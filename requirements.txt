@@ -1,0 +1,4 @@
+requests==2.34.2
+python-dotenv==1.2.4
+beautifulsoup4==4.15.0
+psycopg[binary]==3.3.6
