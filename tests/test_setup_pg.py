@@ -81,7 +81,7 @@ def test_readonly_role_cannot_write():
     import psycopg
     from dotenv import load_dotenv
     load_dotenv(ROOT / ".env")
-    with psycopg.connect(host="localhost", port=setup_pg.HOST_PORT, dbname="veda", user=setup_pg.RO_ROLE,
+    with psycopg.connect(host=setup_pg.config.PG_HOST, port=setup_pg.HOST_PORT, dbname="veda", user=setup_pg.RO_ROLE,
                          password=os.environ["VEDA_PG_RO_PASSWORD"], autocommit=True) as conn:
         conn.execute("SELECT COUNT(*) FROM source_registry")
         with pytest.raises(psycopg.errors.InsufficientPrivilege):

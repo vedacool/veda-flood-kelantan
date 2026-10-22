@@ -33,9 +33,11 @@ ZETARIS_NET = "zetaris_default"
 DATASOURCE = "veda_pg"
 RO_ROLE = "veda_zetaris"                  # Zetaris reads as this role (SELECT only)
 WRITER_ROLE = "veda_writer"               # ingest jobs write as this role (INSERT/UPDATE on ingest tables only)
-WRITER_TABLES = ["stations", "river_levels"]
+WRITER_GRANTS = {"stations": "SELECT, INSERT, UPDATE", "river_levels": "SELECT, INSERT, UPDATE",
+                 "station_links": "SELECT, INSERT, UPDATE, DELETE"}   # seed_stations replaces all links each run
+WRITER_TABLES = list(WRITER_GRANTS)
 SCHEMA = ROOT / "db" / "schema.sql"
-TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry"]
+TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry", "station_links"]
 PASSWORD_OK = re.compile(r"^[A-Za-z0-9_-]{16,}$")  # role passwords go into DDL / JDBC options: keep them plain
 DOCKER_TIMEOUT_S = 60
 AGENT = "Setup"
@@ -173,8 +175,8 @@ def apply_schema(conn):
             conn.execute(f"ALTER TABLE {table} ADD CONSTRAINT {name} {definition}")
             added.append(name)
     conn.execute(pgsql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(pgsql.Identifier(WRITER_ROLE)))
-    for t in WRITER_TABLES:
-        conn.execute(pgsql.SQL("GRANT SELECT, INSERT, UPDATE ON {} TO {}").format(
+    for t, privileges in WRITER_GRANTS.items():
+        conn.execute(pgsql.SQL("GRANT " + privileges + " ON {} TO {}").format(
             pgsql.Identifier(t), pgsql.Identifier(WRITER_ROLE)))
     tables = [r[0] for r in conn.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY 1")]
     return tables, added
@@ -218,7 +220,7 @@ def main():
             tables, added = apply_schema(conn)
         trace.step(AGENT, "pg.schema", output_summary=f"tables: {', '.join(tables)}; constraints added: "
                    f"{', '.join(added) or 'none (all present)'}",
-                   decision=f"{RO_ROLE} SELECT only; {WRITER_ROLE} SELECT/INSERT/UPDATE on {', '.join(WRITER_TABLES)}")
+                   decision=f"{RO_ROLE} SELECT only; {WRITER_ROLE} writes {', '.join(WRITER_TABLES)}")
         trace.step(AGENT, "zetaris.datasource", output_summary=f"{DATASOURCE}: {register_in_zetaris()}")
         counts = smoke_check()
         trace.step(AGENT, "smoke_check", output_summary=", ".join(f"{t}={n}" for t, n in counts.items()),

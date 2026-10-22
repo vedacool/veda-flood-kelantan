@@ -71,3 +71,32 @@ CREATE TABLE IF NOT EXISTS source_registry (
 GRANT USAGE ON SCHEMA public TO veda_zetaris;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO veda_zetaris;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO veda_zetaris;
+
+-- B-67: curated station mapping (from data/stations_mapping.csv via scripts/seed_stations.py).
+-- The JPS collector never writes these columns, so curated values survive every scrape.
+ALTER TABLE stations
+    ADD COLUMN IF NOT EXISTS brief_name text,           -- name used in BUILD_BRIEF, e.g. 'Sg Kelantan @ Jambatan Guillemard'
+    ADD COLUMN IF NOT EXISTS is_core boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS chain text,                -- 'kelantan-main', 'kelantan-galas', 'kelantan-lebir', 'golok'
+    ADD COLUMN IF NOT EXISTS chain_order integer,       -- position along the chain, upstream = 1
+    ADD COLUMN IF NOT EXISTS role text,
+    ADD COLUMN IF NOT EXISTS controls_town text,
+    ADD COLUMN IF NOT EXISTS backup_of text,            -- station_key this gauge stands in for when that one is stale
+    ADD COLUMN IF NOT EXISTS mapping_status text,       -- 'verified - …' / 'tentative - needs Dr Ariff'
+    ADD COLUMN IF NOT EXISTS mapping_note text,
+    ADD COLUMN IF NOT EXISTS coords_source text;
+
+-- Relations between gauges: upstream_of (adjacent along a chain), backup_for, travel_time (lag range, any pair).
+CREATE TABLE IF NOT EXISTS station_links (
+    from_key    text NOT NULL REFERENCES stations (station_key),
+    to_key      text NOT NULL REFERENCES stations (station_key),
+    link_type   text NOT NULL CHECK (link_type IN ('upstream_of', 'backup_for', 'travel_time')),
+    lag_min_h   double precision,
+    lag_max_h   double precision,
+    lag_source  text,
+    status      text NOT NULL,
+    notes       text,
+    PRIMARY KEY (from_key, to_key, link_type),
+    CHECK (from_key <> to_key),
+    CHECK (lag_min_h IS NULL OR lag_max_h IS NULL OR lag_min_h <= lag_max_h)
+);

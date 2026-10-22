@@ -49,3 +49,8 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | GitHub CI runs guard tests, codemap check, pip-audit and gitleaks on every push, so protection does not depend on local hooks | audit P3 |
 | 2026-10-22 | CI actions on Node 24 (checkout v7.0.1, setup-python v7.0.0, gitleaks-action v3.0.0), pinned to commit SHAs; runner pinned to ubuntu-24.04; Dependabot proposes weekly updates (PRs only) | dependency review 2026-10-22 (Node 20 removed from runners) |
 | 2026-10-22 | Dependency age policy: prefer releases ≥ ~2 weeks old unless it is a security fix; exception: certifi (CA list should be current). Applied: soupsieve 3.0.4 → 2.10, pluggy 1.7.0 → 1.6.0; local pip 25.1.1 (6 advisories) → 26.2.1 | dependency review 2026-10-22 |
+| 2026-10-22 | Curated network = 16 gauges (5 core + upstream sentinels on Galas/Lebir/Golok + controlling gauges for Pasir Mas, Kota Bharu, Tumpat); all 36 still collected. Every chain order / town-control assumption is "tentative - needs Dr Ariff" until reviewed | B-67 · Husaini 22 Oct (option A) |
+| 2026-10-22 | `data/stations_mapping.csv` is the single source of truth for the mapping; review it, then re-run `scripts/seed_stations.py` | B-67 |
+| 2026-10-22 | Lags stored as ranges, "reported, tentative": Kuala Krai→Kusial 6–9 h, Kuala Krai→Tambatan Diraja 9–17 h, Dabong→Kuala Krai ~23 h (single event, low confidence); all others empty | B-67 · Husaini 22 Oct |
+| 2026-10-22 | Threshold cross-check uses the 2014 JPS table, not data.gov.my: data.gov.my's frozen `warning_level` repeats the normal level for most gauges | B-67 |
+| 2026-10-22 | Python connects to veda-pg at `127.0.0.1`, not `localhost` (Windows tried IPv6 first: ~10 s per connection) | B-67 |
