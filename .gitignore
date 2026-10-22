@@ -20,3 +20,7 @@ data/cache/
 .DS_Store
 Thumbs.db
 .vscode/
+# generated evidence (regenerated for submission)
+logs/*.xml
+logs/*.json
+data/world/

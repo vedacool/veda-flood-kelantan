@@ -70,3 +70,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Gazetteer never guesses: close spellings get "Did you mean…?", unknown names get "not covered yet" with the covered list; known-Kelantan names come from the MetMalaysia forecast list (data, not a hard-coded list) | B-09 |
 | 2026-10-22 | Tumpat: Kg Kok Majid (Sg Kelantan) is the primary controlling gauge, Kuala Jambu (Sg Golok) secondary; kampung/school names not covered in v1 | Husaini 22 Oct (B-09) |
 | 2026-10-22 | First committed SAMPLE_MODE fixtures = the gazetteer's two queries; offline gazetteer tests replay them in CI | B-09 (start of B-18) |
+| 2026-10-22 | World Model = Python implementation following the Meterless reference semantics; conformance = one-for-one Python port of the 8 official checks (same ids/inputs/thresholds), labelled as a port; Meterless asked (D-09, Husaini) whether that is accepted | B-10/B-11 |
+| 2026-10-22 | World Model storage: append-only SQLite event log, state rebuilt from events; timestamps from provenance, never the wall clock (reproducible re-runs) | B-10 |
+| 2026-10-22 | Edges that may exist several times from one node (e.g. a gauge that is a sentinel for several places) carry the place as `context`, because a same-(from, type, context) edge supersedes the old one | B-10 |
+| 2026-10-22 | Enrichment queue, control plane and supervisor agent are listed as dormant in `manifest()` (spec's wired-vs-helper honesty) | B-10 |
