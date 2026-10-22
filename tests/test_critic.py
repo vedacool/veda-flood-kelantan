@@ -185,7 +185,7 @@ def scripted(reviews):
     def llm(lane, messages, agent, **kw):
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             return SimpleNamespace(data=GOOD_PLAN, text="")
-        if lane == "deep":
+        if messages[0]["content"] == critic.CRITIC_SYSTEM:
             d = reviews[min(calls["reviews"], len(reviews) - 1)]
             calls["reviews"] += 1
             return SimpleNamespace(data={"decision": d, "problems": [] if d == "approve" else
@@ -235,20 +235,38 @@ def lanes_llm(deep_fails=True, fast_fails=False):
     return llm
 
 
-def test_deep_failure_falls_back_to_one_fast_lane_review(run, quiet_zetaris):
+@pytest.fixture
+def deep_first(monkeypatch):
+    monkeypatch.setenv("VEDA_CRITIC_LANE", "deep")
+
+
+def test_fast_lane_is_the_default_critic_lane(run, quiet_zetaris, monkeypatch):
+    monkeypatch.delenv("VEDA_CRITIC_LANE", raising=False)
+    llm = lanes_llm(deep_fails=True)
+    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
+    assert llm.calls == ["fast"] and r["critic_lane"] == "fast" and "model" in r["checked_by"]
+
+
+@pytest.mark.parametrize("value, lane", [("deep", "deep"), ("FAST", "fast"), ("nonsense", "fast"), ("", "fast")])
+def test_critic_lane_setting(monkeypatch, value, lane):
+    monkeypatch.setenv("VEDA_CRITIC_LANE", value)
+    assert critic.critic_lane() == lane
+
+
+def test_deep_failure_falls_back_to_one_fast_lane_review(run, quiet_zetaris, deep_first):
     llm = lanes_llm()
     r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
     assert llm.calls == ["deep", "fast"] and r["critic_lane"] == "fast" and "model" in r["checked_by"]
     assert r["decision"] == "approve"
 
 
-def test_no_fast_fallback_without_enough_time(run, quiet_zetaris):
+def test_no_fast_fallback_without_enough_time(run, quiet_zetaris, deep_first):
     llm = lanes_llm()
     r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=5)
     assert llm.calls == ["deep"] and r["critic_lane"] is None and "model" not in r["checked_by"]
 
 
-def test_both_lanes_down_means_code_and_zetaris_only(run, quiet_zetaris):
+def test_both_lanes_down_means_code_and_zetaris_only(run, quiet_zetaris, deep_first):
     llm = lanes_llm(fast_fails=True)
     r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
     assert llm.calls == ["deep", "fast"] and r["checked_by"] == ["code", "zetaris"]

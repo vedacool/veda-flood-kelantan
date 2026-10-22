@@ -11,7 +11,7 @@ import pytest
 
 from app import gazetteer, loop, trace
 from app.adapters import nightshift
-from app.agents import coordinator, data_agent
+from app.agents import coordinator, critic, data_agent
 from app.engines.world_model import WorldModel
 
 GOOD_PLAN = {"intent": "risk_check", "user_type": "resident", "place_text": "Rantau Panjang",
@@ -29,7 +29,7 @@ def stub_llm(plan=None, answer=None, fail=False, review=None):
             raise nightshift.NightshiftError("stub: Nightshift down")
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             data = plan
-        elif lane == "deep":                    # Critic: approve unless told otherwise
+        elif messages[0]["content"] == critic.CRITIC_SYSTEM:      # Critic (any lane): approve unless told otherwise
             data = {"decision": review or "approve", "problems": [], "fix": ""}
         else:                                   # draft: only the explanation (B-21) - the card is code
             data = {"explanation": answer if answer is not None else "The river is steady for now."}
@@ -177,9 +177,9 @@ def test_plan_for_uncovered_place_says_so(run):
 
 def test_plan_writes_intent_tags_not_the_question_to_the_world(run):
     w = WorldModel()
-    coordinator.plan("My phone is 012-3456789, is Tumpat safe?", world=w, llm=stub_llm(GOOD_PLAN))
+    coordinator.plan("My phone is 019-8765432, is Tumpat safe?", world=w, llm=stub_llm(GOOD_PLAN))
     ctx = [c for c in w.store.state["contexts"].values() if c["type"] == "run"][0]
-    assert "012" not in json.dumps(ctx) and ctx["attrs"]["intent"] == "risk_check"
+    assert "8765432" not in json.dumps(ctx) and ctx["attrs"]["intent"] == "risk_check"   # not a time-like digit run
 
 
 # -- Coordinator: draft ---------------------------------------------------------------------------------------
@@ -218,7 +218,7 @@ def test_loop_runs_every_state_offline(offline):
     assert r["answer"]["approved"] and r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"]
     agents = {x["agent_name"] for x in lines(r["trace"]) if x["action"] in ("world.read", "world.write")}
     assert agents == {"Coordinator", "Data & Reconciler", "Forecast", "Critic"}          # B-57: all four agents
-    assert [c["lane"] for c in llm.calls] == ["fast", "deep"]            # explanation + Critic; plan is code
+    assert [c["lane"] for c in llm.calls] == ["fast", "fast"]    # explanation + Critic (fast lane first, 23 Oct)
 
 
 def test_loop_without_any_model_still_answers_in_sample_mode(offline):

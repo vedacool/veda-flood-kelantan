@@ -25,7 +25,7 @@ def stub(effort="full"):
         calls.append(lane)
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             return SimpleNamespace(data={**PLAN, "effort": effort}, text="")
-        if lane == "deep":
+        if messages[0]["content"] == critic.CRITIC_SYSTEM:
             return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": ""}, text="")
         return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")
     llm.calls = calls
@@ -73,7 +73,8 @@ def test_full_path_runs_everything(offline, force):
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     actions = [x["action"] for x in lines(r)]
     assert {"data.cross_check", "data.reconcile", "critic.requery"} <= set(actions)
-    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["fast", "deep"]
+    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["fast", "fast"]
+    assert r["reviews"][0]["critic_lane"] == "fast"
     assert [x for x in lines(r) if x["action"] == "route"][0]["decision"] == "full: test: forced full"
 
 
@@ -84,7 +85,7 @@ def test_full_path_plan_is_written_by_code(offline, force):
     plan = [x for x in lines(r) if x["action"] == "plan"][0]
     assert r["plan"]["planned_by"] == "code" and r["plan"]["effort"] == "full" and plan["source"] == "code"
     assert r["plan"]["user_type"] == "family_far_away" and len(r["plan"]["sources"]) == 4
-    assert llm.calls == ["fast", "deep"]
+    assert llm.calls == ["fast", "fast"]
 
 
 def test_question_words_alone_send_it_down_the_full_path(offline, force):

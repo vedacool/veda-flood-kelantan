@@ -17,6 +17,7 @@ review is code + Zetaris only, traced as 'fallback'. The loop allows at most MAX
 Reads the forecast and source status from the World Model; writes its review (and a confirmed stale source) back.
 """
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -31,6 +32,13 @@ from app.engines.world_model.veda_ingest import place_id
 AGENT = "Critic"
 MAX_REJECTIONS = 2
 FAST_FALLBACK_MIN_S = 20         # the fast-lane fallback review needs at least this much time left
+
+
+def critic_lane():
+    """Which lane the Critic reviews on first: VEDA_CRITIC_LANE = fast (default since 23 Oct: the deep lane failed all
+    12 live attempts - Nightshift's 45 s cut-off / NVIDIA 500s) or deep (Super VL; falls back to fast if it fails)."""
+    lane = os.getenv("VEDA_CRITIC_LANE", "fast").strip().lower()
+    return lane if lane in ("fast", "deep") else "fast"
 PROBLEM_TYPES = ("unsupported", "wrong_verdict", "unsafe", "missing_level_name", "missing_confidence",
                  "missing_stale_note", "missing_conflict", "conflict", "unclear", "other")
 STATION_KEY = re.compile(r"^[A-Za-z0-9_]+$")
@@ -221,7 +229,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                output_summary=f"{len(findings)} problem(s)", source="code",
                status="needs_revision" if findings else "success",
                decision="; ".join(f"{f['type']}: {f['detail']}" for f in findings) or "all code checks pass")
-    checked_by, status_note, critic_lane = ["code"], None, "deep"
+    checked_by, status_note, critic_lane_used = ["code"], None, None
     if not recheck_data:
         recheck = {"problems": [], "note": skip_reason or "re-query skipped"}
     elif round_no == 1:
@@ -234,16 +242,18 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
         status_note = skip_reason or "model review skipped"
     else:
+        first = critic_lane()
         try:
             remaining = None if budget_s is None else max(1.0, budget_s - (time.monotonic() - t_start))
             decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm,
-                                                          remaining)          # the re-query time is already used
+                                                          remaining, lane=first)   # re-query time already used
             checked_by.append("model")
+            critic_lane_used = first
         except nightshift.NightshiftError as e:
             decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
             status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
             left = None if budget_s is None else budget_s - (time.monotonic() - t_start)
-            if left is None or left >= FAST_FALLBACK_MIN_S:
+            if first == "deep" and (left is None or left >= FAST_FALLBACK_MIN_S):
                 # Husaini 22 Oct night: the deep lane is unreliable on NVIDIA's side -> one review on the fast lane
                 trace.step(AGENT, "critic.fallback", input_summary=f"deep lane failed: {str(e)[:120]}",
                            output_summary="one review on the fast lane (Nemotron Lightning)", status="fallback",
@@ -252,7 +262,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                     decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck,
                                                                   llm, left, lane="fast")
                     checked_by.append("model")
-                    critic_lane, status_note = "fast", "deep lane failed -> reviewed on the fast lane"
+                    critic_lane_used, status_note = "fast", "deep lane failed -> reviewed on the fast lane"
                 except nightshift.NightshiftError as e2:
                     status_note = f"deep and fast lanes unavailable ({e2}) -> review by code + Zetaris only"
     if code_problems and decision == "approve":
@@ -262,7 +272,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     if decision == "reject" and not fix:
         fix = "; ".join(p["detail"] for p in problems[:4])
     result = {"decision": decision, "problems": problems, "fix": fix, "round": round_no, "checked_by": checked_by,
-              "critic_lane": critic_lane if "model" in checked_by else None,
+              "critic_lane": critic_lane_used if "model" in checked_by else None,
               "recheck": {k: v for k, v in recheck.items() if k != "problems"}}
     trace.step(AGENT, "critic.review", input_summary=f"draft round {round_no} ({answer.get('drafted_by')})",
                output_summary=f"{decision}: {len(problems)} problem(s)" + (f" - fix: {fix}" if fix else ""),
