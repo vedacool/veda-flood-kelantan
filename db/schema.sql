@@ -126,3 +126,26 @@ CREATE TABLE IF NOT EXISTS rain_points (
     coords_source  text,
     status         text NOT NULL
 );
+
+-- B-09: gazetteer. places (existing table) gets provenance + links to its rain point and forecast;
+-- place_aliases holds normalised spellings; place_gauges says which gauges represent a place.
+ALTER TABLE places
+    ADD COLUMN IF NOT EXISTS coords_source text,
+    ADD COLUMN IF NOT EXISTS rain_location_id integer,      -- nearest rain point (rain_points.location_id)
+    ADD COLUMN IF NOT EXISTS forecast_location_id text,     -- data.gov.my forecast location, e.g. 'Tn032'
+    ADD COLUMN IF NOT EXISTS mapping_status text,
+    ADD COLUMN IF NOT EXISTS notes text;
+
+CREATE TABLE IF NOT EXISTS place_aliases (
+    alias_norm  text PRIMARY KEY,                           -- normalised by app.gazetteer.normalize()
+    place_id    text NOT NULL REFERENCES places (place_id),
+    alias       text NOT NULL                               -- as written in data/places.csv
+);
+
+CREATE TABLE IF NOT EXISTS place_gauges (
+    place_id     text NOT NULL REFERENCES places (place_id),
+    station_key  text NOT NULL REFERENCES stations (station_key),
+    role         text NOT NULL CHECK (role IN ('controlling', 'controlling_secondary', 'sentinel')),
+    sort_order   integer NOT NULL DEFAULT 1,
+    PRIMARY KEY (place_id, station_key)
+);

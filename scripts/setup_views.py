@@ -6,7 +6,9 @@ Views live in SchemaStore container `veda` and are read as veda.<view>:
     river_status_latest   one row per JPS gauge: latest level, reading time + age, band vs thresholds, change 1 h / 3 h
     rain_24h_by_point     one row per rain point: rain past 24 h / 7 d, next 24 h / 72 h, max probability next 24 h
     forecast_kelantan     one row per Kelantan place (state / district / town) per day: MetMalaysia forecast
-    station_risk_inputs   one row per core station: the three above fused (place_risk_inputs follows in B-09)
+    station_risk_inputs   one row per core station: the three above fused
+    place_risk_inputs     one row per covered place (B-09): controlling gauge + nearest rain + town forecast
+    place_gauge_status    one row per place x gauge (controlling, secondary, sentinels) + travel time if known
 Each view file holds one read-only SELECT; it is checked with the same rule as run_sql before it is created.
 Needs: scripts/setup_pg.py, seed_stations.py and setup_wx.py run first.
 """
@@ -23,7 +25,8 @@ from app.adapters import zetaris  # noqa: E402
 
 CONTAINER = "veda"
 VIEWS_DIR = ROOT / "db" / "views"
-ORDER = ["river_status_latest", "rain_24h_by_point", "forecast_kelantan", "station_risk_inputs"]  # dependencies last
+ORDER = ["river_status_latest", "rain_24h_by_point", "forecast_kelantan", "station_risk_inputs",
+         "place_risk_inputs", "place_gauge_status"]  # dependencies last
 AGENT = "Setup"
 
 

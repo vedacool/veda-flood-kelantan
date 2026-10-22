@@ -67,3 +67,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Views carry facts (age, band, change, rain sums); freshness and verdicts are judged in Python, so tentative limits live in one place | B-08 |
 | 2026-10-22 | `rain_points` copied into veda-pg by setup_wx so views can name each Open-Meteo row; `place_risk_inputs` waits for the B-09 gazetteer (B-08 marked done then) | B-08 |
 | 2026-10-22 | Open-Meteo fetch time is not visible to views (cache keeps no timestamp) → B-13 records refresh times for forecast freshness | B-08 |
+| 2026-10-22 | Gazetteer never guesses: close spellings get "Did you mean…?", unknown names get "not covered yet" with the covered list; known-Kelantan names come from the MetMalaysia forecast list (data, not a hard-coded list) | B-09 |
+| 2026-10-22 | Tumpat: Kg Kok Majid (Sg Kelantan) is the primary controlling gauge, Kuala Jambu (Sg Golok) secondary; kampung/school names not covered in v1 | Husaini 22 Oct (B-09) |
+| 2026-10-22 | First committed SAMPLE_MODE fixtures = the gazetteer's two queries; offline gazetteer tests replay them in CI | B-09 (start of B-18) |

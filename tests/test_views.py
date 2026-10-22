@@ -18,7 +18,8 @@ live = pytest.mark.skipif(os.getenv("VEDA_LIVE") != "1", reason="live Zetaris te
 def test_every_view_file_is_created_and_in_dependency_order():
     files = {p.stem for p in (ROOT / "db" / "views").glob("*.sql")}
     assert files == set(setup_views.ORDER)
-    assert setup_views.ORDER[-1] == "station_risk_inputs"          # depends on the other three
+    assert setup_views.ORDER.index("station_risk_inputs") > setup_views.ORDER.index("forecast_kelantan")
+    assert setup_views.ORDER[-2:] == ["place_risk_inputs", "place_gauge_status"]   # depend on the others
 
 
 @pytest.mark.parametrize("name", setup_views.ORDER)
@@ -58,6 +59,7 @@ def test_view_row_counts(live_run):
     assert counts["river_status_latest"] == 36
     assert counts["rain_24h_by_point"] == 7
     assert counts["station_risk_inputs"] == 5
+    assert counts["place_risk_inputs"] == 4                       # one fused row per covered place (B-09)
     assert counts["forecast_kelantan"] > 0
 
 
