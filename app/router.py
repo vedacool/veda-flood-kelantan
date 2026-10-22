@@ -1,7 +1,7 @@
 """Router (B-17, Husaini 22 Oct night): CODE decides quick vs full and the answer language - before any AI call.
 
     r = router.route(question, place, world, pre)      -> {effort: quick | full, reasons, language, notes}
-    p = router.quick_plan(question, resolution, r)     the plan for the quick path (no AI planning)
+    p = router.code_plan(question, resolution, r)      the plan, written by code on BOTH paths (22 Oct night)
 
 Full if ANY of these (the reasons go into the trace):
     a linked gauge (controlling, second controlling or upstream sentinel) is at or above Alert
@@ -10,6 +10,8 @@ Full if ANY of these (the reasons go into the trace):
     a stale or missing source (controlling or upstream gauge without a fresh reading; no rain or MET forecast data)
     the question is about evacuation, being cut off, rising water or the coming days (BM, EN, Kelantan dialect)
 Otherwise quick. Language: any BM word in the question -> answer in BM (mixed BM/EN is normal in Kelantan).
+User type from the question's words: school (sekolah, cikgu...) before family (mak, anak, orang tua...) before
+resident (saya, rumah saya...), else unknown.
 Word lists and the two rise limits are TENTATIVE (Husaini / Dr Ariff to review).
 """
 import re
@@ -46,6 +48,19 @@ QUESTION_TRIGGERS = {
                   "this week", "next days", "coming days", "next few days", "next two days", "next 2 days",
                   "24 jam", "48 jam", "24 hours", "48 hours"],
 }
+
+
+# Who is asking - checked in this order (Husaini 22 Oct night + Claude's list). Phrases match whole words.
+USER_TYPES = [
+    ("school", ["sekolah", "school", "murid", "pelajar", "cikgu", "guru", "teacher", "student", "students", "pupils",
+                "spm", "asrama"]),
+    ("family_far_away", ["mak", "emak", "ayah", "abah", "ibu", "bapa", "parents", "mother", "father", "mum", "mom",
+                         "dad", "keluarga", "family", "nenek", "atuk", "datuk", "grandma", "grandmother", "grandfather",
+                         "anak", "isteri", "suami", "wife", "husband", "rumah mak", "orang tua", "warga emas",
+                         "elderly", "adik", "abang", "kakak", "sister", "brother", "relatives", "saudara"]),
+    ("resident", ["saya", "aku", "kami", "kita", "rumah saya", "my house", "my home", "i live", "we live", "kawe",
+                  "ambo"]),
+]
 
 
 def _words(question):
@@ -114,10 +129,24 @@ def route(question, place, world, pre):
             "intent": next((k for k, _ in asked if k in ("evacuation", "cut_off")), "risk_check")}
 
 
-def quick_plan(question, resolution, r):
-    """The plan for the quick path, written by code (no AI planning, Husaini 22 Oct night)."""
+def user_type(question):
+    """'school' | 'family_far_away' | 'resident' | 'unknown' from the question's words."""
+    text = " " + " ".join(_words(question)) + " "
+    return next((kind for kind, words in USER_TYPES if any(f" {w} " in text for w in words)), "unknown")
+
+
+def code_plan(question, resolution, r):
+    """The plan, written by code on both paths (Husaini 22 Oct night: no AI planning - saves a 12-29 s call)."""
     from app.agents.coordinator import QUICK_SOURCES
-    return {"question_language": r["language"], "intent": r["intent"], "user_type": "unknown", "effort": "quick",
-            "sources": list(QUICK_SOURCES), "place": resolution.place, "place_status": resolution.status,
-            "place_message": resolution.message, "planned_by": "code",
-            "reason": "Quick path decided by code: " + (r["reasons"][0] if r["reasons"] else "nothing calls for more")}
+    from app.agents.data_agent import SOURCES
+    quick = r["effort"] == "quick"
+    p = {"question_language": r["language"], "intent": r["intent"], "user_type": user_type(question),
+         "effort": r["effort"], "sources": list(QUICK_SOURCES if quick else SOURCES), "place": resolution.place,
+         "place_status": resolution.status, "place_message": resolution.message, "planned_by": "code",
+         "reason": (f"{r['effort'].capitalize()} path decided by code: "
+                    + (r["reasons"][0] if r["reasons"] else "nothing calls for more"))}
+    trace.step(AGENT, "plan", input_summary=question,
+               output_summary=(f"intent={p['intent']} user={p['user_type']} place={resolution.place['name']} "
+                               f"effort={p['effort']} sources={','.join(p['sources'])} language={p['question_language']}"),
+               source="code", target_agent="Data & Reconciler", decision=p["reason"], details={"plan": p})
+    return p

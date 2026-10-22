@@ -262,3 +262,24 @@ def test_live_planner_prompt(tmp_path):
         trace.end_run()
     assert {"intent", "place", "sources"} <= r.data.keys()
     assert r.served_model and "nemotron" in r.served_model
+
+
+def test_one_try_only_does_not_retry(fake):
+    fake["queue"] += [FakeResponse(502, {"error": {"message": "Meterless provider request failed."}})]
+    with pytest.raises(nightshift.NightshiftError):
+        nightshift.chat("deep", [{"role": "user", "content": "x"}], agent="Critic", max_attempts=1)
+    rec = [x for x in trace_lines(fake) if x["action"] == "nightshift.chat"]
+    assert len(fake["calls"]) == 1 and [x["status"] for x in rec] == ["failed"]
+    assert rec[0]["decision"] == "One try only - caller falls back"
+
+
+def test_one_try_only_skips_the_json_repair_round(fake):
+    fake["queue"] += [FakeResponse(200, ok_payload(text="not json at all"))]
+    with pytest.raises(nightshift.NightshiftError):
+        nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator", json_mode=True,
+                        max_attempts=1)
+    assert len(fake["calls"]) == 1
+
+
+def test_deep_lane_may_take_longer_than_fast(fake):
+    assert nightshift.LANE_TIMEOUT_S["deep"] > nightshift.LANE_TIMEOUT_S["fast"]

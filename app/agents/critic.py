@@ -178,7 +178,7 @@ def _model_review(question, answer, facts, findings, recheck, llm, budget_s):
                          "ZETARIS_RECHECK": {k: v for k, v in recheck.items() if k != "problems"}},
                          ensure_ascii=False, default=str)}],
             agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator", max_tokens=3000,
-            budget_s=budget_s)
+            budget_s=budget_s, max_attempts=1)
     data = r.data if isinstance(r.data, dict) else {}
     decision = data.get("decision") if data.get("decision") in ("approve", "reject") else "reject"
     problems = [{"type": p.get("type") if p.get("type") in PROBLEM_TYPES else "other",

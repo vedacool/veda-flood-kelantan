@@ -274,7 +274,8 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
         try:
             r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
                              {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
-                    agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS, budget_s=budget_s)
+                    agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS, budget_s=budget_s,
+                    max_attempts=1)
             explanation = (r.data or {}).get("explanation") if isinstance(r.data, dict) else None
             problem = card_mod.explanation_problem(explanation, card)
             if problem:

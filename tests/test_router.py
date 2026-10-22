@@ -145,3 +145,22 @@ def test_stale_feed_is_marked_stale_and_triggers_nothing(run):
 
 def test_unreadable_feed_is_reported(run):
     assert data_agent.met_warnings(None, PLACE, NOW)["status"] == "failed"
+
+
+@pytest.mark.parametrize("question, kind", [
+    ("Sekolah anak saya di Tumpat selamat ke?", "school"),
+    ("Cikgu, kena tutup sekolah esok?", "school"),
+    ("Guru di Pasir Mas tanya", "school"),
+    ("Mak ayah saya di Tumpat", "family_far_away"),
+    ("Anak saya tinggal di Kota Bharu", "family_far_away"),
+    ("Isteri saya di Rantau Panjang", "family_far_away"),
+    ("Rumah mak di Pasir Mas ok?", "family_far_away"),
+    ("Orang tua saya di Tumpat", "family_far_away"),
+    ("Ada warga emas di kampung", "family_far_away"),
+    ("My parents live in Tumpat", "family_far_away"),
+    ("Rumah saya di Pasir Mas", "resident"),
+    ("I live in Kota Bharu, is it safe?", "resident"),
+    ("Kota Bharu ok?", "unknown"),
+])
+def test_user_type_from_words(question, kind):
+    assert router.user_type(question) == kind

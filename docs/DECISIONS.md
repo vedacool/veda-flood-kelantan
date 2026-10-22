@@ -131,4 +131,11 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | The card also shows the thresholds and next-24 h rain, so an explanation can cite them without being rejected | B-21 |
 | 2026-10-22 | Deep lane (Critic) may take up to 100 s per call, never more than the time left in the 150 s budget minus 10 s for the final answer; fast lane stays 60 s | Husaini 22 Oct night |
 | 2026-10-22 | If the Critic's AI review is skipped or times out, the AI explanation is dropped and only the template answer (BM or EN) goes out - nothing leaves that the AI Critic has not checked; reason traced as `final_answer` | Husaini 22 Oct night |
+| 2026-10-22 | Nightshift cuts Nemotron calls at ~45 s (HTTP 502); measured 22 Oct. | Husaini 22 Oct night |
+| 2026-10-22 | The cut-off is Nightshift's provider time-to-first-byte limit (`ttfb_timeout`, 45,003 ms in its log); no setting for it in config.toml / lanes.toml - question raised with Meterless. Streaming (`stream: true`) is accepted but does not reliably avoid it (1 of 2 runs passed, after 144 s) | 22 Oct night (measured) |
+| 2026-10-22 | Lightning ignores the thinking switch through Nightshift (300-490 completion tokens for a 14-character answer with thinking on, off, "low" or /no_think; reasoning_budget has no effect) - the explanation call cannot be made cheaper from VEDA | 22 Oct night (measured) |
+| 2026-10-22 | Planning in code on the full path too (router writes intent, user type, sources; user-type keywords incl. anak, isteri, suami, rumah mak, orang tua, warga emas, cikgu, guru) - Nemotron keeps the explanation and the Critic review | Husaini 22 Oct night |
+| 2026-10-22 | Critic reasoning off (reasoning on: 144 s or the 45 s cut-off; off: 36-48 s, same decisions) - supersedes "keep reasoning on" because streaming did not fix the cut-off | Husaini 22 Oct night |
+| 2026-10-22 | One try per Nemotron call (no retry, no JSON repair round), then fall back: no explanation -> the card; no Critic model -> code + Zetaris review | Husaini 22 Oct night |
+| 2026-10-22 | Replay runs only: 240 s budget, traced as "replay budget 240 s"; live stays 150 s (wired in with B-70) | Husaini 22 Oct night |
 

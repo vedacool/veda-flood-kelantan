@@ -73,15 +73,18 @@ def test_full_path_runs_everything(offline, force):
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     actions = [x["action"] for x in lines(r)]
     assert {"data.cross_check", "data.reconcile", "critic.requery"} <= set(actions)
-    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["fast", "fast", "deep"]
+    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["fast", "deep"]
     assert [x for x in lines(r) if x["action"] == "route"][0]["decision"] == "full: test: forced full"
 
 
-def test_the_model_cannot_lower_the_effort_code_decided(offline, force):
+def test_full_path_plan_is_written_by_code(offline, force):
     force("full")
-    r = loop.run("Is Rantau Panjang at risk?", llm=stub("quick"), log_dir=offline, quiet=True)
+    llm = stub("full")
+    r = loop.run("Is Rantau Panjang at risk? My parents live there.", llm=llm, log_dir=offline, quiet=True)
     plan = [x for x in lines(r) if x["action"] == "plan"][0]
-    assert r["plan"]["effort"] == "full" and "effort quick -> full (decided by code)" in plan["details"]["fixes"]
+    assert r["plan"]["planned_by"] == "code" and r["plan"]["effort"] == "full" and plan["source"] == "code"
+    assert r["plan"]["user_type"] == "family_far_away" and len(r["plan"]["sources"]) == 4
+    assert llm.calls == ["fast", "deep"]
 
 
 def test_question_words_alone_send_it_down_the_full_path(offline, force):
@@ -104,7 +107,7 @@ def test_no_time_left_means_code_answer_and_code_review_with_reasons(offline, fo
     budget = [x for x in lines(r) if x["action"] == "budget"]
     assert [b["input_summary"] for b in budget] == ["the answer", "the review"]
     assert all(b["status"] == "fallback" and b["decision"].startswith("budget:") for b in budget)
-    assert r["answer"]["drafted_by"] == "fallback" and llm.calls == ["fast"]          # only the plan call
+    assert r["answer"]["drafted_by"] == "fallback" and llm.calls == []               # no time for any model call
     assert r["reviews"][0]["checked_by"] == ["code"] and r["answer"]["approved"]          # no time to re-query either
 
 

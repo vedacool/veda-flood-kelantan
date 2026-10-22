@@ -130,7 +130,7 @@ def _error_message(payload, r):
     return str(err or r.text or f"HTTP {r.status_code}")[:200]
 
 
-def _call(lane, body, agent, prompt_summary, deadline=None):
+def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
     """POST with retry/backoff. Returns (payload, attempts). Raises NightshiftError when out of retries or time.
     deadline: time.monotonic() value after which no new attempt starts (the run's time budget)."""
     base, token = _config()
@@ -174,10 +174,11 @@ def _call(lane, body, agent, prompt_summary, deadline=None):
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
                        decision="Not retryable - caller must fall back")
             raise NightshiftError(fatal)
-        if attempt > len(BACKOFF_S):
+        if attempt > len(BACKOFF_S) or (max_attempts and attempt >= max_attempts):
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=problem,
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
-                       decision="Out of retries - caller must fall back")
+                       decision=("One try only - caller falls back" if max_attempts == 1
+                                 else "Out of retries - caller must fall back"))
             raise NightshiftError(f"Nightshift failed after {attempt} attempts: {problem}")
         trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=problem,
                    status="retrying", source=f"nightshift:{lane}", retry_count=attempt, duration_ms=ms,
@@ -186,9 +187,11 @@ def _call(lane, body, agent, prompt_summary, deadline=None):
 
 
 def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max_tokens=DEFAULT_MAX_TOKENS,
-         temperature=0.2, target_agent=None, budget_s=None):
+         temperature=0.2, target_agent=None, budget_s=None, max_attempts=None):
     """Send one chat request through Nightshift on lane `fast` or `deep`. Returns LLMResult, raises NightshiftError.
-    budget_s: optional cap on total seconds incl. retries and the JSON repair (pass the run's remaining time)."""
+    budget_s: optional cap on total seconds incl. retries and the JSON repair (pass the run's remaining time).
+    max_attempts=1: one try only, no retry and no JSON repair round (agents, Husaini 22 Oct night: Nightshift
+    cuts a call at ~45 s, so a retry mostly burns another 45 s - the caller falls back instead)."""
     deadline = time.monotonic() + budget_s if budget_s else None
     if config.sample_mode():
         raise NightshiftError("SAMPLE_MODE: offline SampleGenerator arrives in B-18; no live model calls allowed")
@@ -203,14 +206,19 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     prompt_summary = trace.summarize(_last_user(messages), 120)
 
     t0 = time.perf_counter()
-    payload, attempts = _call(lane, body, agent, prompt_summary, deadline)
+    payload, attempts = _call(lane, body, agent, prompt_summary, deadline, max_attempts)
     msg = payload["choices"][0].get("message") or {}
     text = msg.get("content") or ""
     data = None
     if json_mode:
         try:
             data = _parse_json(text)
-        except ValueError as e:  # one repair round
+        except ValueError as e:  # one repair round (not with max_attempts=1)
+            if max_attempts == 1:
+                trace.step(agent, "nightshift.chat", input_summary=prompt_summary, status="failed",
+                           output_summary=trace.summarize(text, 120), source=f"nightshift:{lane}",
+                           retry_count=attempts - 1, decision="Invalid JSON and one try only - caller falls back")
+                raise NightshiftError(f"model did not return valid JSON (one try only): {e}") from e
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=trace.summarize(text, 120),
                        status="retrying", source=f"nightshift:{lane}", retry_count=attempts,
                        decision=f"Invalid JSON ({e}) -> asking the model to repair it once")

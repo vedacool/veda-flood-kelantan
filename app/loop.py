@@ -5,8 +5,8 @@
     plan -> gather -> forecast -> draft -> critique -> (revise -> critique) -> done
 
 plan      Code first: the gazetteer finds the place (not covered -> done, no AI call) and the router decides
-          quick or full + the answer language from the question and the prefetched data. Quick = plan written
-          by code; full = the Coordinator plans with Nemotron (it cannot change the effort, place or language).
+          quick or full + the answer language from the question and the prefetched data, and writes the plan
+          (intent, user type, sources) - no AI planning on either path (22 Oct night).
           The Data & Reconciler agent prefetches the world in the background from the very start.
 gather    Data & Reconciler agent: health checks -> World Model -> evidence for the planned place.
 forecast  Forecast agent: verdict + range + confidence (quick plan -> current levels only).
@@ -32,7 +32,7 @@ from app.engines.world_model import WorldModel
 STATES = ("plan", "gather", "forecast", "draft", "critique", "revise", "done")
 DEADLINE_S = 600
 BUDGET_S = {"quick": 30, "full": 150}    # Husaini 22 Oct night: the longest the user should wait for an answer
-PLAN_CAP_S = 30                          # the planning call may not use more than this
+REPLAY_BUDGET_S = 240                    # replay runs only (B-70, Husaini 22 Oct night) - traced as "replay budget 240 s"
 MIN_MODEL_S = 10                         # don't start a model call with less time than this left
 RESERVE_S = 2                            # kept back from every model call for the steps after it
 RECHECK_S = 6                            # the Critic's own Zetaris re-query needs about this long
@@ -108,12 +108,8 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 else:
                     r = router.route(question, res.place, world, pre.result())
                     budget = budget_s or BUDGET_S[r["effort"]]
-                    if r["effort"] == "quick":
-                        p = router.quick_plan(question, res, r)
-                        coordinator.remember(world, p)
-                    else:
-                        p = coordinator.plan(question, world=world, llm=llm, budget_s=min(PLAN_CAP_S, left()),
-                                             resolved=res, effort="full", language=r["language"])
+                    p = router.code_plan(question, res, r)          # both paths: no AI planning (22 Oct night)
+                    coordinator.remember(world, p)
                     p["route_reasons"] = r["reasons"]
                     state = "gather"
             elif state == "gather":

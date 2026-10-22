@@ -218,7 +218,7 @@ def test_loop_runs_every_state_offline(offline):
     assert r["answer"]["approved"] and r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"]
     agents = {x["agent_name"] for x in lines(r["trace"]) if x["action"] in ("world.read", "world.write")}
     assert agents == {"Coordinator", "Data & Reconciler", "Forecast", "Critic"}          # B-57: all four agents
-    assert [c["lane"] for c in llm.calls] == ["fast", "fast", "deep"]
+    assert [c["lane"] for c in llm.calls] == ["fast", "deep"]            # explanation + Critic; plan is code
 
 
 def test_loop_without_any_model_still_answers_in_sample_mode(offline):
