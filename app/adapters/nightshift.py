@@ -288,7 +288,7 @@ def main(argv):
                  agent="Coordinator", json_mode=True, target_agent="Data")
     except NightshiftError as e:
         trace.end_run("failed", str(e))
-        print(f"FAILED: {e}")
+        print(f"FAILED: {trace.redact(str(e))}")
         return 1
     print(json.dumps(r.data, indent=2, ensure_ascii=False))
     print(f"served_model={r.served_model} pinned={r.pinned} attempts={r.attempts} latency={r.latency_ms} ms")

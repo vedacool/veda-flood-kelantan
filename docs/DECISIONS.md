@@ -37,3 +37,13 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Lane pinning = per-app **lane allowlist** in Nightshift `app-policy.json` (`veda-fast` → `["fast"]`, `veda-deep` → `["deep"]`); app `mode` alone never pins a model (it is a core mode, not a lane) | B-66 · found in Nightshift engine code (select.js `modelOnAllowedLanes`); public docs silent |
 | 2026-10-22 | Both Nightshift lanes stay `role = "race"`, `races = true`; `verify` role / `races = false` lanes never answer | B-66 |
 | 2026-10-22 | Adapter `pinned` = lane honoured AND expected model answered (Lightning / Super VL, env-overridable); otherwise trace says "WRONG MODEL" | B-66 |
+| 2026-10-22 | Shared settings live in `app/config.py` (flags, MYT, Postgres address, secret patterns) - no copies in modules or tests | audit 2026-10-22 |
+| 2026-10-22 | `run_sql` read-only = SELECT/WITH start AND no write/DDL word or reflect/java_method outside quotes; comments are stripped, never joined into the query | audit P1 #1-2 |
+| 2026-10-22 | Agents' DDL: only `CACHE TABLE` and REST tables on https `api.data.gov.my` / `api.open-meteo.com` / `flood-api.open-meteo.com`; everything else is `setup=True` (scripts only) | audit P2 |
+| 2026-10-22 | JPS upsert never replaces a stored threshold/id with a missing one; ambiguous numbers (decimal comma, nan/inf, 9999, outside -50..1000 m) become NULL | audit P1 #3 / P2 |
+| 2026-10-22 | `--loop` collector survives any failed cycle; only config errors stop it | audit P1 #4 |
+| 2026-10-22 | veda-pg published on 127.0.0.1 only; ingest writes as `veda_writer` (own password), not the superuser; plausibility/FK constraints added by setup_pg | audit P2/P3 |
+| 2026-10-22 | All human-facing times (trace sentences, run ids, snapshot names) in MYT regardless of machine time zone | audit P3 |
+| 2026-10-22 | **Won't fix:** no automatic deletion of traces/snapshots (~3 MB/day; they are judging evidence) - revisit only if disk becomes a problem | audit P3 |
+| 2026-10-22 | **Deferred to B-18:** committed SAMPLE_MODE fixtures (need the agents' real SQL first); `requirements-lock.txt` pins all deps but without hashes (no pip-tools available) | audit P2/P3 |
+| 2026-10-22 | GitHub CI runs guard tests, codemap check, pip-audit and gitleaks on every push, so protection does not depend on local hooks | audit P3 |

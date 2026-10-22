@@ -10,6 +10,27 @@
     "app/ingest/jps.py:store-transaction": "4d4e31d",
     "app/adapters/zetaris.py:coerce": "4d4e31d",
     "app/adapters/nightshift.py:retries+pinning": "4d4e31d",
-    "scripts/setup_pg.py:parameterised-sql": "4d4e31d"
+    "scripts/setup_pg.py:parameterised-sql": "4d4e31d",
+    "app/adapters/zetaris.py:read-only+ddl-lockdown": "f82485e",
+    "app/ingest/jps.py:store-coalesce+loop": "f82485e",
+    "veda-pg:bind-127.0.0.1+writer-role": "f82485e",
+    "dependencies:pip-audit-clean": "f82485e"
+  },
+  "fixesApplied": {
+    "date": "2026-10-22",
+    "commits": [
+      "c9eb9e7",
+      "71177ea",
+      "08a8e68",
+      "3c8322b",
+      "ee32ba8",
+      "f82485e"
+    ],
+    "open": [
+      "SAMPLE_MODE fixtures (B-18)"
+    ],
+    "wontFix": [
+      "trace/snapshot rotation"
+    ]
   }
 }

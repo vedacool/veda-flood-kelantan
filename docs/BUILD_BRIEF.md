@@ -24,10 +24,10 @@ Track: **Solving Fragmented Intelligence** (GenAI Works Open Agent Hackathon 202
 | Forecast agent | code | — | Trend, upstream→downstream lag, "bigger than the 2014 flood?", verdict rules → range + confidence |
 | Critic | LLM | Nightshift lane `deep` (Nemotron 3.5 Super VL) | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
 
-Caps: Critic ≤ 2 rejections · 3 retries with backoff · 10-minute deadline · temperature 0.2 · agents exchange structured JSON, not chat history.
+Caps: Critic ≤ 2 rejections · bounded retries with backoff (Nightshift 3, Zetaris 2) · 10-minute deadline · temperature 0.2 · agents exchange structured JSON, not chat history.
 
 ## 4. Sponsor technology (all load-bearing)
-- **Zetaris** — the only data path. Lightning REST tables (Open-Meteo, data.gov.my) + Postgres registered as a datasource (`river_levels`, `places`, `historic_peaks`, `source_registry`) + views (`place_risk_inputs`). One tool: `run_sql()`.
+- **Zetaris** — the only data path. Lightning REST tables (Open-Meteo, data.gov.my) + Postgres registered as a datasource (`stations`, `river_levels`, `places`, `historic_peaks`, `source_registry`) + views (`place_risk_inputs`). One tool: `run_sql()`.
 - **Meterless World Model engine** — shared state: entities (stations, rivers, places, districts, sources), relations (`upstream_of` with lag, `nearest_station`, `in_district`), timeline snapshots, `stale`/`conflict` facts. Every agent reads/writes it. Conformance tests + a feature test.
 - **Meterless Nightshift** — the only AI provider: `http://127.0.0.1:8088/v1`; model routes `meterless/fast` and `meterless/deep` (Setup Guide 4.6: pin a `meterless/*` route), each app pinned to its own lane; never `meterless/auto`.
 - **NVIDIA Nemotron** — powers both LLM agents through Nightshift.
@@ -36,7 +36,7 @@ Caps: Critic ≤ 2 rejections · 3 retries with backoff · 10-minute deadline ·
 ## 5. Data sources
 | Need | Source | Notes |
 |---|---|---|
-| Live river levels + thresholds (normal/alert/warning/danger) | JPS Public Infobanjir — `https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/aras-air-data/?state=KEL&district=ALL&station=ALL&lang=en` | HTML table (`data-th` attributes). Scrape ≤ 1×/15 min, cache, identify ourselves. Store snapshots for SAMPLE_MODE |
+| Live river levels + thresholds (normal/alert/warning/danger) | JPS Public Infobanjir — `https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/aras-air-data/?state=KEL&district=ALL&station=ALL&lang=en` | HTML table (`data-th` attributes). Scrape ≤ 1×/15 min, cache, identify ourselves. Keep snapshots; SAMPLE_MODE replays them (B-18) |
 | Rain past + forecast | Open-Meteo `/v1/forecast` | No key, CC BY 4.0. Points: stations, upstream, Thai-side Golok basin |
 | District forecast + official warnings | data.gov.my `/weather/forecast`, `/weather/warning` | `?meta=true`; 4 req/min → cache |
 | **Stale source (must be caught)** | data.gov.my `/flood-warning` | Frozen since 23 Feb 2024 — the Critic must detect and exclude it |
