@@ -23,6 +23,7 @@ Reads historic peaks from the World Model; writes its forecast there as a fact a
 from datetime import datetime, timezone
 
 from app import trace
+from app.config import MYT
 from app.engines.world_model.veda_ingest import place_id
 
 AGENT = "Forecast"
@@ -147,19 +148,42 @@ def _rain(rain):
                    past7 is not None and past7 >= WET_GROUND_7D_MM, "freshness": rain.get("freshness")}
 
 
-def _history(world, g, top):
-    """Historic peaks at the controlling gauge (World Model read) compared with now and the projection."""
+def peak_time(p):
+    """When a historic peak happened (MYT), from 'observed_when' ('27 Nov 2024 19:30', '29 Nov 2024', '2014') or the
+    event name ('Dec 2014 ...'); None if it cannot be read."""
+    for text, fmt in ((p.get("observed_when"), "%d %b %Y %H:%M"), (p.get("observed_when"), "%d %b %Y"),
+                      ((p.get("event") or "")[:8], "%b %Y"), (p.get("observed_when"), "%Y")):
+        try:
+            return datetime.strptime(str(text).strip(), fmt).replace(tzinfo=MYT)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def _history(world, g, top, clock=None):
+    """Historic peaks at the controlling gauge (World Model read) compared with now and the projection. With a
+    clock (replay, B-70) only peaks from BEFORE that time are used - a later flood is hindsight."""
     facts = world.facts_about(g["station"], "historic_peaks") if world else []
     peaks = facts[-1]["value"] if facts else []
+    if clock is not None:
+        peaks = [p for p in peaks if (peak_time(p) or clock) < clock]
     out = [{"event": p["event"], "peak_m": p["peak_m"], "above_now_m": round(p["peak_m"] - g["level_m"], 2),
             "source": p["source_type"], "reconstructed": bool(p.get("reconstructed"))} for p in peaks[:3]]
     dec2014 = next((p for p in peaks if p["event"] == "Dec 2014"), None)
+    if dec2014 is not None and dec2014 not in peaks[:3]:          # the card always compares with 2014 (B-70)
+        out.append({"event": dec2014["event"], "peak_m": dec2014["peak_m"],
+                    "above_now_m": round(dec2014["peak_m"] - g["level_m"], 2), "source": dec2014["source_type"],
+                    "reconstructed": bool(dec2014.get("reconstructed"))})
     bigger = None if dec2014 is None else (top if top is not None else g["level_m"]) > dec2014["peak_m"]
     return out, bigger
 
 
 def _confidence(main, others, fired, rain, now_only):
     score, why = 0.85, []
+    replay = ((main.get("provenance") or {}).get("replay") or {})
+    if replay and not replay.get("time_exact", True):       # Husaini 22 Oct night: approximate times -> medium
+        score = min(score, 0.69)
+        why.append("trend built on readings with approximate times (replay)")
     if main.get("freshness") == "aging":
         score -= 0.15
         why.append("controlling reading is aging")
@@ -229,7 +253,7 @@ def forecast(plan, evidence, world=None, now=None):
                          "reason": f"{main['name']} is rising fast (>= {RISING_FAST_M_PER_H} m/h) - one level up"})
     main_trend = next(t for t in trends if t["role"] == "controlling")
     top = (main_trend["projection_m"].get("24h") or {}).get("max")
-    history, bigger = _history(world, main, top)
+    history, bigger = _history(world, main, top, _clock(evidence) if evidence.get("replay") else None)
     out.update({"verdict": LEVELS[base], "level_name": BAND_NAMES.get(main["band"]),
                 "triggers": triggers or [{"level": "NORMAL", "rule": "no-trigger",
                                           "reason": "controlling gauge below alert and no other rule fired"}],
@@ -238,6 +262,10 @@ def forecast(plan, evidence, world=None, now=None):
                 "controlling": trends, "upstream": upstream, "rain": rain, "history": history,
                 "bigger_than_2014": bigger})
     return _finish(out, plan, world, evidence, run_id)
+
+
+def _clock(evidence):
+    return datetime.fromisoformat(evidence["clock"].replace("Z", "+00:00"))
 
 
 def _finish(out, plan, world, evidence, run_id):

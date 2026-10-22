@@ -7,8 +7,9 @@ Everything is read through run_sql (so it replays offline in SAMPLE_MODE). Every
 {kind: 'zetaris', at: <time the DATA refers to>, sql, query_hash, view, agent, run_id} (+ health on readings). Using the data's own time
 (gauge reading time, forecast window) keeps ingest idempotent: the same readings twice change nothing.
 """
+import re
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from app import config, trace
 from app.adapters import zetaris
@@ -204,6 +205,95 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
                                                           "when": p["forecast_today_when"]}, confidence=0.7, source=fsrc)
     return {"gauges": n, "places": len(inputs), "unhealthy": unhealthy}
 
+
+
+# -- Flood replay (B-70) ---------------------------------------------------------------------------------------
+SCENARIO = re.compile(r"^[a-z0-9_]+$")
+
+
+def replay_sqls(scenario, at):
+    """The replay's two queries, CUT AT THE REPLAY TIME in SQL - nothing later ever enters VEDA (no hindsight).
+    at = aware datetime. Gauge rows: veda_pg.replay_levels (UTC); rain: the archive REST table, hours in MYT."""
+    if not SCENARIO.match(scenario or ""):
+        raise ValueError(f"bad replay scenario name {scenario!r}")
+    utc = at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    myt = at.astimezone(config.MYT)
+    hour = lambda d: d.strftime("%Y-%m-%dT%H:%M")        # noqa: E731 - Open-Meteo hour labels, MYT
+    levels = ("SELECT station_key, observed_at, level_m, kind, time_exact, label FROM veda_pg.replay_levels "
+              f"WHERE scenario = '{scenario}' AND observed_at <= TIMESTAMP '{utc}' ORDER BY station_key, observed_at")
+    rain = ("SELECT COALESCE(r.location_id, 0) AS location_id, "
+            f"ROUND(SUM(CASE WHEN t > '{hour(myt - timedelta(hours=24))}' THEN CAST(r.hourly.precipitation[i] AS DOUBLE) "
+            "END), 1) AS rain_past_24h_mm, ROUND(SUM(CAST(r.hourly.precipitation[i] AS DOUBLE)), 1) AS rain_past_7d_mm, "
+            f"MAX(t) AS last_hour FROM veda_wx.om_rain_{scenario} r LATERAL VIEW posexplode(r.hourly.time) h AS i, t "
+            f"WHERE t > '{hour(myt - timedelta(days=7))}' AND t <= '{hour(myt)}' GROUP BY COALESCE(r.location_id, 0)")
+    PURPOSES[levels] = f"replay {scenario}: gauge levels up to the replay time"
+    PURPOSES[rain] = f"replay {scenario}: archive rain up to the replay time"
+    return {"scenario": scenario, "levels": levels, "rain": rain}
+
+
+def _true(value):
+    """A boolean that may arrive as text from Zetaris ('true' / 'false')."""
+    return value is True or str(value).strip().lower() in ("true", "t", "1")
+
+
+def _band(level, attrs):
+    """The JPS band for a level, from the gauge's thresholds (same rule as the river_status_latest view)."""
+    for key, band in (("danger_m", "danger"), ("warning_m", "warning"), ("alert_m", "alert"), ("normal_m", "normal")):
+        if attrs.get(key) is not None and level >= attrs[key]:
+            return band
+    return "below_normal" if attrs.get("normal_m") is not None else "unknown"
+
+
+def _change(rows, latest, hours):
+    """Level change against the newest row at least `hours` older (within one more hour) - like the view."""
+    t = latest["t"]
+    earlier = [r for r in rows if t - timedelta(hours=hours + 1) < r["t"] <= t - timedelta(hours=hours)]
+    return round(latest["level_m"] - earlier[-1]["level_m"], 2) if earlier else None
+
+
+def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
+    """The replay's facts: gauge levels (reported or reconstructed, each with its label) and past rain - all
+    stamped and cut at the replay time. No MetMalaysia forecast or warnings: data.gov.my keeps no 2024 archive."""
+    rows, qh = _sql(sqls["levels"], agent, PURPOSES[sqls["levels"]], results)
+    by = {}
+    for r in rows:
+        by.setdefault(r["station_key"], []).append({**r, "t": datetime.fromisoformat(
+            _utc_iso(r["observed_at"]).replace("Z", "+00:00"))})
+    n, unhealthy = 0, {}
+    for key, readings in by.items():
+        latest = readings[-1]
+        ent = world.entity(station_id(key)) or {"attrs": {}}
+        g = {"level_m": latest["level_m"], "change_1h_m": _change(readings, latest, 1),
+             "change_3h_m": _change(readings, latest, 3), "danger_m": ent["attrs"].get("danger_m")}
+        health = check("jps_levels", g) if check else None
+        ok = not health or health.get("ok", True)
+        if not ok:
+            unhealthy[key] = health
+        src = _src(_utc_iso(latest["observed_at"]), qh, "veda_pg.replay_levels", agent, run_id, "replay", health)
+        src["replay"] = {"kind": latest["kind"], "label": latest["label"],    # Zetaris returns booleans as text
+                         "time_exact": all(_true(r["time_exact"]) for r in readings[-4:])}
+        sid = station_id(key)
+        world.assert_fact(sid, "water_level_m", latest["level_m"], confidence=0.7 if ok else 0.2, source=src)
+        world.assert_fact(sid, "band", _band(latest["level_m"], ent["attrs"]), confidence=0.7, source=src)
+        for pred in ("change_1h_m", "change_3h_m"):
+            if g[pred] is not None:
+                world.assert_fact(sid, pred, g[pred], confidence=0.6, source=src)
+        n += 1
+    rain, qh_r = _sql(sqls["rain"], agent, PURPOSES[sqls["rain"]], results)
+    by_loc = {r["location_id"]: r for r in rain}
+    places, _ = _sql(PLACES_SQL, agent, "world: places and their gauges", results)
+    at_iso = at.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    for pl in {r["place_id"]: r for r in places}.values():
+        r = by_loc.get(pl["rain_location_id"])
+        if not r:
+            continue
+        value = {"rain_past_24h_mm": r["rain_past_24h_mm"], "rain_past_7d_mm": r["rain_past_7d_mm"],
+                 "rain_next_24h_mm": None, "rain_next_72h_mm": None, "max_prob_next_24h_pct": None,
+                 "rain_point": pl["rain_location_id"]}
+        rsrc = _src(at_iso, qh_r, f"veda_wx.om_rain_{sqls['scenario']}", agent, run_id,
+                    "open_meteo_archive", check("open_meteo", value) if check else None)
+        world.assert_fact(place_id(pl["place_id"]), "rain_mm", value, confidence=0.7, source=rsrc)
+    return {"gauges": n, "places": len(by_loc), "unhealthy": unhealthy}
 
 NETWORK_SQL = [STATIONS_SQL, LINKS_SQL, PLACES_SQL, PEAKS_SQL]
 READINGS_SQL = [READING_TIMES_SQL, GAUGE_STATUS_SQL, RAIN_WINDOW_SQL, PLACE_INPUTS_SQL]

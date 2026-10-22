@@ -152,3 +152,13 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **Rain:** `setup_wx.py` adds the Zetaris REST table `veda_wx.om_rain_nov2024` = Open-Meteo **archive** (ERA5), hourly rain at the 7 rain points, 15 Nov – 2 Dec 2024 (host `archive-api.open-meteo.com` added to the REST allow-list). Hourly values are the rain of the hour ending at that time; a replay uses only hours up to its replay time (no hindsight).
 - **Failure behaviour:** any anchor problem → nothing is written, the problems are printed and traced; the scenario is replaced in one transaction.
 
+## Flood replay mode (B-70) — `python run.py --replay nov2024 --at "2024-11-26 18:00" "<question>"`
+- **What it does:** runs the full agent loop as if it were the replay time, on real Nov 2024 data. Scenes: 26 Nov 18:00 (Rantau Panjang 8.41 m, Warning → PREPARE) and 27 Nov 19:30 (10.94 m, Danger → ACT); verdicts come from the same rules at run time.
+- **No hindsight:** the clock is the replay time; `veda_ingest.replay_sqls()` cuts the gauge rows (`observed_at <= …`) and the hourly archive rain (`t <= …`, past 24 h / 7 days) **in the SQL**, so later data never enters VEDA; historic peaks dated at or after the replay time are hidden (`forecast_agent.peak_time`); today's MetMalaysia forecast and warnings are not used ("not available in replay: data.gov.my keeps no 2024 archive"); no forecast refresh. The data.gov.my /flood-warning stale check still runs and is naturally stale.
+- **Separate world:** a fresh in-memory World Model per replay run — 2024 facts never mix with today's.
+- **Labels:** the answer's first line is always the scenario title "REPLAY · Nov 2024"; the river line is followed by the reading's label (EN in the data, rendered in BM for BM answers); the card adds "Compared with 2014: …" and "Rain past 24 h … (Open-Meteo archive); no rain forecast in a replay". The Critic's code checks require "REPLAY" in a replay answer.
+- **Confidence:** a trend built on readings with approximate times is held at **medium** (Husaini 22 Oct night).
+- **Budget:** `REPLAY_BUDGET_S` = 240 s, traced on the `System | replay` line ("replay budget 240 s"); live runs stay 150 s.
+- **Offline:** both scenes' Zetaris results are recorded as SAMPLE_MODE fixtures (`tests/test_replay.py`).
+- **Known limit:** the straight-line 24 h projection on a steeply rising river overshoots (27 Nov: 13.75–14.54 m, while the river peaked ~11.4 m on 28–29 Nov) — the rule itself is review-pack question A5.
+

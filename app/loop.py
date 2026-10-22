@@ -49,19 +49,30 @@ def open_world(run_id):
 
 
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
-        on_step=None):
+        on_step=None, replay=None, at=None):
     """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, card, reviews, timing,
     trace}.
-    budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live. Never raises for data or model problems; those end up in the
+    budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live.
+    replay='nov2024', at=<aware datetime> (B-70): a flood replay - the clock is set to `at`, every data source is cut
+    there, the World Model is a fresh in-memory one, the budget is REPLAY_BUDGET_S. Never raises for data or model problems; those end up in the
     answer and the trace."""
     run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet, listener=on_step)
     t0 = time.monotonic()
     own_world = world is None
+    if replay:
+        if replay not in config.REPLAYS or at is None:
+            raise ValueError(f"unknown replay {replay!r} or no replay time")
+        now, budget_s = at, budget_s or REPLAY_BUDGET_S
+        world = world or WorldModel()               # 2024 facts never mix with today's World Model
+        trace.step("System", "replay", input_summary=replay,
+                   output_summary=f"{config.REPLAYS[replay]['title']} at {at.astimezone(config.MYT):%d %b %Y %H:%M} MYT",
+                   decision=f"replay budget {REPLAY_BUDGET_S} s; all data cut at the replay time; reconstructed levels "
+                            "are labelled", details={"scenario": replay, "at": at.isoformat()})
     world = world or open_world(run_.run_id)
     state, p, evidence, fc, card, answer, status = "plan", None, None, None, None, None, "success"
     reviews, timing, budget = [], {}, None
     pool = ThreadPoolExecutor(max_workers=1)
-    pre = pool.submit(trace.bind(data_agent.prefetch), world, now)        # world refresh while the Coordinator plans
+    pre = pool.submit(trace.bind(data_agent.prefetch), world, now, replay)    # world refresh while code routes
 
     def elapsed():
         return time.monotonic() - t0

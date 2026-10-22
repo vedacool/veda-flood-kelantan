@@ -60,10 +60,11 @@ def test_english_card_reads_in_order():
     assert lines[1] == "Rantau Panjang: WATCH - JPS level Alert"
     assert lines[2] == ("River: [JPS reading] m at 22 Oct 20:45 (Sg. Golok di Rantau Panjang (F1)); [distance] above Alert (7 m), "
                         "[distance] below Danger (9 m), [distance] below the Nov 2024 (29 Nov) peak (11.43 m).")
-    assert lines[3] == "Next 24 h: 6.9-7.4 m (straight-line trend). Confidence: high."
-    assert lines[4] == "Rain next 24 h: 10.9 mm (Open-Meteo)."
-    assert lines[5] == "Sources: JPS 16 min ago; Open-Meteo 2 h ago; MetMalaysia forecast for today."
-    assert lines[6] == "Excluded: data.gov.my flood-warning (stale, last update 2024-02-23)."
+    assert lines[3] == "Compared with 2014: 3.75 m below the Dec 2014 peak here (10.84 m)."
+    assert lines[4] == "Next 24 h: 6.9-7.4 m (straight-line trend). Confidence: high."
+    assert lines[5] == "Rain next 24 h: 10.9 mm (Open-Meteo)."
+    assert lines[6] == "Sources: JPS 16 min ago; Open-Meteo 2 h ago; MetMalaysia forecast for today."
+    assert lines[7] == "Excluded: data.gov.my flood-warning (stale, last update 2024-02-23)."
 
 
 def test_malay_card_reads_in_order():
@@ -71,7 +72,8 @@ def test_malay_card_reads_in_order():
     assert lines[0].startswith("APA PERLU DIBUAT SEKARANG: Semak semula dalam 3 jam")
     assert lines[1] == "Rantau Panjang: WATCH - paras JPS Waspada"
     assert "[distance] di atas Waspada (7 m), [distance] di bawah Bahaya (9 m)" in lines[2]
-    assert lines[3] == "24 jam akan datang: 6.9-7.4 m (unjuran garis lurus). Keyakinan: tinggi."
+    assert lines[3] == "Berbanding 2014: 3.75 m di bawah puncak Dis 2014 di sini (10.84 m)."
+    assert lines[4] == "24 jam akan datang: 6.9-7.4 m (unjuran garis lurus). Keyakinan: tinggi."
     assert lines[-1].startswith("Diketepikan: data.gov.my flood-warning (lapuk")
 
 

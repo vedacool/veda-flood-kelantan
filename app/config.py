@@ -39,6 +39,11 @@ def secret_env_values(environ=None, min_len=8):
             if k.startswith(SECRET_ENV_PREFIXES) and SECRET_ENV_KEY.search(k) and len(v.strip()) >= min_len]
 
 
+# --- Flood replays (B-70) -------------------------------------------------------------------------------------
+# A replay always says its title at the top of the answer (Husaini 22 Oct night). default_at = the first scene.
+REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "default_at": "2024-11-26 18:00"}}
+
+
 # --- Personal data (B-56: no personal data in traces) --------------------------------------------------------
 # Malaysian phone numbers and MyKad (IC) numbers typed into a question are masked in every trace line. Boundaries
 # (no letter/digit/_/. on either side) keep gauge ids (5521044_DKKI0014), run ids, timestamps and coordinates intact.

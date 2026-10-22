@@ -2,9 +2,12 @@
 
     python run.py "Is Rantau Panjang at risk?"            short live progress, then the answer
     python run.py --verbose "Is Rantau Panjang at risk?"  every trace line as a sentence
+    python run.py --replay nov2024 --at "2024-11-26 18:00" "Rantau Panjang selamat ke?"   flood replay (B-70)
 """
+import argparse
 import sys
 import time
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -32,6 +35,8 @@ def progress_printer():
             line = f"  review: {out}"
         elif a == "budget":
             line = f"  ! {out}"
+        elif a == "replay":
+            line = f"  {out} ({rec.get('decision')})"
         elif rec["status"] == "failed" and a not in ("run_end",):
             line = f"  ! {rec['agent_name']}: {out}"
         if line:
@@ -42,9 +47,19 @@ def progress_printer():
 def main(argv):
     load_dotenv(config.ROOT / ".env")
     from app import loop
-    verbose = "--verbose" in argv
-    question = " ".join(a for a in argv[1:] if a != "--verbose") or "Is Rantau Panjang at risk of flooding?"
-    result = loop.run(question, quiet=not verbose, on_step=None if verbose else progress_printer())
+    ap = argparse.ArgumentParser(description="Ask VEDA one question")
+    ap.add_argument("question", nargs="*")
+    ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--replay", choices=sorted(config.REPLAYS), help="replay a past flood (B-70)")
+    ap.add_argument("--at", help="replay time in MYT, 'YYYY-MM-DD HH:MM' (default: the scenario's first scene)")
+    args = ap.parse_args(argv[1:])
+    question = " ".join(args.question) or "Is Rantau Panjang at risk of flooding?"
+    at = None
+    if args.replay:
+        at = datetime.strptime(args.at or config.REPLAYS[args.replay]["default_at"], "%Y-%m-%d %H:%M").replace(
+            tzinfo=config.MYT)
+    result = loop.run(question, quiet=not args.verbose, on_step=None if args.verbose else progress_printer(),
+                      replay=args.replay, at=at)
     answer = result["answer"]
     print("\n" + "=" * 72)
     print(trace.redact(answer["text"]))

@@ -25,7 +25,7 @@ from app.adapters import zetaris
 from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
 from app.engines.world_model.veda_ingest import (NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
-                                                 ingest_readings, place_id)
+                                                 ingest_readings, ingest_replay, place_id, replay_sqls)
 
 AGENT = "Data & Reconciler"
 SOURCES = ("jps_levels", "open_meteo", "mygov_forecast", "mygov_warning")   # what a plan may ask for
@@ -43,6 +43,7 @@ ABOVE_DANGER_MAX_M = 15.0         # Dec 2014: Kuala Krai peaked ~9 m above dange
 MAX_JUMP_1H_M = 3.0               # tentative: a bigger rise or fall in one hour is treated as a bad reading
 MAX_RAIN_24H_MM = 1000.0
 AGREE_M = 0.05                    # two sources within 5 cm of each other agree
+NOT_IN_REPLAY = "not available in replay: data.gov.my keeps no 2024 archive"
 
 CLOCK_SQL = "SELECT current_timestamp() AS now_utc"
 FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime "
@@ -329,21 +330,26 @@ def _forecast_age(world, key, clock):
     return _age_since(clock, _last_refresh(world, key))
 
 
-def prefetch(world, now=None):
+def prefetch(world, now=None, replay=None):
     """The part of gathering that needs no plan: refresh an old forecast table, then fetch the network, the
     readings, the data clock and /flood-warning AT THE SAME TIME and load them into the World Model. The loop runs
     this while the Coordinator is still planning (B-17). Returns {clock, notes, results, events_added} or
-    {error, clock, notes}. Never raises for a data problem."""
+    {error, clock, notes}. Never raises for a data problem.
+    replay = a scenario (B-70) with now = the replay time: the gauge rows and archive rain are cut at that time in
+    the SQL, and no MetMalaysia data is used (data.gov.my keeps no 2024 archive - today's would be anachronistic)."""
     run = trace.current_run()
     run_id = run.run_id if run else None
     events_before = len(world.store.events)
-    notes = [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n]
-    sqls = NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL])
+    notes = [] if replay else [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n]
+    rsql = replay_sqls(replay, now) if replay else None
+    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
+            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL]))
     try:
         results = fetch_all(sqls, AGENT, optional={FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL})
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
-        counts = ingest_readings(world, AGENT, run_id, check=check, results=results)
+        counts = (ingest_replay(world, AGENT, run_id, rsql, now, check=check, results=results) if replay else
+                  ingest_readings(world, AGENT, run_id, check=check, results=results))
     except zetaris.ZetarisError as e:
         trace.step(AGENT, "world.write", output_summary=f"{e.kind}: {e}", status="failed", source="zetaris",
                    decision="Could not load the world from Zetaris -> no evidence; the answer must say so")
@@ -354,7 +360,8 @@ def prefetch(world, now=None):
                source="world_model", decision=(f"Wrote {added} new event(s) to the World Model" if added
                                                else "Nothing changed since the last run -> no new events"),
                details={"network": net, "unhealthy": counts["unhealthy"], "queries_in_parallel": len(sqls)})
-    return {"clock": clock, "notes": notes, "results": results, "events_added": added}
+    return {"clock": clock, "notes": notes, "results": results, "events_added": added,
+            "replay": {"scenario": replay, "at": _iso(clock)} if replay else None}
 
 
 def gather(plan, world, now=None, pre=None):
@@ -395,8 +402,16 @@ def gather(plan, world, now=None, pre=None):
         sources["jps_levels"] = {"status": status, "note": (
             f"{len(gauges)} gauge(s); " + (f"stale or missing: {', '.join(stale)}; " if stale else "")
             + (f"failed checks: {', '.join(bad)}" if bad else "all readings passed the checks"))}
+    replay = pre.get("replay")
     for key, item in (("open_meteo", ctx.get("rain")), ("mygov_forecast", ctx.get("met_forecast"))):
         if key not in wanted:
+            continue
+        if replay and key == "open_meteo" and item is not None:
+            item["age_minutes"], item["freshness"] = None, "archive"
+            sources[key] = {"status": "ok", "note": "Open-Meteo archive: real hourly rain up to the replay time"}
+            continue
+        if replay:
+            sources[key] = {"status": "skipped", "note": NOT_IN_REPLAY}
             continue
         if item is None:
             sources[key] = {"status": "failed", "note": "no data for this place"}
@@ -409,7 +424,9 @@ def gather(plan, world, now=None, pre=None):
         sources[key] = {"status": status, "note": f"refreshed {age} min ago ({item['freshness']})"
                         if age is not None else "refresh time unknown"}
     warnings = None
-    if "mygov_warning" in wanted:
+    if "mygov_warning" in wanted and replay:
+        sources["mygov_warning"] = {"status": "skipped", "note": NOT_IN_REPLAY}
+    elif "mygov_warning" in wanted:
         warnings = met_warnings(pre.get("results", {}).get(WARNING_SQL), plan["place"], clock, world, run_id)
         sources["mygov_warning"] = {"status": {"ok": "ok", "stale": "stale"}.get(warnings["status"], "failed"),
                                     "note": warnings["note"]}
@@ -444,5 +461,5 @@ def gather(plan, world, now=None, pre=None):
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
-            "met_warnings": warnings,
+            "met_warnings": warnings, "replay": replay,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

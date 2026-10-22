@@ -1,0 +1,319 @@
+{
+ "sql": "SELECT station_key, observed_at, level_m, kind, time_exact, label FROM veda_pg.replay_levels WHERE scenario = 'nov2024' AND observed_at <= TIMESTAMP '2024-11-27 11:30:00' ORDER BY station_key, observed_at",
+ "query_hash": "fcc308cd73f834c5",
+ "recorded_at": "2026-10-22T15:37:40Z",
+ "columns": [
+  "station_key",
+  "observed_at",
+  "level_m",
+  "kind",
+  "time_exact",
+  "label"
+ ],
+ "rows": [
+  [
+   "_DPMS0003",
+   "2024-11-26 00:00:00.0",
+   "8.27",
+   "reported",
+   "false",
+   "reported JPS reading (Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)); time approximate"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 01:00:00.0",
+   "8.28",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 02:00:00.0",
+   "8.3",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 03:00:00.0",
+   "8.31",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 04:00:00.0",
+   "8.33",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 05:00:00.0",
+   "8.34",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 06:00:00.0",
+   "8.35",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 07:00:00.0",
+   "8.37",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 08:00:00.0",
+   "8.38",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 09:00:00.0",
+   "8.4",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.27 m (26 Nov ~08:00) and 8.41 m (26 Nov ~18:00)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 10:00:00.0",
+   "8.41",
+   "reported",
+   "false",
+   "reported JPS reading (Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)); time approximate"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 11:00:00.0",
+   "8.51",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 12:00:00.0",
+   "8.61",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 13:00:00.0",
+   "8.71",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 14:00:00.0",
+   "8.81",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 15:00:00.0",
+   "8.91",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 16:00:00.0",
+   "9.01",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 17:00:00.0",
+   "9.1",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 18:00:00.0",
+   "9.2",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 19:00:00.0",
+   "9.3",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 20:00:00.0",
+   "9.4",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 21:00:00.0",
+   "9.5",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 22:00:00.0",
+   "9.6",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-26 23:00:00.0",
+   "9.7",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 00:00:00.0",
+   "9.8",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 01:00:00.0",
+   "9.9",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 02:00:00.0",
+   "10.0",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 03:00:00.0",
+   "10.1",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 04:00:00.0",
+   "10.2",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 05:00:00.0",
+   "10.3",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 06:00:00.0",
+   "10.39",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 07:00:00.0",
+   "10.49",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 08:00:00.0",
+   "10.59",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 09:00:00.0",
+   "10.69",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 10:00:00.0",
+   "10.79",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 11:00:00.0",
+   "10.89",
+   "reconstructed",
+   "false",
+   "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+  ],
+  [
+   "_DPMS0003",
+   "2024-11-27 11:30:00.0",
+   "10.94",
+   "reported",
+   "true",
+   "reported JPS reading (Kosmo, 27 Nov 2024 20:19 (citing Infobanjir / JPS))"
+  ],
+  [
+   "_DTMH0008",
+   "2024-11-26 06:30:00.0",
+   "25.15",
+   "reported",
+   "true",
+   "reported JPS reading (Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS))"
+  ]
+ ]
+}

@@ -12,7 +12,7 @@ numbers that are in the card (`explanation_problem`). Advice texts are TENTATIVE
 import re
 from datetime import datetime
 
-from app.config import MYT
+from app.config import MYT, REPLAYS
 
 ADVICE = {  # Husaini 22 Oct night, tentative - Dr Ariff to check (docs/review_pack_ariff.md section G)
     "NORMAL": {"en": "No action needed. Keep an eye on JPS updates.",
@@ -47,6 +47,12 @@ T = {  # fixed wording, BM + EN
     "peak": {"en": "the {event} peak", "ms": "puncak {event}"},
     "next24": {"en": "Next 24 h", "ms": "24 jam akan datang"},
     "rain": {"en": "Rain next 24 h: {mm} mm (Open-Meteo)", "ms": "Hujan 24 jam akan datang: {mm} mm (Open-Meteo)"},
+    "rain_past": {"en": "Rain past 24 h: {mm} mm (Open-Meteo archive); no rain forecast in a replay",
+                  "ms": "Hujan 24 jam lepas: {mm} mm (arkib Open-Meteo); tiada ramalan hujan dalam ulang tayang"},
+    "vs2014": {"en": "Compared with 2014: {d} m {rel} the Dec 2014 peak here ({p} m)",
+               "ms": "Berbanding 2014: {d} m {rel} puncak Dis 2014 di sini ({p} m)"},
+    "archive": {"en": "Open-Meteo archive (real rain up to the replay time)",
+                "ms": "arkib Open-Meteo (hujan sebenar sehingga masa ulang tayang)"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
     "tidal": {"en": "trend not projected (tide-influenced gauge)", "ms": "trend tidak diunjurkan (stesen dipengaruhi pasang surut)"},
     "confidence": {"en": "Confidence", "ms": "Keyakinan"},
@@ -102,10 +108,13 @@ def build(plan, evidence, forecast):
             "thresholds": {}, "rain_24h_mm": None,
             "range_24h": None, "tidal": bool(trend.get("tide_influenced")), "peak": None, "upstream": [],
             "warnings": [w["heading"] for w in ((evidence or {}).get("met_warnings") or {}).get("active", [])],
-            "sources": [], "excluded": None, "conflicts": []}
+            "sources": [], "excluded": None, "conflicts": [], "vs_2014": None, "rain_past_24h_mm": None,
+            "replay": (REPLAYS.get(((evidence or {}).get("replay") or {}).get("scenario")) or {}).get("title"),
+            "reading_label": None}
     if main and main["level_m"] is not None and verdict != "INSUFFICIENT_DATA":
         th = main["thresholds"]
         card["gauge"] = {"name": main["name"], "level_m": main["level_m"], "read_at": _hhmm(main["observed_at"])}
+        card["reading_label"] = ((main.get("provenance") or {}).get("replay") or {}).get("label")
         for key in ("alert", "danger"):
             if th.get(f"{key}_m") is not None:
                 card["comparison"][key] = round(main["level_m"] - th[f"{key}_m"], 2)
@@ -117,6 +126,9 @@ def build(plan, evidence, forecast):
             top = max(hist, key=lambda h: h["peak_m"])
             card["peak"] = {"event": top["event"], "peak_m": top["peak_m"],
                             "diff_m": round(main["level_m"] - top["peak_m"], 2)}
+        y2014 = next((h for h in hist if h["event"] == "Dec 2014"), None)
+        if y2014 and y2014 is not top:            # the explicit "bigger than 2014?" line (B-70)
+            card["vs_2014"] = {"peak_m": y2014["peak_m"], "diff_m": round(main["level_m"] - y2014["peak_m"], 2)}
     for u in fc.get("upstream", []):
         if u.get("band") in ("alert", "warning", "danger") or u.get("rising"):
             card["upstream"].append({"gauge": u["gauge"], "band": u.get("band"), "rising": u.get("rising"),
@@ -124,7 +136,10 @@ def build(plan, evidence, forecast):
     if main and main["age_minutes"] is not None:
         card["sources"].append(("jps", main["age_minutes"]))
     rain = ctx.get("rain")
-    if rain:
+    if rain and card["replay"]:
+        card["sources"].append(("archive", None))
+        card["rain_past_24h_mm"] = rain.get("rain_past_24h_mm")
+    elif rain:
         card["sources"].append(("open_meteo", rain.get("age_minutes")))
         card["rain_24h_mm"] = rain.get("rain_next_24h_mm")
     if ctx.get("met_forecast"):
@@ -136,6 +151,19 @@ def build(plan, evidence, forecast):
     return card
 
 
+LABEL_BM = (("reconstructed between the verified JPS readings", "dibina semula antara bacaan JPS yang disahkan"),
+            ("reported JPS reading", "bacaan JPS yang dilaporkan"), ("; time approximate", "; masa anggaran"),
+            (" and ", " dan "))
+
+
+def label_text(label, lang):
+    """A replay reading's label (written in English in the data) in the answer's language - same facts."""
+    if lang == "ms":
+        for en, ms in LABEL_BM:
+            label = label.replace(en, ms)
+    return label
+
+
 def _age(minutes, lang):
     if minutes is None:
         return T["age_unknown"][lang]
@@ -145,7 +173,7 @@ def _age(minutes, lang):
 def render(card, lang, explanation=None, low_confidence=False):
     """Plain text for WhatsApp / SMS in 'en' or 'ms'. Only `explanation` comes from a model."""
     lang = lang if lang in ("en", "ms") else "en"
-    out = []
+    out = [card["replay"]] if card.get("replay") else []          # a replay always says so first
     if low_confidence:
         out.append(T["low_conf"][lang])
     out.append(f"{T['action'][lang]}: {card['action'][lang]}")
@@ -165,6 +193,12 @@ def render(card, lang, explanation=None, low_confidence=False):
                          f"{T['peak'][lang].format(event=p['event'])} ({_num(p['peak_m'])} m)")
         out.append(f"{T['river'][lang]}: {_num(g['level_m'])} m {T['at'][lang]} {g['read_at']} ({g['name']})"
                    + ("; " + ", ".join(parts) if parts else "") + ".")
+        if card.get("reading_label"):
+            out.append(f"({label_text(card['reading_label'], lang)})")
+        if card.get("vs_2014"):
+            v = card["vs_2014"]
+            out.append(T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
+                                                rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + ".")
     elif card["verdict"] == "INSUFFICIENT_DATA":
         out.append(T["no_reading"][lang].capitalize() + ".")
     conf = T["conf_label"].get(card["confidence"], T["conf_label"]["low"])[lang]
@@ -177,6 +211,8 @@ def render(card, lang, explanation=None, low_confidence=False):
                    + f"{T['confidence'][lang]}: {conf}.")
     if card.get("rain_24h_mm") is not None:
         out.append(T["rain"][lang].format(mm=_num(card["rain_24h_mm"])) + ".")
+    if card.get("rain_past_24h_mm") is not None:
+        out.append(T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"])) + ".")
     if explanation:
         out.append(explanation.strip())
     for u in card.get("upstream", []):
@@ -188,8 +224,9 @@ def render(card, lang, explanation=None, low_confidence=False):
         out.append(f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}.")
     for w in card.get("warnings", []):
         out.append(f"{T['warning'][lang]}: {w}.")
-    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None}
-    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T["met_today"][lang] for k, m in card.get("sources", [])]
+    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None}
+    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T["archive" if k == "archive" else "met_today"][lang]
+            for k, m in card.get("sources", [])]
     if srcs:
         out.append(f"{T['sources'][lang]}: " + "; ".join(srcs) + ".")
     if card.get("excluded"):

@@ -143,4 +143,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Replay rain = Open-Meteo archive, HOURLY, cut at the replay time (a daily total would include rain after the replay time) | Husaini 22 Oct night |
 | 2026-10-22 | Nemotron calls are streamed (`stream: true`), with a hard total time limit per call on VEDA's side. Measured 3 runs each: draft non-stream 2/3 vs stream 3/3; Critic full input 0/3 (non-stream and stream), small input non-stream 2/3, small input stream 3/3 (33.8 / 49.4 / 115.4 s) | Husaini 22 Oct night |
 | 2026-10-22 | The Critic model gets the small input: the answer text + "every line except the explanation was written by code from verified data" + the card + code findings + Zetaris re-check (the code checks already hold each card line to the evidence) | Husaini 22 Oct night |
+| 2026-10-22 | Replay = clock set to the replay time, every source cut in SQL at that time, historic peaks after it hidden, no 2026 MetMalaysia data, fresh in-memory World Model, "REPLAY · Nov 2024" first line, labels on every replay reading, 2014 comparison line, medium confidence on approximate times, 240 s budget | Husaini 22 Oct night (B-70) |
+| 2026-10-22 | Zetaris returns Postgres booleans as text ("false"): parse explicitly (`veda_ingest._true`) - `bool("false")` is True | B-70 (bug found in live check) |
 
