@@ -1,15 +1,20 @@
 # Weekly update proposals as pull requests - nothing changes until a PR is reviewed and merged.
 # Policy (DECISIONS): prefer releases that are at least ~2 weeks old unless the update is a security fix.
+# `cooldown` makes Dependabot wait 14 days after a release before proposing it (security updates are not delayed).
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 5
 
   - package-ecosystem: pip
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 5
