@@ -85,4 +85,16 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Until B-18, SAMPLE_MODE (and any Nightshift outage) uses the code-written plan and answer — real logic over the same evidence, traced as `fallback` | B-12 |
 | 2026-10-22 | Loop skeleton logs forecast / critique as "skipped — not built yet"; without the Forecast agent the answer gives no verdict | B-12 |
 | 2026-10-22 | Question radar stores intent tags only (a run context in the World Model), never the question text | B-12 |
+| 2026-10-22 | Plan change log (22 Oct night, reconciliation with the code) adopted in the repo — the rows below | Husaini 22 Oct |
+| 2026-10-22 | The code agent is called **"Data & Reconciler"** in traces and docs; the file stays `app/agents/data_agent.py` | Husaini 22 Oct |
+| 2026-10-22 | The quick path must really skip steps (not just be labelled quick) | Husaini 22 Oct → B-17 |
+| 2026-10-22 | Time budget: quick ≤ 30 s, full ≤ 90 s; per-call timeouts Zetaris 30 s, Nightshift 60 s (were 120 s / 180 s) | Husaini 22 Oct → B-17 |
+| 2026-10-22 | B-70 replay uses the verified Rantau Panjang peak 10.94 m (27 Nov 2024 19:30), never the unverified 10.97 m | Husaini 22 Oct |
+| 2026-10-22 | Agents never create or replace Zetaris views (guard stays); self-growing = new REST tables + World Model candidates | Husaini 22 Oct |
+| 2026-10-22 | Phone and IC (MyKad) numbers are masked in every trace line (`[phone]`, `[IC]`) | Husaini 22 Oct (B-56) |
+| 2026-10-22 | Conflicts between sources: reliability first, then recency; anything unresolved goes to `conflicts_unresolved` in the evidence and the answer | Husaini 22 Oct → B-14/B-21 |
+| 2026-10-22 | Cursor delegation follows CLAUDE.md rule 13 (`--trust`, no `--force`, `cursor-agent(B-xx): …`) — supersedes plan §11 wording | Husaini 22 Oct |
+| 2026-10-22 | No direct NVIDIA fallback — Nightshift is the only AI path | Husaini 22 Oct |
+| 2026-10-22 | Python 3.13 everywhere, Dockerfile on `python:3.13-slim` | Husaini 22 Oct → B-19 |
+| 2026-10-22 | Place→gauge links are hand-checked edges (`controlled_by`, `also_controlled_by`, `sentinel_for`, `upstream_of`, `travel_time`), not nearest-distance | Husaini 22 Oct |
 
