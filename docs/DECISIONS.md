@@ -20,3 +20,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Every commit message carries a backlog ID (`B-xx` / `S-xx`) | B-65 (commit-msg hook) |
 | 2026-10-22 | Trace line = FAQ fields + `run_id`, `step`, `decision`, `source`, `mode`, `duration_ms`, `details`; fixed status set; JSON in UTC, sentences in local time | B-02 |
 | 2026-10-22 | Trace redacts secrets itself (patterns + env secret values) — callers never need to remember | B-02 |
+| 2026-10-22 | Each lane has its own `meterless-app` header (`veda-fast`, `veda-deep`, from `.env`) | B-03 · receipt shows Nightshift binds routing mode per app (`app_policy.bound_mode`) |
+| 2026-10-22 | Default `max_tokens` 2000; `empty_response` → one retry with double budget | B-03 probe: Lightning uses ~1.1–1.4k hidden tokens even with thinking off |
+| 2026-10-22 | Adapter refuses live calls in SAMPLE_MODE until the SampleGenerator lands | B-03 → B-18 |
