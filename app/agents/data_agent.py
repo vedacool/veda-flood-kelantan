@@ -215,6 +215,11 @@ def reconcile(quantity, candidates, agree_within=AGREE_M):
     nor time can decide - flag, don't guess."""
     shown = [{**c, "at": _iso(c["at"]) if c["at"] else None} for c in candidates]
     entry = {"quantity": quantity, "candidates": shown}
+    candidates = [c for c in candidates if isinstance(c["value"], (int, float)) and not isinstance(c["value"], bool)]
+    if len(candidates) < 2:                 # a source without a value cannot disagree
+        only = candidates[0] if candidates else None
+        return {**entry, "chosen": only and only["source"], "value": only and only["value"], "rule": "single",
+                "reason": "only one source has a value"}
     values = [c["value"] for c in candidates]
     best_rel = max((c["reliability"] or 0) for c in candidates)
     top = [c for c in candidates if (c["reliability"] or 0) == best_rel]

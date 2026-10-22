@@ -29,6 +29,8 @@ SAFETY = {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
     "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
 }
+REVISE_NOTE = ("\nThis is a REVISION: the Critic rejected previous_draft. Fix every item in critic_problems, "
+               "follow critic_fix, keep everything else that was correct.")
 VERDICT_WORDS = re.compile(r"\b(NORMAL|WATCH|PREPARE|ACT|INSUFFICIENT[ _]DATA)\b")
 
 PLAN_SYSTEM = (
@@ -164,7 +166,8 @@ def _forecast_facts(fc):
     return {"verdict": fc["verdict"], "jps_level_name": fc.get("level_name"),
             "confidence": {"label": fc["confidence"]["label"], "score": fc["confidence"]["score"]},
             "why": [t["reason"] for t in fc["triggers"]], "mode": fc["mode"],
-            "projection_m": (main or {}).get("projection_m"), "hours_to": (main or {}).get("hours_to"),
+            "projection_m": (main or {}).get("projection_m"),
+            "hours_to": {k: v for k, v in ((main or {}).get("hours_to") or {}).items() if v["earliest"] > 0},
             "upstream": [u for u in fc.get("upstream", []) if u.get("rising") or u.get("band") in
                          ("alert", "warning", "danger")],
             "history": fc.get("history"), "bigger_than_2014": fc.get("bigger_than_2014")}
@@ -281,17 +284,22 @@ def fallback_answer(facts):
     return " ".join(lines)
 
 
-def draft(question, p, evidence, forecast=None, llm=None, budget_s=None):
-    """Answer for the user -> {'text', 'language', 'drafted_by', 'safety_line'}. Never raises."""
+def draft(question, p, evidence, forecast=None, llm=None, budget_s=None, feedback=None, previous=None):
+    """Answer for the user -> {'text', 'language', 'drafted_by', 'safety_line'}. Never raises.
+    feedback = the Critic's review of `previous` (revise round): its problems and fix go to the model."""
     llm = llm or nightshift.chat
     facts = facts_for_model(evidence, forecast)
     language = p.get("question_language", "en")
     drafted_by, why, text = "llm", None, None
+    request = {"question": question, "language": language, "intent": p["intent"], "user_type": p["user_type"],
+               "evidence": facts}
+    if feedback:                    # revise after a Critic rejection: the previous draft + what to fix
+        request["previous_draft"] = (previous or {}).get("text")
+        request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
+        request["critic_fix"] = feedback.get("fix")
     try:
-        r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM},
-                         {"role": "user", "content": json.dumps({"question": question, "language": language,
-                                                                 "intent": p["intent"], "user_type": p["user_type"],
-                                                                 "evidence": facts}, ensure_ascii=False)}],
+        r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
+                         {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
                 agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=2000, budget_s=budget_s)
         text = (r.data or {}).get("answer") if isinstance(r.data, dict) else None
         problem = draft_problem(text, facts)
@@ -303,9 +311,23 @@ def draft(question, p, evidence, forecast=None, llm=None, budget_s=None):
         text, language = fallback_answer(facts), "en"
     answer = {"text": text.strip(), "language": language, "drafted_by": drafted_by,
               "safety_line": SAFETY.get(language, SAFETY["en"])}
-    trace.step(AGENT, "draft", input_summary=question, output_summary=answer["text"],
+    trace.step(AGENT, "revise" if feedback else "draft", input_summary=question, output_summary=answer["text"],
                status="success" if drafted_by == "llm" else "fallback", target_agent="Critic",
                decision=why or (f"Drafted from {len(facts['gauges'])} gauge(s), usable={facts['usable']}, "
                                 f"verdict={(facts['forecast'] or {}).get('verdict', 'none')}"),
-               details={"drafted_by": drafted_by})
+               details={"drafted_by": drafted_by, "revision": bool(feedback)})
+    return answer
+
+
+def low_confidence_answer(evidence, forecast, review):
+    """After the Critic's last rejection: the code-written answer, labelled low confidence. Built from the facts
+    only, so it passes the code checks by construction."""
+    facts = facts_for_model(evidence, forecast)
+    text = ("Low confidence: VEDA's reviewer did not approve the written answer, so this is the plain data summary. "
+            + fallback_answer(facts))
+    answer = {"text": text, "language": "en", "drafted_by": "fallback", "low_confidence": True,
+              "safety_line": SAFETY["en"]}
+    kinds = ", ".join(sorted({x["type"] for x in review.get("problems", [])}))
+    trace.step(AGENT, "final_answer", output_summary=text, status="fallback",
+               decision=f"Critic rejected {review.get('round')} time(s) ({kinds}) -> code-written answer, low confidence")
     return answer

@@ -19,7 +19,7 @@ GOOD_PLAN = {"intent": "risk_check", "user_type": "resident", "place_text": "Ran
              "reason": "River status and rain for Rantau Panjang."}
 
 
-def stub_llm(plan=None, answer=None, fail=False):
+def stub_llm(plan=None, answer=None, fail=False, review=None):
     """A stand-in for nightshift.chat: returns the given plan for the plan call and the answer for the draft."""
     calls = []
 
@@ -29,9 +29,13 @@ def stub_llm(plan=None, answer=None, fail=False):
             raise nightshift.NightshiftError("stub: Nightshift down")
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             data = plan
+        elif lane == "deep":                    # Critic: approve unless told otherwise
+            data = {"decision": review or "approve", "problems": [], "fix": ""}
         else:                                   # draft: state the Forecast agent's verdict unless told otherwise
             fc = json.loads(messages[1]["content"])["evidence"].get("forecast") or {}
-            data = {"answer": answer if answer is not None else f"Verdict: {fc.get('verdict', '')}."}
+            complete = (f"Verdict: {fc.get('verdict', '')} (JPS level {(fc.get('jps_level_name') or {}).get('en')}), "
+                        f"confidence {(fc.get('confidence') or {}).get('label')}. The data.gov.my source is stale.")
+            data = {"answer": answer if answer is not None else complete}
         return SimpleNamespace(data=data, text=json.dumps(data))
     llm.calls = calls
     return llm
@@ -213,12 +217,11 @@ def test_loop_runs_every_state_offline(offline):
     assert r["status"] == "success" and r["answer"]["drafted_by"] == "llm"
     assert r["forecast"]["verdict"] in r["answer"]["text"]
     states = [x["input_summary"] for x in lines(r["trace"]) if x["action"] == "state"]
-    assert states == ["plan", "gather", "forecast", "draft", "critique", "critique"]
-    skipped = [x for x in lines(r["trace"]) if x["action"] == "state" and x["status"] == "fallback"]
-    assert [x["target_agent"] for x in skipped] == ["Critic"]
+    assert states == ["plan", "gather", "forecast", "draft", "critique"]
+    assert r["answer"]["approved"] and r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"]
     agents = {x["agent_name"] for x in lines(r["trace"]) if x["action"] in ("world.read", "world.write")}
-    assert {"Coordinator", "Data & Reconciler", "Forecast"} <= agents          # B-57: three of four so far
-    assert [c["lane"] for c in llm.calls] == ["fast", "fast"]
+    assert agents == {"Coordinator", "Data & Reconciler", "Forecast", "Critic"}          # B-57: all four agents
+    assert [c["lane"] for c in llm.calls] == ["fast", "fast", "deep"]
 
 
 def test_loop_without_any_model_still_answers_in_sample_mode(offline):
@@ -285,3 +288,10 @@ def test_gather_reconciles_jps_against_the_frozen_source(run):
 def test_unresolved_conflicts_reach_the_answer():
     facts = dict(FACTS, conflicts_unresolved=[{"quantity": "water level at X", "reason": "equal reliability"}])
     assert "Sources disagree on water level at X" in coordinator.fallback_answer(facts)
+
+
+def test_reconcile_ignores_a_source_without_a_value():
+    r = data_agent.reconcile("level", [_cand("a", 1.7, "2026-10-22T10:00", 0.9), _cand("b", None, "2024-02-23T06:45", 0.9)])
+    assert (r["rule"], r["chosen"], r["value"]) == ("single", "a", 1.7)
+    r = data_agent.reconcile("level", [_cand("a", None, None, 0.9), _cand("b", "n/a", None, 0.9)])
+    assert r["rule"] == "single" and r["chosen"] is None

@@ -9,13 +9,15 @@ plan      Coordinator: intent, user type, place (gazetteer), sources, effort. Un
 gather    Data & Reconciler agent: Zetaris -> health checks -> World Model -> evidence.
 forecast  Forecast agent: verdict + range + confidence from the evidence (quick plan -> current levels only).
 draft     Coordinator writes the answer from the evidence.
-critique  Critic (B-14) - not built yet: logged as skipped. revise is entered only after a Critic rejection.
+critique  Critic: code checks + its own Zetaris re-queries + deep-lane review -> approve or reject.
+revise    after a rejection the Coordinator redrafts with the Critic's problems, then back to critique. After
+          critic.MAX_REJECTIONS (2) rejections the answer is the code-written summary, labelled low confidence.
 Every state change is one trace line. A 10-minute deadline ends the run with whatever is safe to say.
 """
 import time
 
 from app import config, trace
-from app.agents import coordinator, data_agent, forecast_agent
+from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
 STATES = ("plan", "gather", "forecast", "draft", "critique", "revise", "done")
@@ -31,19 +33,15 @@ def open_world(run_id):
     return WorldModel(storage=WORLD_PATH, audit_jsonl=config.ROOT / "logs" / f"worldmodel-audit-{run_id}.jsonl")
 
 
-def _skip(state, agent, item):
-    trace.step("System", "state", input_summary=state, output_summary="skipped", status="fallback",
-               target_agent=agent, decision=f"{agent} is not built yet ({item}) - nothing is invented in its place")
-
-
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False):
-    """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, trace}. Never raises for data or
-    model problems; those end up in the answer and the trace."""
+    """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, reviews, trace}.
+    Never raises for data or model problems; those end up in the answer and the trace."""
     run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet)
     t0 = time.monotonic()
     own_world = world is None
     world = world or open_world(run_.run_id)
     state, p, evidence, fc, answer, status = "plan", None, None, None, None, "success"
+    reviews = []
 
     def left():
         return max(1.0, deadline_s - (time.monotonic() - t0))
@@ -76,8 +74,20 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=left())
                 state = "critique"
             elif state == "critique":
-                _skip(state, "Critic", "B-14")
-                state = "done"
+                reviews.append(critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
+                                             llm=llm, budget_s=left()))
+                if reviews[-1]["decision"] == "approve":
+                    answer["approved"] = True
+                    state = "done"
+                elif len(reviews) >= critic.MAX_REJECTIONS:
+                    answer = coordinator.low_confidence_answer(evidence, fc, reviews[-1])
+                    state = "done"
+                else:
+                    state = "revise"
+            elif state == "revise":
+                answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=left(),
+                                           feedback=reviews[-1], previous=answer)
+                state = "critique"
         answer.setdefault("safety_line", coordinator.SAFETY.get(answer.get("language"), coordinator.SAFETY["en"]))
     except Exception as e:          # a bug must still close the trace with a clear failure line
         status = "failed"
@@ -88,4 +98,4 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         if own_world:
             world.close()
     return {"run_id": run_.run_id, "status": status, "answer": answer, "plan": p, "evidence": evidence,
-            "forecast": fc, "trace": str(path)}
+            "forecast": fc, "reviews": reviews, "trace": str(path)}
