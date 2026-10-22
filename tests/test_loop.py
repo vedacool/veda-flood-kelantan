@@ -157,6 +157,7 @@ def test_gather_without_prefetch_still_works(offline):
 
 def test_timeouts_follow_the_plan_change_log():
     assert nightshift.TIMEOUT_S == 60 and zetaris.TIMEOUT_S == 30
+    assert nightshift.LANE_TIMEOUT_S == {"fast": 60, "deep": 100} and loop.FINAL_RESERVE_S == 10
     assert loop.BUDGET_S == {"quick": 30, "full": 150}
 
 
@@ -170,3 +171,24 @@ def test_bound_function_can_run_in_many_threads_at_once(tmp_path):
     finally:
         trace.end_run()
     assert ids == [run_id] * 10
+
+
+def test_explanation_is_dropped_when_the_ai_critic_cannot_check_it(offline, force):
+    force("full")
+    base = stub("full")
+
+    def llm(lane, messages, agent, **kw):
+        if lane == "deep":
+            raise nightshift.NightshiftError("stub: deep lane timed out")
+        return base(lane, messages, agent, **kw)
+    r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
+    assert r["answer"]["explanation"] is None and r["answer"]["drafted_by"] == "code"
+    assert "The river is steady for now." not in r["answer"]["text"] and r["answer"]["approved"]
+    final = [x for x in lines(r) if x["action"] == "final_answer"][0]
+    assert final["decision"].startswith("AI explanation dropped: the Critic's AI review did not run or timed out")
+
+
+def test_explanation_stays_when_the_ai_critic_approved_it(offline, force):
+    force("full")
+    r = loop.run("Is Rantau Panjang at risk?", llm=stub("full"), log_dir=offline, quiet=True)
+    assert r["answer"]["explanation"] == "The river is steady for now." and r["answer"]["drafted_by"] == "llm"

@@ -291,6 +291,16 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
     return answer
 
 
+def template_answer(card, language, why):
+    """The card alone (no AI explanation), in the user's language - used when the AI Critic could not check the
+    explanation (Husaini 22 Oct night). The reason is traced."""
+    answer = {"text": card_mod.render(card, language), "language": language, "drafted_by": "code",
+              "explanation": None, "card": card, "safety_line": SAFETY.get(language, SAFETY["en"])}
+    trace.step(AGENT, "final_answer", output_summary=answer["text"], status="fallback",
+               decision=f"AI explanation dropped: {why} -> template answer only")
+    return answer
+
+
 def low_confidence_answer(evidence, forecast, review, card=None, language="en", plan=None):
     """After the Critic's last rejection: the card alone, labelled low confidence, in the user's language. Built by
     code only, so it passes the code checks by construction."""

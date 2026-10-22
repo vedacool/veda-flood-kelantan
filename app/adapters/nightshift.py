@@ -28,7 +28,8 @@ RETRY_STATUSES = {429, 500, 502, 503, 504}
 BACKOFF_S = (2, 4, 8)          # waits before retry 1, 2, 3
 MIN_MAX_TOKENS = 200           # B-64: tiny budgets + reasoning -> empty response
 DEFAULT_MAX_TOKENS = 2000      # B-03 probe: Lightning spends ~1.1-1.4k hidden tokens even with thinking off
-TIMEOUT_S = 60                  # B-17 (Husaini 22 Oct): one call may take at most 60 s
+TIMEOUT_S = 60                  # B-17 (Husaini 22 Oct): one call may take at most 60 s ...
+LANE_TIMEOUT_S = {"fast": 60, "deep": 100}   # ... except the deep lane (Critic), 100 s (Husaini 22 Oct night)
 _sleep = time.sleep            # patched in tests
 
 
@@ -138,11 +139,12 @@ def _call(lane, body, agent, prompt_summary, deadline=None):
         attempt += 1
         t0 = time.perf_counter()
         problem = fatal = None
-        left = deadline - time.monotonic() if deadline else TIMEOUT_S
+        cap = LANE_TIMEOUT_S.get(lane, TIMEOUT_S)
+        left = deadline - time.monotonic() if deadline else cap
         try:
             if left <= 1:
                 raise requests.Timeout("run time budget used up")
-            r = _post(base, token, body, lane_app(lane), timeout=min(TIMEOUT_S, left))
+            r = _post(base, token, body, lane_app(lane), timeout=min(cap, left))
             payload = r.json() if r.content else {}
             if not isinstance(payload, dict):          # list / str body: never crash on .get
                 payload = {"error": str(payload)[:200]}

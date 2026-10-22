@@ -36,6 +36,7 @@ PLAN_CAP_S = 30                          # the planning call may not use more th
 MIN_MODEL_S = 10                         # don't start a model call with less time than this left
 RESERVE_S = 2                            # kept back from every model call for the steps after it
 RECHECK_S = 6                            # the Critic's own Zetaris re-query needs about this long
+FINAL_RESERVE_S = 10                     # the Critic's model must leave this much for writing the final answer
 WORLD_PATH = config.ROOT / "data" / "world" / "world.sqlite"
 
 
@@ -131,9 +132,14 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 quick = p["effort"] == "quick"
                 why = "quick plan: review by code checks only" if quick else short("the review")
                 reviews.append(critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
-                                             llm=llm, budget_s=model_time(), use_model=why is None,
+                                             llm=llm, budget_s=max(1.0, left() - FINAL_RESERVE_S),
+                                             use_model=why is None,
                                              recheck_data=not quick and (why is None or left() >= RECHECK_S),
                                              skip_reason=why))
+                if answer.get("explanation") and "model" not in reviews[-1]["checked_by"]:
+                    # Husaini 22 Oct night: nothing goes out that the AI Critic has not checked
+                    answer = coordinator.template_answer(card, p["question_language"],
+                                                         "the Critic's AI review did not run or timed out")
                 if reviews[-1]["decision"] == "approve":
                     answer["approved"] = True
                     state = "done"

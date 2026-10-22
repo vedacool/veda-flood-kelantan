@@ -129,4 +129,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Card length limit 900 characters (one phone screen) instead of ~600: the agreed BM ACT advice alone makes the card ~760 | B-21 |
 | 2026-10-22 | "Place not covered": reply in the user's language + nearest covered place from the average position of the district's stations in data.gov.my /flood-warning (station positions do not go stale); no position → no suggestion | Husaini 22 Oct night (B-21) |
 | 2026-10-22 | The card also shows the thresholds and next-24 h rain, so an explanation can cite them without being rejected | B-21 |
+| 2026-10-22 | Deep lane (Critic) may take up to 100 s per call, never more than the time left in the 150 s budget minus 10 s for the final answer; fast lane stays 60 s | Husaini 22 Oct night |
+| 2026-10-22 | If the Critic's AI review is skipped or times out, the AI explanation is dropped and only the template answer (BM or EN) goes out - nothing leaves that the AI Critic has not checked; reason traced as `final_answer` | Husaini 22 Oct night |
 
