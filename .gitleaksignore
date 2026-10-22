@@ -1,0 +1,7 @@
+# Known false positives for gitleaks (one fingerprint per line: commit:file:rule:line).
+# All three are made-up test values used to prove trace redaction works ("zk_live_ABCDEF123456",
+# "abcd1234efgh") in the B-02 version of tests/test_trace.py. They were never real credentials; the
+# current test builds them at runtime. Real .env secrets were checked against the full history: 0 hits.
+bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:45
+bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:49
+bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:51
