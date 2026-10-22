@@ -1,0 +1,15 @@
+{
+  "lastAuditCommit": "4d4e31d",
+  "lastFullAuditCommit": "4d4e31d",
+  "lastAuditDate": "2026-10-22",
+  "report": "docs/audit/2026-10-22-audit.md",
+  "note": "First run had no baseline, so it covered the whole codebase (functional, security, data, reliability, code quality). A/11y, privacy, performance, deploy skipped as N/A at this stage - re-run all before submission.",
+  "verifiedGood": {
+    "secrets-in-history": "4d4e31d",
+    "app/ingest/jps.py:parse": "4d4e31d",
+    "app/ingest/jps.py:store-transaction": "4d4e31d",
+    "app/adapters/zetaris.py:coerce": "4d4e31d",
+    "app/adapters/nightshift.py:retries+pinning": "4d4e31d",
+    "scripts/setup_pg.py:parameterised-sql": "4d4e31d"
+  }
+}
