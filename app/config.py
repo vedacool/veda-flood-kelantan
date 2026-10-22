@@ -39,6 +39,16 @@ def secret_env_values(environ=None, min_len=8):
             if k.startswith(SECRET_ENV_PREFIXES) and SECRET_ENV_KEY.search(k) and len(v.strip()) >= min_len]
 
 
+# --- Personal data (B-56: no personal data in traces) --------------------------------------------------------
+# Malaysian phone numbers and MyKad (IC) numbers typed into a question are masked in every trace line. Boundaries
+# (no letter/digit/_/. on either side) keep gauge ids (5521044_DKKI0014), run ids, timestamps and coordinates intact.
+_EDGE_L, _EDGE_R = r"(?<![\w.])", r"(?!\w|\.\d)"         # a full stop ending a sentence is fine
+PERSONAL_PATTERNS = {
+    "[phone]": re.compile(_EDGE_L + r"(?:\+?60[\s-]?|0)(?:1\d|[3-9])[\s-]?\d{3,4}[\s-]?\d{4}" + _EDGE_R),
+    "[IC]": re.compile(_EDGE_L + r"(?:\d{6}-\d{2}-\d{4}|\d{12})" + _EDGE_R),
+}
+
+
 # Each pattern marks the secret part as group "secret" (redaction keeps the text around it). Placeholders such as
 # "{PW}", "<token>", "$VAR", "***" and "…" are not secrets, so values must contain a letter/digit and none of {}<>$*.
 _VAL = r"(?=[^\"'\s]*[A-Za-z0-9])[^\"'{}<>$*()\[\]\s]"   # code like os.environ["X"] is not a value

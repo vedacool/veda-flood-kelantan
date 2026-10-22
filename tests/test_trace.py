@@ -136,3 +136,31 @@ def test_write_failure_does_not_crash(run, capsys):
     run.path = run.path.parent / "missing-dir" / "x.jsonl"
     trace.step("Data", "fetch")
     assert "could not write" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("text, masked", [
+    ("call me 012-3456789", "call me [phone]"),
+    ("my number 0123456789.", "my number [phone]."),
+    ("+60 12-345 6789 please", "[phone] please"),
+    ("+60123456789", "[phone]"),
+    ("rumah 09-748 1234", "rumah [phone]"),
+    ("IC 880101-03-5678", "IC [IC]"),
+    ("ic 880101035678", "ic [IC]"),
+])
+def test_phone_and_ic_numbers_are_masked(text, masked):
+    assert trace.redact(text) == masked
+
+
+@pytest.mark.parametrize("text", [
+    "station:jps:5521044_DKKI0014", "6021065_DPMS0001", "run 20261022-185555-bcc9", "2026-10-22T10:30:00Z",
+    "5.756620964560449, 102.14462513200138", "hash 645376666066d288", "level 7.18 m (2339 ms)", "26296",
+])
+def test_ids_times_and_coordinates_are_not_masked(text):
+    assert trace.redact(text) == text
+
+
+def test_question_with_a_phone_number_is_masked_in_the_file(tmp_path):
+    r = trace.start_run("Rumah mak 019-8765432 di Tumpat, selamat?", log_dir=tmp_path, quiet=True)
+    trace.end_run()
+    text = r.path.read_text(encoding="utf-8")
+    assert "8765432" not in text and "[phone]" in text and "Tumpat" in text

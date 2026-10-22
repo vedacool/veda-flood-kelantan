@@ -45,12 +45,15 @@ def _mask(match):
 
 
 def redact(text):
-    """Mask secret-looking strings (config.SECRET_PATTERNS) and VEDA's secret env values."""
+    """Mask secret-looking strings (config.SECRET_PATTERNS), VEDA's secret env values, and personal data
+    (phone / IC numbers, config.PERSONAL_PATTERNS)."""
     text = str(text)
     for _key, value in config.secret_env_values(min_len=6):
         text = text.replace(value, "***")
     for pat in config.SECRET_PATTERNS.values():
         text = pat.sub(_mask, text)
+    for label, pat in config.PERSONAL_PATTERNS.items():
+        text = pat.sub(label, text)
     return text
 
 
