@@ -1,0 +1,40 @@
+# CI: the same checks as the local pre-commit hook, so nothing depends on a hook being installed (audit 2026-10-22).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # full history for the secret scan
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned dependencies
+        run: pip install -r requirements-lock.txt
+
+      - name: Guard rules + tests (offline; live tests skip without VEDA_LIVE=1)
+        run: python -m pytest -q -p no:cacheprovider
+
+      - name: CODEMAP is up to date
+        run: python scripts/codemap.py --check
+
+      - name: Known vulnerabilities in dependencies
+        run: |
+          pip install pip-audit==2.7.3
+          pip-audit -r requirements-lock.txt
+
+      - name: Secret scan of the whole git history
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

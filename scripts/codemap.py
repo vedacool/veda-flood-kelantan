@@ -41,21 +41,28 @@ def python_files():
     return [f for f in files if "__pycache__" not in f.parts]
 
 
-def imported_modules(tree, this_module):
-    """Absolute names of modules this file imports (relative imports resolved)."""
+def imported_modules(tree, this_module, is_package=False):
+    """Absolute names of modules this file imports (relative imports resolved).
+    A package's __init__ is its own package, so `from . import x` there means this_module.x."""
     names = set()
-    pkg = this_module.split(".")[:-1]
+    pkg = this_module.split(".") if is_package else this_module.split(".")[:-1]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names.update(a.name for a in node.names)
         elif isinstance(node, ast.ImportFrom):
             base = node.module or ""
             if node.level:
-                anchor = pkg[: len(pkg) - (node.level - 1)] if node.level > 1 else pkg
+                anchor = pkg[: len(pkg) - (node.level - 1)]
                 base = ".".join(anchor + ([base] if base else []))
             names.add(base)
             names.update(f"{base}.{a.name}" for a in node.names)
     return names
+
+
+def imports_of_file(path):
+    """Imported module names of one .py file under ROOT (shared with tests/test_architecture.py)."""
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"), filename=str(path))
+    return imported_modules(tree, module_name(Path(path)), is_package=Path(path).name == "__init__.py")
 
 
 def build():
@@ -71,7 +78,7 @@ def build():
                 args = "" if kind == "class" else "(" + ", ".join(a.arg for a in node.args.args) + ")"
                 public.append(f"`{kind} {node.name}{args}` — {first_line(ast.get_docstring(node))}")
         modules[name] = {"path": f.relative_to(ROOT).as_posix(), "purpose": first_line(ast.get_docstring(tree)),
-                         "public": public, "imports": imported_modules(tree, name)}
+                         "public": public, "imports": imported_modules(tree, name, f.name == "__init__.py")}
 
     for name, m in modules.items():
         m["callers"] = sorted(other for other, o in modules.items() if other != name and name in o["imports"])

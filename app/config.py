@@ -41,7 +41,7 @@ def secret_env_values(environ=None, min_len=8):
 
 # Each pattern marks the secret part as group "secret" (redaction keeps the text around it). Placeholders such as
 # "{PW}", "<token>", "$VAR", "***" and "…" are not secrets, so values must contain a letter/digit and none of {}<>$*.
-_VAL = r"(?=[^\"'\s]*[A-Za-z0-9])[^\"'{}<>$*\s]"
+_VAL = r"(?=[^\"'\s]*[A-Za-z0-9])[^\"'{}<>$*()\[\]\s]"   # code like os.environ["X"] is not a value
 SECRET_PATTERNS = {
     "NVIDIA API key": re.compile(r"(?P<secret>nvapi-[A-Za-z0-9_\-]{8,})"),
     "OpenAI-style key": re.compile(r"(?P<secret>\bsk-[A-Za-z0-9_\-]{16,})"),
@@ -53,7 +53,8 @@ SECRET_PATTERNS = {
         r"(?i)\b(?:password|passwd|pwd|secret|token|api[_-]?key|apikey)[\"']?\s*(?:[=:]\s*|\s+)[\"']"
         r"(?P<secret>" + _VAL + r"[^\"'{}<>$*]{2,})[\"']"),
     "secret env assignment": re.compile(
-        r"\b[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY)[A-Z0-9_]*=(?P<secret>" + _VAL + r"{7,})"),
+        r"\b[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY)[A-Z0-9_]*=(?P<secret>" + _VAL + r"{7,})"
+        r"(?![\w.\[(])"),            # a value followed by . [ ( is code (os.environ[...]), not a secret
     "secret key=value": re.compile(
-        r"(?i)\b(?:password|passwd|secret|token|api[_-]?key)=(?P<secret>" + _VAL + r"{5,})"),
+        r"(?i)\b(?:password|passwd|secret|token|api[_-]?key)=(?P<secret>" + _VAL + r"{5,})(?![\w.\[(])"),
 }
