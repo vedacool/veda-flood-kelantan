@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# local-only notes for Claude Code
+CLAUDE.local.md
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# runtime
+logs/*.jsonl
+data/cache/
+*.sqlite
+*.db
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/

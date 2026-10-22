@@ -1,0 +1,9 @@
+---
+description: VEDA project rules
+alwaysApply: true
+---
+- Source of truth: docs/BUILD_BRIEF.md and CLAUDE.md.
+- Agents get data only via run_sql() (Zetaris). Models only via Nightshift (`fast`, `deep`), never meterless/auto.
+- Every agent step writes a JSONL trace line. No hard-coded outputs or demo-only branches.
+- Never write secrets into code, logs, fixtures or docs.
+- Safety: no NORMAL on missing/stale data; never advise wading/driving through water; always "not an official warning".
