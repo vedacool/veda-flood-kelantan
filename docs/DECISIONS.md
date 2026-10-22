@@ -114,4 +114,11 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | `trace.bind` runs each call in its own context copy (the old version crashed when one bound function ran in two threads) | B-17 |
 | 2026-10-22 | Every model call keeps 2 s in reserve for the steps after it; the Critic's model gets only what is left after its own re-query; with < 6 s left the re-query is skipped too (the Data & Reconciler agent has already excluded the stale source) | B-17 |
 | 2026-10-22 | Measured live 22 Oct: gather 0.1–1.7 s (was 35–45 s); quick 23–28 s within 30 s but the answer is code-written (Lightning plan 11–22 s leaves too little for a draft); full 92–95 s - Lightning drafts vary 12–69 s and the deep review 45–80 s, so under 90 s the AI review often cannot run. Budget numbers to be re-decided by Husaini | B-17 |
+| 2026-10-22 | Budgets re-decided: **full 150 s**, quick stays 30 s (supersedes full 90 s) | Husaini 22 Oct night |
+| 2026-10-22 | The web page and the CLI show each step live while the run is in progress | Husaini 22 Oct night |
+| 2026-10-22 | **Code decides quick vs full** (no AI planning on the quick path). Full if ANY: a linked gauge ≥ Alert, a rising trend, an active MET/JPS warning, a stale or missing source, or the question is about evacuation, being cut off or the next days; otherwise quick. The reason is written into the trace | Husaini 22 Oct night |
+| 2026-10-22 | Code-written quick answers are approved (BM + EN template, B-21) | Husaini 22 Oct night |
+| 2026-10-22 | B-14's real rejection for the demo comes from the B-70 replay (real Nov 2024 data); `VEDA_FAULTS` is for tests only and must never be enabled in SAMPLE_MODE or the demo | Husaini 22 Oct night |
+| 2026-10-22 | Cursor CLI session issue dropped (no further work) | Husaini 22 Oct night |
+| 2026-10-22 | B-72 Zetaris result cache parked as P3 — data loading is no longer the bottleneck (B-17: gather 0.1–1.7 s) | Husaini 22 Oct night |
 
