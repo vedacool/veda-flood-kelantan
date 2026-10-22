@@ -18,3 +18,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Trace logger lives at `app/trace.py`; every agent imports it (guard rule) | B-65 |
 | 2026-10-22 | Guard rules in `tests/test_architecture.py` run on every commit; secret scan uses a small Python scanner (no gitleaks for now) and covers every tracked file incl. `spikes/` | B-65 |
 | 2026-10-22 | Every commit message carries a backlog ID (`B-xx` / `S-xx`) | B-65 (commit-msg hook) |
+| 2026-10-22 | Trace line = FAQ fields + `run_id`, `step`, `decision`, `source`, `mode`, `duration_ms`, `details`; fixed status set; JSON in UTC, sentences in local time | B-02 |
+| 2026-10-22 | Trace redacts secrets itself (patterns + env secret values) — callers never need to remember | B-02 |
