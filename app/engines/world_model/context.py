@@ -58,6 +58,10 @@ class ContextBuilder:
                                      "source": lag.get("lag_source"), "status": lag.get("status")}
         return item
 
+    def gauge(self, station_id, role, reason, now):
+        """One gauge's item (same shape as in build) - the Data & Reconciler agent uses it for backup gauges."""
+        return self._gauge(station_id, role, reason, now)
+
     def build(self, intent, place, now=None):
         """Context payload for one place id (e.g. 'place:veda:rantau_panjang'). Unknown place -> found=False."""
         now = now or datetime.now(timezone.utc)

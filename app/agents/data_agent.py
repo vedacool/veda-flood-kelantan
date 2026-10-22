@@ -18,7 +18,7 @@ Nothing here crashes the run: every source ends with a status (ok | degraded | s
 plain note, and `usable` says whether the controlling gauge can be trusted for "now".
 """
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app import config, trace
 from app.adapters import zetaris
@@ -52,6 +52,12 @@ WARNING_SQL = ("SELECT w.heading_en, w.text_en, w.text_bm, w.valid_from, w.valid
                "FROM veda_wx.mygov_warning LATERAL VIEW explode(data) AS w")
 PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock",
                  WARNING_SQL: "MetMalaysia warnings"})
+# Which breaker guards which query (B-15). The rain + MET forecast view is one query (place_risk_inputs).
+JPS_CORE = set(READINGS_SQL[:2])                       # gauge reading times + gauge status
+BREAKER_OF = {READINGS_SQL[0]: "jps_levels", READINGS_SQL[1]: "jps_levels",
+              READINGS_SQL[2]: "rain_and_forecast", READINGS_SQL[3]: "rain_and_forecast",
+              WARNING_SQL: "mygov_warning", FLOOD_WARNING_SQL: "mygov_flood"}
+OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3]}
 FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
@@ -326,8 +332,130 @@ def met_warnings(result, place, clock, world=None, run_id=None):
     return {"status": status, "newest_issued": newest_text, "active": active, "note": note}
 
 
+# -- Self-healing ladder (B-15) -------------------------------------------------------------------------------
+def _fresh_ok(g):
+    return (g is not None and g["level_m"] is not None and g.get("freshness") in ("fresh", "aging")
+            and (g.get("health") or {"ok": True})["ok"])
+
+
+def backups_for(world, station):
+    """Gauges that can stand in for `station`: the mapping's backup_of pair, either way round (B-67)."""
+    key = station.split(":", 2)[2]
+    me = world.entity(station) or {"attrs": {}}
+    out = [external_id("station", "jps", me["attrs"]["backup_of"])] if me["attrs"].get("backup_of") else []
+    out += [e["id"] for e in world.store.state["entities"].values()
+            if e["type"] == "station" and str(e["attrs"].get("backup_of") or "") == key and e["id"] not in out]
+    return out
+
+
+def heal(ctx, world, clock):
+    """The ladder for every gauge the answer needs, in place on ctx. Steps: 1 fresh/aging reading -> use it;
+    2 silent/stale -> a backup gauge with a fresh reading (mapping backup_of; for a place with a second controlling
+    gauge, that one); 3 no fresh backup -> keep the last reading for context only (never for the verdict), so the
+    controlling gauge gives INSUFFICIENT DATA. Returns the decisions; each is one data.heal trace line."""
+    cb, decisions = ContextBuilder(world), []
+
+    def backup_items(g, role):
+        items = []
+        for b in backups_for(world, g["station"]):
+            item = cb.gauge(b, role, f"backup gauge for {g['name']}", clock)
+            item["freshness"] = freshness("jps_levels", item["age_minutes"])
+            items.append(item)
+        return items
+
+    def silent_since(g):
+        return (f"silent since {_myt_hhmm(g['observed_at'])}" if g["observed_at"] else "no reading at all")
+
+    def note(step, text, g, used=None):
+        decisions.append({"step": step, "gauge": g["name"], "role": g["role"], "used": used, "note": text})
+        trace.step(AGENT, "data.heal", input_summary=f"{g['name']} ({g['role']})", output_summary=text,
+                   status="fallback", source="jps_levels", decision=f"self-healing step {step}")
+
+    gauges = ctx.get("gauges", [])
+    main = next((g for g in gauges if g["role"] == "controlling"), None)
+    if main is not None and not _fresh_ok(main):
+        candidates = backup_items(main, "controlling") + [g for g in gauges if g["role"] == "controlling_secondary"]
+        good = next((c for c in candidates if _fresh_ok(c)), None)
+        if good is not None:
+            healed = {**good, "role": "controlling", "backup_for": main["name"],
+                      "selection_reason": f"backup: {main['name']} {silent_since(main)}"}
+            ctx["gauges"] = [healed] + [g for g in gauges if g is not main and g["station"] != good["station"]]
+            ctx["silent"] = [main]
+            note(2, f"{main['name']} {silent_since(main)} -> using {good['name']}", main, good["name"])
+        else:
+            ctx["last_reading"] = main if main["level_m"] is not None else None
+            note(3, f"{main['name']} {silent_since(main)} and no fresh backup -> INSUFFICIENT DATA"
+                    + (f"; last reading {main['level_m']} m shown for context only" if main["level_m"] is not None
+                       else ""), main)
+    for i, sentinel in enumerate(ctx.get("sentinels", [])):
+        if _fresh_ok(sentinel):
+            continue
+        good = next((c for c in backup_items(sentinel, "sentinel") if _fresh_ok(c)), None)
+        if good is not None:
+            ctx["sentinels"][i] = {**good, "backup_for": sentinel["name"], "travel_time_h": None,
+                                   "selection_reason": f"backup: {sentinel['name']} {silent_since(sentinel)}"}
+            note(2, f"upstream {sentinel['name']} {silent_since(sentinel)} -> using {good['name']}", sentinel,
+                 good["name"])
+    return decisions
+
+
+def _myt_hhmm(iso):
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(config.MYT).strftime("%d %b %H:%M")
+    except ValueError:
+        return str(iso)
+
+
 def _forecast_age(world, key, clock):
     return _age_since(clock, _last_refresh(world, key))
+
+
+# -- Circuit breaker (B-15) ----------------------------------------------------------------------------------
+# 3 failures in a row -> the source's queries are skipped for 15 minutes (no 30 s timeouts on every question); then
+# one trial (half-open): success closes it, failure opens it again. State lives on the source's World Model context
+# (fail_count, open_until) - it survives across runs and its history is the evolution log.
+BREAKER_FAILURES = 3
+BREAKER_OPEN = timedelta(minutes=15)
+
+
+def _breaker_state(world, key):
+    attrs = (world.store.state["contexts"].get(source_id(key)) or {}).get("attrs", {})
+    until = attrs.get("open_until")
+    return attrs.get("fail_count") or 0, datetime.fromisoformat(until.replace("Z", "+00:00")) if until else None
+
+
+def circuit_open(world, key, wall):
+    """True while the source's circuit is open (its queries are skipped). Traced either way when not closed."""
+    fails, until = _breaker_state(world, key)
+    if until is None:
+        return False
+    if wall < until:
+        trace.step(AGENT, "data.circuit", input_summary=key, output_summary=f"open until {_myt_hhmm(_iso(until))} - skipped",
+                   status="fallback", source=key, decision=f"{fails} failures in a row -> not called for 15 min")
+        return True
+    trace.step(AGENT, "data.circuit", input_summary=key, output_summary="half-open: one trial call", source=key,
+               decision="15 minutes passed -> try once; success closes the circuit, failure opens it again")
+    return False
+
+
+def record_call(world, key, ok, wall, run_id, why=None):
+    """Update the source's breaker after a call: success resets it; the 3rd failure in a row opens it."""
+    fails, until = _breaker_state(world, key)
+    if ok:
+        if not fails and until is None:
+            return
+        fails, until, text = 0, None, "closed again after a successful call"
+    else:
+        fails += 1
+        until = wall + BREAKER_OPEN if fails >= BREAKER_FAILURES else None
+        text = (f"opened until {_myt_hhmm(_iso(until))} after {fails} failures in a row" if until
+                else f"failure {fails} of {BREAKER_FAILURES}" + (f" ({why})" if why else ""))
+    world.upsert_context("source", external_key={"system": "veda", "id": key},
+                         attrs={"fail_count": fails, "open_until": _iso(until) if until else None},
+                         source={"kind": "agent_check", "at": _iso(wall), "agent": AGENT, "run_id": run_id,
+                                 "origin": "circuit breaker"})
+    trace.step(AGENT, "data.circuit", input_summary=key, output_summary=text, source=key,
+               status="success" if ok else "fallback", decision="circuit breaker (B-15)")
 
 
 def prefetch(world, now=None, replay=None):
@@ -344,13 +472,27 @@ def prefetch(world, now=None, replay=None):
     rsql = replay_sqls(replay, now) if replay else None
     sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
             NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL]))
+    wall = datetime.now(timezone.utc)               # the breaker runs on real time, also in a replay's past clock
+    skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
+    if skipped & JPS_CORE:
+        e = zetaris.ZetarisError("source_unavailable", "JPS river levels skipped: circuit open after repeated failures")
+        trace.step(AGENT, "world.write", output_summary=str(e), status="failed", source="jps_levels",
+                   decision="Circuit breaker open -> no gauge data this run; the answer must say so")
+        return {"error": e, "clock": now or wall, "notes": notes}
     try:
-        results = fetch_all(sqls, AGENT, optional={FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL})
+        results = fetch_all([q for q in sqls if q not in skipped], AGENT, optional=OPTIONAL_SQL)
+        results.update({q: None for q in skipped})
+        if not replay:
+            for key in {BREAKER_OF[q] for q in sqls if q in BREAKER_OF and q not in skipped}:
+                ok = all(results.get(q) is not None for q in sqls if BREAKER_OF.get(q) == key)
+                record_call(world, key, ok, wall, run_id)
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
         counts = (ingest_replay(world, AGENT, run_id, rsql, now, check=check, results=results) if replay else
                   ingest_readings(world, AGENT, run_id, check=check, results=results))
     except zetaris.ZetarisError as e:
+        if not replay:
+            record_call(world, "jps_levels", False, wall, run_id, f"{e.kind}: {e}")
         trace.step(AGENT, "world.write", output_summary=f"{e.kind}: {e}", status="failed", source="zetaris",
                    decision="Could not load the world from Zetaris -> no evidence; the answer must say so")
         return {"error": e, "clock": now or datetime.now(timezone.utc), "notes": notes}
@@ -392,9 +534,10 @@ def gather(plan, world, now=None, pre=None):
     for key, field in (("open_meteo", "rain"), ("mygov_forecast", "met_forecast")):
         if key not in wanted and ctx.get(field) is not None:
             ctx[field] = None           # evidence holds only what the plan asked for
-    gauges = ctx.get("gauges", []) + ctx.get("sentinels", [])
-    for g in gauges:
+    for g in ctx.get("gauges", []) + ctx.get("sentinels", []):
         g["freshness"] = freshness("jps_levels", g["age_minutes"])
+    healing = heal(ctx, world, clock) if ctx.get("found") else []
+    gauges = ctx.get("gauges", []) + ctx.get("sentinels", [])
     if "jps_levels" in wanted:
         bad = [g["name"] for g in gauges if g["health"] and not g["health"]["ok"]]
         stale = [g["name"] for g in gauges if g["freshness"] in ("stale", "unknown")]
@@ -461,5 +604,5 @@ def gather(plan, world, now=None, pre=None):
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
-            "met_warnings": warnings, "replay": replay,
+            "met_warnings": warnings, "replay": replay, "healing": healing,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

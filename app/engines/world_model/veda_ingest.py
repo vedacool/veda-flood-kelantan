@@ -112,7 +112,7 @@ def build_network(world, agent, run_id, results=None):
             "name": s["name"], "is_core": s["is_core"], "chain": s["chain"], "chain_order": s["chain_order"],
             "role": s["role"], "controls_town": s["controls_town"], "lat": s["lat"], "lon": s["lon"],
             "normal_m": s["normal_m"], "alert_m": s["alert_m"], "warning_m": s["warning_m"], "danger_m": s["danger_m"],
-            "mapping_status": s["mapping_status"]})
+            "mapping_status": s["mapping_status"], "backup_of": s["backup_of"]})
         if s["river"]:
             river = world.upsert_entity("river", name=s["river"], source=src)
             world.relate(sid, "on_river", river["id"], valid_from=MAPPING_VERSION_AT, source=src)
@@ -187,9 +187,14 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
             if g[pred] is not None:
                 world.assert_fact(sid, pred, g[pred], confidence=0.8 if ok else 0.2, source=src)
         n += 1
-    windows, _ = _sql(RAIN_WINDOW_SQL, agent, "world: rain forecast windows", results)
+    def optional(sql, purpose):          # a failed / skipped (circuit open) rain query -> no rain facts, not no answer
+        if results is not None and sql in results and results[sql] is None:
+            return [], None
+        return _sql(sql, agent, purpose, results)
+
+    windows, _ = optional(RAIN_WINDOW_SQL, "world: rain forecast windows")
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
-    inputs, qh = _sql(PLACE_INPUTS_SQL, agent, "world: place risk inputs", results)
+    inputs, qh = optional(PLACE_INPUTS_SQL, "world: place risk inputs")
     today_myt = datetime.now(config.MYT).date().isoformat()   # the forecast row is "today" in Malaysia time
     for p in inputs:
         pid = place_id(p["place_id"])

@@ -184,6 +184,9 @@ def _confidence(main, others, fired, rain, now_only):
     if replay and not replay.get("time_exact", True):       # Husaini 22 Oct night: approximate times -> medium
         score = min(score, 0.69)
         why.append("trend built on readings with approximate times (replay)")
+    if main.get("backup_for"):                                 # B-15: a stand-in gauge -> one step lower
+        score = min(score, 0.69)
+        why.append(f"backup gauge in use ({main['backup_for']} silent)")
     if main.get("freshness") == "aging":
         score -= 0.15
         why.append("controlling reading is aging")

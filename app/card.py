@@ -71,6 +71,11 @@ T = {  # fixed wording, BM + EN
                  "ms": "Diketepikan: data.gov.my flood-warning (lapuk, kemas kini terakhir {when})"},
     "conflict": {"en": "Sources disagree on {q}; VEDA did not pick one", "ms": "Sumber tidak sepakat tentang {q}; VEDA tidak memilih"},
     "no_reading": {"en": "no fresh reading from the controlling gauge", "ms": "tiada bacaan terkini dari stesen utama"},
+    "backup": {"en": "Note: {primary} {silent} - using the backup gauge {backup}",
+               "ms": "Nota: {primary} {silent} - menggunakan stesen ganti {backup}"},
+    "silent": {"en": "has no reading since {t}", "ms": "tiada bacaan sejak {t}"},
+    "silent_never": {"en": "has no reading", "ms": "tiada bacaan"},
+    "last": {"en": "Last reading: {m} m at {t} ({age}) - too old to use", "ms": "Bacaan terakhir: {m} m pada {t} ({age}) - terlalu lama untuk digunakan"},
     "low_conf": {"en": "Low confidence: VEDA's reviewer did not approve the written explanation, so only the checked "
                        "data is shown.",
                  "ms": "Keyakinan rendah: penyemak VEDA tidak meluluskan penjelasan bertulis, jadi hanya data yang "
@@ -110,7 +115,7 @@ def build(plan, evidence, forecast):
             "warnings": [w["heading"] for w in ((evidence or {}).get("met_warnings") or {}).get("active", [])],
             "sources": [], "excluded": None, "conflicts": [], "vs_2014": None, "rain_past_24h_mm": None,
             "replay": (REPLAYS.get(((evidence or {}).get("replay") or {}).get("scenario")) or {}).get("title"),
-            "reading_label": None}
+            "reading_label": None, "backup": None, "last_reading": None}
     if main and main["level_m"] is not None and verdict != "INSUFFICIENT_DATA":
         th = main["thresholds"]
         card["gauge"] = {"name": main["name"], "level_m": main["level_m"], "read_at": _hhmm(main["observed_at"])}
@@ -133,6 +138,14 @@ def build(plan, evidence, forecast):
         if u.get("band") in ("alert", "warning", "danger") or u.get("rising"):
             card["upstream"].append({"gauge": u["gauge"], "band": u.get("band"), "rising": u.get("rising"),
                                      "arrives_in_h": u.get("arrives_in_h")})
+    if main and main.get("backup_for"):              # B-15: say plainly that a backup gauge stands in
+        silent = (ctx.get("silent") or [{}])[0]
+        card["backup"] = {"primary": main["backup_for"], "backup": main["name"],
+                          "since": _hhmm(silent["observed_at"]) if silent.get("observed_at") else None}
+    last = ctx.get("last_reading")
+    if last and verdict == "INSUFFICIENT_DATA":
+        card["last_reading"] = {"level_m": last["level_m"], "at": _hhmm(last["observed_at"]),
+                                "age_minutes": last["age_minutes"]}
     if main and main["age_minutes"] is not None:
         card["sources"].append(("jps", main["age_minutes"]))
     rain = ctx.get("rain")
@@ -201,6 +214,14 @@ def render(card, lang, explanation=None, low_confidence=False):
                                                 rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + ".")
     elif card["verdict"] == "INSUFFICIENT_DATA":
         out.append(T["no_reading"][lang].capitalize() + ".")
+        if card.get("last_reading"):
+            lr = card["last_reading"]
+            out.append(T["last"][lang].format(m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang))
+                       + ".")
+    if card.get("backup"):
+        b = card["backup"]
+        silent = T["silent"][lang].format(t=b["since"]) if b.get("since") else T["silent_never"][lang]
+        out.append(T["backup"][lang].format(primary=b["primary"], silent=silent, backup=b["backup"]) + ".")
     conf = T["conf_label"].get(card["confidence"], T["conf_label"]["low"])[lang]
     if card.get("range_24h"):
         r = card["range_24h"]

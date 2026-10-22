@@ -155,4 +155,8 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Container: python:3.13-slim pinned by digest, non-root user, .env / logs / on-disk World Model never copied; SAMPLE_MODE container tested offline (replay ACT, evals 13/13) | B-19 |
 | 2026-10-23 | Critic fast-lane fallback: deep call fails + >= 20 s left -> one review on the fast lane (Lightning); "Critic down" in tests/evals now means both lanes | Husaini 22 Oct night (B-14) |
 | 2026-10-23 | Critic reviews on the fast lane first (`VEDA_CRITIC_LANE=fast`, default) while the deep lane is failing: 12/12 deep attempts failed 22-23 Oct and a failed deep call left no time for the fast fallback (0/3); set `deep` to go back to Super VL | Husaini 23 Oct |
+| 2026-10-23 | Live with the fast-lane Critic (00:20 MYT): draft 3/3, Critic AI 1/3 (approve, 40 s; failures = Lightning empty answer at 51 s, connection timeout at 60 s); full answers 83-112 s | measured |
+| 2026-10-23 | Self-healing ladder: fresh -> backup gauge (mapping backup_of; second controlling gauge) with medium confidence -> last reading for context only + INSUFFICIENT DATA; every step traced and said in the card (BM/EN) | Husaini 23 Oct (B-15) |
+| 2026-10-23 | Circuit breaker per source group: 3 failures -> skip 15 min -> one trial; state on the World Model source context; real time, not in replays | B-15 |
+| 2026-10-23 | The rain + MET forecast query is optional: its failure removes the rain line, not the answer | B-15 (found while planning) |
 
