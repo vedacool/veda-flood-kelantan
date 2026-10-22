@@ -43,6 +43,8 @@ def fake(monkeypatch, tmp_path):
     monkeypatch.delenv("METERLESS_MODEL_DEEP", raising=False)
     monkeypatch.delenv("METERLESS_APP_FAST", raising=False)
     monkeypatch.delenv("METERLESS_APP_DEEP", raising=False)
+    monkeypatch.delenv("METERLESS_EXPECT_FAST", raising=False)
+    monkeypatch.delenv("METERLESS_EXPECT_DEEP", raising=False)
     monkeypatch.setattr(nightshift, "_sleep", lambda s: None)
     state = {"queue": [], "calls": []}
 
@@ -85,6 +87,33 @@ def test_each_lane_uses_its_own_app(fake, monkeypatch):
     nightshift.chat("deep", [{"role": "user", "content": "x"}], agent="Critic")
     assert [c["headers"]["meterless-app"] for c in fake["calls"]] == ["veda-fast", "veda-deep-custom"]
     assert trace_lines(fake)[-1]["details"]["app"] == "veda-deep-custom"
+
+
+SUPER_VL = "nvidia/nemotron-3.5-super-vl-120b-a12b"
+LIGHTNING = "nvidia/nemotron-3.5-lightning-30b-a3b"
+
+
+def test_deep_pinned_only_with_super_vl(fake):
+    fake["queue"].append(FakeResponse(200, ok_payload(model=SUPER_VL, routed="deep")))
+    r = nightshift.chat("deep", [{"role": "user", "content": "x"}], agent="Critic")
+    assert r.pinned and r.expected_model == SUPER_VL
+    assert trace_lines(fake)[-1]["details"]["expected_model"] == SUPER_VL
+
+
+def test_wrong_model_on_right_lane_is_flagged(fake):
+    # the B-66 failure: Nightshift honoured lane 'fast' but the race was won by Super VL
+    fake["queue"].append(FakeResponse(200, ok_payload(model=SUPER_VL, routed="fast")))
+    r = nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
+    assert r.pinned is False and r.served_model == SUPER_VL
+    line = trace_lines(fake)[-1]
+    assert line["decision"].startswith("WRONG MODEL on lane 'fast'") and LIGHTNING in line["decision"]
+    assert line["details"]["pinned"] is False
+
+
+def test_expected_model_override_from_env(fake, monkeypatch):
+    monkeypatch.setenv("METERLESS_EXPECT_FAST", "nvidia/some-other-nemotron")
+    fake["queue"].append(FakeResponse(200, ok_payload(model="nvidia/some-other-nemotron", routed="fast")))
+    assert nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator").pinned
 
 
 def test_token_never_in_trace(fake):

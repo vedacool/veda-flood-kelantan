@@ -34,3 +34,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | **Supersedes the spike-5 key decision:** `station_key` = JPS graph-link id (`…/wl-graph/?stationid=_DKBR0007`) — every row has one; it equals the data.gov.my `station_id` for 24/36 stations (spike measured 0 % because it compared the visible Station ID column) | B-06 |
 | 2026-10-22 | JPS collector: ≤ 1 live fetch / 15 min, no override; raw snapshots in `data/cache/jps/` (ignored), selected ones committed to `data/snapshots/jps/` | B-06 |
 | 2026-10-22 | Agents may not import DB drivers (`psycopg`, `sqlite3`) — guard rule, same as HTTP libraries | B-06 |
+| 2026-10-22 | Lane pinning = per-app **lane allowlist** in Nightshift `app-policy.json` (`veda-fast` → `["fast"]`, `veda-deep` → `["deep"]`); app `mode` alone never pins a model (it is a core mode, not a lane) | B-66 · found in Nightshift engine code (select.js `modelOnAllowedLanes`); public docs silent |
+| 2026-10-22 | Both Nightshift lanes stay `role = "race"`, `races = true`; `verify` role / `races = false` lanes never answer | B-66 |
+| 2026-10-22 | Adapter `pinned` = lane honoured AND expected model answered (Lightning / Super VL, env-overridable); otherwise trace says "WRONG MODEL" | B-66 |

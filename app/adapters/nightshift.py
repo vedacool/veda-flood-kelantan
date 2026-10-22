@@ -20,6 +20,10 @@ import requests
 from app import trace
 
 LANES = ("fast", "deep")
+EXPECTED_MODEL = {  # B-66: the Nemotron model each lane must be answered by (override: METERLESS_EXPECT_<LANE>)
+    "fast": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "deep": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+}
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 BACKOFF_S = (2, 4, 8)          # waits before retry 1, 2, 3
 MIN_MAX_TOKENS = 200           # B-64: tiny budgets + reasoning -> empty response
@@ -40,7 +44,8 @@ class LLMResult:
     served_model: str | None
     routed_mode: str | None
     mode_coerced: bool | None
-    pinned: bool
+    pinned: bool               # lane honoured AND the expected model answered
+    expected_model: str
     attempts: int
     latency_ms: int
     usage: dict = field(default_factory=dict)
@@ -60,6 +65,11 @@ def lane_model(lane):
     if "auto" in model.lower():
         raise ValueError(f"METERLESS_MODEL_{lane.upper()}={model!r} is not allowed - never route through auto")
     return model
+
+
+def expected_model(lane):
+    """The model that must answer a lane (env METERLESS_EXPECT_<LANE>, else EXPECTED_MODEL)."""
+    return os.getenv(f"METERLESS_EXPECT_{lane.upper()}", "").strip() or EXPECTED_MODEL[lane]
 
 
 def lane_app(lane):
@@ -200,21 +210,28 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
 
     ms = int((time.perf_counter() - t0) * 1000)
     rc = _receipt(payload)
-    pinned = rc["mode_coerced"] is not True and rc["routed_mode"] in (lane, model)
+    want = expected_model(lane)
+    lane_ok = rc["mode_coerced"] is not True and rc["routed_mode"] in (lane, model)
+    model_ok = rc["served_model"] == want
+    pinned = lane_ok and model_ok
     if pinned:
         decision = f"Answered by {rc['served_model']} on lane '{lane}'"
-    else:
+    elif not lane_ok:
         decision = (f"Lane NOT pinned: asked '{lane}', Nightshift routed '{rc['routed_mode']}'"
                     f"{' (app rule coerced it)' if rc['mode_coerced'] else ''}; answered by {rc['served_model']}")
+    else:
+        decision = (f"WRONG MODEL on lane '{lane}': expected {want}, answered by {rc['served_model']} "
+                    f"- check the app's lane allowlist in Nightshift")
     result = LLMResult(text=text, lane=lane, served_model=rc["served_model"], routed_mode=rc["routed_mode"],
-                       mode_coerced=rc["mode_coerced"], pinned=pinned, attempts=attempts, latency_ms=ms,
+                       mode_coerced=rc["mode_coerced"], pinned=pinned, expected_model=want, attempts=attempts,
+                       latency_ms=ms,
                        usage=payload.get("usage") or {}, tool_calls=msg.get("tool_calls") or [], data=data)
     trace.step(agent, "nightshift.chat", input_summary=prompt_summary,
                output_summary=(f"{len(result.tool_calls)} tool call(s)" if result.tool_calls
                                else trace.summarize(text, 120)),
                status="success", target_agent=target_agent, source=f"nightshift:{lane}",
                retry_count=attempts - 1, duration_ms=ms, decision=decision,
-               details={"requested_model": model, "app": lane_app(lane), **rc, "pinned": pinned, "usage": result.usage,
+               details={"requested_model": model, "app": lane_app(lane), **rc, "expected_model": want, "pinned": pinned, "usage": result.usage,
                         "attempts": attempts, "json_mode": json_mode, "thinking": bool(thinking)})
     return result
 
