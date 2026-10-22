@@ -44,6 +44,9 @@ SETUP_DDL = re.compile(
     r"^\s*(CREATE\s+(OR\s+REPLACE\s+)?SCHEMASTORE\s+VIEW|CREATE\s+SCHEMASTORE\s+CONTAINER"
     r"|DROP\s+SCHEMASTORE\s+VIEW|DROP\s+LIGHTNING\s+DATABASE\s+TABLE|CREATE\s+LIGHTNING\s+DATABASE"
     r"|REGISTER\s+DATASOURCE\s+TABLES|CREATE\s+DATASOURCE|UNCACHE\s+TABLE)\b", re.IGNORECASE)
+# Agents may also drop the cache of ONE REST table in VEDA_WX, so the next CACHE TABLE fetches that source again
+# (B-13: the Data agent refreshes an old forecast and records when it did). Nothing else can be uncached by agents.
+AGENT_REFRESH = re.compile(r"^\s*UNCACHE\s+TABLE\s+veda_wx\.\w+$", re.IGNORECASE)
 REST_HOSTS = {"api.data.gov.my", "api.open-meteo.com", "flood-api.open-meteo.com"}  # REST tables may call only these
 NUMBER = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$")  # no leading zeros: "0740121" stays text
 
@@ -305,10 +308,12 @@ def run_sql(sql, agent, purpose=None, limit=1000, budget_s=None):
 
 def ddl_problem(sql, setup=False):
     """None if this DDL may run; otherwise a short reason.
-    Agents (setup=False): only CACHE TABLE, or CREATE LIGHTNING REST TABLE whose endpoints are https on REST_HOSTS.
+    Agents (setup=False): only CACHE TABLE, UNCACHE TABLE veda_wx.<table> (refresh), or CREATE LIGHTNING REST TABLE whose endpoints are https on REST_HOSTS.
     Setup scripts (setup=True) may also create/replace views, drop tables, register/create datasources."""
     text = normalize_sql(sql)
     if setup and SETUP_DDL.match(text):
+        return None
+    if AGENT_REFRESH.match(text):
         return None
     if not AGENT_DDL.match(text):
         return "not on the DDL allow-list" + ("" if setup else " for agents")

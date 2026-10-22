@@ -76,3 +76,13 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Enrichment queue, control plane and supervisor agent are listed as dormant in `manifest()` (spec's wired-vs-helper honesty) | B-10 |
 | 2026-10-22 | World Model facts are stamped with the time the DATA refers to (gauge reading time, forecast window, forecast date), not the query time - keeps ingest idempotent and ages honest; unchanged upserts write no event | B-10 |
 | 2026-10-22 | B-57 (trace shows agents reading/writing the World Model) stays open until the agents exist (B-12/B-13) | B-10 |
+| 2026-10-22 | Agents may `UNCACHE TABLE veda_wx.<table>` (nothing else) so the Data agent can refresh an old forecast and record when; all other UNCACHE stays setup-only | B-13 |
+| 2026-10-22 | MetMalaysia town forecast uses the MET limits (≤12 h fresh / ≤24 h aging); forecast age = time since the Data agent's last recorded refresh, "unknown" when none (status degraded) | B-13 |
+| 2026-10-22 | Plausibility limits (tentative, Dr Ariff): level −5…120 m, ≤15 m above danger, ≤3 m change in 1 h, ≤1000 mm rain in 24 h; failing readings are kept with confidence 0.2, never silently dropped | B-13 |
+| 2026-10-22 | data.gov.my `/flood-warning` shares JPS station ids → the Data agent's agreement check compares them and excludes the frozen source, recording why in the World Model | B-13 |
+| 2026-10-22 | The Data agent's clock is Zetaris's `current_timestamp()` — live = now, SAMPLE_MODE = recording time — so replayed ages are consistent | B-13 |
+| 2026-10-22 | Coordinator: the model proposes, code decides — place only from the gazetteer, allowed values enforced, corrections traced; drafts are checked (no invented decimals, no verdict words) and the safety line is added by code | B-12 |
+| 2026-10-22 | Until B-18, SAMPLE_MODE (and any Nightshift outage) uses the code-written plan and answer — real logic over the same evidence, traced as `fallback` | B-12 |
+| 2026-10-22 | Loop skeleton logs forecast / critique as "skipped — not built yet"; without the Forecast agent the answer gives no verdict | B-12 |
+| 2026-10-22 | Question radar stores intent tags only (a run context in the World Model), never the question text | B-12 |
+

@@ -47,6 +47,7 @@ class ContextBuilder:
                 "age_minutes": _age_minutes(level["source"]["at"], now) if level else None,
                 "thresholds": {k: entity["attrs"].get(k) for k in ("normal_m", "alert_m", "warning_m", "danger_m")},
                 "provenance": level["source"] if level else None,
+                "health": level["source"].get("health") if level else None,
                 "mapping_status": entity["attrs"].get("mapping_status"), "selection_reason": reason}
         for pred in ("change_1h_m", "change_3h_m"):
             f = self._fact(station_id, pred)

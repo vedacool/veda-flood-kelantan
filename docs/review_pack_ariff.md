@@ -46,6 +46,9 @@ Context: today some JPS gauges simply stopped reporting for hours (Kuala Krai la
 **B1.** Are these limits right? (In particular: is 3 h too strict for JPS during a flood, or too loose?)
 > Answer: ______
 
+**B2.** (added 22 Oct, B-13) VEDA treats a reading as **broken** (kept, but not trusted) when the level is outside −5…120 m, more than 15 m above the gauge's danger level, or changed more than **3 m in one hour**. Is 3 m/h a sensible "impossible jump" for Kelantan gauges in a big flood (e.g. Kuala Krai, Dec 2014)?
+> Answer: ______
+
 ---
 
 ## C. Gauge network and which gauge represents which town (B-67) — ~20 min

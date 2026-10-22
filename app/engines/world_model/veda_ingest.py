@@ -4,7 +4,7 @@
     ingest_readings(world, agent, run_id) the current facts for covered places: river levels, rain, forecast
 
 Everything is read through run_sql (so it replays offline in SAMPLE_MODE). Every write carries provenance:
-{kind: 'zetaris', at: <time the DATA refers to>, query_hash, view, agent, run_id}. Using the data's own time
+{kind: 'zetaris', at: <time the DATA refers to>, sql, query_hash, view, agent, run_id} (+ health on readings). Using the data's own time
 (gauge reading time, forecast window) keeps ingest idempotent: the same readings twice change nothing.
 """
 from datetime import datetime
@@ -38,14 +38,21 @@ SOURCES = {  # contexts: where VEDA's facts come from
 }
 
 
+_SQL_BY_HASH = {}
+
+
 def _sql(sql, agent, purpose):
     r = zetaris.run_sql(sql, agent=agent, purpose=purpose)
+    _SQL_BY_HASH[r.query_hash] = r.sql
     return r.records, r.query_hash
 
 
-def _src(at, query_hash, view, agent, run_id, origin):
-    return {"kind": "zetaris", "at": at, "query_hash": query_hash, "view": view, "agent": agent, "run_id": run_id,
-            "origin": origin}
+def _src(at, query_hash, view, agent, run_id, origin, health=None):
+    src = {"kind": "zetaris", "at": at, "sql": _SQL_BY_HASH.get(query_hash), "query_hash": query_hash, "view": view,
+           "agent": agent, "run_id": run_id, "origin": origin}
+    if health is not None:
+        src["health"] = health
+    return src
 
 
 def _utc_iso(text):
@@ -110,24 +117,30 @@ def build_network(world, agent, run_id):
     return {"stations": len(stations), "links": len(links), "place_gauges": len(rows), "sources": len(SOURCES)}
 
 
-def ingest_readings(world, agent, run_id):
+def ingest_readings(world, agent, run_id, check=None):
     """Current facts for covered places. River facts carry the gauge's reading time; rain the forecast window end;
-    the forecast its date. Returns counts."""
+    the forecast its date. check(kind, row) -> health dict (the Data agent's checks) is stored with each fact;
+    a reading that fails a check is still written, with low confidence, so the gap stays visible.
+    Returns counts + the gauges whose health was not ok."""
     times, qh_t = _sql(READING_TIMES_SQL, agent, "world: gauge reading times")
     observed = {t["station_key"]: _utc_iso(t["observed_at_utc"]) for t in times}
     gauges, qh = _sql(GAUGE_STATUS_SQL, agent, "world: gauge status for covered places")
-    n = 0
+    n, unhealthy = 0, {}
     for g in {r["station_key"]: r for r in gauges}.values():
         at = observed.get(g["station_key"])
         if not at:
             continue                    # no reading at all: nothing to assert (the Critic sees the gap)
-        src = _src(at, qh, "veda.place_gauge_status", agent, run_id, "jps_levels")
+        health = check("jps_levels", g) if check else None
+        ok = not health or health.get("ok", True)
+        if not ok:
+            unhealthy[g["station_key"]] = health
+        src = _src(at, qh, "veda.place_gauge_status", agent, run_id, "jps_levels", health)
         sid = station_id(g["station_key"])
-        world.assert_fact(sid, "water_level_m", g["level_m"], confidence=0.9, source=src)
-        world.assert_fact(sid, "band", g["band"], confidence=0.9, source=src)
+        world.assert_fact(sid, "water_level_m", g["level_m"], confidence=0.9 if ok else 0.2, source=src)
+        world.assert_fact(sid, "band", g["band"], confidence=0.9 if ok else 0.2, source=src)
         for pred in ("change_1h_m", "change_3h_m"):
             if g[pred] is not None:
-                world.assert_fact(sid, pred, g[pred], confidence=0.8, source=src)
+                world.assert_fact(sid, pred, g[pred], confidence=0.8 if ok else 0.2, source=src)
         n += 1
     windows, _ = _sql(RAIN_WINDOW_SQL, agent, "world: rain forecast windows")
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
@@ -135,12 +148,14 @@ def ingest_readings(world, agent, run_id):
     today_myt = datetime.now(config.MYT).date().isoformat()   # the forecast row is "today" in Malaysia time
     for p in inputs:
         pid = place_id(p["place_id"])
-        rsrc = _src(window.get(p["rain_point"], "unknown"), qh, "veda.place_risk_inputs", agent, run_id, "open_meteo")
+        rsrc = _src(window.get(p["rain_point"], "unknown"), qh, "veda.place_risk_inputs", agent, run_id, "open_meteo",
+                    check("open_meteo", p) if check else None)
         world.assert_fact(pid, "rain_mm", {k: p[k] for k in ("rain_past_24h_mm", "rain_past_7d_mm", "rain_next_24h_mm",
                                                           "rain_next_72h_mm", "max_prob_next_24h_pct")} | {
             "rain_point": p["rain_point"]}, confidence=0.7, source=rsrc)
         if p["forecast_today"]:
-            fsrc = _src(today_myt + "T00:00:00+08:00", qh, "veda.place_risk_inputs", agent, run_id, "mygov_forecast")
+            fsrc = _src(today_myt + "T00:00:00+08:00", qh, "veda.place_risk_inputs", agent, run_id, "mygov_forecast",
+                        check("mygov_forecast", p) if check else None)
             world.assert_fact(pid, "met_forecast_today", {"summary": p["forecast_today"],
                                                           "when": p["forecast_today_when"]}, confidence=0.7, source=fsrc)
-    return {"gauges": n, "places": len(inputs)}
+    return {"gauges": n, "places": len(inputs), "unhealthy": unhealthy}
