@@ -1,0 +1,55 @@
+{
+ "sql": "SELECT COALESCE(r.location_id, 0) AS location_id, ROUND(SUM(CASE WHEN t > '2024-11-26T08:00' THEN CAST(r.hourly.precipitation[i] AS DOUBLE) END), 1) AS rain_past_24h_mm, ROUND(SUM(CAST(r.hourly.precipitation[i] AS DOUBLE)), 1) AS rain_past_7d_mm, MAX(t) AS last_hour FROM veda_wx.om_rain_nov2024 r LATERAL VIEW posexplode(r.hourly.time) h AS i, t WHERE t > '2024-11-20T08:00' AND t <= '2024-11-27T08:00' GROUP BY COALESCE(r.location_id, 0)",
+ "query_hash": "4496cc61bebec0af",
+ "recorded_at": "2026-10-22T15:40:54Z",
+ "columns": [
+  "location_id",
+  "rain_past_24h_mm",
+  "rain_past_7d_mm",
+  "last_hour"
+ ],
+ "rows": [
+  [
+   "0",
+   "42.0",
+   "194.5",
+   "2024-11-27T08:00"
+  ],
+  [
+   "1",
+   "55.9",
+   "240.3",
+   "2024-11-27T08:00"
+  ],
+  [
+   "2",
+   "43.4",
+   "209.5",
+   "2024-11-27T08:00"
+  ],
+  [
+   "3",
+   "52.9",
+   "236.4",
+   "2024-11-27T08:00"
+  ],
+  [
+   "4",
+   "59.4",
+   "260.1",
+   "2024-11-27T08:00"
+  ],
+  [
+   "5",
+   "22.7",
+   "187.0",
+   "2024-11-27T08:00"
+  ],
+  [
+   "6",
+   "42.0",
+   "205.7",
+   "2024-11-27T08:00"
+  ]
+ ]
+}
