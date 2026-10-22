@@ -11,7 +11,7 @@ Husaini leads the build. He is an engineer but not a day-to-day coder: he vibe-c
 3. **Explain every change** in 2–5 plain sentences after finishing (what, why, how to check).
 4. **Module contracts:** every module has inputs → outputs → failure behaviour written in `docs/how-it-works.md`. Update it when you change a module.
 5. **Secrets:** never write keys or tokens into code, logs, fixtures, docs or commit messages. Read everything from environment variables; keep `.env.example` with placeholders only. Redact auth headers in logs.
-6. **Models:** call Nightshift at `METERLESS_BASE_URL` with model `fast` (Coordinator) or `deep` (Critic). Never `meterless/auto`. Never call NVIDIA directly.
+6. **Models:** call Nightshift at `METERLESS_BASE_URL` with model `meterless/fast` (Coordinator, lane fast) or `meterless/deep` (Critic, lane deep). Never `meterless/auto`. Never call NVIDIA directly.
 7. **Data:** agents get data only through `run_sql()` (Zetaris). No direct HTTP from agents.
 8. **Traces:** every agent step, Zetaris call and Nightshift call writes one JSONL line to `logs/trace-<run_id>.jsonl`.
 9. **No fake behaviour:** no hard-coded outputs, no demo-only branches, never read from `output_examples/` at runtime. Fault injection only via the documented `VEDA_FAULTS` flag, logged as `injected_fault`.

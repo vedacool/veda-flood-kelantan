@@ -29,7 +29,7 @@ Caps: Critic ≤ 2 rejections · 3 retries with backoff · 10-minute deadline ·
 ## 4. Sponsor technology (all load-bearing)
 - **Zetaris** — the only data path. Lightning REST tables (Open-Meteo, data.gov.my) + Postgres registered as a datasource (`river_levels`, `places`, `historic_peaks`, `source_registry`) + views (`place_risk_inputs`). One tool: `run_sql()`.
 - **Meterless World Model engine** — shared state: entities (stations, rivers, places, districts, sources), relations (`upstream_of` with lag, `nearest_station`, `in_district`), timeline snapshots, `stale`/`conflict` facts. Every agent reads/writes it. Conformance tests + a feature test.
-- **Meterless Nightshift** — the only AI provider: `http://127.0.0.1:8088/v1`; model names `fast` and `deep`; never `meterless/auto`.
+- **Meterless Nightshift** — the only AI provider: `http://127.0.0.1:8088/v1`; model routes `meterless/fast` and `meterless/deep` (Setup Guide 4.6: pin a `meterless/*` route), each app pinned to its own lane; never `meterless/auto`.
 - **NVIDIA Nemotron** — powers both LLM agents through Nightshift.
 - **Cursor** — the IDE. Claude Code (inside Cursor) leads; the Cursor CLI agent takes small delegated jobs, logged in `docs/cursor-log.md`.
 

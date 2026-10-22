@@ -61,7 +61,7 @@ def lane_model(lane):
     """Model name sent to Nightshift for a lane (from env). Refuses unknown lanes and anything `auto`."""
     if lane not in LANES:
         raise ValueError(f"unknown lane {lane!r}; use one of {LANES}")
-    model = os.getenv(f"METERLESS_MODEL_{lane.upper()}", lane).strip()
+    model = os.getenv(f"METERLESS_MODEL_{lane.upper()}", f"meterless/{lane}").strip()  # Setup Guide 4.6: pin a meterless/* route
     if "auto" in model.lower():
         raise ValueError(f"METERLESS_MODEL_{lane.upper()}={model!r} is not allowed - never route through auto")
     return model

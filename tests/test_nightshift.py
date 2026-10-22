@@ -72,7 +72,7 @@ def test_happy_path_logs_served_model_and_pinned(fake):
     r = nightshift.chat("fast", [{"role": "user", "content": "Say OK"}], agent="Coordinator")
     assert r.text == "hello" and r.pinned and r.attempts == 1
     call = fake["calls"][0]
-    assert call["body"]["model"] == "fast" and call["body"]["max_tokens"] == nightshift.DEFAULT_MAX_TOKENS
+    assert call["body"]["model"] == "meterless/fast" and call["body"]["max_tokens"] == nightshift.DEFAULT_MAX_TOKENS
     assert call["headers"]["meterless-app"] == "veda-fast"
     line = trace_lines(fake)[-1]
     assert line["agent_name"] == "Coordinator" and line["source"] == "nightshift:fast"
