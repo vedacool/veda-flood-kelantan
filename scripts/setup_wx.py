@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))
 from dotenv import load_dotenv  # noqa: E402
 
 from app import config, trace  # noqa: E402
-from app.adapters import zetaris  # noqa: E402
+from app.adapters import pg, zetaris  # noqa: E402
 
 DB = "VEDA_WX"
 POINTS = ROOT / "data" / "rain_points.csv"
@@ -137,6 +137,19 @@ SMOKE = {
 }
 
 
+def seed_points_table(points):
+    """Replace veda-pg rain_points with the CSV (one transaction) so Zetaris views can name each om_rain row."""
+    with pg.transaction() as conn:
+        conn.execute("DELETE FROM rain_points")
+        for p in points:
+            conn.execute(
+                """INSERT INTO rain_points (location_id, point_key, station_key, name, lat, lon, role, coords_source, status)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (int(p["location_id"]), p["point_key"], p.get("station_key") or None, p.get("name") or None,
+                 float(p["lat"]), float(p["lon"]), p.get("role") or None, p["coords_source"], p["status"]))
+    return len(points)
+
+
 def smoke_check():
     """Rows from every table through run_sql. Returns {table: rows}."""
     return {name: zetaris.run_sql(sql, agent=AGENT, purpose=f"smoke check {name}").rows for name, sql in SMOKE.items()}
@@ -162,6 +175,8 @@ def main(argv=None):
             trace.end_run("failed", "; ".join(problems))
             print("\n".join(problems))
             return 1
+        n_points = seed_points_table(points)
+        trace.step(AGENT, "pg.rain_points", output_summary=f"{n_points} rain points written to veda-pg", source="veda-pg")
         done = ensure_tables(points, recreate=args.recreate)
         trace.step(AGENT, "zetaris.tables", output_summary=", ".join(f"{k}: {v}" for k, v in done.items()))
         cache_tables(points, refresh=args.refresh)
@@ -171,7 +186,7 @@ def main(argv=None):
                    output_summary=f"om_rain {len(rows['om_rain'])} points; forecast {len(rows['mygov_forecast'])} places; "
                                   f"warnings {len(rows['mygov_warning'])}; flood-warning newest {newest_flood}",
                    decision="Every table answers through Zetaris")
-    except (zetaris.ZetarisError, OSError, KeyError, ValueError) as e:
+    except (zetaris.ZetarisError, pg.PgError, OSError, KeyError, ValueError) as e:
         trace.end_run("failed", f"{type(e).__name__}: {e}")
         print(f"SETUP FAILED: {type(e).__name__}: {trace.redact(str(e))}")
         return 1

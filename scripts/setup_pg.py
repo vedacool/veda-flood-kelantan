@@ -35,10 +35,11 @@ RO_ROLE = "veda_zetaris"                  # Zetaris reads as this role (SELECT o
 WRITER_ROLE = "veda_writer"               # ingest jobs write as this role (INSERT/UPDATE on ingest tables only)
 WRITER_GRANTS = {"stations": "SELECT, INSERT, UPDATE", "river_levels": "SELECT, INSERT, UPDATE",
                  "station_links": "SELECT, INSERT, UPDATE, DELETE",   # seed_stations replaces all links each run
-                 "historic_peaks": "SELECT, INSERT, UPDATE, DELETE"}  # seed_peaks replaces all peaks each run
+                 "historic_peaks": "SELECT, INSERT, UPDATE, DELETE",  # seed_peaks replaces all peaks each run
+                 "rain_points": "SELECT, INSERT, UPDATE, DELETE"}     # setup_wx replaces all points each run
 WRITER_TABLES = list(WRITER_GRANTS)
 SCHEMA = ROOT / "db" / "schema.sql"
-TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry", "station_links"]
+TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry", "station_links", "rain_points"]
 PASSWORD_OK = re.compile(r"^[A-Za-z0-9_-]{16,}$")  # role passwords go into DDL / JDBC options: keep them plain
 DOCKER_TIMEOUT_S = 60
 AGENT = "Setup"

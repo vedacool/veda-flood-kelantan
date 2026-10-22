@@ -64,3 +64,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | B-09 first places: Pasir Mas town, Rantau Panjang (needed for the B-70 Nov 2024 replay), Kota Bharu, Tumpat — with aliases/spelling variants and a "Did you mean…?" reply | Husaini 22 Oct |
 | 2026-10-22 | Freshness defaults (tentative — Dr Ariff to review): JPS levels fresh ≤1 h / aging 1–3 h / stale >3 h · Open-Meteo forecast ≤6 h / 6–12 h / >12 h · MET warnings ≤12 h / 12–24 h / >24 h; aging lowers confidence, stale = not used | Husaini 22 Oct (supersedes the B-05 KIV) |
 | 2026-10-22 | All open "needs Dr Ariff" items collected in `docs/review_pack_ariff.md` (~1 h, priority order) | Husaini 22 Oct |
+| 2026-10-22 | Views carry facts (age, band, change, rain sums); freshness and verdicts are judged in Python, so tentative limits live in one place | B-08 |
+| 2026-10-22 | `rain_points` copied into veda-pg by setup_wx so views can name each Open-Meteo row; `place_risk_inputs` waits for the B-09 gazetteer (B-08 marked done then) | B-08 |
+| 2026-10-22 | Open-Meteo fetch time is not visible to views (cache keeps no timestamp) → B-13 records refresh times for forecast freshness | B-08 |

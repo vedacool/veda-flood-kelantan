@@ -112,3 +112,17 @@ ALTER TABLE historic_peaks
     ADD COLUMN IF NOT EXISTS warning_m double precision,
     ADD COLUMN IF NOT EXISTS danger_m double precision,
     ADD COLUMN IF NOT EXISTS notes text;
+
+-- B-08: rain points (from data/rain_points.csv via scripts/setup_wx.py) so Zetaris views can name each
+-- Open-Meteo row: om_rain row COALESCE(location_id, 0) = rain_points.location_id.
+CREATE TABLE IF NOT EXISTS rain_points (
+    location_id    integer PRIMARY KEY,
+    point_key      text NOT NULL UNIQUE,
+    station_key    text REFERENCES stations (station_key),
+    name           text,
+    lat            double precision NOT NULL,
+    lon            double precision NOT NULL,
+    role           text,
+    coords_source  text,
+    status         text NOT NULL
+);
