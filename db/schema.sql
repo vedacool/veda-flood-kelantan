@@ -100,3 +100,15 @@ CREATE TABLE IF NOT EXISTS station_links (
     CHECK (from_key <> to_key),
     CHECK (lag_min_h IS NULL OR lag_max_h IS NULL OR lag_min_h <= lag_max_h)
 );
+
+-- B-55: historic peaks with provenance. Official JPS figures and news-reported figures are kept apart
+-- (source_type); news values for the same event may disagree - each row cites its own source.
+ALTER TABLE historic_peaks
+    ADD COLUMN IF NOT EXISTS observed_when text,        -- as given by the source, e.g. '24 Dec 2014 16:00'
+    ADD COLUMN IF NOT EXISTS source_type text,          -- 'official' (JPS) | 'news' (reported)
+    ADD COLUMN IF NOT EXISTS source_name text,
+    ADD COLUMN IF NOT EXISTS normal_m double precision, -- thresholds in force at the time (2014 JPS table)
+    ADD COLUMN IF NOT EXISTS alert_m double precision,
+    ADD COLUMN IF NOT EXISTS warning_m double precision,
+    ADD COLUMN IF NOT EXISTS danger_m double precision,
+    ADD COLUMN IF NOT EXISTS notes text;

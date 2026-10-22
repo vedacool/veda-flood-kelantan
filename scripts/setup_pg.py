@@ -34,7 +34,8 @@ DATASOURCE = "veda_pg"
 RO_ROLE = "veda_zetaris"                  # Zetaris reads as this role (SELECT only)
 WRITER_ROLE = "veda_writer"               # ingest jobs write as this role (INSERT/UPDATE on ingest tables only)
 WRITER_GRANTS = {"stations": "SELECT, INSERT, UPDATE", "river_levels": "SELECT, INSERT, UPDATE",
-                 "station_links": "SELECT, INSERT, UPDATE, DELETE"}   # seed_stations replaces all links each run
+                 "station_links": "SELECT, INSERT, UPDATE, DELETE",   # seed_stations replaces all links each run
+                 "historic_peaks": "SELECT, INSERT, UPDATE, DELETE"}  # seed_peaks replaces all peaks each run
 WRITER_TABLES = list(WRITER_GRANTS)
 SCHEMA = ROOT / "db" / "schema.sql"
 TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry", "station_links"]
@@ -51,6 +52,10 @@ CONSTRAINTS = [
      "FOREIGN KEY (nearest_station_key) REFERENCES stations (station_key) ON DELETE SET NULL"),
     ("river_levels_level_range", "river_levels", "CHECK (level_m IS NULL OR level_m BETWEEN -50 AND 1000)"),
     ("river_levels_not_future", "river_levels", "CHECK (observed_at <= scraped_at + interval '1 day')"),
+    ("historic_peaks_station_fk", "historic_peaks", "FOREIGN KEY (station_key) REFERENCES stations (station_key)"),
+    ("historic_peaks_source_type", "historic_peaks",
+     "CHECK (source_type IS NULL OR source_type IN ('official', 'news'))"),
+    ("historic_peaks_range", "historic_peaks", "CHECK (peak_m BETWEEN -50 AND 1000)"),
     ("stations_threshold_range", "stations",
      "CHECK ((normal_m IS NULL OR normal_m BETWEEN -50 AND 1000) AND (alert_m IS NULL OR alert_m BETWEEN -50 AND 1000)"
      " AND (warning_m IS NULL OR warning_m BETWEEN -50 AND 1000) AND (danger_m IS NULL OR danger_m BETWEEN -50 AND 1000))"),

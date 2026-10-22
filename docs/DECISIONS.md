@@ -58,3 +58,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | B-07 slim: rain at 5 core gauges + Galas and Lebir upstream points; Thai-side Golok rain deferred (README gap) | backlog review 22 Oct |
 | 2026-10-22 | All Open-Meteo rain points in ONE REST table (multi-location request; Zetaris returns one row per point); read `COALESCE(location_id, 0)` | B-07 probe |
 | 2026-10-22 | Coordinates kept at full precision in CSVs (a builder bug had rounded them to 6 significant digits, ~40 m) | B-07 |
+| 2026-10-22 | Historic peaks: official JPS 2014 table (USM CGSS slides URL) + verified news figures only, each row with its own URL; conflicting sources kept side by side, official wins; unverified 10.97 m dropped | B-55 · source check by research agent + spot-check |
+| 2026-10-22 | Any "current level" sentence shows the reading time (MYT) - never "now" - until freshness limits are agreed | B-55 |
