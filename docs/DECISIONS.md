@@ -152,4 +152,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Web entry point = FastAPI 0.143.0 + uvicorn 0.54.0 (newest releases at least 14 days old, Dependabot cooldown rule), httpx 0.28.1 for tests; one static page, no external scripts; live steps over Server-Sent Events from the trace listener | B-19 |
 | 2026-10-23 | One run at a time (429 when busy) - the World Model on disk has one writer; server binds 127.0.0.1 unless VEDA_HOST says otherwise | B-19 |
 | 2026-10-23 | Deep-lane re-test after midnight: 0/3 again (provider_deadline x2, NVIDIA 500) -> the fast-lane Critic fallback goes in (decided 22 Oct night) | B-14 |
+| 2026-10-23 | Container: python:3.13-slim pinned by digest, non-root user, .env / logs / on-disk World Model never copied; SAMPLE_MODE container tested offline (replay ACT, evals 13/13) | B-19 |
 

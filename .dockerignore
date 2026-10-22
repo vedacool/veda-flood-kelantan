@@ -1,0 +1,13 @@
+# Never into the image: secrets, local state, caches, VCS.
+.env
+.env.*
+!.env.example
+.venv/
+.git/
+logs/
+data/world/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+CLAUDE.local.md
+spikes/

@@ -181,3 +181,8 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **`GET /`:** the web page — question box, Live / REPLAY · Nov 2024 scenes, the steps appearing live, then the answer in the user's language with an EN / BM switch (the other language shows the code-written card + its disclaimer). No external scripts or fonts (works offline); light and dark.
 - **Failure behaviour:** bad input → **400** `{"error": {"code", "message"}}` (empty or > 500-character question, unknown replay, bad time, time outside the replay window, `at` without `replay`, not JSON); a second run while one is running → **429** (one writer for the World Model on disk); a model failure never becomes a 500 page (agents fall back; 503 only if one ever escapes). Every returned text is redacted like the trace.
 
+## Container (B-19) — `Dockerfile`, `.dockerignore`
+- **Image:** `python:3.13-slim` pinned by digest; installs `requirements-lock.txt`; copies the app, the recorded data (SAMPLE_MODE fixtures, curated CSVs, replay anchors), `run.py`, the eval runner and scenarios; runs as user `veda`; healthcheck on `/health`; starts `python -m app.main` on 0.0.0.0:8000 inside the container.
+- **Judges:** `docker build -t veda .` then `docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda` — no `.env`, no keys, no network (tested 23 Oct: replay ACT via POST /run, safety evals 13/13 inside the container).
+- **Never copied** (`.dockerignore`): `.env`, `.venv/`, `.git/`, `logs/`, `data/world/`, `CLAUDE.local.md`, `spikes/`. Guard tests in `tests/test_docker.py`.
+
