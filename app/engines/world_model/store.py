@@ -27,6 +27,10 @@ class EventStore:
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._db = sqlite3.connect(self.path, check_same_thread=False)
+            # B-17: WAL + NORMAL sync. A full disk sync per event cost ~116 ms on drive E: (153 events = 18 s).
+            # Still crash-safe for a VEDA crash; only the last few events could be lost on a sudden power cut.
+            self._db.execute("PRAGMA journal_mode=WAL")
+            self._db.execute("PRAGMA synchronous=NORMAL")
             self._db.execute("CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, kind TEXT NOT NULL, "
                              "payload TEXT NOT NULL, at TEXT NOT NULL, actor TEXT, run_id TEXT)")
             self._db.commit()

@@ -4,17 +4,18 @@
 
     plan -> gather -> forecast -> draft -> critique -> (revise -> critique) -> done
 
-plan      Coordinator: intent, user type, place (gazetteer), sources, effort. Unknown place -> done with the
-          gazetteer's reply ("Did you mean...?" / not covered). Meanwhile the Data & Reconciler agent already
-          prefetches the world in the background (it needs no plan).
+plan      Code first: the gazetteer finds the place (not covered -> done, no AI call) and the router decides
+          quick or full + the answer language from the question and the prefetched data. Quick = plan written
+          by code; full = the Coordinator plans with Nemotron (it cannot change the effort, place or language).
+          The Data & Reconciler agent prefetches the world in the background from the very start.
 gather    Data & Reconciler agent: health checks -> World Model -> evidence for the planned place.
 forecast  Forecast agent: verdict + range + confidence (quick plan -> current levels only).
 draft     Coordinator writes the answer from the evidence.
 critique  Critic: code checks + its own Zetaris re-queries + deep-lane review -> approve or reject.
 revise    after a rejection the Coordinator redrafts with the Critic's problems, then back to critique. After
           critic.MAX_REJECTIONS (2) rejections the answer is the code-written summary, labelled low confidence.
-Paths (B-17): quick = jps + MET forecast, no cross-check, "now" forecast, Critic = code checks only; full = all.
-Time budget from the start of the run: quick 30 s, full 90 s. When too little is left for a model call, that step
+Paths (B-17): quick = jps + MET forecast, no cross-check, "now" forecast, answer and review by code (no Nemotron
+call at all); full = everything. Time budget from the start of the run: quick 30 s, full 150 s. When too little is left for a model call, that step
 falls back to code (answer written by code, review by code checks) and the trace says why ("budget: ...").
 Every state change is one trace line with the elapsed time; a timing line closes the run. A 10-minute hard
 deadline ends the run with whatever is safe to say.
@@ -22,13 +23,13 @@ deadline ends the run with whatever is safe to say.
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from app import config, trace
+from app import config, gazetteer, router, trace
 from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
 STATES = ("plan", "gather", "forecast", "draft", "critique", "revise", "done")
 DEADLINE_S = 600
-BUDGET_S = {"quick": 30, "full": 90}     # Husaini 22 Oct: the longest the user should wait for an answer
+BUDGET_S = {"quick": 30, "full": 150}    # Husaini 22 Oct night: the longest the user should wait for an answer
 PLAN_CAP_S = 30                          # the planning call may not use more than this
 MIN_MODEL_S = 10                         # don't start a model call with less time than this left
 RESERVE_S = 2                            # kept back from every model call for the steps after it
@@ -44,11 +45,12 @@ def open_world(run_id):
     return WorldModel(storage=WORLD_PATH, audit_jsonl=config.ROOT / "logs" / f"worldmodel-audit-{run_id}.jsonl")
 
 
-def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None):
+def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
+        on_step=None):
     """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, reviews, timing, trace}.
-    budget_s overrides the per-effort budget (tests). Never raises for data or model problems; those end up in the
+    budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live. Never raises for data or model problems; those end up in the
     answer and the trace."""
-    run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet)
+    run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet, listener=on_step)
     t0 = time.monotonic()
     own_world = world is None
     world = world or open_world(run_.run_id)
@@ -92,12 +94,23 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                 + (f" ({left():.0f} s of the {p['effort']} budget left)" if budget else ""))
             current, started = state, elapsed()
             if state == "plan":
-                p = coordinator.plan(question, world=world, llm=llm, budget_s=min(PLAN_CAP_S, left()))
-                budget = budget_s or BUDGET_S[p["effort"]]
-                if p["place_status"] != "found":
-                    answer = {"text": p["place_message"], "language": p["question_language"], "drafted_by": "code"}
+                lang = router.language(question)
+                res = gazetteer.resolve(question, agent=coordinator.AGENT)
+                if res.status != "found":
+                    p = {"question_language": lang, "place": None, "place_status": res.status,
+                         "place_message": res.message, "planned_by": "code"}
+                    answer = {"text": res.message, "language": lang, "drafted_by": "code"}
                     state = "done"
                 else:
+                    r = router.route(question, res.place, world, pre.result())
+                    budget = budget_s or BUDGET_S[r["effort"]]
+                    if r["effort"] == "quick":
+                        p = router.quick_plan(question, res, r)
+                        coordinator.remember(world, p)
+                    else:
+                        p = coordinator.plan(question, world=world, llm=llm, budget_s=min(PLAN_CAP_S, left()),
+                                             resolved=res, effort="full", language=r["language"])
+                    p["route_reasons"] = r["reasons"]
                     state = "gather"
             elif state == "gather":
                 evidence = data_agent.gather(p, world, now=now, pre=pre.result())
@@ -106,7 +119,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 fc = forecast_agent.forecast(p, evidence, world)
                 state = "draft"
             elif state == "draft":
-                why = short("the answer")
+                why = "quick path: answer written by code" if p["effort"] == "quick" else short("the answer")
                 answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=model_time(),
                                            use_model=why is None, skip_reason=why)
                 state = "critique"

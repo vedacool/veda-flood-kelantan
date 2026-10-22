@@ -17,6 +17,7 @@ refresh is older than the 'fresh' limit or unknown, and records when it refreshe
 Nothing here crashes the run: every source ends with a status (ok | degraded | stale | failed | skipped) and a
 plain note, and `usable` says whether the controlling gauge can be trusted for "now".
 """
+import re
 from datetime import datetime, timezone
 
 from app import config, trace
@@ -32,6 +33,7 @@ FRESHNESS = {  # minutes: (fresh up to, aging up to); older = stale. Tentative, 
     "jps_levels": (60, 180),
     "open_meteo": (360, 720),
     "mygov_forecast": (720, 1440),
+    "mygov_warning": (720, 1440),
 }
 REFRESHABLE = {"open_meteo": "veda_wx.om_rain", "mygov_forecast": "veda_wx.mygov_forecast"}
 LABEL = {"jps_levels": "JPS river levels", "open_meteo": "Open-Meteo rain forecast",
@@ -45,7 +47,12 @@ AGREE_M = 0.05                    # two sources within 5 cm of each other agree
 CLOCK_SQL = "SELECT current_timestamp() AS now_utc"
 FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime "
                      "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s")
-PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock"})
+WARNING_SQL = ("SELECT w.heading_en, w.text_en, w.text_bm, w.valid_from, w.valid_to, w.warning_issue.issued AS issued "
+               "FROM veda_wx.mygov_warning LATERAL VIEW explode(data) AS w")
+PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock",
+                 WARNING_SQL: "MetMalaysia warnings"})
+FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
+KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
 
 def freshness(source, age_minutes):
@@ -253,6 +260,71 @@ def _reconcile_levels(cross, world):
     return out
 
 
+def _myt_time(text):
+    """MetMalaysia times ('2026-10-22T10:30:00', local) -> aware datetime in MYT, or None."""
+    try:
+        t = datetime.fromisoformat(str(text).replace("Z", "+00:00")) if text else None
+    except ValueError:
+        return None
+    return t if t is None or t.tzinfo else t.replace(tzinfo=config.MYT)
+
+
+def _covers(text, place):
+    """Does a warning text name this place's area? 'Kelantan' alone = the whole state; 'Kelantan (Tumpat, ...)'
+    = only those districts."""
+    for m in KELANTAN_AREA.finditer(text or ""):
+        districts = m.group(2)
+        if districts is None:
+            return True
+        names = {place.get("district"), place.get("name")} - {None}
+        if any(n.lower() in districts.lower() for n in names):
+            return True
+    return False
+
+
+def met_warnings(result, place, clock, world=None, run_id=None):
+    """MetMalaysia warnings for one place -> {status: ok | stale | failed, newest_issued, active: [...], note}.
+    Only rain / thunderstorm warnings that name the place's area and are valid now count. If the feed's newest
+    warning is older than the MET 'aging' limit (24 h) the feed is stale: reported, and it triggers nothing."""
+    if result is None:
+        return {"status": "failed", "active": [], "note": "MetMalaysia warnings could not be read"}
+    rows = result.records
+    issued = [t for t in (_myt_time(r.get("issued")) for r in rows) if t]
+    newest = max(issued) if issued else None
+    age = _age_since(clock, newest)
+    fresh = freshness("mygov_warning", age)
+    active = []
+    for r in rows:
+        if not FLOOD_WARNING_TYPES.search(r.get("heading_en") or ""):
+            continue
+        if not (_covers(r.get("text_en"), place) or _covers(r.get("text_bm"), place)):
+            continue
+        start, end, at = _myt_time(r.get("valid_from")), _myt_time(r.get("valid_to")), _myt_time(r.get("issued"))
+        now_valid = (start is None or start <= clock) and (end >= clock if end else
+                                                             at is not None and _age_since(clock, at) <= 1440)
+        if now_valid:
+            active.append({"heading": r.get("heading_en"), "valid_to": end.isoformat() if end else None})
+    newest_text = newest.strftime("%Y-%m-%d %H:%M MYT") if newest else None
+    if fresh in ("stale", "unknown"):
+        status, note, active = "stale", (f"MetMalaysia warnings feed is stale (newest {newest_text}) - "
+                                         "ignored, it triggers nothing"), []
+    else:
+        status = "ok"
+        note = (f"{len(active)} active MetMalaysia warning(s) for this area: "
+                + "; ".join(a["heading"] for a in active) if active
+                else f"no active MetMalaysia rain/thunderstorm warning for this area (feed updated {newest_text})")
+    if world is not None:
+        world.upsert_context("source", external_key={"system": "veda", "id": "mygov_warning"},
+                             attrs={"status": status, "newest_issued": newest_text},
+                             source={"kind": "zetaris", "at": _iso(clock), "sql": result.sql,
+                                     "query_hash": result.query_hash, "view": "veda_wx.mygov_warning",
+                                     "agent": AGENT, "run_id": run_id, "origin": "MetMalaysia warnings check"})
+    trace.step(AGENT, "data.met_warnings", input_summary=place.get("name"), output_summary=note,
+               status="success" if status == "ok" else "fallback", source="mygov_warning",
+               details={"newest_issued": newest_text, "active": active, "rows": len(rows)})
+    return {"status": status, "newest_issued": newest_text, "active": active, "note": note}
+
+
 def _forecast_age(world, key, clock):
     return _age_since(clock, _last_refresh(world, key))
 
@@ -266,9 +338,9 @@ def prefetch(world, now=None):
     run_id = run.run_id if run else None
     events_before = len(world.store.events)
     notes = [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n]
-    sqls = NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL] + ([] if now else [CLOCK_SQL])
+    sqls = NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL])
     try:
-        results = fetch_all(sqls, AGENT)
+        results = fetch_all(sqls, AGENT, optional={FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL})
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
         counts = ingest_readings(world, AGENT, run_id, check=check, results=results)
@@ -336,8 +408,11 @@ def gather(plan, world, now=None, pre=None):
             "degraded" if item["freshness"] in ("aging", "unknown") else "ok"
         sources[key] = {"status": status, "note": f"refreshed {age} min ago ({item['freshness']})"
                         if age is not None else "refresh time unknown"}
+    warnings = None
     if "mygov_warning" in wanted:
-        sources["mygov_warning"] = {"status": "skipped", "note": "MetMalaysia warnings are not wired into the agents yet"}
+        warnings = met_warnings(pre.get("results", {}).get(WARNING_SQL), plan["place"], clock, world, run_id)
+        sources["mygov_warning"] = {"status": {"ok": "ok", "stale": "stale"}.get(warnings["status"], "failed"),
+                                    "note": warnings["note"]}
 
     cross = None
     if quick:
@@ -369,4 +444,5 @@ def gather(plan, world, now=None, pre=None):
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
+            "met_warnings": warnings,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

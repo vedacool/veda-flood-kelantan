@@ -61,12 +61,23 @@ def _sql(sql, agent, purpose, results=None):
 PURPOSES = {}          # sql -> trace purpose, filled below
 
 
-def fetch_all(sqls, agent, workers=10):
+def fetch_all(sqls, agent, workers=10, optional=()):
     """Run independent read-only queries at the same time (B-17: ~28 s one by one -> ~6 s together).
-    Returns {sql: SqlResult}. A ZetarisError from any query is raised."""
-    run_one = trace.bind(lambda q: zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch")))
+    Returns {sql: SqlResult}. A failed query in `optional` maps to None (its run_sql trace line says why);
+    any other failure raises its ZetarisError."""
+    def run_one(q):
+        try:
+            return zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch"))
+        except zetaris.ZetarisError as e:
+            if q in optional:
+                return None
+            return e
     with ThreadPoolExecutor(max_workers=min(workers, len(sqls)) or 1) as ex:
-        return dict(zip(sqls, ex.map(run_one, sqls)))
+        results = dict(zip(sqls, ex.map(trace.bind(run_one), sqls)))
+    failed = next((r for r in results.values() if isinstance(r, zetaris.ZetarisError)), None)
+    if failed:
+        raise failed
+    return results
 
 
 def _src(at, query_hash, view, agent, run_id, origin, health=None):

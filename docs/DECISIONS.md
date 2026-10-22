@@ -121,4 +121,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | B-14's real rejection for the demo comes from the B-70 replay (real Nov 2024 data); `VEDA_FAULTS` is for tests only and must never be enabled in SAMPLE_MODE or the demo | Husaini 22 Oct night |
 | 2026-10-22 | Cursor CLI session issue dropped (no further work) | Husaini 22 Oct night |
 | 2026-10-22 | B-72 Zetaris result cache parked as P3 — data loading is no longer the bottleneck (B-17: gather 0.1–1.7 s) | Husaini 22 Oct night |
+| 2026-10-22 | Router details: rising = ≥ 0.3 m / 3 h or ≥ 0.15 m / 1 h (tide-influenced gauges excluded); MET warning counts only if rain/thunderstorm, names Kelantan (or the place's district when districts are listed), valid now, feed ≤ 24 h old; word lists BM + EN + Kelantan dialect (tentative) | B-17 |
+| 2026-10-22 | World Model SQLite in WAL mode, synchronous=NORMAL: per-event disk sync cost 116 ms on drive E: (prefetch 19 s → 6 s) | B-17 |
+| 2026-10-22 | Optional prefetch queries (MET warnings, /flood-warning, data clock) fail softly; network + readings still fail the run's data loudly | B-17 |
 

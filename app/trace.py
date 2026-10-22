@@ -27,10 +27,11 @@ MAX_SUMMARY = 300
 class Run:
     """One VEDA run: its id, trace file, step counter and write lock."""
 
-    def __init__(self, run_id, path, quiet=False):
+    def __init__(self, run_id, path, quiet=False, listener=None):
         self.run_id = run_id
         self.path = path
         self.quiet = quiet
+        self.listener = listener        # called with every record as it is written (live progress: CLI, web page)
         self.step = 0
         self.lock = threading.Lock()
 
@@ -108,12 +109,13 @@ def current_run():
     return _current.get()
 
 
-def start_run(question=None, log_dir=None, quiet=False):
-    """Start a run: create logs/trace-<run_id>.jsonl, write a run_start line, make it the current run."""
+def start_run(question=None, log_dir=None, quiet=False, listener=None):
+    """Start a run: create logs/trace-<run_id>.jsonl, write a run_start line, make it the current run.
+    listener(record) is called for every step as it happens (B-17: live progress); its errors never stop a run."""
     run_id = f"{datetime.now(config.MYT):%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4]}"  # MYT
     folder = Path(log_dir) if log_dir else ROOT / "logs"
     folder.mkdir(parents=True, exist_ok=True)
-    run = Run(run_id, folder / f"trace-{run_id}.jsonl", quiet)
+    run = Run(run_id, folder / f"trace-{run_id}.jsonl", quiet, listener)
     _current.set(run)
     step("System", "run_start", input_summary=question,
          output_summary=f"Run {run_id} started ({'SAMPLE_MODE' if config.sample_mode() else 'live'})",
@@ -154,6 +156,11 @@ def step(agent, action, input_summary=None, output_summary=None, status="success
     _write(run, record)
     if not run.quiet:
         print(sentence(record), flush=True)
+    if run.listener:
+        try:
+            run.listener(record)
+        except Exception as e:  # a broken progress display must never stop the run
+            print(f"WARNING: progress listener failed: {type(e).__name__}", file=sys.stderr)
     return record
 
 

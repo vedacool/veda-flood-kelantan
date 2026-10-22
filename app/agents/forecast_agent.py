@@ -42,7 +42,7 @@ BAND_NAMES = {  # JPS level names shown with every verdict (B-21)
     "warning": {"en": "Warning", "ms": "Amaran"},
     "danger": {"en": "Danger", "ms": "Bahaya"},
 }
-NOT_CHECKED = ["MetMalaysia warnings (not wired yet)", "official warnings / evacuation orders (no source yet)",
+NOT_CHECKED = ["MetMalaysia warnings (used to pick the full path, not yet in the verdict)", "official warnings / evacuation orders (no source yet)",
                "step-down wait of 12-24 h (A3, needs a verdict history)"]
 
 

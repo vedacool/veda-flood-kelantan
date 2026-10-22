@@ -85,8 +85,9 @@ def _resolve_place(question, place_text, fixes):
     return first            # keep the "Did you mean...?" / not-covered reply for the name the user gave
 
 
-def _validate(question, raw, fixes):
-    """Model output -> a plan VEDA can execute. Every correction is appended to `fixes`."""
+def _validate(question, raw, fixes, resolved=None):
+    """Model output -> a plan VEDA can execute. Every correction is appended to `fixes`.
+    resolved = the place the code already found (B-17 routing) - then the model's place_text is not used."""
     raw = raw if isinstance(raw, dict) else {}
     effort = _choose(raw.get("effort"), EFFORTS, "full", "effort", fixes)
     asked = raw.get("sources") if isinstance(raw.get("sources"), list) else []
@@ -100,7 +101,7 @@ def _validate(question, raw, fixes):
         sources.insert(0, "jps_levels")
         fixes.append("added jps_levels: every flood answer needs the river gauges")
     place_text = raw.get("place_text") if isinstance(raw.get("place_text"), str) else ""
-    res = _resolve_place(question, place_text.strip(), fixes)
+    res = resolved or _resolve_place(question, place_text.strip(), fixes)
     return {
         "question_language": _choose(raw.get("language"), LANGUAGES, "en", "language", fixes),
         "intent": _choose(raw.get("intent"), INTENTS, "risk_check", "intent", fixes),
@@ -111,8 +112,10 @@ def _validate(question, raw, fixes):
     }
 
 
-def plan(question, world=None, llm=None, budget_s=None):
-    """Plan for one question. llm(lane, messages, agent=..., json_mode=..., ...) -> LLMResult (default: Nightshift)."""
+def plan(question, world=None, llm=None, budget_s=None, resolved=None, effort=None, language=None):
+    """Plan for one question. llm(lane, messages, agent=..., json_mode=..., ...) -> LLMResult (default: Nightshift).
+    resolved / effort / language: already decided by code (B-17 router) - the model cannot change them; any
+    difference is listed in the trace's fixes."""
     llm = llm or nightshift.chat
     fixes, planned_by, why = [], "llm", None
     try:
@@ -121,8 +124,16 @@ def plan(question, world=None, llm=None, budget_s=None):
         raw = r.data
     except nightshift.NightshiftError as e:
         raw, planned_by, why = {}, "fallback", f"Nightshift unavailable ({e}) -> plan written by code"
-    p = _validate(question, raw, fixes if planned_by == "llm" else [])
+    p = _validate(question, raw, fixes if planned_by == "llm" else [], resolved)
     p["planned_by"] = planned_by
+    for key, value in (("effort", effort), ("question_language", language)):
+        if value and p[key] != value:
+            if planned_by == "llm":
+                fixes.append(f"{key} {p[key]} -> {value} (decided by code)")
+            p[key] = value
+    if effort == "full" and planned_by == "llm" and len(p["sources"]) < 2:
+        p["sources"] = list(SOURCES)
+        fixes.append("full path -> every source")
     if planned_by == "fallback":
         p["reason"] = "Fallback plan: full effort, every source."
     trace.step(AGENT, "plan", input_summary=question,
@@ -131,7 +142,7 @@ def plan(question, world=None, llm=None, budget_s=None):
                status="success" if planned_by == "llm" else "fallback", target_agent="Data & Reconciler",
                decision=why or ("; ".join(fixes) if fixes else p["reason"]), details={"plan": p, "fixes": fixes})
     if world is not None and run_id():
-        _remember(world, p)
+        remember(world, p)
     return p
 
 
@@ -140,7 +151,7 @@ def run_id():
     return run.run_id if run else None
 
 
-def _remember(world, p):
+def remember(world, p):
     """Question radar in the World Model: intent tags only, never the question text (no personal data)."""
     at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     world.upsert_context("run", external_key={"system": "veda", "id": run_id()}, attrs={
