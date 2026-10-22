@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA - Kelantan flood check</title>
+<style>
+  :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5f5f5a; --card: #ffffff; --line: #d9d9d4; --accent: #1f5f8b;
+          --warn: #9a5b00; --bad: #a3271f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --fg: #ececea; --muted: #a7a7a1; --card: #20201e; --line: #3a3a37; --accent: #7fb6dd;
+            --warn: #e0a54a; --bad: #ef7d73; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  form { display: grid; gap: 10px; }
+  label { font-weight: 600; }
+  input, select, button { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+                          background: var(--card); color: var(--fg); width: 100%; }
+  button { background: var(--accent); color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  section { margin-top: 22px; }
+  h2 { font-size: 1rem; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  #steps { list-style: none; padding: 0; margin: 0; font: 14px/1.45 ui-monospace, Consolas, monospace; }
+  #steps li { padding: 3px 0; border-bottom: 1px dashed var(--line); white-space: pre-wrap; word-break: break-word; }
+  #steps li.fail { color: var(--bad); }
+  #steps li.note { color: var(--warn); }
+  #steps .t { color: var(--muted); display: inline-block; min-width: 4.5em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+          white-space: pre-wrap; word-break: break-word; }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+  .tabs button { width: auto; padding: 6px 12px; background: var(--card); color: var(--fg); border: 1px solid var(--line); }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .error { color: var(--bad); font-weight: 600; }
+  [hidden] { display: none !important; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>VEDA - Kelantan flood check</h1>
+  <p class="sub">Ask about Pasir Mas, Rantau Panjang, Kota Bharu or Tumpat - in English or Bahasa Melayu.
+    Every step is shown as it happens.</p>
+
+  <form id="ask">
+    <label for="q">Your question</label>
+    <input id="q" name="q" maxlength="500" required placeholder="e.g. Mak ayah saya di Tumpat, kena pindah malam ni?">
+    <div class="row">
+      <div>
+        <label for="mode">Data</label>
+        <select id="mode">
+          <option value="">Live (now)</option>
+          <option value="nov2024|2024-11-26 18:00">REPLAY · Nov 2024 - 26 Nov 18:00</option>
+          <option value="nov2024|2024-11-27 08:00">REPLAY · Nov 2024 - 27 Nov 08:00</option>
+          <option value="nov2024|2024-11-27 19:30">REPLAY · Nov 2024 - 27 Nov 19:30</option>
+        </select>
+      </div>
+      <div style="align-self: end"><button id="go" type="submit">Ask VEDA</button></div>
+    </div>
+  </form>
+
+  <p id="err" class="error" role="alert" hidden></p>
+
+  <section id="steps-box" hidden aria-live="polite">
+    <h2>What VEDA is doing</h2>
+    <ol id="steps"></ol>
+  </section>
+
+  <section id="answer-box" hidden>
+    <h2>Answer</h2>
+    <div class="tabs" role="group" aria-label="Language">
+      <button type="button" data-lang="ms" aria-pressed="false">Bahasa Melayu</button>
+      <button type="button" data-lang="en" aria-pressed="false">English</button>
+    </div>
+    <div id="answer" class="card"></div>
+    <p id="meta" class="meta"></p>
+  </section>
+
+  <footer>Decision support only - not an official warning. Follow JPS / APM / police instructions.
+    Emergency 999 · APM 991.</footer>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let result = null, shown = "en", t0 = 0;
+
+function addStep(text, cls) {
+  const li = document.createElement("li");
+  if (cls) li.className = cls;
+  const t = document.createElement("span");
+  t.className = "t";
+  t.textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+  li.append(t, document.createTextNode(text));
+  $("steps").append(li);
+}
+
+function showAnswer(lang) {
+  if (!result) return;
+  shown = lang;
+  // the user's own language: the full answer (with the AI explanation if the Critic approved it);
+  // the other language: the code-written card + that language's disclaimer
+  $("answer").textContent = (lang === result.language || !result.card) ? result.output
+    : result.card[lang] + "\n" + result.disclaimer[lang];
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("meta").textContent = `Verdict ${result.verdict || "-"} · confidence ${result.confidence || "-"} · ` +
+    `${result.approved_by_critic ? "approved by the Critic" : "checked by code"} · ${result.execution_time} s · ` +
+    `trace ${result.log_file}`;
+}
+
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showAnswer(b.dataset.lang)));
+
+$("ask").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const [replay, at] = ($("mode").value || "|").split("|");
+  const params = new URLSearchParams({ question: $("q").value, replay, at });
+  $("err").hidden = true; $("steps").replaceChildren(); $("answer-box").hidden = true;
+  $("steps-box").hidden = false; $("go").disabled = true; result = null; t0 = performance.now();
+  try {
+    const res = await fetch("/run/stream?" + params);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body.error && body.error.message) || ("HTTP " + res.status));
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let cut;
+      while ((cut = buf.indexOf("\n\n")) >= 0) {
+        const block = buf.slice(0, cut); buf = buf.slice(cut + 2);
+        const kind = (block.match(/^event: (.*)$/m) || [])[1];
+        const data = JSON.parse((block.match(/^data: (.*)$/m) || [, "null"])[1]);
+        if (kind === "step") addStep(data.line, data.status === "failed" ? "fail" : data.line.trim().startsWith("!") ? "note" : "");
+        if (kind === "error") throw new Error(data.message);
+        if (kind === "result") { result = data; $("answer-box").hidden = false; showAnswer(data.language || "en"); }
+      }
+    }
+  } catch (e) {
+    $("err").textContent = e.message; $("err").hidden = false;
+  } finally {
+    $("go").disabled = false;
+  }
+});
+</script>
+</body>
+</html>

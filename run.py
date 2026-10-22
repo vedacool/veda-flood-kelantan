@@ -11,34 +11,14 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from app import config, trace
-
-STEP_LABELS = {"plan": "Understanding the question", "gather": "Checking river gauges, rain and warnings",
-               "forecast": "Working out the risk", "draft": "Writing the answer", "critique": "Checking the answer",
-               "revise": "Fixing the answer"}
-
+from app import config, progress, trace
 
 def progress_printer():
     """A listener for loop.run(on_step=...): one short line per step, as it happens (B-17)."""
     t0 = time.monotonic()
 
     def show(rec):
-        a, out = rec["action"], rec.get("output_summary") or ""
-        line = None
-        if a == "state":
-            line = f"> {STEP_LABELS.get(rec['input_summary'], rec['input_summary'])}"
-        elif a == "route":
-            line = f"  {out}: {rec.get('decision') or ''}"
-        elif a == "forecast.verdict":
-            line = f"  verdict {out}"
-        elif a == "critic.review":
-            line = f"  review: {out}"
-        elif a == "budget":
-            line = f"  ! {out}"
-        elif a == "replay":
-            line = f"  {out} ({rec.get('decision')})"
-        elif rec["status"] == "failed" and a not in ("run_end",):
-            line = f"  ! {rec['agent_name']}: {out}"
+        line = progress.describe(rec)
         if line:
             print(f"{time.monotonic() - t0:6.1f}s {trace.redact(line)[:150]}", flush=True)
     return show

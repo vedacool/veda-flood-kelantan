@@ -173,3 +173,11 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **Each scenario:** the question, optional replay scene, optional `stale_hours`, a stand-in AI (`llm`: its explanation; Critic approve / reject / down), and `expect`: verdict, path, drafted_by, language, first line, `must` / `must_not` text.
 - **Run:** `python scripts/run_evals.py [safety]` → PASS/FAIL table + pass rate; `tests/test_safety.py` runs the set in the test suite. Mutation-checked: switching off a gate rule makes the matching scenario fail.
 
+## Entry points (B-19) — `app/main.py`, `app/web/index.html`, `app/progress.py`, `run.py`
+- **Start:** `python -m app.main` → http://127.0.0.1:8000 (`VEDA_HOST` / `VEDA_PORT`; 127.0.0.1 by default so it is not open to the LAN). CLI: `python run.py "<question>"` (`--verbose`, `--replay nov2024 --at "2024-11-26 18:00"`).
+- **`GET /health`:** `{status, sample_mode, zetaris, nightshift}` — Zetaris and Nightshift are pinged (not in SAMPLE_MODE); `degraded` if either does not answer.
+- **`POST /run`** `{"question", "replay"?, "at"?}` → `{run_id, trace_id, status, output (answer + disclaimer), language, verdict, confidence, drafted_by, approved_by_critic, safety_fixes, agents, log_file, execution_time, timing, card {en, ms}, disclaimer {en, ms}}`.
+- **`GET /run/stream?question=…&replay=…&at=…`:** Server-Sent Events — one `step` event per important trace step as it happens (`progress.describe`, the same short lines as the CLI), then one `result` event (the JSON above) or an `error` event.
+- **`GET /`:** the web page — question box, Live / REPLAY · Nov 2024 scenes, the steps appearing live, then the answer in the user's language with an EN / BM switch (the other language shows the code-written card + its disclaimer). No external scripts or fonts (works offline); light and dark.
+- **Failure behaviour:** bad input → **400** `{"error": {"code", "message"}}` (empty or > 500-character question, unknown replay, bad time, time outside the replay window, `at` without `replay`, not JSON); a second run while one is running → **429** (one writer for the World Model on disk); a model failure never becomes a 500 page (agents fall back; 503 only if one ever escapes). Every returned text is redacted like the trace.
+

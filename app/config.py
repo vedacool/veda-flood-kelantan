@@ -41,7 +41,9 @@ def secret_env_values(environ=None, min_len=8):
 
 # --- Flood replays (B-70) -------------------------------------------------------------------------------------
 # A replay always says its title at the top of the answer (Husaini 22 Oct night). default_at = the first scene.
-REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "default_at": "2024-11-26 18:00"}}
+REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "default_at": "2024-11-26 18:00",
+                       "window": ("2024-11-26 08:00", "2024-11-27 19:30"),     # first and last verified reading
+                       "scenes": ["2024-11-26 18:00", "2024-11-27 08:00", "2024-11-27 19:30"]}}
 
 
 # --- Personal data (B-56: no personal data in traces) --------------------------------------------------------

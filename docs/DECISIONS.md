@@ -149,4 +149,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | The 24 h straight-line projection stays as is until Dr Ariff answers A5 (it overshoots on a steep rise, e.g. replay 27 Nov 19:30: 13.75-14.54 m vs the ~11.4 m peak) | Husaini 22 Oct night |
 | 2026-10-22 | One final safety gate in code (`app/safety.py`) after the Critic on every path; a zero-width projected range is dropped, never shown as a single precise number | Husaini 22 Oct night (B-58) |
 | 2026-10-22 | Safety evals: 13 offline scenarios incl. hostile AI explanations and the replay scenes; the stale-gauge scenario is B-41's acceptance test | B-58 |
+| 2026-10-23 | Web entry point = FastAPI 0.143.0 + uvicorn 0.54.0 (newest releases at least 14 days old, Dependabot cooldown rule), httpx 0.28.1 for tests; one static page, no external scripts; live steps over Server-Sent Events from the trace listener | B-19 |
+| 2026-10-23 | One run at a time (429 when busy) - the World Model on disk has one writer; server binds 127.0.0.1 unless VEDA_HOST says otherwise | B-19 |
+| 2026-10-23 | Deep-lane re-test after midnight: 0/3 again (provider_deadline x2, NVIDIA 500) -> the fast-lane Critic fallback goes in (decided 22 Oct night) | B-14 |
 
