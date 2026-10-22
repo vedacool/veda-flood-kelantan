@@ -10,7 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AGENTS = ROOT / "app" / "agents"
-NETWORK_MODULES = {"requests", "httpx", "urllib", "urllib3", "aiohttp", "socket", "http"}
+NETWORK_MODULES = {"requests", "httpx", "urllib", "urllib3", "aiohttp", "socket", "http",
+                   "psycopg", "psycopg2", "sqlite3"}  # direct DB access also bypasses Zetaris
 TRACE_MODULE = "app.trace"  # trace logger location, fixed in DECISIONS.md (built in B-02)
 
 
@@ -59,7 +60,7 @@ def test_agents_never_import_network_libraries():
         hits = {m for m in imports_of(f) if m.split(".")[0] in NETWORK_MODULES}
         if hits:
             bad.append(f"{rel(f)} imports {sorted(hits)}")
-    assert not bad, "Agents must get data only via run_sql() (Zetaris), never direct HTTP:\n" + "\n".join(bad)
+    assert not bad, "Agents must get data only via run_sql() (Zetaris), never direct HTTP or DB:\n" + "\n".join(bad)
 
 
 # --- Rule 1b: agents never use setup-only DDL (CREATE DATASOURCE) ------------------------------------------

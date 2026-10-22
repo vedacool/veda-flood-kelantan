@@ -61,6 +61,7 @@ Scripts: `spikes/s1…s6` (throwaway — not VEDA code). Raw evidence: `logs/spi
   | Galas @ Dabong | Sg. Galas di Dabong (F1) | *(blank)* |
   | Kelantan @ Jambatan Guillemard | **not named** — likely Sg. Kelantan di Kusial (0731371WL) or Kusial Baru (blank) | ? |
 - **8 of 36 JPS rows have no Station ID**, including 2 of ours.
+- **Correction (B-06):** each JPS row also has a graph-link id (`…/wl-graph/?stationid=_DKBR0007`). It is never blank and equals the data.gov.my `station_id` for **24/36** stations, including 4 of our 5 core ones. VEDA uses it as `station_key`. The 0 % below compared only the visible Station ID column.
 - **ID match JPS ↔ data.gov.my `/flood-warning`: 0 / 52 (0 %).** JPS now uses new IDs (`0730671WL`). data.gov.my keeps the old ones (`_DKBR0007`, `5320038_DKKI0003`, station_code `DKBR0007`/`DABONG`).
 - **Name match** (lower-case, brackets and punctuation removed): 25/52 data.gov.my stations match a JPS station (24/36 JPS stations covered).
 - → **Decision:** our own `stations` table is the key. It holds a VEDA `station_key`, plus `jps_id` (nullable), `mygov_id`/`mygov_code` and the normalised name. The scraper joins on `jps_id` when present, otherwise on the normalised name. The cross-source mapping for our 5 stations is curated by hand.

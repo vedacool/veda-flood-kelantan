@@ -31,3 +31,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Read-only role `veda_zetaris` has its own password `VEDA_PG_RO_PASSWORD` | B-05 (spike 3 follow-up) |
 | 2026-10-22 | `CREATE DATASOURCE` only via `run_ddl(setup=True)` from `scripts/`; guard rule bans it in agents | B-05 |
 | 2026-10-22 | `source_registry` freshness SLAs / trust status **KIV** — Husaini + Dr Ariff still discussing; table stays empty, `freshness_sla_min` nullable | B-05 |
+| 2026-10-22 | **Supersedes the spike-5 key decision:** `station_key` = JPS graph-link id (`…/wl-graph/?stationid=_DKBR0007`) — every row has one; it equals the data.gov.my `station_id` for 24/36 stations (spike measured 0 % because it compared the visible Station ID column) | B-06 |
+| 2026-10-22 | JPS collector: ≤ 1 live fetch / 15 min, no override; raw snapshots in `data/cache/jps/` (ignored), selected ones committed to `data/snapshots/jps/` | B-06 |
+| 2026-10-22 | Agents may not import DB drivers (`psycopg`, `sqlite3`) — guard rule, same as HTTP libraries | B-06 |
