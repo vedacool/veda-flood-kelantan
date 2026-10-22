@@ -1,0 +1,8 @@
+location_id,point_key,station_key,name,lat,lon,role,coords_source,status,needs_review_by,notes
+0,dabong,5320038_DKKI0003,Sg. Galas di Dabong (F1),5.37961,102.0154,core gauge - Sg Galas @ Dabong,"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,
+1,kuala_krai,5521044_DKKI0014,Sg. Kelantan di Kuala Krai (F1),5.53264,102.19651,core gauge - Sg Kelantan @ Tangga Krai (confluence),"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,
+2,kusial,_DMCG0215,Sg. Kelantan di Kusial (F1),5.76293,102.14699,core gauge - Sg Kelantan @ Jambatan Guillemard,"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,
+3,tambatan_diraja,_DKBR0007,Sg. Kelantan di Tambatan D'Raja (F1),6.134988,102.23489,core gauge - Sg Kelantan @ Tambatan Diraja (Kota Bharu),"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,
+4,rantau_panjang,_DPMS0003,Sg. Golok di Rantau Panjang (F1),6.02289,101.9764,core gauge - Sg Golok @ Rantau Panjang,"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,"Thai-side Golok points (Sukhirin, Waeng) deferred - known gap"
+5,limau_kasturi,5020030_DGMG0016,Sg. Galas di Limau Kasturi (F1),5.075726,102.07159,upstream catchment - Galas arm,"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,
+6,kg_tualang,5222052_DKKI0005,Sg. Lebir di Kg. Tualang (F1),5.2749,102.26524,upstream catchment - Lebir arm,"data.gov.my /flood-warning station list (lat/lon), fetched 22 Oct 2026",tentative - needs Dr Ariff,Dr Ariff,

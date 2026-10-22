@@ -54,3 +54,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Lags stored as ranges, "reported, tentative": Kuala Krai→Kusial 6–9 h, Kuala Krai→Tambatan Diraja 9–17 h, Dabong→Kuala Krai ~23 h (single event, low confidence); all others empty | B-67 · Husaini 22 Oct |
 | 2026-10-22 | Threshold cross-check uses the 2014 JPS table, not data.gov.my: data.gov.my's frozen `warning_level` repeats the normal level for most gauges | B-67 |
 | 2026-10-22 | Python connects to veda-pg at `127.0.0.1`, not `localhost` (Windows tried IPv6 first: ~10 s per connection) | B-67 |
+| 2026-10-22 | Plan to freeze (Husaini OK): merge World Model items (B-10/11/57), safety (B-41→B-58), SAMPLE_MODE (B-39→B-18), healing (B-45→B-15), entry points (B-40→B-19), bootstrap (setup scripts→B-38), go-public (B-25/48/49→B-53), docs (B-23/52→B-24); defer B-22, B-31, B-33–36, B-44, B-46, B-60, B-62, B-63, B-68; record SAMPLE_MODE fixtures as each agent is built; recommend a plain Python agent loop over LangGraph (decision pending) | backlog review 22 Oct |
+| 2026-10-22 | B-07 slim: rain at 5 core gauges + Galas and Lebir upstream points; Thai-side Golok rain deferred (README gap) | backlog review 22 Oct |
+| 2026-10-22 | All Open-Meteo rain points in ONE REST table (multi-location request; Zetaris returns one row per point); read `COALESCE(location_id, 0)` | B-07 probe |
+| 2026-10-22 | Coordinates kept at full precision in CSVs (a builder bug had rounded them to 6 significant digits, ~40 m) | B-07 |

@@ -43,7 +43,7 @@ AGENT_DDL = re.compile(r"^\s*(CACHE\s+TABLE|CREATE\s+LIGHTNING\s+REST\s+TABLE)\b
 SETUP_DDL = re.compile(
     r"^\s*(CREATE\s+(OR\s+REPLACE\s+)?SCHEMASTORE\s+VIEW|CREATE\s+SCHEMASTORE\s+CONTAINER"
     r"|DROP\s+SCHEMASTORE\s+VIEW|DROP\s+LIGHTNING\s+DATABASE\s+TABLE|CREATE\s+LIGHTNING\s+DATABASE"
-    r"|REGISTER\s+DATASOURCE\s+TABLES|CREATE\s+DATASOURCE)\b", re.IGNORECASE)
+    r"|REGISTER\s+DATASOURCE\s+TABLES|CREATE\s+DATASOURCE|UNCACHE\s+TABLE)\b", re.IGNORECASE)
 REST_HOSTS = {"api.data.gov.my", "api.open-meteo.com", "flood-api.open-meteo.com"}  # REST tables may call only these
 NUMBER = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$")  # no leading zeros: "0740121" stays text
 
