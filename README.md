@@ -8,6 +8,13 @@ VEDA is a multi-agent system that cross-checks fragmented flood data for Kelanta
 
 > ⚠️ Not an official flood warning. Always follow JPS, APM and police instructions. Emergency: 999 · APM: 991.
 
+## Developer setup — guard hooks
+After cloning, turn on the repo's git hooks once:
+```
+git config core.hooksPath .githooks
+```
+Every commit then regenerates `docs/CODEMAP.md` and runs `tests/test_architecture.py` (agents get data only via Zetaris, no `meterless/auto`, no reads of `output_examples/`, every agent traces, secret scan). Commit messages must carry a backlog ID (`B-xx`). Decisions are logged in `docs/DECISIONS.md`.
+
 ## Pre-existing materials
 Design notes summarised in `docs/BUILD_BRIEF.md` were written 20–22 Oct 2026, before the build window. All code in this repository was written inside the window.
 
