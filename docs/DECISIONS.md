@@ -60,3 +60,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Coordinates kept at full precision in CSVs (a builder bug had rounded them to 6 significant digits, ~40 m) | B-07 |
 | 2026-10-22 | Historic peaks: official JPS 2014 table (USM CGSS slides URL) + verified news figures only, each row with its own URL; conflicting sources kept side by side, official wins; unverified 10.97 m dropped | B-55 · source check by research agent + spot-check |
 | 2026-10-22 | Any "current level" sentence shows the reading time (MYT) - never "now" - until freshness limits are agreed | B-55 |
+| 2026-10-22 | Agent orchestration: plain Python loop as an explicit state machine plan → gather → forecast → draft → critique → revise → done; no LangGraph | Husaini 22 Oct (VEDA_PLAN §4, B-17) |
+| 2026-10-22 | B-09 first places: Pasir Mas town, Rantau Panjang (needed for the B-70 Nov 2024 replay), Kota Bharu, Tumpat — with aliases/spelling variants and a "Did you mean…?" reply | Husaini 22 Oct |
+| 2026-10-22 | Freshness defaults (tentative — Dr Ariff to review): JPS levels fresh ≤1 h / aging 1–3 h / stale >3 h · Open-Meteo forecast ≤6 h / 6–12 h / >12 h · MET warnings ≤12 h / 12–24 h / >24 h; aging lowers confidence, stale = not used | Husaini 22 Oct (supersedes the B-05 KIV) |
+| 2026-10-22 | All open "needs Dr Ariff" items collected in `docs/review_pack_ariff.md` (~1 h, priority order) | Husaini 22 Oct |
