@@ -29,7 +29,7 @@ from app import config, trace
 
 FIXTURES = trace.ROOT / "data" / "fixtures" / "zetaris"
 BACKOFF_S = (2, 4)       # network / 5xx retries
-TIMEOUT_S = 120
+TIMEOUT_S = 30                    # B-17 (Husaini 22 Oct): one query may take at most 30 s
 _sleep = time.sleep      # patched in tests
 
 READ_ONLY = re.compile(r"^\s*(SELECT|WITH)\b", re.IGNORECASE)

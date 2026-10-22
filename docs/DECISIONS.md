@@ -107,4 +107,11 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Unsafe-advice check is a word list (EN + BM) per sentence; a sentence with don't/never/avoid/jangan/elak counts as a warning, not advice | B-14 |
 | 2026-10-22 | After 2 rejections the answer is the code-written summary labelled "Low confidence" (built from facts only, so it passes the code checks); rejections are never staged - a forced one would only come from the documented VEDA_FAULTS flag (B-45) | B-14 |
 | 2026-10-22 | B-57 closed by B-14: all four agents read and write the World Model in the trace (run context, readings/health, forecast, critic_review + stale_confirmed) | B-14 |
+| 2026-10-22 | Speed: the 10 world queries run in parallel (28 s → 6 s measured) and start in a background thread while the Coordinator plans; forecast refresh happens there too (no plan needed) | B-17 |
+| 2026-10-22 | Lightning calls use max_tokens 4000 (measured: at 2000, 2 of 3 plan calls came back empty and were retried, 51–57 s; at 4000, 0 of 3, 12–34 s) | B-17 |
+| 2026-10-22 | Budget enforcement: no model call starts with < 10 s of the budget left; the step falls back to code (answer by code / review by code + Zetaris) and a `budget` trace line says so; planning call capped at 30 s | B-17 |
+| 2026-10-22 | Quick path = river levels + MET forecast, no cross-check/reconciliation, "now" forecast, Critic code checks only (no deep-lane call, no re-query) | B-17 |
+| 2026-10-22 | `trace.bind` runs each call in its own context copy (the old version crashed when one bound function ran in two threads) | B-17 |
+| 2026-10-22 | Every model call keeps 2 s in reserve for the steps after it; the Critic's model gets only what is left after its own re-query; with < 6 s left the re-query is skipped too (the Data & Reconciler agent has already excluded the stale source) | B-17 |
+| 2026-10-22 | Measured live 22 Oct: gather 0.1–1.7 s (was 35–45 s); quick 23–28 s within 30 s but the answer is code-written (Lightning plan 11–22 s leaves too little for a draft); full 92–95 s - Lightning drafts vary 12–69 s and the deep review 45–80 s, so under 90 s the AI review often cannot run. Budget numbers to be re-decided by Husaini | B-17 |
 

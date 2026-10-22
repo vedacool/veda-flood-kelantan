@@ -23,7 +23,8 @@ from app import config, trace
 from app.adapters import zetaris
 from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
-from app.engines.world_model.veda_ingest import build_network, ingest_readings, place_id
+from app.engines.world_model.veda_ingest import (NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
+                                                 ingest_readings, place_id)
 
 AGENT = "Data & Reconciler"
 SOURCES = ("jps_levels", "open_meteo", "mygov_forecast", "mygov_warning")   # what a plan may ask for
@@ -44,6 +45,7 @@ AGREE_M = 0.05                    # two sources within 5 cm of each other agree
 CLOCK_SQL = "SELECT current_timestamp() AS now_utc"
 FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime "
                      "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s")
+PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock"})
 
 
 def freshness(source, age_minutes):
@@ -107,13 +109,11 @@ def source_id(key):
     return external_id("source", "veda", key)
 
 
-def _clock(now):
+def _clock(result):
     """The time the data is 'as of': Zetaris's own clock (live = now; SAMPLE_MODE = when it was recorded)."""
-    if now:
-        return now
     try:
-        t = _utc(zetaris.run_sql(CLOCK_SQL, agent=AGENT, purpose="data clock").rows[0][0])
-    except (zetaris.ZetarisError, IndexError):
+        t = _utc(result.rows[0][0])
+    except (AttributeError, IndexError):
         t = None
     return t or datetime.now(timezone.utc)
 
@@ -156,12 +156,14 @@ def _age_since(clock, dt):
     return int((clock - dt).total_seconds() // 60) if dt else None
 
 
-def _cross_check(ctx, clock, world, run_id):
-    """data.gov.my /flood-warning vs JPS for this place's gauges. Returns the result and writes source status."""
-    try:
-        r = zetaris.run_sql(FLOOD_WARNING_SQL, agent=AGENT, purpose="cross-check: data.gov.my /flood-warning")
-    except zetaris.ZetarisError as e:
-        return {"status": "failed", "note": f"data.gov.my /flood-warning could not be read ({e.kind})"}
+def _cross_check(ctx, clock, world, run_id, r=None):
+    """data.gov.my /flood-warning vs JPS for this place's gauges. Returns the result and writes source status.
+    r = the already-fetched /flood-warning result (prefetch), else it is queried here."""
+    if r is None:
+        try:
+            r = zetaris.run_sql(FLOOD_WARNING_SQL, agent=AGENT, purpose=PURPOSES[FLOOD_WARNING_SQL])
+        except zetaris.ZetarisError as e:
+            return {"status": "failed", "note": f"data.gov.my /flood-warning could not be read ({e.kind})"}
     myt = [datetime.fromisoformat(str(x["water_level_update_datetime"])).replace(tzinfo=config.MYT)
            for x in r.records if x.get("water_level_update_datetime")]
     newest = max(myt) if myt else None
@@ -255,35 +257,52 @@ def _forecast_age(world, key, clock):
     return _age_since(clock, _last_refresh(world, key))
 
 
-def gather(plan, world, now=None):
-    """Evidence for plan['place'] from the sources the plan asks for. Never raises for a data problem."""
+def prefetch(world, now=None):
+    """The part of gathering that needs no plan: refresh an old forecast table, then fetch the network, the
+    readings, the data clock and /flood-warning AT THE SAME TIME and load them into the World Model. The loop runs
+    this while the Coordinator is still planning (B-17). Returns {clock, notes, results, events_added} or
+    {error, clock, notes}. Never raises for a data problem."""
     run = trace.current_run()
     run_id = run.run_id if run else None
-    wanted = [s for s in plan.get("sources", []) if s in SOURCES]
     events_before = len(world.store.events)
-    sources = {s: {"status": "skipped", "note": "not in the plan"} for s in SOURCES if s not in wanted}
-    notes = []
-    for key in REFRESHABLE:
-        if key in wanted:
-            note = _refresh_if_old(world, key, now, run_id)
-            if note:
-                notes.append(note)
-    clock = _clock(now)                 # after any refresh, so a just-refreshed forecast is 0 min old
+    notes = [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n]
+    sqls = NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL] + ([] if now else [CLOCK_SQL])
     try:
-        net = build_network(world, AGENT, run_id)
-        counts = ingest_readings(world, AGENT, run_id, check=check)
+        results = fetch_all(sqls, AGENT)
+        clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
+        net = build_network(world, AGENT, run_id, results=results)
+        counts = ingest_readings(world, AGENT, run_id, check=check, results=results)
     except zetaris.ZetarisError as e:
         trace.step(AGENT, "world.write", output_summary=f"{e.kind}: {e}", status="failed", source="zetaris",
                    decision="Could not load the world from Zetaris -> no evidence; the answer must say so")
-        return {"place": plan.get("place"), "clock": _iso(clock), "usable": False, "context": None,
-                "sources": {s: {"status": "failed", "note": f"Zetaris {e.kind}"} for s in wanted} | sources,
-                "notes": [f"Could not read data through Zetaris ({e.kind})."], "events_added": 0}
+        return {"error": e, "clock": now or datetime.now(timezone.utc), "notes": notes}
     added = len(world.store.events) - events_before
     trace.step(AGENT, "world.write", output_summary=f"{net['stations']} gauges, {counts['gauges']} readings, "
                                                     f"{counts['places']} places; {added} new event(s)",
                source="world_model", decision=(f"Wrote {added} new event(s) to the World Model" if added
                                                else "Nothing changed since the last run -> no new events"),
-               details={"network": net, "unhealthy": counts["unhealthy"]})
+               details={"network": net, "unhealthy": counts["unhealthy"], "queries_in_parallel": len(sqls)})
+    return {"clock": clock, "notes": notes, "results": results, "events_added": added}
+
+
+def gather(plan, world, now=None, pre=None):
+    """Evidence for plan['place'] from the sources the plan asks for. pre = prefetch() result (run during
+    planning); without it the prefetch runs here. A quick plan skips the cross-check and reconciliation.
+    Never raises for a data problem."""
+    run = trace.current_run()
+    run_id = run.run_id if run else None
+    pre = pre or prefetch(world, now)
+    quick = plan.get("effort") == "quick"
+    wanted = [s for s in plan.get("sources", []) if s in SOURCES]
+    events_before = len(world.store.events)
+    sources = {s: {"status": "skipped", "note": "not in the plan"} for s in SOURCES if s not in wanted}
+    notes, clock = list(pre["notes"]), pre["clock"]
+    if pre.get("error"):
+        e = pre["error"]
+        return {"place": plan.get("place"), "clock": _iso(clock), "usable": False, "context": None,
+                "sources": {s: {"status": "failed", "note": f"Zetaris {e.kind}"} for s in wanted} | sources,
+                "notes": [f"Could not read data through Zetaris ({e.kind})."], "events_added": 0,
+                "reconciliation": [], "conflicts_unresolved": []}
 
     ctx = ContextBuilder(world).build(plan.get("intent", "risk_check"), place_id(plan["place"]["place_id"]),
                                       now=clock)
@@ -320,7 +339,12 @@ def gather(plan, world, now=None):
     if "mygov_warning" in wanted:
         sources["mygov_warning"] = {"status": "skipped", "note": "MetMalaysia warnings are not wired into the agents yet"}
 
-    cross = _cross_check(ctx, clock, world, run_id) if "jps_levels" in wanted and ctx["found"] else None
+    cross = None
+    if quick:
+        trace.step(AGENT, "data.quick", output_summary="cross-check and reconciliation skipped", source="plan",
+                   decision="Quick plan: current readings only (the full path cross-checks data.gov.my)")
+    elif "jps_levels" in wanted and ctx["found"]:
+        cross = _cross_check(ctx, clock, world, run_id, pre.get("results", {}).get(FLOOD_WARNING_SQL))
     if cross:
         notes.insert(0, cross["note"])         # the excluded source matters more than refresh details
     reconciliation = _reconcile_levels(cross, world)
@@ -345,4 +369,4 @@ def gather(plan, world, now=None):
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
-            "notes": notes, "events_added": len(world.store.events) - events_before}
+            "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

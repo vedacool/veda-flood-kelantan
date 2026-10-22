@@ -28,7 +28,7 @@ RETRY_STATUSES = {429, 500, 502, 503, 504}
 BACKOFF_S = (2, 4, 8)          # waits before retry 1, 2, 3
 MIN_MAX_TOKENS = 200           # B-64: tiny budgets + reasoning -> empty response
 DEFAULT_MAX_TOKENS = 2000      # B-03 probe: Lightning spends ~1.1-1.4k hidden tokens even with thinking off
-TIMEOUT_S = 180
+TIMEOUT_S = 60                  # B-17 (Husaini 22 Oct): one call may take at most 60 s
 _sleep = time.sleep            # patched in tests
 
 

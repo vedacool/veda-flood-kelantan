@@ -25,6 +25,7 @@ USER_TYPES = ("resident", "family_far_away", "school", "unknown")
 EFFORTS = ("quick", "full")
 LANGUAGES = ("en", "ms")
 QUICK_SOURCES = ["jps_levels", "mygov_forecast"]
+MAX_TOKENS = 4000          # B-17: at 2000 Lightning often returned empty (hidden reasoning) and was retried
 SAFETY = {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
     "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
@@ -116,7 +117,7 @@ def plan(question, world=None, llm=None, budget_s=None):
     fixes, planned_by, why = [], "llm", None
     try:
         r = llm("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
-                agent=AGENT, json_mode=True, target_agent="Data & Reconciler", max_tokens=2000, budget_s=budget_s)
+                agent=AGENT, json_mode=True, target_agent="Data & Reconciler", max_tokens=MAX_TOKENS, budget_s=budget_s)
         raw = r.data
     except nightshift.NightshiftError as e:
         raw, planned_by, why = {}, "fallback", f"Nightshift unavailable ({e}) -> plan written by code"
@@ -284,9 +285,11 @@ def fallback_answer(facts):
     return " ".join(lines)
 
 
-def draft(question, p, evidence, forecast=None, llm=None, budget_s=None, feedback=None, previous=None):
+def draft(question, p, evidence, forecast=None, llm=None, budget_s=None, feedback=None, previous=None,
+          use_model=True, skip_reason=None):
     """Answer for the user -> {'text', 'language', 'drafted_by', 'safety_line'}. Never raises.
-    feedback = the Critic's review of `previous` (revise round): its problems and fix go to the model."""
+    feedback = the Critic's review of `previous` (revise round): its problems and fix go to the model.
+    use_model=False (no time left in the budget, B-17): the code-written answer, with skip_reason in the trace."""
     llm = llm or nightshift.chat
     facts = facts_for_model(evidence, forecast)
     language = p.get("question_language", "en")
@@ -297,16 +300,19 @@ def draft(question, p, evidence, forecast=None, llm=None, budget_s=None, feedbac
         request["previous_draft"] = (previous or {}).get("text")
         request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
         request["critic_fix"] = feedback.get("fix")
-    try:
-        r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
-                         {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
-                agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=2000, budget_s=budget_s)
-        text = (r.data or {}).get("answer") if isinstance(r.data, dict) else None
-        problem = draft_problem(text, facts)
-        if problem:
-            drafted_by, why = "fallback", f"Model draft rejected by code check: {problem} -> code-written answer"
-    except nightshift.NightshiftError as e:
-        drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> code-written answer"
+    if not use_model:
+        drafted_by, why = "fallback", (skip_reason or "model not used") + " -> code-written answer"
+    else:
+        try:
+            r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
+                             {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
+                    agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS, budget_s=budget_s)
+            text = (r.data or {}).get("answer") if isinstance(r.data, dict) else None
+            problem = draft_problem(text, facts)
+            if problem:
+                drafted_by, why = "fallback", f"Model draft rejected by code check: {problem} -> code-written answer"
+        except nightshift.NightshiftError as e:
+            drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> code-written answer"
     if drafted_by == "fallback":
         text, language = fallback_answer(facts), "en"
     answer = {"text": text.strip(), "language": language, "drafted_by": drafted_by,

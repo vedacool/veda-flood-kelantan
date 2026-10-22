@@ -174,9 +174,11 @@ def end_run(status="success", output_summary=None):
 
 def bind(fn):
     """Wrap fn so it runs inside the current trace run - use when handing work to a plain thread/executor:
-    executor.submit(trace.bind(work), ...). (FastAPI's threadpool already copies the context.)"""
+    executor.submit(trace.bind(work), ...) or executor.map(trace.bind(work), items). Each call runs in its own copy
+    of the context, so several threads can use one bound function at the same time. (FastAPI's threadpool already
+    copies the context.)"""
     ctx = contextvars.copy_context()
-    return lambda *a, **k: ctx.run(fn, *a, **k)
+    return lambda *a, **k: ctx.copy().run(fn, *a, **k)
 
 
 def main(argv):

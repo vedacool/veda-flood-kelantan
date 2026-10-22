@@ -18,6 +18,7 @@ Reads the forecast and source status from the World Model; writes its review (an
 """
 import json
 import re
+import time
 from datetime import datetime, timezone
 
 from app import config, trace
@@ -178,9 +179,12 @@ def _model_review(question, answer, facts, findings, recheck, llm, budget_s):
     return decision, problems, str(data.get("fix") or "")[:500]
 
 
-def review(question, plan, evidence, forecast, answer, world=None, round_no=1, llm=None, budget_s=None):
-    """Approve or reject one draft. Returns {decision, problems, fix, round, checked_by, recheck}. Never raises."""
+def review(question, plan, evidence, forecast, answer, world=None, round_no=1, llm=None, budget_s=None,
+           use_model=True, recheck_data=True, skip_reason=None):
+    """Approve or reject one draft. Returns {decision, problems, fix, round, checked_by, recheck}. Never raises.
+    use_model / recheck_data = False (quick path, or no time left - B-17): code checks only, reason in the trace."""
     llm = llm or nightshift.chat
+    t_start = time.monotonic()
     run = trace.current_run()
     run_id = run.run_id if run else None
     facts = coordinator.facts_for_model(evidence, forecast)
@@ -194,15 +198,27 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                output_summary=f"{len(findings)} problem(s)", source="code",
                status="needs_revision" if findings else "success",
                decision="; ".join(f"{f['type']}: {f['detail']}" for f in findings) or "all code checks pass")
-    recheck = requery(evidence, world, run_id) if round_no == 1 else {"problems": [], "note": "re-query done in round 1"}
+    checked_by, status_note = ["code"], None
+    if not recheck_data:
+        recheck = {"problems": [], "note": skip_reason or "re-query skipped"}
+    elif round_no == 1:
+        recheck = requery(evidence, world, run_id)
+        checked_by.append("zetaris")
+    else:
+        recheck = {"problems": [], "note": "re-query done in round 1"}
     code_problems = findings + recheck["problems"]
-    checked_by, status_note = ["code", "zetaris"], None
-    try:
-        decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm, budget_s)
-        checked_by.append("model")
-    except nightshift.NightshiftError as e:
+    if not use_model:
         decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
-        status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
+        status_note = skip_reason or "model review skipped"
+    else:
+        try:
+            remaining = None if budget_s is None else max(1.0, budget_s - (time.monotonic() - t_start))
+            decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm,
+                                                          remaining)          # the re-query time is already used
+            checked_by.append("model")
+        except nightshift.NightshiftError as e:
+            decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
+            status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
     if code_problems and decision == "approve":
         decision = "reject"
         status_note = (status_note + "; " if status_note else "") + "model approved, but code checks found problems"

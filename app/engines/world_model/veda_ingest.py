@@ -7,9 +7,10 @@ Everything is read through run_sql (so it replays offline in SAMPLE_MODE). Every
 {kind: 'zetaris', at: <time the DATA refers to>, sql, query_hash, view, agent, run_id} (+ health on readings). Using the data's own time
 (gauge reading time, forecast window) keeps ingest idempotent: the same readings twice change nothing.
 """
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from app import config
+from app import config, trace
 from app.adapters import zetaris
 from app.engines.world_model.stable_ids import external_id
 
@@ -50,10 +51,22 @@ SOURCES = {
 _SQL_BY_HASH = {}
 
 
-def _sql(sql, agent, purpose):
-    r = zetaris.run_sql(sql, agent=agent, purpose=purpose)
+def _sql(sql, agent, purpose, results=None):
+    """Records + query hash for one query - from `results` (already fetched by fetch_all) when there."""
+    r = results[sql] if results and sql in results else zetaris.run_sql(sql, agent=agent, purpose=purpose)
     _SQL_BY_HASH[r.query_hash] = r.sql
     return r.records, r.query_hash
+
+
+PURPOSES = {}          # sql -> trace purpose, filled below
+
+
+def fetch_all(sqls, agent, workers=10):
+    """Run independent read-only queries at the same time (B-17: ~28 s one by one -> ~6 s together).
+    Returns {sql: SqlResult}. A ZetarisError from any query is raised."""
+    run_one = trace.bind(lambda q: zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch")))
+    with ThreadPoolExecutor(max_workers=min(workers, len(sqls)) or 1) as ex:
+        return dict(zip(sqls, ex.map(run_one, sqls)))
 
 
 def _src(at, query_hash, view, agent, run_id, origin, health=None):
@@ -77,9 +90,9 @@ def place_id(pid):
     return external_id("place", "veda", pid)
 
 
-def build_network(world, agent, run_id):
+def build_network(world, agent, run_id, results=None):
     """Gauges, rivers, districts, places and sources + relations. Returns counts."""
-    stations, qh = _sql(STATIONS_SQL, agent, "world: curated gauges")
+    stations, qh = _sql(STATIONS_SQL, agent, "world: curated gauges", results)
     src = _src(MAPPING_VERSION_AT, qh, "veda_pg.stations", agent, run_id, "curated mapping v1")
     for s in stations:
         sid = station_id(s["station_key"])
@@ -94,7 +107,7 @@ def build_network(world, agent, run_id):
         if s["district"]:
             district = world.upsert_entity("district", name=s["district"], source=src)
             world.relate(sid, "in_district", district["id"], valid_from=MAPPING_VERSION_AT, source=src)
-    links, qh = _sql(LINKS_SQL, agent, "world: gauge links")
+    links, qh = _sql(LINKS_SQL, agent, "world: gauge links", results)
     lsrc = _src(MAPPING_VERSION_AT, qh, "veda_pg.station_links", agent, run_id, "curated mapping v1")
     for link in links:
         attrs = {"lag_min_h": link["lag_min_h"], "lag_max_h": link["lag_max_h"], "lag_source": link["lag_source"],
@@ -103,7 +116,7 @@ def build_network(world, agent, run_id):
         world.relate(station_id(link["from_key"]), link["link_type"], station_id(link["to_key"]),
                      valid_from=MAPPING_VERSION_AT, context=link["to_key"] if link["link_type"] == "travel_time" else None,
                      attrs=attrs, source=lsrc)
-    rows, qh = _sql(PLACES_SQL, agent, "world: places and their gauges")
+    rows, qh = _sql(PLACES_SQL, agent, "world: places and their gauges", results)
     psrc = _src(MAPPING_VERSION_AT, qh, "veda_pg.places", agent, run_id, "gazetteer v1")
     for r in rows:
         pid = place_id(r["place_id"])
@@ -120,7 +133,7 @@ def build_network(world, agent, run_id):
         else:
             world.relate(gid, "sentinel_for", pid, valid_from=MAPPING_VERSION_AT, context=r["place_id"],
                          attrs={"sort_order": r["sort_order"]}, source=psrc)
-    peaks, qh = _sql(PEAKS_SQL, agent, "world: historic peaks")
+    peaks, qh = _sql(PEAKS_SQL, agent, "world: historic peaks", results)
     ksrc = _src(MAPPING_VERSION_AT, qh, "veda_pg.historic_peaks", agent, run_id, "historic peaks (B-55)")
     by_station = {}
     for pk in peaks:
@@ -137,14 +150,14 @@ def build_network(world, agent, run_id):
             "sources": len(SOURCES)}
 
 
-def ingest_readings(world, agent, run_id, check=None):
+def ingest_readings(world, agent, run_id, check=None, results=None):
     """Current facts for covered places. River facts carry the gauge's reading time; rain the forecast window end;
     the forecast its date. check(kind, row) -> health dict (the Data & Reconciler agent's checks) is stored with each fact;
     a reading that fails a check is still written, with low confidence, so the gap stays visible.
     Returns counts + the gauges whose health was not ok."""
-    times, qh_t = _sql(READING_TIMES_SQL, agent, "world: gauge reading times")
+    times, qh_t = _sql(READING_TIMES_SQL, agent, "world: gauge reading times", results)
     observed = {t["station_key"]: _utc_iso(t["observed_at_utc"]) for t in times}
-    gauges, qh = _sql(GAUGE_STATUS_SQL, agent, "world: gauge status for covered places")
+    gauges, qh = _sql(GAUGE_STATUS_SQL, agent, "world: gauge status for covered places", results)
     n, unhealthy = 0, {}
     for g in {r["station_key"]: r for r in gauges}.values():
         at = observed.get(g["station_key"])
@@ -162,9 +175,9 @@ def ingest_readings(world, agent, run_id, check=None):
             if g[pred] is not None:
                 world.assert_fact(sid, pred, g[pred], confidence=0.8 if ok else 0.2, source=src)
         n += 1
-    windows, _ = _sql(RAIN_WINDOW_SQL, agent, "world: rain forecast windows")
+    windows, _ = _sql(RAIN_WINDOW_SQL, agent, "world: rain forecast windows", results)
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
-    inputs, qh = _sql(PLACE_INPUTS_SQL, agent, "world: place risk inputs")
+    inputs, qh = _sql(PLACE_INPUTS_SQL, agent, "world: place risk inputs", results)
     today_myt = datetime.now(config.MYT).date().isoformat()   # the forecast row is "today" in Malaysia time
     for p in inputs:
         pid = place_id(p["place_id"])
@@ -179,3 +192,17 @@ def ingest_readings(world, agent, run_id, check=None):
             world.assert_fact(pid, "met_forecast_today", {"summary": p["forecast_today"],
                                                           "when": p["forecast_today_when"]}, confidence=0.7, source=fsrc)
     return {"gauges": n, "places": len(inputs), "unhealthy": unhealthy}
+
+
+NETWORK_SQL = [STATIONS_SQL, LINKS_SQL, PLACES_SQL, PEAKS_SQL]
+READINGS_SQL = [READING_TIMES_SQL, GAUGE_STATUS_SQL, RAIN_WINDOW_SQL, PLACE_INPUTS_SQL]
+PURPOSES.update({
+    STATIONS_SQL: "world: curated gauges",
+    LINKS_SQL: "world: gauge links",
+    PLACES_SQL: "world: places and their gauges",
+    PEAKS_SQL: "world: historic peaks",
+    READING_TIMES_SQL: "world: gauge reading times",
+    GAUGE_STATUS_SQL: "world: gauge status for covered places",
+    RAIN_WINDOW_SQL: "world: rain forecast windows",
+    PLACE_INPUTS_SQL: "world: place risk inputs",
+})
