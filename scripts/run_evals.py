@@ -23,15 +23,17 @@ EVALS = ROOT / "tests" / "evals"
 
 
 def stand_in(spec):
-    """The scenario's stand-in for Nemotron: writes the given explanation; the Critic approves / rejects / is down."""
+    """The scenario's stand-in for Nemotron: writes the given explanation; the Critic approves / rejects / is down
+    ("down" = both its lanes fail)."""
     from app.adapters import nightshift
+    from app.agents import critic
     spec = spec or {}
 
     def llm(lane, messages, agent, **kw):
-        if lane == "deep":
-            if spec.get("critic", "approve") == "down":
+        if messages[0]["content"] == critic.CRITIC_SYSTEM:       # the Critic, on the deep or the fallback fast lane
+            if spec.get("critic", "approve") == "down" or (spec.get("critic") == "deep_down" and lane == "deep"):
                 raise nightshift.NightshiftError("eval: Critic AI unavailable")
-            decision = spec.get("critic", "approve")
+            decision = "approve" if spec.get("critic") == "deep_down" else spec.get("critic", "approve")
             problems = [] if decision == "approve" else [{"type": "unclear", "detail": "eval rejection"}]
             return SimpleNamespace(data={"decision": decision, "problems": problems, "fix": "eval"}, text="")
         if spec.get("explanation") is None:

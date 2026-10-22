@@ -120,9 +120,9 @@ def test_stale_source_not_excluded_by_evidence_is_caught(run, monkeypatch):
 # -- the review: model + code ---------------------------------------------------------------------------------
 def model(decision, problems=(), fail=False):
     def llm(lane, messages, agent, **kw):
-        assert lane == "deep" and messages[0]["content"] == critic.CRITIC_SYSTEM
+        assert messages[0]["content"] == critic.CRITIC_SYSTEM
         if fail:
-            raise nightshift.NightshiftError("stub: down")
+            raise nightshift.NightshiftError(f"stub: {lane} lane down")
         data = {"decision": decision, "problems": list(problems), "fix": "say it plainly"}
         return SimpleNamespace(data=data, text=json.dumps(data))
     return llm
@@ -220,3 +220,35 @@ def test_two_rejections_give_the_low_confidence_code_answer(offline):
     assert llm.calls["reviews"] == critic.MAX_REJECTIONS and len(r["reviews"]) == 2
     assert r["answer"]["low_confidence"] and r["answer"]["text"].startswith("Low confidence:")
     assert "approved" not in r["answer"]
+
+
+# -- fast-lane fallback (decided 22 Oct night, added 23 Oct after the deep lane failed 0/3 twice) ---------------
+def lanes_llm(deep_fails=True, fast_fails=False):
+    calls = []
+
+    def llm(lane, messages, agent, **kw):
+        calls.append(lane)
+        if (lane == "deep" and deep_fails) or (lane == "fast" and fast_fails):
+            raise nightshift.NightshiftError(f"stub: {lane} lane provider_deadline")
+        return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": ""}, text="")
+    llm.calls = calls
+    return llm
+
+
+def test_deep_failure_falls_back_to_one_fast_lane_review(run, quiet_zetaris):
+    llm = lanes_llm()
+    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
+    assert llm.calls == ["deep", "fast"] and r["critic_lane"] == "fast" and "model" in r["checked_by"]
+    assert r["decision"] == "approve"
+
+
+def test_no_fast_fallback_without_enough_time(run, quiet_zetaris):
+    llm = lanes_llm()
+    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=5)
+    assert llm.calls == ["deep"] and r["critic_lane"] is None and "model" not in r["checked_by"]
+
+
+def test_both_lanes_down_means_code_and_zetaris_only(run, quiet_zetaris):
+    llm = lanes_llm(fast_fails=True)
+    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
+    assert llm.calls == ["deep", "fast"] and r["checked_by"] == ["code", "zetaris"]

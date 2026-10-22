@@ -10,7 +10,7 @@ import pytest
 
 from app import gazetteer, loop, router, trace
 from app.adapters import nightshift, zetaris
-from app.agents import coordinator, data_agent
+from app.agents import coordinator, critic, data_agent
 from app.engines.world_model import WorldModel
 from app.engines.world_model import veda_ingest
 
@@ -181,8 +181,8 @@ def test_explanation_is_dropped_when_the_ai_critic_cannot_check_it(offline, forc
     base = stub("full")
 
     def llm(lane, messages, agent, **kw):
-        if lane == "deep":
-            raise nightshift.NightshiftError("stub: deep lane timed out")
+        if messages[0]["content"] == critic.CRITIC_SYSTEM:        # both Critic lanes down
+            raise nightshift.NightshiftError(f"stub: {lane} lane timed out")
         return base(lane, messages, agent, **kw)
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     assert r["answer"]["explanation"] is None and r["answer"]["drafted_by"] == "code"

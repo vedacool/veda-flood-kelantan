@@ -30,6 +30,7 @@ from app.engines.world_model.veda_ingest import place_id
 
 AGENT = "Critic"
 MAX_REJECTIONS = 2
+FAST_FALLBACK_MIN_S = 20         # the fast-lane fallback review needs at least this much time left
 PROBLEM_TYPES = ("unsupported", "wrong_verdict", "unsafe", "missing_level_name", "missing_confidence",
                  "missing_stale_note", "missing_conflict", "conflict", "unclear", "other")
 STATION_KEY = re.compile(r"^[A-Za-z0-9_]+$")
@@ -175,21 +176,22 @@ SMALL_EVIDENCE_NOTE = ("Every line of the draft except the explanation was writt
                        "(checked against the evidence by code). The card as written by code: ")
 
 
-def _model_review(question, answer, facts, findings, recheck, llm, budget_s):
-    """The deep-lane review -> (decision, problems, fix) or raises NightshiftError.
+def _model_review(question, answer, facts, findings, recheck, llm, budget_s, lane="deep"):
+    """The model review on `lane` (deep normally; fast as the fallback) -> (decision, problems, fix) or raises
+    NightshiftError.
     With a card (B-21) the model gets the SMALL input: the card text instead of the whole evidence - measured 22 Oct
     night: full input 0/3 (cut at 45 s), small input 3/3 when streamed. The code checks already hold every card
     line to the evidence; the model judges the explanation, clarity and safety."""
     card = answer.get("card")
     evidence = (SMALL_EVIDENCE_NOTE + card_mod.render(card, answer.get("language") or "en")) if card else facts
-    r = llm("deep", [{"role": "system", "content": CRITIC_SYSTEM},
+    r = llm(lane, [{"role": "system", "content": CRITIC_SYSTEM},
                      {"role": "user", "content": json.dumps({
                          "question": question, "language": answer.get("language"), "draft": answer["text"],
                          "EVIDENCE": evidence, "CODE_FINDINGS": findings,
                          "ZETARIS_RECHECK": {k: v for k, v in recheck.items() if k != "problems"}},
                          ensure_ascii=False, default=str)}],
-            agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator", max_tokens=3000,
-            budget_s=budget_s, max_attempts=1)
+            agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator",
+            max_tokens=3000 if lane == "deep" else 4000, budget_s=budget_s, max_attempts=1)
     data = r.data if isinstance(r.data, dict) else {}
     decision = data.get("decision") if data.get("decision") in ("approve", "reject") else "reject"
     problems = [{"type": p.get("type") if p.get("type") in PROBLEM_TYPES else "other",
@@ -219,7 +221,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                output_summary=f"{len(findings)} problem(s)", source="code",
                status="needs_revision" if findings else "success",
                decision="; ".join(f"{f['type']}: {f['detail']}" for f in findings) or "all code checks pass")
-    checked_by, status_note = ["code"], None
+    checked_by, status_note, critic_lane = ["code"], None, "deep"
     if not recheck_data:
         recheck = {"problems": [], "note": skip_reason or "re-query skipped"}
     elif round_no == 1:
@@ -240,6 +242,19 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         except nightshift.NightshiftError as e:
             decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
             status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
+            left = None if budget_s is None else budget_s - (time.monotonic() - t_start)
+            if left is None or left >= FAST_FALLBACK_MIN_S:
+                # Husaini 22 Oct night: the deep lane is unreliable on NVIDIA's side -> one review on the fast lane
+                trace.step(AGENT, "critic.fallback", input_summary=f"deep lane failed: {str(e)[:120]}",
+                           output_summary="one review on the fast lane (Nemotron Lightning)", status="fallback",
+                           decision=f"{'unlimited' if left is None else f'{left:.0f} s'} left -> fast-lane review")
+                try:
+                    decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck,
+                                                                  llm, left, lane="fast")
+                    checked_by.append("model")
+                    critic_lane, status_note = "fast", "deep lane failed -> reviewed on the fast lane"
+                except nightshift.NightshiftError as e2:
+                    status_note = f"deep and fast lanes unavailable ({e2}) -> review by code + Zetaris only"
     if code_problems and decision == "approve":
         decision = "reject"
         status_note = (status_note + "; " if status_note else "") + "model approved, but code checks found problems"
@@ -247,13 +262,15 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     if decision == "reject" and not fix:
         fix = "; ".join(p["detail"] for p in problems[:4])
     result = {"decision": decision, "problems": problems, "fix": fix, "round": round_no, "checked_by": checked_by,
+              "critic_lane": critic_lane if "model" in checked_by else None,
               "recheck": {k: v for k, v in recheck.items() if k != "problems"}}
     trace.step(AGENT, "critic.review", input_summary=f"draft round {round_no} ({answer.get('drafted_by')})",
                output_summary=f"{decision}: {len(problems)} problem(s)" + (f" - fix: {fix}" if fix else ""),
                status="approved" if decision == "approve" else "needs_revision", target_agent="Coordinator",
                decision=status_note or ("; ".join(f"{p['type']}: {p['detail']}" for p in problems[:4])
                                         or "evidence supports the draft"),
-               details={"problems": problems, "checked_by": checked_by, "round": round_no})
+               details={"problems": problems, "checked_by": checked_by, "round": round_no,
+                        "critic_lane": result["critic_lane"]})
     if world is not None and plan.get("place"):
         at = evidence.get("clock") or datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         world.assert_fact(place_id(plan["place"]["place_id"]), "critic_review",
