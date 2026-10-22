@@ -250,3 +250,38 @@ def test_live_two_questions_two_plans(tmp_path):
     assert a["planned_by"] == b["planned_by"] == "llm"
     assert (a["place"]["place_id"], b["place"]["place_id"]) == ("rantau_panjang", "tumpat")
     assert b["question_language"] == "ms" and b["intent"] != a["intent"]
+
+
+# -- Reconciliation (B-14: reliability first, then recency) ---------------------------------------------------
+def _cand(source, value, at, rel):
+    from datetime import datetime, timezone
+    return {"source": source, "value": value, "reliability": rel,
+            "at": datetime.fromisoformat(at).replace(tzinfo=timezone.utc) if at else None}
+
+
+def test_reconcile_prefers_reliability_then_recency():
+    r = data_agent.reconcile("level", [_cand("a", 7.0, "2026-10-22T10:00", 0.9), _cand("b", 8.0, "2026-10-22T11:00", 0.6)])
+    assert (r["chosen"], r["rule"]) == ("a", "reliability")                   # reliability beats a newer reading
+    r = data_agent.reconcile("level", [_cand("a", 7.0, "2024-02-23T06:45", 0.9), _cand("b", 5.2, "2026-10-22T10:00", 0.9)])
+    assert (r["chosen"], r["rule"], r["value"]) == ("b", "recency", 5.2)
+
+
+def test_reconcile_agreement_and_unresolved():
+    r = data_agent.reconcile("level", [_cand("a", 7.00, "2026-10-22T10:00", 0.9), _cand("b", 7.04, None, 0.9)])
+    assert r["rule"] == "agree" and r["chosen"] == "a"
+    r = data_agent.reconcile("level", [_cand("a", 7.0, "2026-10-22T10:00", 0.9), _cand("b", 8.0, "2026-10-22T10:00", 0.9)])
+    assert r["rule"] == "unresolved" and r["chosen"] is None and "not guessed" in r["reason"]
+    r = data_agent.reconcile("level", [_cand("a", 7.0, None, 0.9), _cand("b", 8.0, "2026-10-22T10:00", 0.9)])
+    assert r["rule"] == "unresolved"                                           # a missing time cannot win on recency
+
+
+def test_gather_reconciles_jps_against_the_frozen_source(run):
+    ev = data_agent.gather(rp_plan(), WorldModel())
+    rec = ev["reconciliation"]
+    assert rec and all(r["chosen"] == "jps_levels" for r in rec if r["rule"] != "agree")
+    assert any(r["rule"] == "recency" for r in rec) and ev["conflicts_unresolved"] == []
+
+
+def test_unresolved_conflicts_reach_the_answer():
+    facts = dict(FACTS, conflicts_unresolved=[{"quantity": "water level at X", "reason": "equal reliability"}])
+    assert "Sources disagree on water level at X" in coordinator.fallback_answer(facts)

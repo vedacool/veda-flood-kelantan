@@ -101,4 +101,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Tide-influenced gauges are judged on their level only (no projection, no "rising fast"): Tambatan Diraja (mapping) and Kok Majid (marked tentative after Tumpat came out WATCH from a tidal rise) | B-16 |
 | 2026-10-22 | Historic peaks live in the World Model as one `historic_peaks` fact per gauge; the Forecast agent reads them there and writes its verdict back as a `forecast` fact (B-57: Coordinator, Data & Reconciler and Forecast now read/write the WM) | B-16 |
 | 2026-10-22 | The Coordinator's draft must state the Forecast agent's verdict and no other; quick plans get a "now" verdict (current levels only) until B-17 shortens the whole path | B-16 |
+| 2026-10-22 | Source reliability (tentative, Dr Ariff) lives on the World Model source contexts: JPS 0.9, data.gov.my flood-warning 0.9, MET warnings 0.9, MET forecast 0.8, Open-Meteo 0.6; reconciliation = reliability, then recency, else `conflicts_unresolved`; the answer must mention every unresolved conflict | B-14 |
 

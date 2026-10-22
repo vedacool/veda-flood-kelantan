@@ -9,6 +9,9 @@ Health checks (limits are TENTATIVE, 22 Oct - Dr Ariff to review, see docs/revie
     plausible  level in a sane range for its gauge; no jump bigger than MAX_JUMP_1H_M in one hour
     agreement  data.gov.my /flood-warning vs JPS for the same gauges. That source is frozen since Feb 2024, so
                the agent flags it stale and excludes it - and the World Model records why.
+Reconciliation: when two sources give the same quantity, the more reliable one wins (reliability is on each source's
+World Model context, tentative); on a tie the newer reading wins; if neither decides, the quantity goes into
+`conflicts_unresolved` - flagged, never guessed.
 Before reading, it refreshes a cached forecast table (Open-Meteo, MetMalaysia) when the World Model says the last
 refresh is older than the 'fresh' limit or unknown, and records when it refreshed - so forecast age is known.
 Nothing here crashes the run: every source ends with a status (ok | degraded | stale | failed | skipped) and a
@@ -36,6 +39,7 @@ LEVEL_RANGE_M = (-5.0, 120.0)     # every Kelantan gauge datum fits (Gua Musang 
 ABOVE_DANGER_MAX_M = 15.0         # Dec 2014: Kuala Krai peaked ~9 m above danger; 15 m above = not believable
 MAX_JUMP_1H_M = 3.0               # tentative: a bigger rise or fall in one hour is treated as a bad reading
 MAX_RAIN_24H_MM = 1000.0
+AGREE_M = 0.05                    # two sources within 5 cm of each other agree
 
 CLOCK_SQL = "SELECT current_timestamp() AS now_utc"
 FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime "
@@ -189,6 +193,59 @@ def _cross_check(ctx, clock, world, run_id):
     return {"status": "stale" if excluded else "ok", "note": note, "newest": newest_text, "pairs": pairs}
 
 
+def reliability(world, key):
+    """A source's reliability (0-1) from its World Model context; None if unknown."""
+    ctx = world.store.state["contexts"].get(source_id(key)) if world else None
+    return (ctx or {}).get("attrs", {}).get("reliability")
+
+
+def _when(text, tz):
+    """'2026-10-22T10:30:00Z' (UTC) or '2024-02-23 14:45:00' (local time in tz) -> aware datetime, or None."""
+    try:
+        t = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=tz)
+
+
+def reconcile(quantity, candidates, agree_within=AGREE_M):
+    """One value for a quantity seen by several sources: higher reliability first, then the newer reading.
+    candidates: [{'source', 'value', 'at' (aware datetime or None), 'reliability'}].
+    Returns {quantity, candidates, chosen, rule, reason}; rule 'unresolved' (chosen None) when neither reliability
+    nor time can decide - flag, don't guess."""
+    shown = [{**c, "at": _iso(c["at"]) if c["at"] else None} for c in candidates]
+    entry = {"quantity": quantity, "candidates": shown}
+    values = [c["value"] for c in candidates]
+    best_rel = max((c["reliability"] or 0) for c in candidates)
+    top = [c for c in candidates if (c["reliability"] or 0) == best_rel]
+    if max(values) - min(values) <= agree_within:
+        chosen, rule, reason = top[0], "agree", f"sources agree within {agree_within}"
+    elif len(top) == 1:
+        chosen, rule, reason = top[0], "reliability", f"{top[0]['source']} is the more reliable source ({best_rel})"
+    else:
+        dated = sorted((c for c in top if c["at"]), key=lambda c: c["at"], reverse=True)
+        if len(dated) == len(top) and dated[0]["at"] > dated[1]["at"]:
+            chosen, rule = dated[0], "recency"
+            reason = (f"equal reliability ({best_rel}); {dated[0]['source']} is newer "
+                      f"({_iso(dated[0]['at'])} vs {_iso(dated[1]['at'])})")
+        else:
+            return {**entry, "chosen": None, "value": None, "rule": "unresolved",
+                    "reason": f"equal reliability ({best_rel}) and no newer reading - flagged, not guessed"}
+    return {**entry, "chosen": chosen["source"], "value": chosen["value"], "rule": rule, "reason": reason}
+
+
+def _reconcile_levels(cross, world):
+    """Gauge levels seen by both JPS and data.gov.my /flood-warning -> reconciliation entries."""
+    out = []
+    for pr in (cross or {}).get("pairs", []):
+        out.append(reconcile(f"water level at {pr['gauge']}", [
+            {"source": "jps_levels", "value": pr["jps_level_m"], "at": _when(pr["jps_at"], timezone.utc),
+             "reliability": reliability(world, "jps_levels")},
+            {"source": "mygov_flood", "value": pr["mygov_level_m"], "at": _when(pr["mygov_at"], config.MYT),
+             "reliability": reliability(world, "mygov_flood")}]))
+    return out
+
+
 def _forecast_age(world, key, clock):
     return _age_since(clock, _last_refresh(world, key))
 
@@ -261,6 +318,14 @@ def gather(plan, world, now=None):
     cross = _cross_check(ctx, clock, world, run_id) if "jps_levels" in wanted and ctx["found"] else None
     if cross:
         notes.insert(0, cross["note"])         # the excluded source matters more than refresh details
+    reconciliation = _reconcile_levels(cross, world)
+    unresolved = [r for r in reconciliation if r["rule"] == "unresolved"]
+    if reconciliation:
+        trace.step(AGENT, "data.reconcile", input_summary=f"{len(reconciliation)} quantity(ies) seen by 2 sources",
+                   output_summary=f"{len(unresolved)} unresolved", source="world_model",
+                   status="fallback" if unresolved else "success",
+                   decision="; ".join(f"{r['quantity']}: {r['rule']} - {r['reason']}" for r in reconciliation[:3]),
+                   details={"reconciliation": reconciliation})
 
     controlling = next((g for g in ctx.get("gauges", []) if g["role"] == "controlling"), None)
     usable = bool(controlling and controlling["level_m"] is not None and controlling["freshness"] in ("fresh", "aging")
@@ -274,4 +339,5 @@ def gather(plan, world, now=None):
         trace.step(AGENT, "data.health", input_summary=key, output_summary=f"{s['status']}: {s['note']}",
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
-            "cross_check": cross, "notes": notes, "events_added": len(world.store.events) - events_before}
+            "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
+            "notes": notes, "events_added": len(world.store.events) - events_before}

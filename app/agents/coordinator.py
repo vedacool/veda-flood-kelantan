@@ -54,7 +54,8 @@ DRAFT_SYSTEM = (
     "PREPARE, ACT or INSUFFICIENT_DATA) with the JPS level name, the projected range and the confidence label. Never "
     "give a different verdict. If there is no forecast, give no verdict.\n"
     "4. If usable is false, say clearly that the current river status cannot be confirmed, and why.\n"
-    "5. Mention stale or excluded sources in one short clause if the evidence notes them.\n"
+    "5. Mention stale or excluded sources in one short clause if the evidence notes them, and every item in "
+    "conflicts_unresolved (say the sources disagree and VEDA did not pick one).\n"
     "6. Never advise walking, wading or driving through floodwater.\n"
     "7. Write in the language given by `language` (en = English, ms = Bahasa Melayu).\n"
     "Reply with ONE JSON object: {\"answer\": \"...\"}. Do not add the official-warning disclaimer; VEDA adds it.")
@@ -193,6 +194,8 @@ def facts_for_model(evidence, forecast=None):
                                                                 "freshness")},
         "met_forecast_today": None if not met else {"summary": met.get("summary"), "when": met.get("when")},
         "source_notes": evidence.get("notes", []),
+        "conflicts_unresolved": [{"quantity": c["quantity"], "reason": c["reason"]}
+                                 for c in evidence.get("conflicts_unresolved", [])],
         "forecast": _forecast_facts(forecast),
     }
 
@@ -268,6 +271,8 @@ def fallback_answer(facts):
         m = facts["met_forecast_today"]
         lines.append(f"MetMalaysia today: {m['summary']}" + (f" ({m['when']})" if m.get("when") else "") + ".")
     lines += facts.get("source_notes", [])[:3]
+    for c in facts.get("conflicts_unresolved", []):
+        lines.append(f"Sources disagree on {c['quantity']} and VEDA did not pick one ({c['reason']}).")
     if fc and fc.get("history"):
         h = fc["history"][0]
         lines.append(f"Highest recorded here: {h['peak_m']} m ({h['event']}), {h['above_now_m']} m above now.")

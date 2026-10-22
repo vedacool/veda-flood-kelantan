@@ -31,12 +31,19 @@ PLACE_INPUTS_SQL = ("SELECT place_id, rain_point, rain_past_24h_mm, rain_past_7d
                     "max_prob_next_24h_pct, forecast_today, forecast_today_when FROM veda.place_risk_inputs")
 RAIN_WINDOW_SQL = "SELECT point_key, forecast_until_myt FROM veda.rain_24h_by_point"
 
-SOURCES = {  # contexts: where VEDA's facts come from
-    "jps_levels": {"name": "JPS Public Infobanjir river levels (scraped -> veda-pg)", "kind": "scrape"},
-    "open_meteo": {"name": "Open-Meteo forecast (Zetaris REST table om_rain)", "kind": "rest_table"},
-    "mygov_forecast": {"name": "data.gov.my MetMalaysia forecast (Zetaris REST table)", "kind": "rest_table"},
-    "mygov_warning": {"name": "data.gov.my MetMalaysia warnings (Zetaris REST table)", "kind": "rest_table"},
-    "mygov_flood": {"name": "data.gov.my /flood-warning (FROZEN since Feb 2024)", "kind": "rest_table"},
+# Contexts: where VEDA's facts come from. `reliability` (0-1, TENTATIVE - Dr Ariff) decides conflicts first,
+# recency second: official gauge data 0.9, official forecasts/warnings 0.8-0.9, a global weather model 0.6.
+SOURCES = {
+    "jps_levels": {"name": "JPS Public Infobanjir river levels (scraped -> veda-pg)", "kind": "scrape",
+                   "reliability": 0.9},
+    "open_meteo": {"name": "Open-Meteo forecast (Zetaris REST table om_rain)", "kind": "rest_table",
+                   "reliability": 0.6},
+    "mygov_forecast": {"name": "data.gov.my MetMalaysia forecast (Zetaris REST table)", "kind": "rest_table",
+                       "reliability": 0.8},
+    "mygov_warning": {"name": "data.gov.my MetMalaysia warnings (Zetaris REST table)", "kind": "rest_table",
+                      "reliability": 0.9},
+    "mygov_flood": {"name": "data.gov.my /flood-warning (FROZEN since Feb 2024)", "kind": "rest_table",
+                    "reliability": 0.9},
 }
 
 
