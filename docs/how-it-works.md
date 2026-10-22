@@ -33,6 +33,6 @@ _Module contracts (inputs → outputs → failure behaviour). Filled in as modul
 - **Failure behaviour:** at most one live fetch per 15 minutes (a newer cached snapshot is reused, no override). Missing columns, no rows, rows without a graph link or duplicate ids → `JpsParseError`, nothing stored, previous data kept. Network/HTTP errors are traced and nothing is stored; the next cycle retries. Values `-`, blank, `-9999` → NULL, never 0. Re-ingesting the same page adds 0 rows (primary key station + time). `--loop` keeps going after a failed cycle.
 
 ## Nightshift configuration VEDA needs (B-66) — outside the repo
-Nightshift pins nothing by itself: the app `mode` (`fast`/`deep`) is a core mode ("prefer speed / quality"), not a lane. Each VEDA app needs a **lane allowlist** in `%LOCALAPPDATA%i.meterless.runtime\statepp-policy.json` (edit only while Nightshift is closed):
+Nightshift pins nothing by itself: the app `mode` (`fast`/`deep`) is a core mode ("prefer speed / quality"), not a lane. Each VEDA app needs a **lane allowlist** in `%LOCALAPPDATA%\ai.meterless.runtime\state\app-policy.json` (edit only while Nightshift is closed):
 `"veda-fast": {"mode": "fast", "lanes": ["fast"]}`, `"veda-deep": {"mode": "deep", "lanes": ["deep"]}`.
 Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Super VL, both `role = "race"`, `races = true` (a `verify` role or `races = false` lane never answers). Check: every trace line says "Answered by … on lane …"; "WRONG MODEL" or "Lane NOT pinned" means this config was lost.
