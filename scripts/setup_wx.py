@@ -87,8 +87,27 @@ def open_meteo_url(points):
     return "https://api.open-meteo.com/v1/forecast?" + urlencode(query, safe=",")
 
 
+# B-70 flood replays: the REAL hourly rain at the same points from the Open-Meteo archive (ERA5). The replay cuts it
+# at the replay time, so no rain that fell later is ever used (Husaini 22 Oct night: hourly, not daily totals).
+REPLAYS = {"om_rain_nov2024": ("2024-11-15", "2024-12-02")}
+
+
+def archive_url(points, start, end):
+    """One Open-Meteo archive request for all points, hourly rain in Malaysia time."""
+    query = {
+        "latitude": ",".join(p["lat"] for p in points),
+        "longitude": ",".join(p["lon"] for p in points),
+        "hourly": "precipitation",
+        "start_date": start,
+        "end_date": end,
+        "timezone": "Asia/Kuala_Lumpur",
+    }
+    return "https://archive-api.open-meteo.com/v1/archive?" + urlencode(query, safe=",")
+
+
 def all_tables(points):
-    return {"om_rain": open_meteo_url(points), **TABLES}
+    return {"om_rain": open_meteo_url(points), **TABLES,
+            **{name: archive_url(points, start, end) for name, (start, end) in REPLAYS.items()}}
 
 
 def create_sql(name, url):
@@ -134,6 +153,8 @@ SMOKE = {
                       "FROM veda_wx.mygov_warning LATERAL VIEW explode(data) AS w"),
     "mygov_flood": ("SELECT COUNT(*) AS stations, MAX(s.water_level_update_datetime) AS newest "
                     "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s"),
+    "om_rain_nov2024": ("SELECT COALESCE(location_id, 0) AS location_id, size(hourly.time) AS hours, "
+                        "hourly.time[0] AS first_hour FROM veda_wx.om_rain_nov2024 ORDER BY 1"),
 }
 
 

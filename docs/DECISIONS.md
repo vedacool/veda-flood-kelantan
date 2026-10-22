@@ -138,4 +138,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Critic reasoning off (reasoning on: 144 s or the 45 s cut-off; off: 36-48 s, same decisions) - supersedes "keep reasoning on" because streaming did not fix the cut-off | Husaini 22 Oct night |
 | 2026-10-22 | One try per Nemotron call (no retry, no JSON repair round), then fall back: no explanation -> the card; no Critic model -> code + Zetaris review | Husaini 22 Oct night |
 | 2026-10-22 | Replay runs only: 240 s budget, traced as "replay budget 240 s"; live stays 150 s (wired in with B-70) | Husaini 22 Oct night |
+| 2026-10-22 | B-70 anchors = verified JPS readings with source + quote: RP 8.27 m (26 Nov ~08:00), 8.41 m (26 Nov ~18:00), 10.94 m (27 Nov 19:30, a reading - not the peak), Kg Jenob 25.15 m (26 Nov 14:30); approximate times marked; 28 Nov HMetro 11.37/11.42 m and 11.63 m left out | Husaini 22 Oct night |
+| 2026-10-22 | Reconstruction = straight line between consecutive verified readings only, labelled "reconstructed between the verified JPS readings …"; GloFAS rejected as a shape (peaks 1 Dec, contradicts the readings); "historical forecast" API not used (returned the archive's numbers) | B-70 |
+| 2026-10-22 | Replay rain = Open-Meteo archive, HOURLY, cut at the replay time (a daily total would include rain after the replay time) | Husaini 22 Oct night |
 

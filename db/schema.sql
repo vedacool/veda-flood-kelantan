@@ -149,3 +149,18 @@ CREATE TABLE IF NOT EXISTS place_gauges (
     sort_order   integer NOT NULL DEFAULT 1,
     PRIMARY KEY (place_id, station_key)
 );
+
+-- B-70: flood replay levels (Nov 2024). kind 'reported' = a verified JPS reading quoted by a cited news report;
+-- 'reconstructed' = a straight line between two reported readings of the same gauge - never before the first or
+-- after the last. Every row carries its label, shown verbatim in the trace and the answer card.
+CREATE TABLE IF NOT EXISTS replay_levels (
+    scenario     text NOT NULL,
+    station_key  text NOT NULL REFERENCES stations (station_key),
+    observed_at  timestamptz NOT NULL,
+    level_m      double precision NOT NULL CHECK (level_m BETWEEN -50 AND 1000),
+    kind         text NOT NULL CHECK (kind IN ('reported', 'reconstructed')),
+    time_exact   boolean NOT NULL,              -- false: the reading time (or an anchor time) is approximate
+    label        text NOT NULL,
+    source_url   text,
+    PRIMARY KEY (scenario, station_key, observed_at)
+);

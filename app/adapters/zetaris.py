@@ -47,7 +47,8 @@ SETUP_DDL = re.compile(
 # Agents may also drop the cache of ONE REST table in VEDA_WX, so the next CACHE TABLE fetches that source again
 # (B-13: the Data & Reconciler agent refreshes an old forecast and records when it did). Nothing else can be uncached by agents.
 AGENT_REFRESH = re.compile(r"^\s*UNCACHE\s+TABLE\s+veda_wx\.\w+$", re.IGNORECASE)
-REST_HOSTS = {"api.data.gov.my", "api.open-meteo.com", "flood-api.open-meteo.com"}  # REST tables may call only these
+REST_HOSTS = {"api.data.gov.my", "api.open-meteo.com", "flood-api.open-meteo.com",   # REST tables may call only these
+              "archive-api.open-meteo.com"}                                          # B-70: real past rain (ERA5)
 NUMBER = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$")  # no leading zeros: "0740121" stays text
 
 

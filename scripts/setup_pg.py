@@ -39,11 +39,12 @@ WRITER_GRANTS = {"stations": "SELECT, INSERT, UPDATE", "river_levels": "SELECT, 
                  "rain_points": "SELECT, INSERT, UPDATE, DELETE",     # setup_wx replaces all points each run
                  "places": "SELECT, INSERT, UPDATE, DELETE",          # seed_places replaces the gazetteer each run
                  "place_aliases": "SELECT, INSERT, UPDATE, DELETE",
-                 "place_gauges": "SELECT, INSERT, UPDATE, DELETE"}
+                 "place_gauges": "SELECT, INSERT, UPDATE, DELETE",
+                 "replay_levels": "SELECT, INSERT, UPDATE, DELETE"}      # build_replay replaces a scenario each run
 WRITER_TABLES = list(WRITER_GRANTS)
 SCHEMA = ROOT / "db" / "schema.sql"
 TABLES = ["stations", "river_levels", "places", "historic_peaks", "source_registry", "station_links", "rain_points",
-          "place_aliases", "place_gauges"]
+          "place_aliases", "place_gauges", "replay_levels"]
 PASSWORD_OK = re.compile(r"^[A-Za-z0-9_-]{16,}$")  # role passwords go into DDL / JDBC options: keep them plain
 DOCKER_TIMEOUT_S = 60
 AGENT = "Setup"
