@@ -59,7 +59,7 @@ def trace_lines(state):
 @pytest.mark.parametrize("raw, expected", [
     ("72", 72), ("-3", -3), ("12.5", 12.5), ("0", 0), ("0.59", 0.59), ("1e3", 1000.0),
     ("0740121WL", "0740121WL"), ("0730671", "0730671"), ("2026-10-22 10:30", "2026-10-22 10:30"),
-    ("", None), ("null", None), (None, None), ("Sg. Kelantan", "Sg. Kelantan"),
+    ("", None), ("null", None), (None, None), ("Sg. Kelantan", "Sg. Kelantan"), ("1e400", "1e400"),
 ])
 def test_coerce(raw, expected):
     assert zetaris.coerce(raw) == expected
@@ -87,6 +87,62 @@ def test_read_only_and_single_statement(fake, sql):
     with pytest.raises(zetaris.ZetarisError) as e:
         zetaris.run_sql(sql, agent="Data")
     assert e.value.kind == "not_allowed" and fake["calls"] == []
+
+
+@pytest.mark.parametrize("sql", [
+    "WITH x AS (SELECT 1) INSERT INTO t SELECT * FROM x",
+    "SELECT reflect('java.lang.Runtime','getRuntime')",
+    "SELECT java_method('java.lang.System','exit',0)",
+    "SELECT * INTO newt FROM veda_pg.stations",
+    "WITH d AS (DELETE FROM t RETURNING *) SELECT * FROM d",
+    "SELECT 1 /* hide */ ; DROP LIGHTNING DATABASE TABLE veda.x",
+    "SELECT '\\'' AS a; DROP LIGHTNING DATABASE TABLE veda.x --'",
+    "SET spark.sql.x = 1",
+])
+def test_writes_and_tricks_refused(fake, sql):
+    with pytest.raises(zetaris.ZetarisError) as e:
+        zetaris.run_sql(sql, agent="Data")
+    assert e.value.kind == "not_allowed" and fake["calls"] == []
+
+
+def test_comment_does_not_swallow_where(fake):
+    sql = "SELECT * FROM veda_pg.river_levels -- latest only\nWHERE station_key = 'X'"
+    assert zetaris.normalize_sql(sql) == "SELECT * FROM veda_pg.river_levels WHERE station_key = 'X'"
+    assert zetaris.normalize_sql("SELECT /* note */ 1") == "SELECT 1"
+
+
+def test_literals_keep_their_spaces_and_words(fake):
+    assert zetaris.normalize_sql("SELECT  'Kg  Baru'   AS p") == "SELECT 'Kg  Baru' AS p"
+    assert zetaris.query_hash("SELECT 'Kg  Baru'") != zetaris.query_hash("SELECT 'Kg Baru'")
+    # write words inside quotes are just text
+    assert zetaris.read_only_problem("SELECT 'please DROP this' AS note, \"set\" FROM t") is None
+
+
+def test_non_object_json_is_handled_not_crashed(fake):
+    class ListResp(FakeResponse):
+        pass
+    fake["queue"] += [FakeResponse(200, ["not", "a", "dict"])] * 3
+    with pytest.raises(zetaris.ZetarisError) as e:
+        zetaris.run_sql("SELECT 1", agent="Data")
+    assert e.value.kind == "network"
+    fake["queue"].append(FakeResponse(429, ["rate", "limited"]))
+    with pytest.raises(zetaris.ZetarisError) as e:
+        zetaris.run_sql("SELECT 2", agent="Data")
+    assert e.value.kind == "sql"
+
+
+def test_row_column_mismatch_is_refused(fake):
+    fake["queue"].append(FakeResponse(200, rows_payload(["a"], [["1", "2", "3"]])))
+    with pytest.raises(zetaris.ZetarisError) as e:
+        zetaris.run_sql("SELECT a FROM t", agent="Data")
+    assert e.value.kind == "bad_response"
+
+
+def test_budget_stops_retries(fake):
+    fake["queue"] += [zetaris.requests.ConnectionError("down")] * 3
+    with pytest.raises(zetaris.ZetarisError):
+        zetaris.run_sql("SELECT 1", agent="Data", budget_s=1.5)   # first wait (2 s) would pass the budget
+    assert len(fake["calls"]) == 1
 
 
 def test_semicolon_inside_string_is_fine(fake):
@@ -162,10 +218,32 @@ def test_ddl_allow_list_and_already_exists(fake):
         zetaris.run_ddl("DROP DATASOURCE veda_pg", agent="Healer")
     fake["queue"] += [FakeResponse(200, rows_payload([], [])),
                       FakeResponse(400, {"msg": 'A table named "om_kb" already exists in database "VEDA_WX".'})]
-    ddl = 'CREATE LIGHTNING REST TABLE om_kb FROM VEDA_WX REQUEST(endpoint "https://x")'
+    ddl = 'CREATE LIGHTNING REST TABLE om_kb FROM VEDA_WX REQUEST(endpoint "https://api.open-meteo.com/v1/forecast?x=1")'
     assert zetaris.run_ddl(ddl, agent="Healer") is True
     assert zetaris.run_ddl(ddl, agent="Healer") is False
     assert [x["status"] for x in trace_lines(fake) if x["action"] == "zetaris.run_ddl"][-2:] == ["success", "success"]
+
+
+@pytest.mark.parametrize("ddl, setup", [
+    ('CREATE LIGHTNING REST TABLE x FROM db REQUEST(endpoint "http://169.254.169.254/latest/meta-data")', False),
+    ('CREATE LIGHTNING REST TABLE x FROM db REQUEST(endpoint "https://evil.example.com/a")', False),
+    ('CREATE LIGHTNING REST TABLE x FROM db REQUEST(endpoint "http://api.open-meteo.com/v1")', False),  # not https
+    ("CREATE OR REPLACE SCHEMASTORE VIEW river_status_latest WITH CONTAINER veda AS SELECT 99 AS level_m", False),
+    ("DROP LIGHTNING DATABASE TABLE VEDA_WX.om_kb", False),
+    ("REGISTER DATASOURCE TABLES FROM veda_pg", False),
+    ('CREATE DATASOURCE x OPTIONS (jdbcdriver "d")', False),
+    ("DROP DATASOURCE veda_pg", True),
+])
+def test_agent_ddl_lockdown(fake, ddl, setup):
+    with pytest.raises(zetaris.ZetarisError) as e:
+        zetaris.run_ddl(ddl, agent="Healer", setup=setup)
+    assert e.value.kind == "not_allowed" and fake["calls"] == []
+
+
+def test_setup_ddl_allowed_with_flag(fake):
+    fake["queue"].append(FakeResponse(200, rows_payload([], [])))
+    assert zetaris.run_ddl("REGISTER DATASOURCE TABLES FROM veda_pg", agent="Setup", setup=True) is True
+    assert zetaris.ddl_problem("CACHE TABLE veda_wx.om_kb") is None
 
 
 def test_ddl_refused_in_sample_mode(fake, monkeypatch):

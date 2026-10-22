@@ -34,8 +34,8 @@ def test_create_datasource_needs_setup_flag(monkeypatch, tmp_path):
         assert e.value.kind == "not_allowed"
     finally:
         trace.end_run()
-    assert zetaris.SETUP_DDL_ALLOWED.match('CREATE DATASOURCE veda_pg OPTIONS ()')
-    assert not zetaris.SETUP_DDL_ALLOWED.match('CREATE DATASOURCES x')
+    assert zetaris.ddl_problem('CREATE DATASOURCE veda_pg OPTIONS ()', setup=True) is None
+    assert zetaris.ddl_problem('CREATE DATASOURCES x', setup=True) is not None
 
 
 live = pytest.mark.skipif(os.getenv("VEDA_LIVE") != "1", reason="live veda-pg/Zetaris test: set VEDA_LIVE=1")

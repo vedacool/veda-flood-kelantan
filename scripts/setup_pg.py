@@ -106,7 +106,7 @@ def register_in_zetaris():
         f'username "{RO_ROLE}", password "{os.environ["VEDA_PG_RO_PASSWORD"]}", schema "public", fetchsize "1000")',
         agent=AGENT, purpose=f"register datasource {DATASOURCE} -> {CONTAINER}:5432", setup=True)
     zetaris.run_ddl(f"REGISTER DATASOURCE TABLES FROM {DATASOURCE}", agent=AGENT,
-                    purpose=f"register tables of {DATASOURCE}")
+                    purpose=f"register tables of {DATASOURCE}", setup=True)
     return "created" if created else "already registered"
 
 
