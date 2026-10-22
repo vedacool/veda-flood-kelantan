@@ -145,4 +145,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | The Critic model gets the small input: the answer text + "every line except the explanation was written by code from verified data" + the card + code findings + Zetaris re-check (the code checks already hold each card line to the evidence) | Husaini 22 Oct night |
 | 2026-10-22 | Replay = clock set to the replay time, every source cut in SQL at that time, historic peaks after it hidden, no 2026 MetMalaysia data, fresh in-memory World Model, "REPLAY · Nov 2024" first line, labels on every replay reading, 2014 comparison line, medium confidence on approximate times, 240 s budget | Husaini 22 Oct night (B-70) |
 | 2026-10-22 | Zetaris returns Postgres booleans as text ("false"): parse explicitly (`veda_ingest._true`) - `bool("false")` is True | B-70 (bug found in live check) |
+| 2026-10-22 | Critic deep lane unreliable tonight (NVIDIA-side provider_deadline / 500): re-test at a quieter hour; if still failing, review once on the fast lane (Lightning) when the deep call fails and the budget allows | Husaini 22 Oct night |
+| 2026-10-22 | The 24 h straight-line projection stays as is until Dr Ariff answers A5 (it overshoots on a steep rise, e.g. replay 27 Nov 19:30: 13.75-14.54 m vs the ~11.4 m peak) | Husaini 22 Oct night |
 
