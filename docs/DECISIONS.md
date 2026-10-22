@@ -27,3 +27,7 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Fixtures keyed by sha256 of whitespace-normalised SQL; store raw Zetaris text, coerce on read (live and replay identical) | B-04 |
 | 2026-10-22 | Numbers coerced only without leading zeros, so station IDs like `0740121WL` / `0730671` stay text | B-04 |
 | 2026-10-22 | Zetaris error kinds: auth · sql · source_unavailable · network · no_fixture · not_allowed; only network/5xx retried (2 s, 4 s) | B-04 |
+| 2026-10-22 | Postgres tables (v3 scope): `stations`, `river_levels`, `places`, `historic_peaks`, `source_registry` — "schools" in the old backlog wording is now `places` (kind = school) | B-05 |
+| 2026-10-22 | Read-only role `veda_zetaris` has its own password `VEDA_PG_RO_PASSWORD` | B-05 (spike 3 follow-up) |
+| 2026-10-22 | `CREATE DATASOURCE` only via `run_ddl(setup=True)` from `scripts/`; guard rule bans it in agents | B-05 |
+| 2026-10-22 | `source_registry` freshness SLAs / trust status **KIV** — Husaini + Dr Ariff still discussing; table stays empty, `freshness_sla_min` nullable | B-05 |

@@ -34,6 +34,7 @@ READ_ONLY = re.compile(r"^\s*(SELECT|WITH)\b", re.IGNORECASE)
 DDL_ALLOWED = re.compile(
     r"^\s*(CREATE\s+LIGHTNING\s+REST\s+TABLE|CREATE\s+(OR\s+REPLACE\s+)?SCHEMASTORE\s+VIEW|CACHE\s+TABLE"
     r"|DROP\s+LIGHTNING\s+DATABASE\s+TABLE|REGISTER\s+DATASOURCE\s+TABLES)\b", re.IGNORECASE)
+SETUP_DDL_ALLOWED = re.compile(r"^\s*CREATE\s+DATASOURCE\b", re.IGNORECASE)  # scripts/ only, never agents
 NUMBER = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$")  # no leading zeros: "0740121" stays text
 
 
@@ -209,12 +210,13 @@ def run_sql(sql, agent, purpose=None, limit=1000):
                      fetched_at=fetched_at, records=records)
 
 
-def run_ddl(sql, agent, purpose=None):
+def run_ddl(sql, agent, purpose=None, setup=False):
     """Run one allow-listed DDL statement (setup / self-healing). 'Already exists' counts as success.
-    Returns True if Zetaris applied it, False if it already existed. Never runs in SAMPLE_MODE."""
+    Returns True if Zetaris applied it, False if it already existed. Never runs in SAMPLE_MODE.
+    setup=True also allows CREATE DATASOURCE - for scripts/ only (guard rule: never in app/agents)."""
     text = normalize_sql(sql)
     label = purpose or text
-    if not DDL_ALLOWED.match(text):
+    if not (DDL_ALLOWED.match(text) or (setup and SETUP_DDL_ALLOWED.match(text))):
         trace.step(agent, "zetaris.run_ddl", input_summary=label, output_summary="refused: not on DDL allow-list",
                    status="failed", source="zetaris", decision="Only allow-listed DDL may run")
         raise ZetarisError("not_allowed", "DDL not on the allow-list")

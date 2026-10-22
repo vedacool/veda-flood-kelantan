@@ -15,6 +15,13 @@ git config core.hooksPath .githooks
 ```
 Every commit then regenerates `docs/CODEMAP.md` and runs `tests/test_architecture.py` (agents get data only via Zetaris, no `meterless/auto`, no reads of `output_examples/`, every agent traces, secret scan). Commit messages must carry a backlog ID (`B-xx`). Decisions are logged in `docs/DECISIONS.md`.
 
+## Developer setup — Postgres store (live mode)
+With Zetaris running and `.env` filled (`VEDA_PG_PASSWORD`, `VEDA_PG_RO_PASSWORD`, `ZETARIS_*`):
+```
+python scripts/setup_pg.py
+```
+Creates/starts the `veda-pg` container (port 5433), joins it to the Zetaris network, applies `db/schema.sql` and registers it in Zetaris as datasource `veda_pg`. Safe to re-run. Not needed in SAMPLE_MODE.
+
 ## Pre-existing materials
 Design notes summarised in `docs/BUILD_BRIEF.md` were written 20–22 Oct 2026, before the build window. All code in this repository was written inside the window.
 

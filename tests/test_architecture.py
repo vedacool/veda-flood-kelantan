@@ -62,6 +62,13 @@ def test_agents_never_import_network_libraries():
     assert not bad, "Agents must get data only via run_sql() (Zetaris), never direct HTTP:\n" + "\n".join(bad)
 
 
+# --- Rule 1b: agents never use setup-only DDL (CREATE DATASOURCE) ------------------------------------------
+def test_agents_never_use_setup_ddl():
+    bad = [f"{rel(f)}:{i}" for f in py_files("app/agents")
+           for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1) if re.search(r"setup\s*=\s*True", line)]
+    assert not bad, "run_ddl(setup=True) is for scripts/ only, never agents:\n" + "\n".join(bad)
+
+
 # --- Rule 2: never route through meterless/auto -------------------------------------------------------------
 def test_no_meterless_auto():
     bad = [f"{rel(f)}:{i}" for f in py_files("app", "scripts", "run.py")
