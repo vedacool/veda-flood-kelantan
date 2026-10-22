@@ -187,3 +187,8 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **Judges:** `docker build -t veda .` then `docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda` — no `.env`, no keys, no network (tested 23 Oct: replay ACT via POST /run, safety evals 13/13 inside the container).
 - **Never copied** (`.dockerignore`): `.env`, `.venv/`, `.git/`, `logs/`, `data/world/`, `CLAUDE.local.md`, `spikes/`. Guard tests in `tests/test_docker.py`.
 
+## Examples (B-20) — `input_examples/`, `output_examples/`, `scripts/make_examples.py`
+- **Inputs:** 6 questions as JSON (rising river PREPARE and ACT from the Nov 2024 replay, normal day EN and BM, broken source = controlling gauge 5 h old, out of area in BM), each with a one-line `about`; usable as `curl -d @file` bodies.
+- **Outputs:** `python scripts/make_examples.py` runs each through the real loop (SAMPLE_MODE by default, `--live` for live) and saves the API JSON + the full trace; nothing hand-written. `tests/test_examples.py` re-runs every example offline and checks the committed answer still matches (verdict, writer, language, first lines).
+- VEDA never reads `output_examples/` at runtime (guard test).
+
