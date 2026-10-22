@@ -47,3 +47,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | **Won't fix:** no automatic deletion of traces/snapshots (~3 MB/day; they are judging evidence) - revisit only if disk becomes a problem | audit P3 |
 | 2026-10-22 | **Deferred to B-18:** committed SAMPLE_MODE fixtures (need the agents' real SQL first); `requirements-lock.txt` pins all deps but without hashes (no pip-tools available) | audit P2/P3 |
 | 2026-10-22 | GitHub CI runs guard tests, codemap check, pip-audit and gitleaks on every push, so protection does not depend on local hooks | audit P3 |
+| 2026-10-22 | CI actions on Node 24 (checkout v7.0.1, setup-python v7.0.0, gitleaks-action v3.0.0), pinned to commit SHAs; runner pinned to ubuntu-24.04; Dependabot proposes weekly updates (PRs only) | dependency review 2026-10-22 (Node 20 removed from runners) |
+| 2026-10-22 | Dependency age policy: prefer releases ≥ ~2 weeks old unless it is a security fix; exception: certifi (CA list should be current). Applied: soupsieve 3.0.4 → 2.10, pluggy 1.7.0 → 1.6.0; local pip 25.1.1 (6 advisories) → 26.2.1 | dependency review 2026-10-22 |

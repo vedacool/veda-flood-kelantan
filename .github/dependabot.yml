@@ -1,0 +1,15 @@
+# Weekly update proposals as pull requests - nothing changes until a PR is reviewed and merged.
+# Policy (DECISIONS): prefer releases that are at least ~2 weeks old unless the update is a security fix.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
