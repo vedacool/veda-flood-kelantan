@@ -14,6 +14,7 @@ import json
 import re
 from datetime import datetime, timezone
 
+from app import card as card_mod
 from app import gazetteer, trace
 from app.adapters import nightshift
 from app.agents.data_agent import SOURCES
@@ -30,7 +31,7 @@ SAFETY = {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
     "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
 }
-REVISE_NOTE = ("\nThis is a REVISION: the Critic rejected previous_draft. Fix every item in critic_problems, "
+REVISE_NOTE = ("\nThis is a REVISION: the Critic rejected previous_explanation. Fix every item in critic_problems, "
                "follow critic_fix, keep everything else that was correct.")
 VERDICT_WORDS = re.compile(r"\b(NORMAL|WATCH|PREPARE|ACT|INSUFFICIENT[ _]DATA)\b")
 
@@ -49,19 +50,17 @@ PLAN_SYSTEM = (
     "reason: one short sentence explaining the plan.\nOutput only the JSON object.")
 
 DRAFT_SYSTEM = (
-    "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. Write the answer to the user "
-    "from the EVIDENCE only. Rules:\n"
-    "1. Use only numbers and facts that appear in the evidence. Say the reading time (MYT) for river levels.\n"
-    "2. Lead with what matters for the user's question, in plain words, max 120 words.\n"
-    "3. The verdict is decided by the Forecast agent: state forecast.verdict exactly as written (NORMAL, WATCH, "
-    "PREPARE, ACT or INSUFFICIENT_DATA) with the JPS level name, the projected range and the confidence label. Never "
-    "give a different verdict. If there is no forecast, give no verdict.\n"
-    "4. If usable is false, say clearly that the current river status cannot be confirmed, and why.\n"
-    "5. Mention stale or excluded sources in one short clause if the evidence notes them, and every item in "
-    "conflicts_unresolved (say the sources disagree and VEDA did not pick one).\n"
-    "6. Never advise walking, wading or driving through floodwater.\n"
-    "7. Write in the language given by `language` (en = English, ms = Bahasa Melayu).\n"
-    "Reply with ONE JSON object: {\"answer\": \"...\"}. Do not add the official-warning disclaimer; VEDA adds it.")
+    "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. VEDA already shows the user a "
+    "CARD with the action to take, the verdict, the river level, the range, the confidence, the sources and the "
+    "disclaimer - all written by code. Your job: write ONLY a short explanation (2-3 sentences, max 60 words) of WHY "
+    "the verdict is what it is, for this user, using the WHY list. Rules:\n"
+    "1. Use only numbers that appear in the CARD (no other numbers at all).\n"
+    "2. Do not repeat the action, the verdict line, the sources or the disclaimer.\n"
+    "3. Do not name any verdict other than the card's.\n"
+    "4. Never advise walking, wading or driving through floodwater.\n"
+    "5. For family_far_away users, say what they can do from afar (call, check on them).\n"
+    "6. Write in `language`: ms = standard Bahasa Melayu, en = English.\n"
+    "Reply with ONE JSON object: {\"explanation\": \"...\"}.")
 
 
 def _choose(value, allowed, default, field, fixes):
@@ -251,100 +250,55 @@ def draft_problem(text, facts):
     return None
 
 
-def fallback_answer(facts):
-    """An answer written by code from the same facts (used when the model is unavailable or its draft fails).
-    English only for now."""
-    place = facts.get("place") or "this place"
-    lines = []
-    fc = facts.get("forecast")
-    if fc:
-        name = (fc.get("jps_level_name") or {}).get("en")
-        lines.append(f"{place}: {fc['verdict']}" + (f" (JPS level: {name})" if name else "")
-                     + f", confidence {fc['confidence']['label']}. Why: {'; '.join(fc['why'][:3])}.")
-        rng = (fc.get("projection_m") or {}).get("24h")
-        if rng:
-            lines.append(f"Projected level in 24 h: {rng['min']}-{rng['max']} m (straight-line trend).")
-    if not facts.get("usable"):
-        lines.append(f"The current river status for {place} cannot be confirmed: the controlling gauge has no "
-                     "fresh, healthy reading.")
-    for g in facts["gauges"]:
-        if g["role"] in ("controlling", "controlling_secondary") and g["level_m"] is not None:
-            th = ", ".join(f"{k} {v} m" for k, v in g["thresholds_m"].items())
-            lines.append(f"{g['gauge']}: {g['level_m']} m at {g['read_at']} ({g['age_minutes']} min ago), "
-                         f"band '{g['band']}'" + (f" (thresholds: {th})" if th else "") + ".")
-    ups = [g for g in facts["gauges"] if g["role"] == "sentinel" and g["level_m"] is not None]
-    if ups:
-        lines.append("Upstream: " + "; ".join(
-            f"{g['gauge']} {g['level_m']} m ({g['band']}, {g['read_at']})"
-            + (f", reported travel time {g['travel_time_h']['min']}-{g['travel_time_h']['max']} h"
-               if g.get("travel_time_h") and g["travel_time_h"]["min"] is not None else "") for g in ups) + ".")
-    if facts.get("rain"):
-        r = facts["rain"]
-        lines.append(f"Rain (Open-Meteo): past 24 h {r['rain_past_24h_mm']} mm, next 24 h {r['rain_next_24h_mm']} mm, "
-                     f"next 72 h {r['rain_next_72h_mm']} mm.")
-    if facts.get("met_forecast_today"):
-        m = facts["met_forecast_today"]
-        lines.append(f"MetMalaysia today: {m['summary']}" + (f" ({m['when']})" if m.get("when") else "") + ".")
-    lines += facts.get("source_notes", [])[:3]
-    for c in facts.get("conflicts_unresolved", []):
-        lines.append(f"Sources disagree on {c['quantity']} and VEDA did not pick one ({c['reason']}).")
-    if fc and fc.get("history"):
-        h = fc["history"][0]
-        lines.append(f"Highest recorded here: {h['peak_m']} m ({h['event']}), {h['above_now_m']} m above now.")
-    if not fc:
-        lines.append("No flood outlook was made for this answer.")
-    return " ".join(lines)
-
-
-def draft(question, p, evidence, forecast=None, llm=None, budget_s=None, feedback=None, previous=None,
+def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=None, feedback=None, previous=None,
           use_model=True, skip_reason=None):
-    """Answer for the user -> {'text', 'language', 'drafted_by', 'safety_line'}. Never raises.
-    feedback = the Critic's review of `previous` (revise round): its problems and fix go to the model.
-    use_model=False (no time left in the budget, B-17): the code-written answer, with skip_reason in the trace."""
+    """The answer -> {'text', 'language', 'drafted_by', 'explanation', 'safety_line'}. Never raises.
+    The card lines (action, verdict + JPS level, comparison, range, sources) are inserted by code; Nemotron writes
+    only the explanation (B-21), which must pass card.explanation_problem. use_model=False (quick path, or no time
+    left) -> the card alone. feedback = the Critic's review of `previous` (revise round)."""
     llm = llm or nightshift.chat
-    facts = facts_for_model(evidence, forecast)
+    card = card or card_mod.build(p, evidence, forecast)
     language = p.get("question_language", "en")
-    drafted_by, why, text = "llm", None, None
-    request = {"question": question, "language": language, "intent": p["intent"], "user_type": p["user_type"],
-               "evidence": facts}
-    if feedback:                    # revise after a Critic rejection: the previous draft + what to fix
-        request["previous_draft"] = (previous or {}).get("text")
-        request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
-        request["critic_fix"] = feedback.get("fix")
+    drafted_by, why, explanation = "llm", None, None
     if not use_model:
-        drafted_by, why = "fallback", (skip_reason or "model not used") + " -> code-written answer"
+        drafted_by = "code" if p.get("effort") == "quick" else "fallback"
+        why = (skip_reason or "model not used") + " -> card written by code"
     else:
+        request = {"question": question, "language": language, "intent": p["intent"], "user_type": p["user_type"],
+                   "CARD": card_mod.render(card, language),
+                   "WHY": [t["reason"] for t in (forecast or {}).get("triggers", [])]}
+        if feedback:                # revise after a Critic rejection: the previous explanation + what to fix
+            request["previous_explanation"] = (previous or {}).get("explanation")
+            request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
+            request["critic_fix"] = feedback.get("fix")
         try:
             r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
                              {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
                     agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS, budget_s=budget_s)
-            text = (r.data or {}).get("answer") if isinstance(r.data, dict) else None
-            problem = draft_problem(text, facts)
+            explanation = (r.data or {}).get("explanation") if isinstance(r.data, dict) else None
+            problem = card_mod.explanation_problem(explanation, card)
             if problem:
-                drafted_by, why = "fallback", f"Model draft rejected by code check: {problem} -> code-written answer"
+                drafted_by, why = "fallback", f"Explanation rejected by code check: {problem} -> card without it"
+                explanation = None
         except nightshift.NightshiftError as e:
-            drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> code-written answer"
-    if drafted_by == "fallback":
-        text, language = fallback_answer(facts), "en"
-    answer = {"text": text.strip(), "language": language, "drafted_by": drafted_by,
-              "safety_line": SAFETY.get(language, SAFETY["en"])}
+            drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> card without an explanation"
+    answer = {"text": card_mod.render(card, language, explanation), "language": language, "drafted_by": drafted_by,
+              "explanation": explanation, "card": card, "safety_line": SAFETY.get(language, SAFETY["en"])}
     trace.step(AGENT, "revise" if feedback else "draft", input_summary=question, output_summary=answer["text"],
-               status="success" if drafted_by == "llm" else "fallback", target_agent="Critic",
-               decision=why or (f"Drafted from {len(facts['gauges'])} gauge(s), usable={facts['usable']}, "
-                                f"verdict={(facts['forecast'] or {}).get('verdict', 'none')}"),
-               details={"drafted_by": drafted_by, "revision": bool(feedback)})
+               status="success" if drafted_by in ("llm", "code") else "fallback", target_agent="Critic",
+               decision=why or f"Card + explanation in {language}, verdict {card['verdict']}",
+               details={"drafted_by": drafted_by, "revision": bool(feedback), "explanation": explanation})
     return answer
 
 
-def low_confidence_answer(evidence, forecast, review):
-    """After the Critic's last rejection: the code-written answer, labelled low confidence. Built from the facts
-    only, so it passes the code checks by construction."""
-    facts = facts_for_model(evidence, forecast)
-    text = ("Low confidence: VEDA's reviewer did not approve the written answer, so this is the plain data summary. "
-            + fallback_answer(facts))
-    answer = {"text": text, "language": "en", "drafted_by": "fallback", "low_confidence": True,
-              "safety_line": SAFETY["en"]}
+def low_confidence_answer(evidence, forecast, review, card=None, language="en", plan=None):
+    """After the Critic's last rejection: the card alone, labelled low confidence, in the user's language. Built by
+    code only, so it passes the code checks by construction."""
+    card = card or card_mod.build(plan or {}, evidence, forecast)
+    text = card_mod.render(card, language, low_confidence=True)
+    answer = {"text": text, "language": language, "drafted_by": "fallback", "low_confidence": True,
+              "explanation": None, "card": card, "safety_line": SAFETY.get(language, SAFETY["en"])}
     kinds = ", ".join(sorted({x["type"] for x in review.get("problems", [])}))
     trace.step(AGENT, "final_answer", output_summary=text, status="fallback",
-               decision=f"Critic rejected {review.get('round')} time(s) ({kinds}) -> code-written answer, low confidence")
+               decision=f"Critic rejected {review.get('round')} time(s) ({kinds}) -> card only, low confidence")
     return answer

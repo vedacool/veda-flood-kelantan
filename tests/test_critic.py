@@ -192,12 +192,11 @@ def scripted(reviews):
                                          [{"type": "unclear", "detail": "too technical"}], "fix": "simpler"}, text="")
         calls["drafts"] += 1
         req = json.loads(messages[1]["content"])
-        fc = req["evidence"]["forecast"]
-        text = (f"Draft {calls['drafts']}: {fc['verdict']} ({fc['jps_level_name']['en']}), confidence "
-                f"{fc['confidence']['label']}. data.gov.my is stale.")
+        text = ["First explanation.", "Second explanation.", "Third explanation."][calls["drafts"] - 1]
         if calls["drafts"] > 1:
-            assert req["critic_problems"] == ["unclear: too technical"] and req["previous_draft"].startswith("Draft")
-        return SimpleNamespace(data={"answer": text}, text=text)
+            assert req["critic_problems"] == ["unclear: too technical"]
+            assert req["previous_explanation"].endswith("explanation.")
+        return SimpleNamespace(data={"explanation": text}, text=text)
     llm.calls = calls
     return llm
 
@@ -210,7 +209,8 @@ def test_reject_then_revise_then_approve(offline):
     llm = scripted(["reject", "approve"])
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     assert states(r) == ["plan", "gather", "forecast", "draft", "critique", "revise", "critique"]
-    assert r["answer"]["text"].startswith("Draft 2") and r["answer"]["approved"]
+    assert r["answer"]["explanation"] == "Second explanation." and r["answer"]["approved"]
+    assert "Second explanation." in r["answer"]["text"] and r["answer"]["text"].startswith("WHAT TO DO NOW")
     assert [v["decision"] for v in r["reviews"]] == ["reject", "approve"]
 
 

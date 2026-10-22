@@ -31,11 +31,8 @@ def stub_llm(plan=None, answer=None, fail=False, review=None):
             data = plan
         elif lane == "deep":                    # Critic: approve unless told otherwise
             data = {"decision": review or "approve", "problems": [], "fix": ""}
-        else:                                   # draft: state the Forecast agent's verdict unless told otherwise
-            fc = json.loads(messages[1]["content"])["evidence"].get("forecast") or {}
-            complete = (f"Verdict: {fc.get('verdict', '')} (JPS level {(fc.get('jps_level_name') or {}).get('en')}), "
-                        f"confidence {(fc.get('confidence') or {}).get('label')}. The data.gov.my source is stale.")
-            data = {"answer": answer if answer is not None else complete}
+        else:                                   # draft: only the explanation (B-21) - the card is code
+            data = {"explanation": answer if answer is not None else "The river is steady for now."}
         return SimpleNamespace(data=data, text=json.dumps(data))
     llm.calls = calls
     return llm
@@ -286,8 +283,10 @@ def test_gather_reconciles_jps_against_the_frozen_source(run):
 
 
 def test_unresolved_conflicts_reach_the_answer():
-    facts = dict(FACTS, conflicts_unresolved=[{"quantity": "water level at X", "reason": "equal reliability"}])
-    assert "Sources disagree on water level at X" in coordinator.fallback_answer(facts)
+    from app import card
+    c = card.build({}, {"conflicts_unresolved": [{"quantity": "water level at X", "reason": "equal"}]}, None)
+    assert "Sources disagree on water level at X" in card.render(c, "en")
+    assert "Sumber tidak sepakat tentang water level at X" in card.render(c, "ms")
 
 
 def test_reconcile_ignores_a_source_without_a_value():

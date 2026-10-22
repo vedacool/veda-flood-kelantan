@@ -96,3 +96,10 @@ def test_alias_cannot_belong_to_two_places():
 def test_nearest_rain_point():
     points = [(0, 5.0, 102.0), (1, 6.1, 102.2)]
     assert seed_places.nearest_rain_point(6.12, 102.24, points)[0] == 1
+
+
+@pytest.mark.parametrize("question, known", [("Machang banjir tak?", "Machang"), ("is bachok flooding", "Bachok"),
+                                             ("Air naik doh ko Jeli?", "Jeli")])
+def test_known_place_inside_a_question_is_recognised(offline, question, known):
+    r = gazetteer.resolve(question)
+    assert r.status == "not_covered" and r.known == known

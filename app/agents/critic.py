@@ -21,6 +21,7 @@ import re
 import time
 from datetime import datetime, timezone
 
+from app import card as card_mod
 from app import config, trace
 from app.adapters import nightshift, zetaris
 from app.agents import coordinator
@@ -65,10 +66,19 @@ def _sentences(text):
     return [s for s in re.split(r"(?<=[.!?])\s+|\n+", text) if s.strip()]
 
 
-def code_checks(text, facts, evidence):
-    """Deterministic problems in a draft -> [{'type', 'detail', 'by': 'code'}]."""
+def code_checks(text, facts, evidence, card=None, explanation=None):
+    """Deterministic problems in a draft -> [{'type', 'detail', 'by': 'code'}].
+    With a card (B-21): the whole text may name only the card's verdict, and the model's explanation may only use
+    numbers that are in the card; without one: the older whole-draft check against the evidence."""
     found = []
-    problem = coordinator.draft_problem(text, facts)
+    if card is not None:
+        said = {w.replace(" ", "_") for w in coordinator.VERDICT_WORDS.findall(text or "")}
+        if said - {card["verdict"]}:
+            found.append({"type": "wrong_verdict",
+                          "detail": f"names {', '.join(sorted(said))} but the card says {card['verdict']}"})
+        problem = card_mod.explanation_problem(explanation, card) if explanation else None
+    else:
+        problem = coordinator.draft_problem(text, facts)
     if problem:
         found.append({"type": "wrong_verdict" if "verdict" in problem else "unsupported", "detail": problem})
     for s in _sentences(text or ""):
@@ -193,7 +203,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         trace.step(AGENT, "world.read", input_summary="the Forecast agent's stored verdict",
                    output_summary=f"stored verdict {stored[-1]['value']['verdict'] if stored else 'none'}",
                    source="world_model")
-    findings = code_checks(answer["text"], facts, evidence)
+    findings = code_checks(answer["text"], facts, evidence, answer.get("card"), answer.get("explanation"))
     trace.step(AGENT, "critic.code_checks", input_summary=f"draft round {round_no}",
                output_summary=f"{len(findings)} problem(s)", source="code",
                status="needs_revision" if findings else "success",

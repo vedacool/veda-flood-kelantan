@@ -12,6 +12,7 @@ Matching is plain and explainable: normalise -> exact alias -> alias inside a lo
 close spelling (difflib, "Did you mean...?") -> known Kelantan place not covered yet -> not covered.
 """
 import difflib
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -24,8 +25,13 @@ FILLER = {"bandar", "jajahan", "daerah", "pekan", "town", "city", "district", "o
 CLOSE_MATCH = 0.75          # difflib ratio for "Did you mean ...?" (plain spelling similarity)
 AGENT = "Gazetteer"
 
-PLACES_SQL = ("SELECT a.alias_norm, p.place_id, p.name, p.district, p.kind "
+PLACES_SQL = ("SELECT a.alias_norm, p.place_id, p.name, p.district, p.kind, p.lat, p.lon "
               "FROM veda_pg.place_aliases a JOIN veda_pg.places p ON p.place_id = a.place_id")
+# Where each Kelantan district roughly is: the average position of its JPS stations in data.gov.my /flood-warning.
+# That feed's LEVELS are frozen since Feb 2024, but station positions do not go stale. Used only to suggest the
+# nearest covered place for a known but uncovered district (B-21).
+DISTRICT_CENTRES_SQL = ("SELECT s.district, AVG(s.latitude) AS lat, AVG(s.longitude) AS lon "
+                        "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s GROUP BY s.district")
 KNOWN_KELANTAN_SQL = "SELECT DISTINCT place FROM veda.forecast_kelantan"
 
 
@@ -37,6 +43,9 @@ class Resolution:
     place: dict | None = None
     suggestions: list = field(default_factory=list)
     message: str = ""
+    known: str | None = None         # a Kelantan name VEDA knows but does not cover yet
+    nearest: dict | None = None      # {'name', 'km'} - the nearest covered place to `known`, when it can be placed
+    covered: list = field(default_factory=list)
 
 
 def normalize(text):
@@ -71,6 +80,32 @@ def _covered_list(aliases):
     return ", ".join(sorted({r["name"] for r in aliases.values()}))
 
 
+def _km(lat1, lon1, lat2, lon2):
+    """Great-circle distance in km."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+def nearest_covered(name, aliases, agent=AGENT):
+    """{'name', 'km'} of the covered place nearest to a known Kelantan district, or None if it cannot be placed."""
+    if "centres" not in _cache:
+        try:
+            rows = zetaris.run_sql(DISTRICT_CENTRES_SQL, agent=agent, purpose="gazetteer: district positions").records
+        except zetaris.ZetarisError:
+            rows = []
+        _cache["centres"] = {normalize(r["district"]): r for r in rows if r.get("district") and r.get("lat")}
+    centre = _cache["centres"].get(normalize(name))
+    if not centre:
+        return None
+    places = {r["place_id"]: r for r in aliases.values() if r.get("lat") is not None}
+    best = min(places.values(), key=lambda r: _km(centre["lat"], centre["lon"], r["lat"], r["lon"]), default=None)
+    if best is None:
+        return None
+    km = _km(centre["lat"], centre["lon"], best["lat"], best["lon"])
+    return {"name": best["name"], "km": max(5, int(round(km / 5)) * 5)}
+
+
 def resolve(text, agent=AGENT):
     """Resolve one place name. Always returns a Resolution (never raises for an unknown place); traced."""
     aliases, known = _load(agent)
@@ -89,12 +124,21 @@ def resolve(text, agent=AGENT):
         names = list(dict.fromkeys(aliases[c]["name"] for c in close))[:3]
         if names:
             res = Resolution(text, "did_you_mean", suggestions=names,
-                             message="Did you mean " + " or ".join(names) + "?")
+                             message="Did you mean " + " or ".join(names) + "?",
+                             covered=sorted({r["name"] for r in aliases.values()}))
     if res is None:
         key = q if q in known else next(iter(difflib.get_close_matches(q, list(known), n=1, cutoff=0.85)), None)
+        if key is None and q:       # a known name inside a longer question ("machang banjir tak") - longest wins
+            inside = [k for k in known if k and re.search(rf"\b{re.escape(k)}\b", q)]
+            key = max(inside, key=len) if inside else None
         where = f"{known[key]} is in Kelantan but" if key else f"'{text.strip()}' is"
+        near = nearest_covered(known[key], aliases, agent) if key else None
         res = Resolution(text, "not_covered",
-                         message=f"{where} not covered by VEDA yet. Covered places: {_covered_list(aliases)}.")
+                         message=f"{where} not covered by VEDA yet. "
+                                 + (f"Nearest covered place: {near['name']} (about {near['km']} km away). " if near else "")
+                                 + f"Covered places: {_covered_list(aliases)}.",
+                         known=known[key] if key else None, nearest=near,
+                         covered=sorted({r["name"] for r in aliases.values()}))
     trace.step(agent, "gazetteer.resolve", input_summary=text, output_summary=f"{res.status}: {res.message}",
                details={"normalized": q, "place_id": res.place["place_id"] if res.place else None,
                         "suggestions": res.suggestions})

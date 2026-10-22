@@ -27,10 +27,7 @@ def stub(effort="full"):
             return SimpleNamespace(data={**PLAN, "effort": effort}, text="")
         if lane == "deep":
             return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": ""}, text="")
-        fc = json.loads(messages[1]["content"])["evidence"]["forecast"]
-        text = (f"{fc['verdict']} ({fc['jps_level_name']['en']}), confidence {fc['confidence']['label']}. "
-                "data.gov.my is stale.")
-        return SimpleNamespace(data={"answer": text}, text=text)
+        return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")
     llm.calls = calls
     return llm
 
@@ -65,7 +62,7 @@ def test_quick_path_really_skips_steps(offline, force):
     assert "data.quick" in actions and "data.cross_check" not in actions and "critic.requery" not in actions
     assert r["forecast"]["mode"] == "now" and r["reviews"][0]["checked_by"] == ["code"]
     assert llm.calls == [] and r["plan"]["planned_by"] == "code"          # no Nemotron call at all
-    assert r["answer"]["drafted_by"] == "fallback" and r["evidence"]["cross_check"] is None
+    assert r["answer"]["drafted_by"] == "code" and r["evidence"]["cross_check"] is None
     route = [x for x in lines(r) if x["action"] == "route"][0]
     assert route["decision"].startswith("quick:") and route["output_summary"].startswith("quick path")
 

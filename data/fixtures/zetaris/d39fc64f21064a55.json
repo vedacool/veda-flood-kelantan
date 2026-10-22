@@ -1,0 +1,39 @@
+{
+ "sql": "SELECT point_key, forecast_until_myt FROM veda.rain_24h_by_point",
+ "query_hash": "d39fc64f21064a55",
+ "recorded_at": "2026-10-22T13:33:07Z",
+ "columns": [
+  "point_key",
+  "forecast_until_myt"
+ ],
+ "rows": [
+  [
+   "kuala_krai",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "dabong",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "rantau_panjang",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "limau_kasturi",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "kusial",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "kg_tualang",
+   "2026-10-28 23:00:00.0"
+  ],
+  [
+   "tambatan_diraja",
+   "2026-10-28 23:00:00.0"
+  ]
+ ]
+}

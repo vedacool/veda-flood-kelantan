@@ -124,4 +124,9 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Router details: rising = ≥ 0.3 m / 3 h or ≥ 0.15 m / 1 h (tide-influenced gauges excluded); MET warning counts only if rain/thunderstorm, names Kelantan (or the place's district when districts are listed), valid now, feed ≤ 24 h old; word lists BM + EN + Kelantan dialect (tentative) | B-17 |
 | 2026-10-22 | World Model SQLite in WAL mode, synchronous=NORMAL: per-event disk sync cost 116 ms on drive E: (prefetch 19 s → 6 s) | B-17 |
 | 2026-10-22 | Optional prefetch queries (MET warnings, /flood-warning, data clock) fail softly; network + readings still fail the run's data loudly | B-17 |
+| 2026-10-22 | Answer card = code; on the full path Nemotron writes only the explanation, inserted only if every number in it is in the card (compared by value, so 7.0 = 7) | Husaini 22 Oct night (B-21) |
+| 2026-10-22 | Advice lines per verdict in BM + EN as set by Husaini (tentative, review pack G) | Husaini 22 Oct night (B-21) |
+| 2026-10-22 | Card length limit 900 characters (one phone screen) instead of ~600: the agreed BM ACT advice alone makes the card ~760 | B-21 |
+| 2026-10-22 | "Place not covered": reply in the user's language + nearest covered place from the average position of the district's stations in data.gov.my /flood-warning (station positions do not go stale); no position → no suggestion | Husaini 22 Oct night (B-21) |
+| 2026-10-22 | The card also shows the thresholds and next-24 h rain, so an explanation can cite them without being rejected | B-21 |
 

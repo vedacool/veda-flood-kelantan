@@ -163,8 +163,9 @@ def test_draft_must_state_the_forecast_verdict_and_no_other():
     assert "does not state" in coordinator.draft_problem("The river is 7.2 m.", facts)
 
 
-def test_fallback_answer_leads_with_the_verdict():
+def test_card_leads_with_the_action_then_the_verdict():
+    from app import card
     ev = evidence(gauge(7.2, 0.01, 0.03))
-    text = coordinator.fallback_answer(coordinator.facts_for_model(ev, verdict(ev)))
-    assert text.startswith("Rantau Panjang: WATCH (JPS level: Alert), confidence")
-    assert "Projected level in 24 h" in text
+    lines = card.render(card.build(PLAN, ev, verdict(ev)), "en").split("\n")
+    assert lines[0].startswith("WHAT TO DO NOW: Check again in 3 hours")
+    assert lines[1] == "Rantau Panjang: WATCH - JPS level Alert" and lines[3].startswith("Next 24 h:")

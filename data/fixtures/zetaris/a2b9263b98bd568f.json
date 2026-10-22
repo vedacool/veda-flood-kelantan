@@ -1,0 +1,57 @@
+{
+ "sql": "SELECT s.district, AVG(s.latitude) AS lat, AVG(s.longitude) AS lon FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s GROUP BY s.district",
+ "query_hash": "a2b9263b98bd568f",
+ "recorded_at": "2026-10-22T13:24:31Z",
+ "columns": [
+  "district",
+  "lat",
+  "lon"
+ ],
+ "rows": [
+  [
+   "Kuala Krai",
+   "5.412386999999999",
+   "102.11489366666667"
+  ],
+  [
+   "Pasir Puteh",
+   "5.8362305",
+   "102.44393033333334"
+  ],
+  [
+   "Gua Musang",
+   "4.922325916666667",
+   "102.11496899999999"
+  ],
+  [
+   "Jeli",
+   "5.685742857142857",
+   "101.85045271428574"
+  ],
+  [
+   "Kota Bharu",
+   "6.060074999999999",
+   "102.2225066"
+  ],
+  [
+   "Tumpat",
+   "6.14938",
+   "102.09293"
+  ],
+  [
+   "Tanah Merah",
+   "5.79762",
+   "102.0305888"
+  ],
+  [
+   "Bachok",
+   "5.946696333333333",
+   "102.31406233333333"
+  ],
+  [
+   "Pasir Mas",
+   "6.006861428571428",
+   "102.07501571428573"
+  ]
+ ]
+}

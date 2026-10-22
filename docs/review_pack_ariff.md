@@ -146,4 +146,23 @@ VEDA reads Open-Meteo rain (past 7 + next 7 days) at 7 points: the 5 core gauges
 > Answer: ______
 
 ---
+## G. What VEDA tells people to do — ~10 min (added 22 Oct night, B-21)
+Every answer starts with one fixed advice line for its verdict, written by code (never by the AI), in BM and English. Text set by Husaini on 22 Oct night, **tentative**.
+
+| Verdict | English | Bahasa Melayu |
+|---|---|---|
+| NORMAL | No action needed. Keep an eye on JPS updates. | Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS. |
+| WATCH | Check again in 3 hours. Get important documents, medicines and a charged phone / power bank ready. | Semak semula dalam 3 jam. Sediakan dokumen penting, ubat-ubatan dan telefon yang dicas / power bank. |
+| PREPARE | Pack an emergency bag. Move valuables and your vehicle to higher ground. Find your nearest PPS (ask the village head / JKKK). Check on elderly or sick neighbours. | Sediakan beg kecemasan. Alihkan barang berharga dan kenderaan ke tempat tinggi. Kenal pasti PPS terdekat (tanya ketua kampung / JKKK). Bantu jiran warga emas atau yang sakit. |
+| ACT | Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991. | Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991. |
+| INSUFFICIENT DATA | VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger. | VEDA tidak dapat mengesahkan paras sungai sekarang. Semak JPS Infobanjir; hubungi 999 jika anda dalam bahaya. |
+
+**G1.** Is each advice line right for its level, and safe? Anything missing (e.g. children, medicine, pets, documents in plastic bags)?
+> Answer: ______
+
+**G2.** "Check again in 3 hours" for WATCH — the right interval?
+> Answer: ______
+
+---
+
 _After your answers: we update the three CSV files, re-run `scripts/seed_stations.py` / `seed_peaks.py`, and change each status from "tentative" to "verified — Dr Ariff, <date>"._

@@ -10,7 +10,8 @@ plan      Code first: the gazetteer finds the place (not covered -> done, no AI 
           The Data & Reconciler agent prefetches the world in the background from the very start.
 gather    Data & Reconciler agent: health checks -> World Model -> evidence for the planned place.
 forecast  Forecast agent: verdict + range + confidence (quick plan -> current levels only).
-draft     Coordinator writes the answer from the evidence.
+draft     The answer card (app/card.py) in the user's language, built by code; on the full path Nemotron adds
+          only a short explanation that may use only the card's numbers.
 critique  Critic: code checks + its own Zetaris re-queries + deep-lane review -> approve or reject.
 revise    after a rejection the Coordinator redrafts with the Critic's problems, then back to critique. After
           critic.MAX_REJECTIONS (2) rejections the answer is the code-written summary, labelled low confidence.
@@ -23,6 +24,7 @@ deadline ends the run with whatever is safe to say.
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from app import card as card_mod
 from app import config, gazetteer, router, trace
 from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
@@ -47,14 +49,15 @@ def open_world(run_id):
 
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
         on_step=None):
-    """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, reviews, timing, trace}.
+    """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, card, reviews, timing,
+    trace}.
     budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live. Never raises for data or model problems; those end up in the
     answer and the trace."""
     run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet, listener=on_step)
     t0 = time.monotonic()
     own_world = world is None
     world = world or open_world(run_.run_id)
-    state, p, evidence, fc, answer, status = "plan", None, None, None, None, "success"
+    state, p, evidence, fc, card, answer, status = "plan", None, None, None, None, None, "success"
     reviews, timing, budget = [], {}, None
     pool = ThreadPoolExecutor(max_workers=1)
     pre = pool.submit(trace.bind(data_agent.prefetch), world, now)        # world refresh while the Coordinator plans
@@ -99,7 +102,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 if res.status != "found":
                     p = {"question_language": lang, "place": None, "place_status": res.status,
                          "place_message": res.message, "planned_by": "code"}
-                    answer = {"text": res.message, "language": lang, "drafted_by": "code"}
+                    answer = {"text": card_mod.place_reply(res, lang), "language": lang, "drafted_by": "code"}
                     state = "done"
                 else:
                     r = router.route(question, res.place, world, pre.result())
@@ -117,11 +120,12 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 state = "forecast"
             elif state == "forecast":
                 fc = forecast_agent.forecast(p, evidence, world)
+                card = card_mod.build(p, evidence, fc)
                 state = "draft"
             elif state == "draft":
                 why = "quick path: answer written by code" if p["effort"] == "quick" else short("the answer")
-                answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=model_time(),
-                                           use_model=why is None, skip_reason=why)
+                answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
+                                           budget_s=model_time(), use_model=why is None, skip_reason=why)
                 state = "critique"
             elif state == "critique":
                 quick = p["effort"] == "quick"
@@ -134,13 +138,14 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     answer["approved"] = True
                     state = "done"
                 elif len(reviews) >= critic.MAX_REJECTIONS or short("the revision"):
-                    answer = coordinator.low_confidence_answer(evidence, fc, reviews[-1])
+                    answer = coordinator.low_confidence_answer(evidence, fc, reviews[-1], card,
+                                                               p["question_language"])
                     state = "done"
                 else:
                     state = "revise"
             elif state == "revise":
-                answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=model_time(),
-                                           feedback=reviews[-1], previous=answer)
+                answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
+                                           budget_s=model_time(), feedback=reviews[-1], previous=answer)
                 state = "critique"
             timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
         answer.setdefault("safety_line", coordinator.SAFETY.get(answer.get("language"), coordinator.SAFETY["en"]))
@@ -164,4 +169,4 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         if own_world:
             world.close()
     return {"run_id": run_.run_id, "status": status, "answer": answer, "plan": p, "evidence": evidence,
-            "forecast": fc, "reviews": reviews, "timing": timing, "trace": str(path)}
+            "forecast": fc, "card": card, "reviews": reviews, "timing": timing, "trace": str(path)}
