@@ -9,9 +9,8 @@ Usage:
 
 Read a saved trace as sentences:  python -m app.trace logs/trace-<run_id>.jsonl
 """
+import contextvars
 import json
-import os
-import re
 import sys
 import threading
 import uuid
@@ -19,18 +18,11 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from app import config
+
+ROOT = config.ROOT
 STATUSES = {"success", "failed", "retrying", "fallback", "needs_revision", "approved", "injected_fault"}
 MAX_SUMMARY = 300
-
-SECRET_PATTERNS = [
-    re.compile(r"nvapi-[A-Za-z0-9_\-]{8,}"),
-    re.compile(r"\bsk-[A-Za-z0-9_\-]{8,}"),
-    re.compile(r"(?i)(Bearer\s+)[A-Za-z0-9._~+/\-]{8,}=*"),
-    re.compile(r"""(?i)((?:password|passwd|secret|token|api_key)["']?(?:\s*[=:]\s*|\s+(?=["']))["']?)[^"'\s,;]{4,}"""),
-]
-SECRET_ENV_KEY = re.compile(r"(?i)(TOKEN|KEY|PASSWORD|SECRET)")
-
 
 class Run:
     """One VEDA run: its id, trace file, step counter and write lock."""
@@ -46,14 +38,19 @@ class Run:
 _current: ContextVar = ContextVar("veda_trace_run", default=None)
 
 
+def _mask(match):
+    """Replace only the `secret` group of a pattern match with ***."""
+    start, end = match.span("secret")
+    return match.group(0)[: start - match.start()] + "***" + match.group(0)[end - match.start():]
+
+
 def redact(text):
-    """Mask secret-looking strings and any secret value present in the environment."""
+    """Mask secret-looking strings (config.SECRET_PATTERNS) and VEDA's secret env values."""
     text = str(text)
-    for key, value in os.environ.items():
-        if SECRET_ENV_KEY.search(key) and len(value) >= 8:
-            text = text.replace(value, "***")
-    for pat in SECRET_PATTERNS:
-        text = pat.sub(lambda m: (m.group(1) if m.groups() else "") + "***", text)
+    for _key, value in config.secret_env_values(min_len=6):
+        text = text.replace(value, "***")
+    for pat in config.SECRET_PATTERNS.values():
+        text = pat.sub(_mask, text)
     return text
 
 
@@ -76,10 +73,6 @@ def _clean(obj):
     return obj
 
 
-def _sample_mode():
-    return os.getenv("SAMPLE_MODE", "false").strip().lower() == "true"
-
-
 def _write(run, record):
     try:
         with run.lock, run.path.open("a", encoding="utf-8") as f:
@@ -90,8 +83,8 @@ def _write(run, record):
 
 def sentence(rec):
     """One readable line for a trace record (used for stdout and the viewer)."""
-    try:  # JSON keeps UTC; sentences show local time (MYT on our machines)
-        ts = datetime.fromisoformat(rec["timestamp"].replace("Z", "+00:00")).astimezone().strftime("%H:%M:%S")
+    try:  # JSON keeps UTC; sentences always show Malaysia time, whatever the machine's zone
+        ts = datetime.fromisoformat(rec["timestamp"].replace("Z", "+00:00")).astimezone(config.MYT).strftime("%H:%M:%S")
     except (KeyError, ValueError):
         ts = "??:??:??"
     who = rec.get("agent_name", "?") + (f" -> {rec['target_agent']}" if rec.get("target_agent") else "")
@@ -114,14 +107,14 @@ def current_run():
 
 def start_run(question=None, log_dir=None, quiet=False):
     """Start a run: create logs/trace-<run_id>.jsonl, write a run_start line, make it the current run."""
-    run_id = f"{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4]}"
+    run_id = f"{datetime.now(config.MYT):%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4]}"  # MYT
     folder = Path(log_dir) if log_dir else ROOT / "logs"
     folder.mkdir(parents=True, exist_ok=True)
     run = Run(run_id, folder / f"trace-{run_id}.jsonl", quiet)
     _current.set(run)
     step("System", "run_start", input_summary=question,
-         output_summary=f"Run {run_id} started ({'SAMPLE_MODE' if _sample_mode() else 'live'})",
-         details={"sample_mode": _sample_mode()})
+         output_summary=f"Run {run_id} started ({'SAMPLE_MODE' if config.sample_mode() else 'live'})",
+         details={"sample_mode": config.sample_mode()})
     return run
 
 
@@ -151,7 +144,7 @@ def step(agent, action, input_summary=None, output_summary=None, status="success
         "retry_count": retry_count,
         "status": status,
         "source": source,
-        "mode": "sample" if _sample_mode() else "live",
+        "mode": "sample" if config.sample_mode() else "live",
         "duration_ms": duration_ms,
         "details": _clean(details or {}),
     }
@@ -166,9 +159,21 @@ def end_run(status="success", output_summary=None):
     run = _current.get()
     if run is None:
         raise RuntimeError("trace.end_run() called without an active run")
-    step("System", "run_end", output_summary=output_summary or f"Run finished after {run.step} steps", status=status)
-    _current.set(None)
+    if status not in STATUSES:
+        status = "failed"  # never leave a run open because of a bad status
+    try:
+        step("System", "run_end", output_summary=output_summary or f"Run finished after {run.step} steps",
+             status=status)
+    finally:
+        _current.set(None)
     return run.path
+
+
+def bind(fn):
+    """Wrap fn so it runs inside the current trace run - use when handing work to a plain thread/executor:
+    executor.submit(trace.bind(work), ...). (FastAPI's threadpool already copies the context.)"""
+    ctx = contextvars.copy_context()
+    return lambda *a, **k: ctx.run(fn, *a, **k)
 
 
 def main(argv):

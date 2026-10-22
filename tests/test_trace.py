@@ -42,15 +42,46 @@ def test_secrets_are_redacted(run, monkeypatch):
     # fake secrets are assembled at runtime so this file never contains a secret-shaped literal (B-65 scan)
     bearer_value = "abcdefghij" * 3
     nv_key = "nv" + "api-" + "A" * 24
-    monkeypatch.setenv("ZETARIS_API_KEY", "zk_live_ABCDEF123456")
+    fake_env_value = "zk_live_" + "ABCDEF123456"
+    pw = "Sup3r" + "Secret!"
+    spaced_pw = "Abc def" + "!123"
+    monkeypatch.setenv("ZETARIS_API_KEY", fake_env_value)
     trace.step("Data", "run_sql",
                input_summary="Authorization: " + "Bearer " + bearer_value,
-               output_summary=f"key {nv_key} and zk_live_ABCDEF123456",
-               details={"jdbc": 'password "Sup3rSecret!"', "nested": ["token=abcd1234efgh"]})
+               output_summary=f"key {nv_key} and {fake_env_value}",
+               details={"jdbc": "pass" + 'word "' + pw + '"', "spaced": "pass" + 'word "' + spaced_pw + '"',
+                        "url": "postgresql://postgres:" + "hunter22" + "@localhost:5433/veda",
+                        "nested": ["tok" + "en=" + "abcd1234efgh"], "json": '{"api_' + 'key": "' + fake_env_value[::-1] + '"}'})
     text = run.path.read_text(encoding="utf-8")
-    for secret in (bearer_value, nv_key[:10], "zk_live_ABCDEF123456", "Sup3rSecret", "abcd1234efgh"):
+    for secret in (bearer_value, nv_key[:10], fake_env_value, pw, spaced_pw, "hunter22", "abcd1234efgh", fake_env_value[::-1]):
         assert secret not in text
     assert "***" in text
+
+
+def test_no_over_redaction(run, monkeypatch):
+    # other tools' env keys are not VEDA secrets: their values must not mask normal text (audit P3)
+    monkeypatch.setenv("MONKEY_BUSINESS", "Kuala Krai")
+    rec = trace.step("Data", "x", output_summary="Kuala Krai gauge; secret: none of this; password \"{PW}\"")
+    assert rec["output_summary"] == "Kuala Krai gauge; secret: none of this; password \"{PW}\""
+
+
+def test_end_run_with_bad_status_still_closes(tmp_path):
+    trace.start_run("t", log_dir=tmp_path, quiet=True)
+    path = trace.end_run("not-a-status")
+    assert trace.current_run() is None
+    assert read_lines(path)[-1]["status"] == "failed"
+
+
+def test_bind_carries_run_into_threads(run):
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(1) as ex:
+        rec = ex.submit(trace.bind(trace.step), "Data", "in_thread").result()
+    assert rec["run_id"] == run.run_id
+
+
+def test_sentence_uses_malaysia_time():
+    rec = {"timestamp": "2026-10-22T02:30:00Z", "step": 1, "agent_name": "A", "action": "x", "status": "success"}
+    assert trace.sentence(rec).startswith("10:30:00 ")
 
 
 def test_normal_words_are_not_redacted(run):
