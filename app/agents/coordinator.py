@@ -111,7 +111,7 @@ def plan(question, world=None, llm=None, budget_s=None):
     fixes, planned_by, why = [], "llm", None
     try:
         r = llm("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
-                agent=AGENT, json_mode=True, target_agent="Data", max_tokens=2000, budget_s=budget_s)
+                agent=AGENT, json_mode=True, target_agent="Data & Reconciler", max_tokens=2000, budget_s=budget_s)
         raw = r.data
     except nightshift.NightshiftError as e:
         raw, planned_by, why = {}, "fallback", f"Nightshift unavailable ({e}) -> plan written by code"
@@ -122,7 +122,7 @@ def plan(question, world=None, llm=None, budget_s=None):
     trace.step(AGENT, "plan", input_summary=question,
                output_summary=(f"intent={p['intent']} user={p['user_type']} place={(p['place'] or {}).get('name')} "
                                f"({p['place_status']}) effort={p['effort']} sources={','.join(p['sources'])}"),
-               status="success" if planned_by == "llm" else "fallback", target_agent="Data",
+               status="success" if planned_by == "llm" else "fallback", target_agent="Data & Reconciler",
                decision=why or ("; ".join(fixes) if fixes else p["reason"]), details={"plan": p, "fixes": fixes})
     if world is not None and run_id():
         _remember(world, p)

@@ -1,4 +1,4 @@
-"""Data agent (B-13): gathers the evidence for one plan - only through Zetaris (run_sql) - checks its health and
+"""Data & Reconciler agent (B-13): gathers the evidence for one plan - only through Zetaris (run_sql) - checks its health and
 writes it to the World Model. Plain code, no LLM.
 
     evidence = data_agent.gather(plan, world)
@@ -22,7 +22,7 @@ from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
 from app.engines.world_model.veda_ingest import build_network, ingest_readings, place_id
 
-AGENT = "Data"
+AGENT = "Data & Reconciler"
 SOURCES = ("jps_levels", "open_meteo", "mygov_forecast", "mygov_warning")   # what a plan may ask for
 FRESHNESS = {  # minutes: (fresh up to, aging up to); older = stale. Tentative, Dr Ariff to review.
     "jps_levels": (60, 180),
@@ -270,7 +270,7 @@ def gather(plan, world, now=None):
     for key, s in sources.items():
         if s["status"] != "skipped":
             world.assert_fact(source_id(key), "health", s, confidence=1.0, source={
-                "kind": "agent_check", "at": _iso(clock), "agent": AGENT, "run_id": run_id, "origin": "Data agent"})
+                "kind": "agent_check", "at": _iso(clock), "agent": AGENT, "run_id": run_id, "origin": "Data & Reconciler agent"})
         trace.step(AGENT, "data.health", input_summary=key, output_summary=f"{s['status']}: {s['note']}",
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,

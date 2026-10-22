@@ -1,4 +1,4 @@
-"""Load VEDA's world from Zetaris into the World Model (the Data agent calls these).
+"""Load VEDA's world from Zetaris into the World Model (the Data & Reconciler agent calls these).
 
     build_network(world, agent, run_id)   gauges, rivers, districts, places, sources and how they relate
     ingest_readings(world, agent, run_id) the current facts for covered places: river levels, rain, forecast
@@ -119,7 +119,7 @@ def build_network(world, agent, run_id):
 
 def ingest_readings(world, agent, run_id, check=None):
     """Current facts for covered places. River facts carry the gauge's reading time; rain the forecast window end;
-    the forecast its date. check(kind, row) -> health dict (the Data agent's checks) is stored with each fact;
+    the forecast its date. check(kind, row) -> health dict (the Data & Reconciler agent's checks) is stored with each fact;
     a reading that fails a check is still written, with low confidence, so the gap stays visible.
     Returns counts + the gauges whose health was not ok."""
     times, qh_t = _sql(READING_TIMES_SQL, agent, "world: gauge reading times")

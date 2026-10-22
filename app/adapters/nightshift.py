@@ -285,7 +285,7 @@ def main(argv):
     trace.start_run(question)
     try:
         r = chat("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
-                 agent="Coordinator", json_mode=True, target_agent="Data")
+                 agent="Coordinator", json_mode=True, target_agent="Data & Reconciler")
     except NightshiftError as e:
         trace.end_run("failed", str(e))
         print(f"FAILED: {trace.redact(str(e))}")

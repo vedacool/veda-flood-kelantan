@@ -1,4 +1,4 @@
-"""B-12 / B-13 tests: Data agent health checks + gather, Coordinator plan/draft, and the loop.
+"""B-12 / B-13 tests: Data & Reconciler agent health checks + gather, Coordinator plan/draft, and the loop.
 
 Offline tests replay the committed SAMPLE_MODE fixtures (data/fixtures/zetaris/) and use a stand-in model, so they
 run in CI with an empty .env. The live test (VEDA_LIVE=1) asks Nemotron two different questions.
@@ -54,7 +54,7 @@ def lines(path):
     return [json.loads(x) for x in open(path, encoding="utf-8")]
 
 
-# -- Data agent: checks ---------------------------------------------------------------------------------------
+# -- Data & Reconciler: checks --------------------------------------------------------------------------------------------
 @pytest.mark.parametrize("age, expected", [(0, "fresh"), (60, "fresh"), (61, "aging"), (180, "aging"),
                                            (181, "stale"), (None, "unknown")])
 def test_jps_freshness_limits(age, expected):
@@ -87,7 +87,7 @@ def test_rain_and_forecast_checks():
     assert not data_agent.check("mygov_forecast", {"forecast_today": ""})["ok"]
 
 
-# -- Data agent: gather (replayed Zetaris) --------------------------------------------------------------------
+# -- Data & Reconciler: gather (replayed Zetaris) --------------------------------------------------------------------
 def rp_plan(sources=("jps_levels", "open_meteo", "mygov_forecast")):
     return {"intent": "risk_check", "place": gazetteer.resolve("Rantau Panjang").place, "sources": list(sources)}
 

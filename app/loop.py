@@ -6,7 +6,7 @@
 
 plan      Coordinator: intent, user type, place (gazetteer), sources, effort. Unknown place -> done with the
           gazetteer's reply ("Did you mean...?" / not covered).
-gather    Data agent: Zetaris -> health checks -> World Model -> evidence.
+gather    Data & Reconciler agent: Zetaris -> health checks -> World Model -> evidence.
 forecast  Forecast agent (B-16) - not built yet: logged as skipped, so the answer gives no verdict.
 draft     Coordinator writes the answer from the evidence.
 critique  Critic (B-14) - not built yet: logged as skipped. revise is entered only after a Critic rejection.

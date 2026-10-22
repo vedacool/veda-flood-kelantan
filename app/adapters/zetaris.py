@@ -1,7 +1,7 @@
 """Zetaris adapter: run_sql() is the only way VEDA reads data (live, record, or SAMPLE_MODE replay).
 
     from app.adapters import zetaris
-    r = zetaris.run_sql("SELECT ...", agent="Data", purpose="latest river levels")
+    r = zetaris.run_sql("SELECT ...", agent="Data & Reconciler", purpose="latest river levels")
     r.columns, r.rows, r.source          # source = "zetaris-live" | "zetaris-replay"
 
 Modes (from env):
@@ -45,7 +45,7 @@ SETUP_DDL = re.compile(
     r"|DROP\s+SCHEMASTORE\s+VIEW|DROP\s+LIGHTNING\s+DATABASE\s+TABLE|CREATE\s+LIGHTNING\s+DATABASE"
     r"|REGISTER\s+DATASOURCE\s+TABLES|CREATE\s+DATASOURCE|UNCACHE\s+TABLE)\b", re.IGNORECASE)
 # Agents may also drop the cache of ONE REST table in VEDA_WX, so the next CACHE TABLE fetches that source again
-# (B-13: the Data agent refreshes an old forecast and records when it did). Nothing else can be uncached by agents.
+# (B-13: the Data & Reconciler agent refreshes an old forecast and records when it did). Nothing else can be uncached by agents.
 AGENT_REFRESH = re.compile(r"^\s*UNCACHE\s+TABLE\s+veda_wx\.\w+$", re.IGNORECASE)
 REST_HOSTS = {"api.data.gov.my", "api.open-meteo.com", "flood-api.open-meteo.com"}  # REST tables may call only these
 NUMBER = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$")  # no leading zeros: "0740121" stays text
@@ -357,7 +357,7 @@ def main(argv):
     sql = " ".join(argv[1:]) or "SELECT 1 AS x"
     trace.start_run(f"zetaris CLI: {sql}")
     try:
-        r = run_sql(sql, agent="Data", purpose="CLI check")
+        r = run_sql(sql, agent="Data & Reconciler", purpose="CLI check")
     except ZetarisError as e:
         trace.end_run("failed", f"{e.kind}: {e}")
         print(f"FAILED ({e.kind}): {trace.redact(str(e))}")

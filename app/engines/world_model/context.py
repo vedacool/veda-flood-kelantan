@@ -5,7 +5,7 @@
 Returns a STRUCTURED payload (spec §10.2), never a pre-written text: the controlling gauge(s), sentinel gauges
 with travel times, rain and the MetMalaysia forecast - every item with its value, the time the data refers to,
 its age, its provenance (query hash, view, agent, run) and why it was selected. Freshness is not judged here;
-the Data agent applies the (tentative) limits to `age_minutes`.
+the Data & Reconciler agent applies the (tentative) limits to `age_minutes`.
 """
 from datetime import datetime, timezone
 

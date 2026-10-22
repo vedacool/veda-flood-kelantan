@@ -20,7 +20,7 @@ Track: **Solving Fragmented Intelligence** (GenAI Works Open Agent Hackathon 202
 | Agent | Kind | Model | Job |
 |---|---|---|---|
 | Coordinator | LLM | Nightshift lane `fast` (Nemotron 3.5 Lightning) | Tag intent + user type + area → write a **plan** (sources, methods, effort) → delegate → draft answer → revise after Critic |
-| Data agent | code | — | Fetch **only via Zetaris SQL**; health-check each source (fresh / schema / plausible / agreement); self-healing ladder; write facts to World Model |
+| Data & Reconciler agent | code | — | Fetch **only via Zetaris SQL**; health-check each source (fresh / schema / plausible / agreement); self-healing ladder; write facts to World Model |
 | Forecast agent | code | — | Trend, upstream→downstream lag, "bigger than the 2014 flood?", verdict rules → range + confidence |
 | Critic | LLM | Nightshift lane `deep` (Nemotron 3.5 Super VL) | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
 
