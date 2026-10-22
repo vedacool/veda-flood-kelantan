@@ -158,6 +158,27 @@ def test_network_error_retried_until_failure(fake):
     assert statuses == ["retrying", "retrying", "retrying", "failed"]
 
 
+def test_string_error_body_is_retried_not_crashed(fake):
+    # audit P2: {"error": "rate limited"} used to raise AttributeError (no trace, wrong exception type)
+    fake["queue"] += [FakeResponse(429, {"error": "rate limited"}), FakeResponse(200, ok_payload())]
+    r = nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
+    assert r.attempts == 2
+
+
+def test_list_body_is_handled(fake):
+    fake["queue"] += [FakeResponse(200, ["not", "a", "dict"])] * 4
+    with pytest.raises(nightshift.NightshiftError):
+        nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
+    assert trace_lines(fake)[-1]["status"] == "failed"
+
+
+def test_budget_stops_retries(fake):
+    fake["queue"] += [nightshift.requests.ConnectionError("down")] * 4
+    with pytest.raises(nightshift.NightshiftError, match="budget"):
+        nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator", budget_s=1.5)
+    assert len(fake["calls"]) == 1
+
+
 def test_401_not_retried(fake):
     fake["queue"].append(FakeResponse(401, {"error": {"message": "bad token"}}))
     with pytest.raises(nightshift.NightshiftError, match="401"):

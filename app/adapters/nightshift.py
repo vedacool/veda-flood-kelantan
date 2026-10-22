@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 import requests
 
-from app import trace
+from app import config, trace
 
 LANES = ("fast", "deep")
 EXPECTED_MODEL = {  # B-66: the Nemotron model each lane must be answered by (override: METERLESS_EXPECT_<LANE>)
@@ -51,10 +51,6 @@ class LLMResult:
     usage: dict = field(default_factory=dict)
     tool_calls: list = field(default_factory=list)
     data: dict | None = None   # parsed JSON when json_mode=True
-
-
-def _sample_mode():
-    return os.getenv("SAMPLE_MODE", "false").strip().lower() == "true"
 
 
 def lane_model(lane):
@@ -114,33 +110,52 @@ def _last_user(messages):
     return next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
 
 
-def _post(base, token, body, app):
+def _post(base, token, body, app, timeout=TIMEOUT_S):
     headers = {"Authorization": f"Bearer {token}", "meterless-app": app, "meterless-scope": "user",
                "Content-Type": "application/json"}
-    return requests.post(f"{base}/chat/completions", headers=headers, json=body, timeout=TIMEOUT_S)
+    return requests.post(f"{base}/chat/completions", headers=headers, json=body, timeout=timeout)
 
 
-def _call(lane, body, agent, prompt_summary):
-    """POST with retry/backoff. Returns (payload, attempts). Raises NightshiftError when out of retries."""
+def _has_choices(payload):
+    ch = payload.get("choices")
+    return isinstance(ch, list) and bool(ch) and isinstance(ch[0], dict)
+
+
+def _error_message(payload, r):
+    """Nightshift's error text, whatever shape the body has (dict / str / missing)."""
+    err = payload.get("error")
+    if isinstance(err, dict):
+        return str(err.get("message", r.text))[:200]
+    return str(err or r.text or f"HTTP {r.status_code}")[:200]
+
+
+def _call(lane, body, agent, prompt_summary, deadline=None):
+    """POST with retry/backoff. Returns (payload, attempts). Raises NightshiftError when out of retries or time.
+    deadline: time.monotonic() value after which no new attempt starts (the run's time budget)."""
     base, token = _config()
     attempt, grew = 0, False
     while True:
         attempt += 1
         t0 = time.perf_counter()
         problem = fatal = None
+        left = deadline - time.monotonic() if deadline else TIMEOUT_S
         try:
-            r = _post(base, token, body, lane_app(lane))
+            if left <= 1:
+                raise requests.Timeout("run time budget used up")
+            r = _post(base, token, body, lane_app(lane), timeout=min(TIMEOUT_S, left))
             payload = r.json() if r.content else {}
-            if r.ok and payload.get("choices"):
+            if not isinstance(payload, dict):          # list / str body: never crash on .get
+                payload = {"error": str(payload)[:200]}
+            if r.ok and _has_choices(payload):
                 return payload, attempt
-            message = str((payload.get("error") or {}).get("message", r.text))[:200]
+            message = _error_message(payload, r)
             if r.status_code == 401:
                 fatal = "Nightshift refused the token (401) - check METERLESS_RUNTIME_TOKEN"
             if "empty_response" in message and not grew:
                 grew = True  # model spent its budget on hidden reasoning: retry once with double budget
                 body = {**body, "max_tokens": body["max_tokens"] * 2}
                 problem = f"empty response -> retry with max_tokens={body['max_tokens']}"
-            elif r.status_code in RETRY_STATUSES:
+            elif r.status_code in RETRY_STATUSES or r.ok:   # 200 without choices = garbage, retry
                 problem = f"HTTP {r.status_code}: {message}"
             else:
                 fatal = f"Nightshift error HTTP {r.status_code}: {message}"
@@ -149,6 +164,9 @@ def _call(lane, body, agent, prompt_summary):
         except ValueError:
             problem = "response was not JSON"
         ms = int((time.perf_counter() - t0) * 1000)
+        wait = BACKOFF_S[min(attempt, len(BACKOFF_S)) - 1]
+        if deadline is not None and not fatal and time.monotonic() + wait >= deadline:
+            fatal = f"run time budget used up after {attempt} attempt(s): {problem}"
         if fatal:
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=fatal,
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
@@ -159,7 +177,6 @@ def _call(lane, body, agent, prompt_summary):
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
                        decision="Out of retries - caller must fall back")
             raise NightshiftError(f"Nightshift failed after {attempt} attempts: {problem}")
-        wait = BACKOFF_S[attempt - 1]
         trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=problem,
                    status="retrying", source=f"nightshift:{lane}", retry_count=attempt, duration_ms=ms,
                    decision=f"Retrying in {wait}s")
@@ -167,9 +184,11 @@ def _call(lane, body, agent, prompt_summary):
 
 
 def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max_tokens=DEFAULT_MAX_TOKENS,
-         temperature=0.2, target_agent=None):
-    """Send one chat request through Nightshift on lane `fast` or `deep`. Returns LLMResult, raises NightshiftError."""
-    if _sample_mode():
+         temperature=0.2, target_agent=None, budget_s=None):
+    """Send one chat request through Nightshift on lane `fast` or `deep`. Returns LLMResult, raises NightshiftError.
+    budget_s: optional cap on total seconds incl. retries and the JSON repair (pass the run's remaining time)."""
+    deadline = time.monotonic() + budget_s if budget_s else None
+    if config.sample_mode():
         raise NightshiftError("SAMPLE_MODE: offline SampleGenerator arrives in B-18; no live model calls allowed")
     model = lane_model(lane)
     body = {"model": model, "messages": list(messages), "temperature": temperature,
@@ -182,7 +201,7 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     prompt_summary = trace.summarize(_last_user(messages), 120)
 
     t0 = time.perf_counter()
-    payload, attempts = _call(lane, body, agent, prompt_summary)
+    payload, attempts = _call(lane, body, agent, prompt_summary, deadline)
     msg = payload["choices"][0].get("message") or {}
     text = msg.get("content") or ""
     data = None
@@ -196,7 +215,7 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
             repair = {**body, "messages": body["messages"] + [
                 {"role": "assistant", "content": text},
                 {"role": "user", "content": "That was not valid JSON. Reply with only the JSON object, nothing else."}]}
-            payload, more = _call(lane, repair, agent, prompt_summary)
+            payload, more = _call(lane, repair, agent, prompt_summary, deadline)
             attempts += more
             text = (payload["choices"][0].get("message") or {}).get("content") or ""
             try:
