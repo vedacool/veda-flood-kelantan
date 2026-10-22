@@ -169,12 +169,21 @@ def requery(evidence, world, run_id):
     return {**out, "problems": problems}
 
 
+SMALL_EVIDENCE_NOTE = ("Every line of the draft except the explanation was written by code from verified data "
+                       "(checked against the evidence by code). The card as written by code: ")
+
+
 def _model_review(question, answer, facts, findings, recheck, llm, budget_s):
-    """The deep-lane review -> (decision, problems, fix) or raises NightshiftError."""
+    """The deep-lane review -> (decision, problems, fix) or raises NightshiftError.
+    With a card (B-21) the model gets the SMALL input: the card text instead of the whole evidence - measured 22 Oct
+    night: full input 0/3 (cut at 45 s), small input 3/3 when streamed. The code checks already hold every card
+    line to the evidence; the model judges the explanation, clarity and safety."""
+    card = answer.get("card")
+    evidence = (SMALL_EVIDENCE_NOTE + card_mod.render(card, answer.get("language") or "en")) if card else facts
     r = llm("deep", [{"role": "system", "content": CRITIC_SYSTEM},
                      {"role": "user", "content": json.dumps({
                          "question": question, "language": answer.get("language"), "draft": answer["text"],
-                         "EVIDENCE": facts, "CODE_FINDINGS": findings,
+                         "EVIDENCE": evidence, "CODE_FINDINGS": findings,
                          "ZETARIS_RECHECK": {k: v for k, v in recheck.items() if k != "problems"}},
                          ensure_ascii=False, default=str)}],
             agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator", max_tokens=3000,

@@ -3,6 +3,7 @@
 The one live test runs only with VEDA_LIVE=1 (real Nightshift, real .env).
 """
 import json
+import time
 import os
 
 import pytest
@@ -19,9 +20,40 @@ class FakeResponse:
         self.ok = 200 <= status < 300
         self.content = json.dumps(payload).encode()
         self.text = json.dumps(payload)
+        self.headers = {"content-type": "application/json"}
 
     def json(self):
         return self._payload
+
+
+class FakeStream:
+    """A text/event-stream answer like Nightshift's: deltas, then closing chunks with the served model + receipt."""
+
+    def __init__(self, events, delay_s=0.0):
+        self.status_code, self.ok, self.content, self.text = 200, True, b"", ""
+        self.headers = {"content-type": "text/event-stream"}
+        self.events, self.delay_s, self.closed = events, delay_s, False
+
+    def iter_lines(self, decode_unicode=True):
+        for e in self.events:
+            if self.delay_s:
+                time.sleep(self.delay_s)
+            yield "data: " + (e if isinstance(e, str) else json.dumps(e))
+
+    def close(self):
+        self.closed = True
+
+
+def stream_events(text="hello", model="nvidia/nemotron-3.5-lightning-30b-a3b", routed="fast"):
+    half = len(text) // 2
+    return [{"model": "meterless/fast", "choices": [{"delta": {"role": "assistant"}}]},
+            {"model": "meterless/fast", "choices": [{"delta": {"content": text[:half]}}]},
+            {"model": "meterless/fast", "choices": [{"delta": {"content": text[half:]}}]},
+            {"model": model, "choices": [{"delta": {}}]},
+            {"model": model, "meterless": {"decision_id": "req_1", "mode": routed,
+                                           "receipt": {"app_policy": {"routed_mode": routed, "mode_coerced": False}}},
+             "usage": {"completion_tokens": 42}},
+            "[DONE]"]
 
 
 def ok_payload(text="hello", model="nvidia/nemotron-3.5-lightning-30b-a3b", routed="fast", coerced=False,
@@ -48,7 +80,7 @@ def fake(monkeypatch, tmp_path):
     monkeypatch.setattr(nightshift, "_sleep", lambda s: None)
     state = {"queue": [], "calls": []}
 
-    def post(url, headers=None, json=None, timeout=None):
+    def post(url, headers=None, json=None, timeout=None, stream=False):
         state["calls"].append({"url": url, "headers": headers, "body": json})
         item = state["queue"].pop(0)
         if isinstance(item, Exception):
@@ -283,3 +315,34 @@ def test_one_try_only_skips_the_json_repair_round(fake):
 
 def test_deep_lane_may_take_longer_than_fast(fake):
     assert nightshift.LANE_TIMEOUT_S["deep"] > nightshift.LANE_TIMEOUT_S["fast"]
+
+
+
+# -- streaming (22 Oct night) ---------------------------------------------------------------------------------
+def test_streamed_answer_is_assembled_with_its_receipt(fake):
+    fake["queue"].append(FakeStream(stream_events('{"x": 1}')))
+    r = nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator", json_mode=True)
+    assert r.data == {"x": 1} and r.served_model == "nvidia/nemotron-3.5-lightning-30b-a3b" and r.pinned
+    assert fake["calls"][0]["body"]["stream"] is True and r.usage == {"completion_tokens": 42}
+
+
+def test_stream_error_event_is_a_failure_with_nightshifts_reason(fake):
+    err = {"error": {"message": "nvidia/nemotron-3.5-super-vl-120b-a12b", "type": "api_error",
+                     "meterless_detail": "ttfb_timeout:nvidia/nemotron-3.5-super-vl-120b-a12b"}}
+    fake["queue"].append(FakeStream([err]))
+    with pytest.raises(nightshift.NightshiftError) as e:
+        nightshift.chat("deep", [{"role": "user", "content": "x"}], agent="Critic", max_attempts=1)
+    assert "ttfb_timeout" in str(e.value)
+
+
+def test_stream_longer_than_the_time_allowed_is_cut(fake):
+    fake["queue"].append(FakeStream(stream_events("hello"), delay_s=0.4))
+    with pytest.raises(nightshift.NightshiftError) as e:
+        nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator", max_attempts=1, budget_s=1.5)
+    assert "network error: Timeout" in str(e.value) or "budget" in str(e.value)
+
+
+def test_non_stream_reply_still_works_when_stream_was_asked(fake):
+    fake["queue"].append(FakeResponse(200, ok_payload()))
+    r = nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
+    assert r.text == "hello"

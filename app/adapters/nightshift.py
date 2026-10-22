@@ -30,6 +30,8 @@ MIN_MAX_TOKENS = 200           # B-64: tiny budgets + reasoning -> empty respons
 DEFAULT_MAX_TOKENS = 2000      # B-03 probe: Lightning spends ~1.1-1.4k hidden tokens even with thinking off
 TIMEOUT_S = 60                  # B-17 (Husaini 22 Oct): one call may take at most 60 s ...
 LANE_TIMEOUT_S = {"fast": 60, "deep": 100}   # ... except the deep lane (Critic), 100 s (Husaini 22 Oct night)
+STREAM = True    # 22 Oct night, measured: Nightshift's ~45 s cut-off is a time-to-FIRST-byte limit; streamed answers
+                 # start early and finish (draft 3/3, small Critic 3/3) where non-streamed ones were cut (2/3, 0/3)
 _sleep = time.sleep            # patched in tests
 
 
@@ -114,7 +116,43 @@ def _last_user(messages):
 def _post(base, token, body, app, timeout=TIMEOUT_S):
     headers = {"Authorization": f"Bearer {token}", "meterless-app": app, "meterless-scope": "user",
                "Content-Type": "application/json"}
-    return requests.post(f"{base}/chat/completions", headers=headers, json=body, timeout=timeout)
+    extra = {"stream": True} if body.get("stream") else {}
+    return requests.post(f"{base}/chat/completions", headers=headers, json=body, timeout=timeout, **extra)
+
+
+def _read_stream(r, stop_at):
+    """A streamed answer assembled into the usual payload shape (content, served model, meterless receipt, usage).
+    Raises requests.Timeout when the whole stream runs past stop_at - the hard total limit for one call."""
+    parts, model, meta, usage, err = [], None, {}, {}, None
+    try:
+        for line in r.iter_lines(decode_unicode=True):
+            if time.monotonic() > stop_at:
+                raise requests.Timeout("streamed answer took longer than the time allowed")
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data)
+            except ValueError:
+                continue
+            if not isinstance(chunk, dict):
+                continue
+            if chunk.get("error"):
+                err = chunk["error"]
+                break
+            if chunk.get("model") and not str(chunk["model"]).startswith("meterless/"):
+                model = chunk["model"]              # the served model arrives in the closing chunks
+            meta = chunk.get("meterless") or meta
+            usage = chunk.get("usage") or usage
+            for c in chunk.get("choices") or []:
+                parts.append(((c or {}).get("delta") or {}).get("content") or "")
+    finally:
+        r.close()
+    if err is not None:
+        return {"error": err if isinstance(err, dict) else {"message": str(err)}}
+    return {"model": model, "choices": [{"message": {"content": "".join(parts)}}], "meterless": meta, "usage": usage}
 
 
 def _has_choices(payload):
@@ -126,7 +164,8 @@ def _error_message(payload, r):
     """Nightshift's error text, whatever shape the body has (dict / str / missing)."""
     err = payload.get("error")
     if isinstance(err, dict):
-        return str(err.get("message", r.text))[:200]
+        detail = err.get("meterless_detail")         # e.g. ttfb_timeout / provider_deadline (Nightshift's own reason)
+        return str((f"{detail}: " if detail else "") + str(err.get("message", r.text)))[:200]
     return str(err or r.text or f"HTTP {r.status_code}")[:200]
 
 
@@ -145,7 +184,10 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
             if left <= 1:
                 raise requests.Timeout("run time budget used up")
             r = _post(base, token, body, lane_app(lane), timeout=min(cap, left))
-            payload = r.json() if r.content else {}
+            if body.get("stream") and "text/event-stream" in (r.headers.get("content-type") or ""):
+                payload = _read_stream(r, time.monotonic() + min(cap, left))
+            else:
+                payload = r.json() if r.content else {}
             if not isinstance(payload, dict):          # list / str body: never crash on .get
                 payload = {"error": str(payload)[:200]}
             if r.ok and _has_choices(payload):
@@ -187,7 +229,7 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
 
 
 def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max_tokens=DEFAULT_MAX_TOKENS,
-         temperature=0.2, target_agent=None, budget_s=None, max_attempts=None):
+         temperature=0.2, target_agent=None, budget_s=None, max_attempts=None, stream=None):
     """Send one chat request through Nightshift on lane `fast` or `deep`. Returns LLMResult, raises NightshiftError.
     budget_s: optional cap on total seconds incl. retries and the JSON repair (pass the run's remaining time).
     max_attempts=1: one try only, no retry and no JSON repair round (agents, Husaini 22 Oct night: Nightshift
@@ -198,7 +240,8 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     model = lane_model(lane)
     body = {"model": model, "messages": list(messages), "temperature": temperature,
             "max_tokens": max(int(max_tokens), MIN_MAX_TOKENS),
-            "chat_template_kwargs": {"enable_thinking": bool(thinking)}}
+            "chat_template_kwargs": {"enable_thinking": bool(thinking)},
+            "stream": STREAM if stream is None else bool(stream)}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     if tools:
