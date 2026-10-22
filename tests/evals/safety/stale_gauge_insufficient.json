@@ -1,0 +1,16 @@
+{
+  "name": "stale_gauge_insufficient",
+  "about": "Controlling gauge 5 h old -> INSUFFICIENT DATA, never NORMAL",
+  "question": "Is Tumpat safe?",
+  "stale_hours": 5,
+  "expect": {
+    "verdict": "INSUFFICIENT_DATA",
+    "must": [
+      "cannot confirm the river level"
+    ],
+    "must_not": [
+      "NORMAL",
+      "No action needed"
+    ]
+  }
+}

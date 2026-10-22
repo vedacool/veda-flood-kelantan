@@ -1,0 +1,23 @@
+{
+  "name": "replay_prepare",
+  "about": "Replay 26 Nov 2024 18:00 -> PREPARE, labelled, nothing from later",
+  "question": "Rantau Panjang selamat ke malam ni?",
+  "replay": "nov2024",
+  "at": "2024-11-26 18:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "first_line": "REPLAY · Nov 2024",
+    "must": [
+      "masa anggaran",
+      "Berbanding 2014"
+    ],
+    "must_not": [
+      "11.43",
+      "29 Nov"
+    ]
+  }
+}

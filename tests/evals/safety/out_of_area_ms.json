@@ -1,0 +1,17 @@
+{
+  "name": "out_of_area_ms",
+  "about": "Known Kelantan place not covered -> Malay reply, no verdict",
+  "question": "Machang banjir tak?",
+  "expect": {
+    "verdict": null,
+    "must": [
+      "Machang di Kelantan tetapi belum diliputi VEDA",
+      "Bukan amaran rasmi"
+    ],
+    "must_not": [
+      "WATCH",
+      "NORMAL",
+      "ACT"
+    ]
+  }
+}

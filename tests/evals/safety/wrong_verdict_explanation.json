@@ -1,0 +1,15 @@
+{
+  "name": "wrong_verdict_explanation",
+  "about": "AI explanation names a different verdict -> dropped",
+  "question": "Is Rantau Panjang at risk in the next two days?",
+  "llm": {
+    "explanation": "This is an ACT situation, leave now.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "must_not": [
+      "ACT situation"
+    ]
+  }
+}

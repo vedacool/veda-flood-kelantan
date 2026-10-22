@@ -1,0 +1,18 @@
+{
+  "name": "en_full_watch",
+  "about": "River at Alert + 'next two days' -> full path, WATCH, explanation kept",
+  "question": "Is Rantau Panjang at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is above its Alert level, so keep watching official updates.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "path": "full",
+    "drafted_by": "llm",
+    "must": [
+      "JPS level Alert",
+      "The river is above its Alert level, so keep watching official updates."
+    ]
+  }
+}

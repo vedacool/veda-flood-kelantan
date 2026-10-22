@@ -147,4 +147,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | Zetaris returns Postgres booleans as text ("false"): parse explicitly (`veda_ingest._true`) - `bool("false")` is True | B-70 (bug found in live check) |
 | 2026-10-22 | Critic deep lane unreliable tonight (NVIDIA-side provider_deadline / 500): re-test at a quieter hour; if still failing, review once on the fast lane (Lightning) when the deep call fails and the budget allows | Husaini 22 Oct night |
 | 2026-10-22 | The 24 h straight-line projection stays as is until Dr Ariff answers A5 (it overshoots on a steep rise, e.g. replay 27 Nov 19:30: 13.75-14.54 m vs the ~11.4 m peak) | Husaini 22 Oct night |
+| 2026-10-22 | One final safety gate in code (`app/safety.py`) after the Critic on every path; a zero-width projected range is dropped, never shown as a single precise number | Husaini 22 Oct night (B-58) |
+| 2026-10-22 | Safety evals: 13 offline scenarios incl. hostile AI explanations and the replay scenes; the stale-gauge scenario is B-41's acceptance test | B-58 |
 

@@ -18,14 +18,14 @@ revise    after a rejection the Coordinator redrafts with the Critic's problems,
 Paths (B-17): quick = jps + MET forecast, no cross-check, "now" forecast, answer and review by code (no Nemotron
 call at all); full = everything. Time budget from the start of the run: quick 30 s, full 150 s. When too little is left for a model call, that step
 falls back to code (answer written by code, review by code checks) and the trace says why ("budget: ...").
-Every state change is one trace line with the elapsed time; a timing line closes the run. A 10-minute hard
+Every answer then passes the safety gate (app/safety.py, B-58). Every state change is one trace line with the elapsed time; a timing line closes the run. A 10-minute hard
 deadline ends the run with whatever is safe to say.
 """
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 from app import card as card_mod
-from app import config, gazetteer, router, trace
+from app import config, gazetteer, router, safety, trace
 from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
@@ -161,7 +161,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                            budget_s=model_time(), feedback=reviews[-1], previous=answer)
                 state = "critique"
             timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
-        answer.setdefault("safety_line", coordinator.SAFETY.get(answer.get("language"), coordinator.SAFETY["en"]))
+        answer = safety.gate(answer, card, evidence, fc)      # B-58: the last check on every answer, every path
         timing["total"] = round(elapsed(), 1)
         over = budget is not None and timing["total"] > budget
         trace.step("System", "timing", output_summary=f"total {timing['total']} s"

@@ -1,0 +1,19 @@
+{
+  "name": "replay_act_2014",
+  "about": "Replay 27 Nov 2024 19:30 -> ACT, 0.1 m above the 2014 peak",
+  "question": "Is Rantau Panjang safe now?",
+  "replay": "nov2024",
+  "at": "2024-11-27 19:30",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "ACT",
+    "first_line": "REPLAY · Nov 2024",
+    "must": [
+      "0.1 m above the Dec 2014 peak",
+      "Never walk or drive through floodwater"
+    ]
+  }
+}

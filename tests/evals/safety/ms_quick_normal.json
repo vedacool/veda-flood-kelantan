@@ -1,0 +1,14 @@
+{
+  "name": "ms_quick_normal",
+  "about": "Malay question -> Malay card and Malay disclaimer",
+  "question": "Tumpat selamat ke?",
+  "expect": {
+    "verdict": "NORMAL",
+    "language": "ms",
+    "must": [
+      "APA PERLU DIBUAT SEKARANG: Tiada tindakan diperlukan.",
+      "Bukan amaran rasmi",
+      "999"
+    ]
+  }
+}

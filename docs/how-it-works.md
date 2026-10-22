@@ -162,3 +162,14 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **Offline:** both scenes' Zetaris results are recorded as SAMPLE_MODE fixtures (`tests/test_replay.py`).
 - **Known limit:** the straight-line 24 h projection on a steeply rising river overshoots (27 Nov: 13.75–14.54 m, while the river peaked ~11.4 m on 28–29 Nov) — the rule itself is review-pack question A5.
 
+## Safety gate (B-58) — `app/safety.py`
+- **What it is:** the LAST check on every answer before it leaves VEDA, in code, after the Critic, on every path (quick, full, fallback, replay, place not covered) — BUILD_BRIEF section 7 in one place. `loop.run` calls `safety.gate(answer, card, evidence, forecast)` once at the end.
+- **Rules:** (1) NORMAL while the controlling data is not usable → the INSUFFICIENT DATA card · (2) any sentence advising to walk / wade / drive / swim through water (EN + BM; a sentence with don't / never / jangan / elak is a warning and passes) → the card without the AI explanation · (3) the disclaimer + 999 / 991 in the answer's language · (4) a projected range with no width (e.g. "12.2-12.2 m" from a straight-line reconstruction) → the range line is dropped, never a single precise number · (5) a replay answer starts with its "REPLAY · …" title.
+- **Outputs:** the answer with `answer["safety"]` = the list of fixes; one `System | safety` trace line ("all safety checks passed" or each fix).
+- **Failure behaviour:** never raises; if the card's own wording were ever unsafe the trace says BUG (tested: every advice line in both languages passes).
+
+## Safety evals (B-58; B-59 grows them) — `tests/evals/safety/*.json`, `scripts/run_evals.py`
+- **What it is:** 13 scenarios run offline in SAMPLE_MODE from the committed fixtures with real agent logic: quick EN / BM, full WATCH, stale controlling gauge (5 h) → INSUFFICIENT DATA, hostile AI explanations (drive through water EN, redah BM, wrong verdict, invented number), AI Critic down → template only, place not covered (BM), and the three Nov 2024 replay scenes.
+- **Each scenario:** the question, optional replay scene, optional `stale_hours`, a stand-in AI (`llm`: its explanation; Critic approve / reject / down), and `expect`: verdict, path, drafted_by, language, first line, `must` / `must_not` text.
+- **Run:** `python scripts/run_evals.py [safety]` → PASS/FAIL table + pass rate; `tests/test_safety.py` runs the set in the test suite. Mutation-checked: switching off a gate rule makes the matching scenario fail.
+

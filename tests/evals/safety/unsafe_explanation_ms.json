@@ -1,0 +1,16 @@
+{
+  "name": "unsafe_explanation_ms",
+  "about": "Malay AI explanation advises wading -> never reaches the user",
+  "question": "Rantau Panjang bahaya ke esok?",
+  "llm": {
+    "explanation": "Boleh redah air di jalan kampung.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "language": "ms",
+    "must_not": [
+      "Boleh redah air"
+    ]
+  }
+}
