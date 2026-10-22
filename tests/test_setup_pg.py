@@ -38,6 +38,28 @@ def test_create_datasource_needs_setup_flag(monkeypatch, tmp_path):
     assert zetaris.ddl_problem('CREATE DATASOURCES x', setup=True) is not None
 
 
+def test_schema_split_respects_quotes(tmp_path, monkeypatch):
+    f = tmp_path / "s.sql"
+    f.write_text("CREATE TABLE a (x text DEFAULT 'a;b -- not a comment'); -- real comment\nSELECT 1;", encoding="utf-8")
+    monkeypatch.setattr(setup_pg, "SCHEMA", f)
+    assert setup_pg.schema_statements() == ["CREATE TABLE a (x text DEFAULT 'a;b -- not a comment')", "SELECT 1"]
+
+
+@pytest.mark.parametrize("value, ok", [("A" * 16, True), ("abc_DEF-123456789", True), ("short", False),
+                                       ('quote"inside1234567', False), ("space inside 123456", False)])
+def test_role_password_rule(value, ok):
+    assert bool(setup_pg.PASSWORD_OK.match(value)) is ok
+
+
+def test_bind_is_localhost_only():
+    assert setup_pg.BIND.startswith("127.0.0.1:")
+
+
+def test_constraints_have_unique_names():
+    names = [n for n, _, _ in setup_pg.CONSTRAINTS]
+    assert len(names) == len(set(names)) and {"river_levels_station_fk", "river_levels_level_range"} <= set(names)
+
+
 live = pytest.mark.skipif(os.getenv("VEDA_LIVE") != "1", reason="live veda-pg/Zetaris test: set VEDA_LIVE=1")
 
 
