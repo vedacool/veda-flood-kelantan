@@ -77,6 +77,10 @@ class WorldModel:
                                                        "status": "pending"})
                         self.store.log_audit("merge-proposed", "resolver", f"{name} ~ {other['name']} ({sim:.3f})",
                                              None, src.get("run_id"), src["at"])
+            current = self.store.state["entities"].get(eid)
+            if current and current.get("state") == state and (name is None or current.get("name") == name) \
+                    and all(current["attrs"].get(k) == v for k, v in (attrs or {}).items()):
+                return current          # nothing new: no event, so repeated runs do not grow the log
             payload = {"id": eid, "type": type, "name": name, "attrs": dict(attrs or {}), "state": state,
                        "source": src, "created_at": src["at"], "updated_at": src["at"]}
             ev = self.store.append("upsert_entity", payload, src["at"], src.get("agent"), src.get("run_id"))
@@ -89,6 +93,9 @@ class WorldModel:
         src = _provenance(source)
         with self.store.lock:
             cid = external_id(type, external_key["system"], external_key["id"])
+            current = self.store.state["contexts"].get(cid)
+            if current and all(current["attrs"].get(k) == v for k, v in (attrs or {}).items()):
+                return current          # nothing new: no event
             payload = {"id": cid, "type": type, "attrs": dict(attrs or {}), "source": src, "created_at": src["at"],
                        "updated_at": src["at"]}
             ev = self.store.append("upsert_context", payload, src["at"], src.get("agent"), src.get("run_id"))

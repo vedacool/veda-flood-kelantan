@@ -74,3 +74,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | World Model storage: append-only SQLite event log, state rebuilt from events; timestamps from provenance, never the wall clock (reproducible re-runs) | B-10 |
 | 2026-10-22 | Edges that may exist several times from one node (e.g. a gauge that is a sentinel for several places) carry the place as `context`, because a same-(from, type, context) edge supersedes the old one | B-10 |
 | 2026-10-22 | Enrichment queue, control plane and supervisor agent are listed as dormant in `manifest()` (spec's wired-vs-helper honesty) | B-10 |
+| 2026-10-22 | World Model facts are stamped with the time the DATA refers to (gauge reading time, forecast window, forecast date), not the query time - keeps ingest idempotent and ages honest; unchanged upserts write no event | B-10 |
+| 2026-10-22 | B-57 (trace shows agents reading/writing the World Model) stays open until the agents exist (B-12/B-13) | B-10 |
