@@ -1,0 +1,262 @@
+"""Forecast agent (B-16): turns the evidence into a verdict with a range and a confidence. Plain code - every
+verdict can be traced to a rule.
+
+    fc = forecast_agent.forecast(plan, evidence, world)
+    fc["verdict"]      NORMAL | WATCH | PREPARE | ACT | INSUFFICIENT_DATA
+    fc["triggers"]     which rules fired, in plain words
+
+Rules = D-06 (approved in principle 22 Oct, TENTATIVE - Dr Ariff to review, docs/review_pack_ariff.md section A):
+    ACT      controlling gauge >= Danger, or projected to reach Danger within 12 h
+    PREPARE  controlling gauge >= Warning, or projected to reach Danger within 24 h, or an upstream sentinel >= Danger,
+             or rain: next 72 h >= 200 mm or next 24 h >= 150 mm
+    WATCH    controlling gauge >= Alert, or projected to reach Alert within 24 h, or an upstream sentinel >= Alert,
+             or rain: next 72 h >= 100 mm on wet ground (past 7 days >= 150 mm)
+    rising fast (>= 0.3 m/h at the controlling gauge) moves the verdict up one level
+    INSUFFICIENT_DATA when the controlling gauge has no fresh, healthy reading - never NORMAL on missing data.
+Projection: straight-line from two rise rates (last 1 h, last 3 h / 3) -> a range at +6/12/24 h; nothing beyond
+24 h (for 24-48 h only upstream gauges and rain count). "Projected to reach" uses the EARLIEST time (safety first).
+Tide-influenced gauges (mapping role says so: Tambatan Diraja, Kok Majid - tentative) are judged on their current
+level only: a few hours of rise there may just be the tide, so no straight-line projection and no "rising fast".
+Mode "now" (quick path): current levels only, no projection.
+Reads historic peaks from the World Model; writes its forecast there as a fact about the place.
+"""
+from datetime import datetime, timezone
+
+from app import trace
+from app.engines.world_model.veda_ingest import place_id
+
+AGENT = "Forecast"
+LEVELS = ("NORMAL", "WATCH", "PREPARE", "ACT")
+RULES = "D-06 verdict rules, tentative 22 Oct - Dr Ariff to review"
+HORIZONS_H = (6, 12, 24)
+RISING_FAST_M_PER_H = 0.3        # A2 (tentative)
+SENTINEL_RISING_M_3H = 0.3       # an upstream gauge counts as "rising" above this 3-hour change
+WET_GROUND_7D_MM = 150.0         # A4 (tentative)
+RAIN_WATCH_72H_MM = 100.0
+RAIN_PREPARE_72H_MM = 200.0
+RAIN_PREPARE_24H_MM = 150.0
+BAND_NAMES = {  # JPS level names shown with every verdict (B-21)
+    "below_normal": {"en": "Below normal", "ms": "Bawah normal"},
+    "normal": {"en": "Normal", "ms": "Normal"},
+    "alert": {"en": "Alert", "ms": "Waspada"},
+    "warning": {"en": "Warning", "ms": "Amaran"},
+    "danger": {"en": "Danger", "ms": "Bahaya"},
+}
+NOT_CHECKED = ["MetMalaysia warnings (not wired yet)", "official warnings / evacuation orders (no source yet)",
+               "step-down wait of 12-24 h (A3, needs a verdict history)"]
+
+
+def _usable(g):
+    return g["level_m"] is not None and g.get("freshness") in ("fresh", "aging") and \
+        (g.get("health") or {"ok": True})["ok"]
+
+
+def rates(g):
+    """Rise rates in m/h from the last 1 h and the last 3 h (either may be missing)."""
+    out = []
+    if g.get("change_1h_m") is not None:
+        out.append(g["change_1h_m"])
+    if g.get("change_3h_m") is not None:
+        out.append(round(g["change_3h_m"] / 3, 3))
+    return out
+
+
+def projection(level, rs):
+    """{'6h': {'min', 'max'}, ...} straight-line range, or {} without a rate."""
+    if not rs:
+        return {}
+    return {f"{h}h": {"min": round(level + min(rs) * h, 2), "max": round(level + max(rs) * h, 2)}
+            for h in HORIZONS_H}
+
+
+def hours_to(level, threshold, rs):
+    """Hours until `threshold`: {'earliest', 'latest'} (latest None = may not get there), 0 if already there,
+    None if not rising or unknown."""
+    if threshold is None:
+        return None
+    if level >= threshold:
+        return {"earliest": 0, "latest": 0}
+    times = sorted((threshold - level) / r for r in rs if r > 0)
+    if not times:
+        return None
+    return {"earliest": round(times[0], 1), "latest": round(times[-1], 1) if len(times) == len(rs) else None}
+
+
+def _gauge_rules(g, now_only):
+    """Triggers for one controlling gauge -> [(level, rule, reason)], plus its trend summary."""
+    th, level, name = g["thresholds"], g["level_m"], g["name"]
+    tidal = bool(g.get("tide_influenced"))
+    rs = [] if now_only or tidal else rates(g)
+    fired = []
+    for key, verdict in (("danger_m", "ACT"), ("warning_m", "PREPARE"), ("alert_m", "WATCH")):
+        if th.get(key) is not None and level >= th[key]:
+            fired.append((verdict, f"level>={key[:-2]}", f"{name} is {level} m, at or above {key[:-2]} "
+                                                         f"({th[key]} m)"))
+            break
+    to = {k[:-2]: hours_to(level, th.get(k), rs) for k in ("alert_m", "warning_m", "danger_m")}
+    if not now_only:
+        d = to["danger"]
+        if d and 0 < d["earliest"] <= 12:
+            fired.append(("ACT", "danger<=12h", f"{name} could reach danger in about {d['earliest']} h"))
+        elif d and 0 < d["earliest"] <= 24:
+            fired.append(("PREPARE", "danger<=24h", f"{name} could reach danger in about {d['earliest']} h"))
+        a = to["alert"]
+        if a and 0 < a["earliest"] <= 24:
+            fired.append(("WATCH", "alert<=24h", f"{name} could reach alert in about {a['earliest']} h"))
+    fast = [] if tidal else [r for r in rates(g) if r >= RISING_FAST_M_PER_H]
+    trend = {"station": g["station"], "gauge": name, "role": g["role"], "level_m": level, "band": g["band"],
+             "band_name": BAND_NAMES.get(g["band"]), "observed_at": g["observed_at"],
+             "rate_m_per_h": {"min": min(rs), "max": max(rs)} if rs else None,
+             "projection_m": projection(level, rs), "hours_to": {k: v for k, v in to.items() if v},
+             "rising_fast": bool(fast), "tide_influenced": tidal,
+             "trend_note": "tide-influenced: trend not projected" if tidal and not now_only else None}
+    return fired, trend, bool(fast)
+
+
+def _upstream(sentinels):
+    """Sentinel triggers + one line each: band, rising or not, and when a rise would arrive."""
+    fired, notes = [], []
+    for s in sentinels:
+        if not _usable(s):
+            notes.append({"gauge": s["name"], "status": "no fresh reading"})
+            continue
+        lag = s.get("travel_time_h")
+        arrives = {"min": lag["min"], "max": lag["max"], "status": lag["status"]} if lag and lag.get("min") is not None \
+            else None
+        rising = (s.get("change_3h_m") or 0) >= SENTINEL_RISING_M_3H
+        when = f", reaches here in {arrives['min']}-{arrives['max']} h" if arrives else ""
+        if s["band"] == "danger":
+            fired.append(("PREPARE", "sentinel>=danger", f"upstream {s['name']} is at danger ({s['level_m']} m){when}"))
+        elif s["band"] in ("alert", "warning"):
+            fired.append(("WATCH", "sentinel>=alert", f"upstream {s['name']} is at {s['band']} ({s['level_m']} m){when}"))
+        notes.append({"gauge": s["name"], "level_m": s["level_m"], "band": s["band"],
+                      "band_name": BAND_NAMES.get(s["band"]), "rising": rising, "arrives_in_h": arrives})
+    return fired, notes
+
+
+def _rain(rain):
+    if not rain:
+        return [], None
+    past7, n24, n72 = rain.get("rain_past_7d_mm"), rain.get("rain_next_24h_mm"), rain.get("rain_next_72h_mm")
+    fired = []
+    if (n72 or 0) >= RAIN_PREPARE_72H_MM or (n24 or 0) >= RAIN_PREPARE_24H_MM:
+        fired.append(("PREPARE", "rain-heavy", f"heavy rain forecast: {n24} mm in 24 h, {n72} mm in 72 h"))
+    elif (n72 or 0) >= RAIN_WATCH_72H_MM and (past7 or 0) >= WET_GROUND_7D_MM:
+        fired.append(("WATCH", "rain-wet-ground", f"{n72} mm forecast in 72 h on wet ground ({past7} mm in 7 days)"))
+    return fired, {"next_24h_mm": n24, "next_72h_mm": n72, "past_7d_mm": past7, "wet_ground":
+                   past7 is not None and past7 >= WET_GROUND_7D_MM, "freshness": rain.get("freshness")}
+
+
+def _history(world, g, top):
+    """Historic peaks at the controlling gauge (World Model read) compared with now and the projection."""
+    facts = world.facts_about(g["station"], "historic_peaks") if world else []
+    peaks = facts[-1]["value"] if facts else []
+    out = [{"event": p["event"], "peak_m": p["peak_m"], "above_now_m": round(p["peak_m"] - g["level_m"], 2),
+            "source": p["source_type"], "reconstructed": bool(p.get("reconstructed"))} for p in peaks[:3]]
+    dec2014 = next((p for p in peaks if p["event"] == "Dec 2014"), None)
+    bigger = None if dec2014 is None else (top if top is not None else g["level_m"]) > dec2014["peak_m"]
+    return out, bigger
+
+
+def _confidence(main, others, fired, rain, now_only):
+    score, why = 0.85, []
+    if main.get("freshness") == "aging":
+        score -= 0.15
+        why.append("controlling reading is aging")
+    rs = rates(main)
+    if now_only:
+        score -= 0.1
+        why.append("quick check: current levels only, no projection")
+    elif main.get("tide_influenced"):
+        score -= 0.1
+        why.append("tide-influenced gauge: trend not projected")
+    elif not rs:
+        score -= 0.15
+        why.append("no recent change data - trend unknown")
+    elif max(rs) > 0.05 and min(rs) < -0.05:
+        score -= 0.1
+        why.append("1 h and 3 h trends disagree")
+    if any(r[1].startswith("sentinel") for r in fired):
+        score -= 0.05
+        why.append("upstream travel times are tentative")
+    if any(r[1].startswith("rain") for r in fired) and (rain or {}).get("freshness") != "fresh":
+        score -= 0.1
+        why.append("rain forecast age not confirmed")
+    if any(not _usable(g) for g in others):
+        score -= 0.1
+        why.append("second controlling gauge has no fresh reading")
+    score = round(max(0.1, score), 2)
+    return {"score": score, "label": "high" if score >= 0.7 else "medium" if score >= 0.5 else "low",
+            "reasons": why or ["fresh readings, consistent trend"]}
+
+
+def forecast(plan, evidence, world=None, now=None):
+    """Verdict + range + confidence for plan['place'] from the Data & Reconciler evidence. Never raises."""
+    run = trace.current_run()
+    run_id = run.run_id if run else None
+    now_only = plan.get("effort") == "quick"
+    ctx = evidence.get("context") or {}
+    controlling = [g for g in ctx.get("gauges", []) if g["role"] in ("controlling", "controlling_secondary")]
+    main = next((g for g in controlling if g["role"] == "controlling"), None)
+    out = {"place": (evidence.get("place") or {}).get("name"), "mode": "now" if now_only else "full",
+           "rules": RULES, "not_checked": NOT_CHECKED}
+    if not evidence.get("usable") or main is None or not any(main["thresholds"].get(k) for k in
+                                                             ("alert_m", "warning_m", "danger_m")):
+        why = ("no controlling gauge for this place" if main is None else
+               "the controlling gauge has no thresholds" if evidence.get("usable") else
+               "the controlling gauge has no fresh, healthy reading")
+        out.update({"verdict": "INSUFFICIENT_DATA", "level_name": BAND_NAMES.get((main or {}).get("band")),
+                    "triggers": [{"level": "INSUFFICIENT_DATA", "rule": "fail-safe", "reason": why}],
+                    "confidence": {"score": 0.1, "label": "low", "reasons": [why]}, "controlling": [], "upstream": [],
+                    "rain": None, "history": [], "bigger_than_2014": None})
+        return _finish(out, plan, world, evidence, run_id)
+    fired, trends, fast = [], [], False
+    for g in controlling:
+        if not _usable(g):
+            continue
+        f, t, is_fast = _gauge_rules(g, now_only)
+        fired += f
+        trends.append(t)
+        fast = fast or (is_fast and g is main)
+    up_fired, upstream = _upstream(ctx.get("sentinels", []))
+    rain_fired, rain = ([], None) if now_only else _rain(ctx.get("rain"))
+    fired += up_fired + rain_fired
+    base = max((LEVELS.index(f[0]) for f in fired), default=0)
+    triggers = [{"level": f[0], "rule": f[1], "reason": f[2]} for f in fired]
+    if fast and base < len(LEVELS) - 1:
+        base += 1
+        triggers.append({"level": LEVELS[base], "rule": "rising-fast",
+                         "reason": f"{main['name']} is rising fast (>= {RISING_FAST_M_PER_H} m/h) - one level up"})
+    main_trend = next(t for t in trends if t["role"] == "controlling")
+    top = (main_trend["projection_m"].get("24h") or {}).get("max")
+    history, bigger = _history(world, main, top)
+    out.update({"verdict": LEVELS[base], "level_name": BAND_NAMES.get(main["band"]),
+                "triggers": triggers or [{"level": "NORMAL", "rule": "no-trigger",
+                                          "reason": "controlling gauge below alert and no other rule fired"}],
+                "confidence": _confidence(main, [g for g in controlling if g is not main], fired, ctx.get("rain"),
+                                          now_only),
+                "controlling": trends, "upstream": upstream, "rain": rain, "history": history,
+                "bigger_than_2014": bigger})
+    return _finish(out, plan, world, evidence, run_id)
+
+
+def _finish(out, plan, world, evidence, run_id):
+    trace.step(AGENT, "forecast.verdict", input_summary=out["place"],
+               output_summary=f"{out['verdict']} (confidence {out['confidence']['label']}, "
+                              f"{out['confidence']['score']})",
+               confidence=out["confidence"]["score"], target_agent="Coordinator",
+               status="fallback" if out["verdict"] == "INSUFFICIENT_DATA" else "success",
+               decision="; ".join(t["reason"] for t in out["triggers"]),
+               details={"mode": out["mode"], "rules": RULES, "triggers": out["triggers"]})
+    if world is not None and plan.get("place"):
+        if out.get("history"):
+            trace.step(AGENT, "world.read", input_summary="historic peaks",
+                       output_summary=f"{len(out['history'])} peak(s) at the controlling gauge", source="world_model")
+        at = evidence.get("clock") or datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        world.assert_fact(place_id(plan["place"]["place_id"]), "forecast",
+                          {k: out[k] for k in ("verdict", "mode", "confidence", "triggers", "bigger_than_2014")},
+                          confidence=out["confidence"]["score"],
+                          source={"kind": "agent", "at": at, "agent": AGENT, "run_id": run_id, "origin": RULES})
+        trace.step(AGENT, "world.write", output_summary=f"forecast fact for {out['place']}", source="world_model",
+                   decision="Verdict stored with its triggers, so later runs (and the Critic) can see it")
+    return out

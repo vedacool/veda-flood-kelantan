@@ -1,6 +1,6 @@
 """Load VEDA's world from Zetaris into the World Model (the Data & Reconciler agent calls these).
 
-    build_network(world, agent, run_id)   gauges, rivers, districts, places, sources and how they relate
+    build_network(world, agent, run_id)   gauges, rivers, districts, places, sources, historic peaks + relations
     ingest_readings(world, agent, run_id) the current facts for covered places: river levels, rain, forecast
 
 Everything is read through run_sql (so it replays offline in SAMPLE_MODE). Every write carries provenance:
@@ -22,6 +22,8 @@ LINKS_SQL = ("SELECT from_key, to_key, link_type, lag_min_h, lag_max_h, lag_sour
 PLACES_SQL = ("SELECT p.place_id, p.name, p.kind, p.district, p.lat, p.lon, p.rain_location_id, p.forecast_location_id, "
               "p.mapping_status, g.station_key, g.role, g.sort_order FROM veda_pg.places p "
               "JOIN veda_pg.place_gauges g ON g.place_id = p.place_id")
+PEAKS_SQL = ("SELECT station_key, event, peak_m, observed_when, source_type, source_name, source_url, reconstructed "
+             "FROM veda_pg.historic_peaks")
 GAUGE_STATUS_SQL = ("SELECT place_id, role, station_key, level_m, age_minutes, band, change_1h_m, change_3h_m "
                     "FROM veda.place_gauge_status")
 READING_TIMES_SQL = ("SELECT station_key, observed_at_utc FROM veda.river_status_latest")
@@ -111,10 +113,21 @@ def build_network(world, agent, run_id):
         else:
             world.relate(gid, "sentinel_for", pid, valid_from=MAPPING_VERSION_AT, context=r["place_id"],
                          attrs={"sort_order": r["sort_order"]}, source=psrc)
+    peaks, qh = _sql(PEAKS_SQL, agent, "world: historic peaks")
+    ksrc = _src(MAPPING_VERSION_AT, qh, "veda_pg.historic_peaks", agent, run_id, "historic peaks (B-55)")
+    by_station = {}
+    for pk in peaks:
+        by_station.setdefault(pk["station_key"], []).append(
+            {k: pk[k] for k in ("event", "peak_m", "observed_when", "source_type", "source_name", "source_url",
+                                "reconstructed")})
+    for key, rows in by_station.items():   # one fact per gauge: all its peaks, highest first
+        world.assert_fact(station_id(key), "historic_peaks", sorted(rows, key=lambda r: -r["peak_m"]),
+                          confidence=0.9, source=ksrc)
     for key, attrs in SOURCES.items():
         world.upsert_context("source", external_key={"system": "veda", "id": key}, attrs=attrs,
                              source=_src(MAPPING_VERSION_AT, None, "registry", agent, run_id, "VEDA source list"))
-    return {"stations": len(stations), "links": len(links), "place_gauges": len(rows), "sources": len(SOURCES)}
+    return {"stations": len(stations), "links": len(links), "place_gauges": len(rows), "peaks": len(peaks),
+            "sources": len(SOURCES)}
 
 
 def ingest_readings(world, agent, run_id, check=None):

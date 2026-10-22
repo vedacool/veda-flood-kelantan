@@ -27,7 +27,11 @@ def stub_llm(plan=None, answer=None, fail=False):
         calls.append({"lane": lane, "system": messages[0]["content"][:40]})
         if fail:
             raise nightshift.NightshiftError("stub: Nightshift down")
-        data = plan if messages[0]["content"] == coordinator.PLAN_SYSTEM else {"answer": answer}
+        if messages[0]["content"] == coordinator.PLAN_SYSTEM:
+            data = plan
+        else:                                   # draft: state the Forecast agent's verdict unless told otherwise
+            fc = json.loads(messages[1]["content"])["evidence"].get("forecast") or {}
+            data = {"answer": answer if answer is not None else f"Verdict: {fc.get('verdict', '')}."}
         return SimpleNamespace(data=data, text=json.dumps(data))
     llm.calls = calls
     return llm
@@ -204,13 +208,16 @@ def test_draft_with_invented_number_falls_back_to_code_answer(run):
 
 # -- Loop -----------------------------------------------------------------------------------------------------
 def test_loop_runs_every_state_offline(offline):
-    llm = stub_llm(GOOD_PLAN, answer="Rantau Panjang river reads as in the evidence.")
+    llm = stub_llm(GOOD_PLAN)
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     assert r["status"] == "success" and r["answer"]["drafted_by"] == "llm"
+    assert r["forecast"]["verdict"] in r["answer"]["text"]
     states = [x["input_summary"] for x in lines(r["trace"]) if x["action"] == "state"]
-    assert states == ["plan", "gather", "forecast", "forecast", "draft", "critique", "critique"]
+    assert states == ["plan", "gather", "forecast", "draft", "critique", "critique"]
     skipped = [x for x in lines(r["trace"]) if x["action"] == "state" and x["status"] == "fallback"]
-    assert [x["target_agent"] for x in skipped] == ["Forecast", "Critic"]
+    assert [x["target_agent"] for x in skipped] == ["Critic"]
+    agents = {x["agent_name"] for x in lines(r["trace"]) if x["action"] in ("world.read", "world.write")}
+    assert {"Coordinator", "Data & Reconciler", "Forecast"} <= agents          # B-57: three of four so far
     assert [c["lane"] for c in llm.calls] == ["fast", "fast"]
 
 

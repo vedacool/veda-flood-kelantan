@@ -7,7 +7,7 @@ The model proposes, code decides: the place always comes from the gazetteer (nev
 field is checked against the allowed values below - anything else is corrected and the correction is traced.
 If Nightshift fails (down, bad JSON, SAMPLE_MODE before B-18) the Coordinator falls back to a plan / answer
 written by code from the same evidence, traced as 'fallback'. The draft is checked before it is used: no number
-that is not in the evidence, no verdict words (the Forecast agent gives verdicts, B-16), never empty.
+that is not in the evidence, it states the Forecast agent's verdict and no other (B-16), never empty.
 The safety line is always added by code, not left to the model.
 """
 import json
@@ -50,7 +50,9 @@ DRAFT_SYSTEM = (
     "from the EVIDENCE only. Rules:\n"
     "1. Use only numbers and facts that appear in the evidence. Say the reading time (MYT) for river levels.\n"
     "2. Lead with what matters for the user's question, in plain words, max 120 words.\n"
-    "3. Do not give a flood verdict or prediction (no NORMAL/WATCH/PREPARE/ACT) - the forecast step is separate.\n"
+    "3. The verdict is decided by the Forecast agent: state forecast.verdict exactly as written (NORMAL, WATCH, "
+    "PREPARE, ACT or INSUFFICIENT_DATA) with the JPS level name, the projected range and the confidence label. Never "
+    "give a different verdict. If there is no forecast, give no verdict.\n"
     "4. If usable is false, say clearly that the current river status cannot be confirmed, and why.\n"
     "5. Mention stale or excluded sources in one short clause if the evidence notes them.\n"
     "6. Never advise walking, wading or driving through floodwater.\n"
@@ -153,7 +155,21 @@ def _myt(iso):
         return None
 
 
-def facts_for_model(evidence):
+def _forecast_facts(fc):
+    """The Forecast agent's result, compact."""
+    if not fc:
+        return None
+    main = next((c for c in fc.get("controlling", []) if c["role"] == "controlling"), None)
+    return {"verdict": fc["verdict"], "jps_level_name": fc.get("level_name"),
+            "confidence": {"label": fc["confidence"]["label"], "score": fc["confidence"]["score"]},
+            "why": [t["reason"] for t in fc["triggers"]], "mode": fc["mode"],
+            "projection_m": (main or {}).get("projection_m"), "hours_to": (main or {}).get("hours_to"),
+            "upstream": [u for u in fc.get("upstream", []) if u.get("rising") or u.get("band") in
+                         ("alert", "warning", "danger")],
+            "history": fc.get("history"), "bigger_than_2014": fc.get("bigger_than_2014")}
+
+
+def facts_for_model(evidence, forecast=None):
     """The compact evidence the model sees (no SQL, no provenance noise) - also what the number check uses."""
     ctx = evidence.get("context") or {}
     gauges = []
@@ -177,6 +193,7 @@ def facts_for_model(evidence):
                                                                 "freshness")},
         "met_forecast_today": None if not met else {"summary": met.get("summary"), "when": met.get("when")},
         "source_notes": evidence.get("notes", []),
+        "forecast": _forecast_facts(forecast),
     }
 
 
@@ -203,8 +220,13 @@ def draft_problem(text, facts):
     """None if the draft may be used, else why not (cheap guard until the Critic, B-14)."""
     if not isinstance(text, str) or not text.strip():
         return "empty answer"
-    if VERDICT_WORDS.search(text):
-        return f"gives a verdict ({VERDICT_WORDS.search(text).group(0)}) - only the Forecast agent may"
+    allowed = (facts.get("forecast") or {}).get("verdict")
+    said = {w.replace(" ", "_") for w in VERDICT_WORDS.findall(text)}
+    if said - {allowed}:
+        return (f"gives a verdict ({', '.join(sorted(said))}) that is not the Forecast agent's ({allowed})" if allowed
+                else f"gives a verdict ({', '.join(sorted(said))}) without a forecast")
+    if allowed and allowed not in said:
+        return f"does not state the Forecast agent's verdict ({allowed})"
     unknown = [n for n in re.findall(r"\d+\.\d+", text) if n not in _numbers(facts)]
     if unknown:
         return f"number(s) not in the evidence: {', '.join(unknown[:3])}"
@@ -216,6 +238,14 @@ def fallback_answer(facts):
     English only for now."""
     place = facts.get("place") or "this place"
     lines = []
+    fc = facts.get("forecast")
+    if fc:
+        name = (fc.get("jps_level_name") or {}).get("en")
+        lines.append(f"{place}: {fc['verdict']}" + (f" (JPS level: {name})" if name else "")
+                     + f", confidence {fc['confidence']['label']}. Why: {'; '.join(fc['why'][:3])}.")
+        rng = (fc.get("projection_m") or {}).get("24h")
+        if rng:
+            lines.append(f"Projected level in 24 h: {rng['min']}-{rng['max']} m (straight-line trend).")
     if not facts.get("usable"):
         lines.append(f"The current river status for {place} cannot be confirmed: the controlling gauge has no "
                      "fresh, healthy reading.")
@@ -238,14 +268,18 @@ def fallback_answer(facts):
         m = facts["met_forecast_today"]
         lines.append(f"MetMalaysia today: {m['summary']}" + (f" ({m['when']})" if m.get("when") else "") + ".")
     lines += facts.get("source_notes", [])[:3]
-    lines.append("VEDA gives no flood outlook yet in this version.")
+    if fc and fc.get("history"):
+        h = fc["history"][0]
+        lines.append(f"Highest recorded here: {h['peak_m']} m ({h['event']}), {h['above_now_m']} m above now.")
+    if not fc:
+        lines.append("No flood outlook was made for this answer.")
     return " ".join(lines)
 
 
-def draft(question, p, evidence, llm=None, budget_s=None):
+def draft(question, p, evidence, forecast=None, llm=None, budget_s=None):
     """Answer for the user -> {'text', 'language', 'drafted_by', 'safety_line'}. Never raises."""
     llm = llm or nightshift.chat
-    facts = facts_for_model(evidence)
+    facts = facts_for_model(evidence, forecast)
     language = p.get("question_language", "en")
     drafted_by, why, text = "llm", None, None
     try:
@@ -266,6 +300,7 @@ def draft(question, p, evidence, llm=None, budget_s=None):
               "safety_line": SAFETY.get(language, SAFETY["en"])}
     trace.step(AGENT, "draft", input_summary=question, output_summary=answer["text"],
                status="success" if drafted_by == "llm" else "fallback", target_agent="Critic",
-               decision=why or f"Drafted from {len(facts['gauges'])} gauge(s), usable={facts['usable']}",
+               decision=why or (f"Drafted from {len(facts['gauges'])} gauge(s), usable={facts['usable']}, "
+                                f"verdict={(facts['forecast'] or {}).get('verdict', 'none')}"),
                details={"drafted_by": drafted_by})
     return answer

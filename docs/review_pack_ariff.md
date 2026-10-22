@@ -30,6 +30,12 @@ VEDA gives one verdict per place for the next 24–48 h. Current rule set (from 
 **A4.** Rain-only triggers (when gauges are calm): WATCH if **3-day rain ≥ 100 mm on wet ground**; PREPARE if **3-day ≥ 200 mm or 1-day ≥ 150 mm**; "wet ground" = 7-day rain ≥ 150 mm. Keep, change, or drop for the hackathon?
 > Answer: ______
 
+**A5.** (added 22 Oct, B-16) Projections are straight-line from the last 1 h and 3 h, and stop at **24 h**; so the code uses "reaches Alert within 24 h" (WATCH) and "Danger within 24 h" (PREPARE) instead of 48 h. Beyond 24 h only upstream gauges and rain count. OK for the hackathon?
+> Answer: ______
+
+**A6.** (added 22 Oct, B-16) **Tidal gauges** are judged on their level only (a rise of a few hours may just be the tide). Marked tidal: Tambatan Diraja, and **Kg Kok Majid (tentative)**. Is Kok Majid tide-influenced? Is **Kuala Jambu** (Sg Golok near its mouth) tide-influenced too?
+> Answer: ______
+
 ---
 
 ## B. Freshness limits — ~5 min

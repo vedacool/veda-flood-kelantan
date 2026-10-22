@@ -7,7 +7,7 @@
 plan      Coordinator: intent, user type, place (gazetteer), sources, effort. Unknown place -> done with the
           gazetteer's reply ("Did you mean...?" / not covered).
 gather    Data & Reconciler agent: Zetaris -> health checks -> World Model -> evidence.
-forecast  Forecast agent (B-16) - not built yet: logged as skipped, so the answer gives no verdict.
+forecast  Forecast agent: verdict + range + confidence from the evidence (quick plan -> current levels only).
 draft     Coordinator writes the answer from the evidence.
 critique  Critic (B-14) - not built yet: logged as skipped. revise is entered only after a Critic rejection.
 Every state change is one trace line. A 10-minute deadline ends the run with whatever is safe to say.
@@ -15,7 +15,7 @@ Every state change is one trace line. A 10-minute deadline ends the run with wha
 import time
 
 from app import config, trace
-from app.agents import coordinator, data_agent
+from app.agents import coordinator, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
 STATES = ("plan", "gather", "forecast", "draft", "critique", "revise", "done")
@@ -37,13 +37,13 @@ def _skip(state, agent, item):
 
 
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False):
-    """One question end to end. Returns {run_id, status, answer, plan, evidence, trace}. Never raises for data or
+    """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, trace}. Never raises for data or
     model problems; those end up in the answer and the trace."""
     run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet)
     t0 = time.monotonic()
     own_world = world is None
     world = world or open_world(run_.run_id)
-    state, p, evidence, answer, status = "plan", None, None, None, "success"
+    state, p, evidence, fc, answer, status = "plan", None, None, None, None, "success"
 
     def left():
         return max(1.0, deadline_s - (time.monotonic() - t0))
@@ -70,10 +70,10 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 evidence = data_agent.gather(p, world, now=now)
                 state = "forecast"
             elif state == "forecast":
-                _skip(state, "Forecast", "B-16")
+                fc = forecast_agent.forecast(p, evidence, world)
                 state = "draft"
             elif state == "draft":
-                answer = coordinator.draft(question, p, evidence, llm=llm, budget_s=left())
+                answer = coordinator.draft(question, p, evidence, forecast=fc, llm=llm, budget_s=left())
                 state = "critique"
             elif state == "critique":
                 _skip(state, "Critic", "B-14")
@@ -88,4 +88,4 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         if own_world:
             world.close()
     return {"run_id": run_.run_id, "status": status, "answer": answer, "plan": p, "evidence": evidence,
-            "trace": str(path)}
+            "forecast": fc, "trace": str(path)}

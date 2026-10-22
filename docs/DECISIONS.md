@@ -97,4 +97,8 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-22 | No direct NVIDIA fallback — Nightshift is the only AI path | Husaini 22 Oct |
 | 2026-10-22 | Python 3.13 everywhere, Dockerfile on `python:3.13-slim` | Husaini 22 Oct → B-19 |
 | 2026-10-22 | Place→gauge links are hand-checked edges (`controlled_by`, `also_controlled_by`, `sentinel_for`, `upstream_of`, `travel_time`), not nearest-distance | Husaini 22 Oct |
+| 2026-10-22 | Forecast agent applies D-06 in code (tentative); "projected to reach" uses the earliest time of a two-rate range (safety first); projections stop at 24 h (straight-line trends are meaningless further out), so 24–48 h comes from upstream gauges and rain only | B-16 |
+| 2026-10-22 | Tide-influenced gauges are judged on their level only (no projection, no "rising fast"): Tambatan Diraja (mapping) and Kok Majid (marked tentative after Tumpat came out WATCH from a tidal rise) | B-16 |
+| 2026-10-22 | Historic peaks live in the World Model as one `historic_peaks` fact per gauge; the Forecast agent reads them there and writes its verdict back as a `forecast` fact (B-57: Coordinator, Data & Reconciler and Forecast now read/write the WM) | B-16 |
+| 2026-10-22 | The Coordinator's draft must state the Forecast agent's verdict and no other; quick plans get a "now" verdict (current levels only) until B-17 shortens the whole path | B-16 |
 
