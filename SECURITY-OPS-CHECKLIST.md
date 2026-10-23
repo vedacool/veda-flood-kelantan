@@ -45,28 +45,34 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       per 15 min.
 - [x] No JPS readings in the repo (B-75): fixtures from JPS tables hold SYNTHETIC values, the JPS page snapshot is
       gone, recorded live traces are redacted; `tests/test_no_jps_readings.py` guards it.
-- [ ] **History clean** (B-75, Husaini's option b) - just before going public, in this order:
-      1. a private local **mirror backup** (`git clone --mirror`), kept on this machine and never pushed;
-      2. `git filter-repo` stripping only the **old blob versions** (today's synthetic / redacted files at the same
-         paths stay): `--strip-blobs-with-ids` with the list built from history (every old version of the JPS page
-         snapshot, of `data/fixtures/`, of `tests/fixtures/jps_*`, of `data/replay/synthetic_anchors.csv`, of
-         `output_examples/` and of `data/sample/live_traces/`), plus a blob callback that, in every other **old**
-         blob, turns each real reading value in **any written form** (N.NN, N.N, N, "N m", "N.NNm", JSON, table cells,
-         quotes) into "[JPS reading]" - except lines still unchanged in today's tree, cited Nov 2024 replay values,
-         official thresholds / historic peaks, and numbers that are not a level (other unit, a parameter) - and
-         `--prune-empty never` so every commit, date and author stays. Today's blobs are never touched.
-         Dry run v2, 23 Oct, on a fresh private mirror clone (108 commits): 223 old blobs stripped, 104 old blobs
-         rewritten (7 distinct lines, all readings quoted in docs and one docstring example), 108 -> 108 commits with
-         authors and dates unchanged, today's tree identical, 0 snapshot commits, 0 stripped blobs left. History
-         search for 196 real values (snapshot, JPS-table fixtures, the private unredacted traces) in any form:
-         309 hits on lines unchanged in today's tree (synthetic / cited / redacted, guarded by
-         `tests/test_no_jps_readings.py`), 160 cited Nov 2024 replay values, 1 not a level, **0 unexplained**;
-      3. CI green on the rewritten history; **one** force push; then delete every **old GitHub Actions workflow
-         run, artifact and cache** (`gh run list` / `gh run delete`, `gh cache delete --all`, artifacts via the
-         API) - CI logs from before the scrub may hold JPS values printed by tests;
-      4. a history search (`git log -p --all | grep` for the removed files and known reading values) finds nothing;
-      5. record it in `docs/DECISIONS.md`.
-- [ ] The repo stays private until B-75 steps 3-4 and the history clean are done.
+- [ ] **Going public = a NEW public repository from a cleaned copy** (B-75; plan changed by Husaini 23 Oct - this
+      replaces the earlier force-push + delete-Actions-runs plan). Real run **Mon 26 Oct, before the first
+      submission, only with Husaini's OK**:
+      1. `github.com/vedacool/veda` stays **PRIVATE and untouched** - full history, push records and CI runs kept as
+         evidence of build timing. **No force push, no deleted Actions runs** there.
+      2. A fresh `git clone --mirror` of the private repo (scratch, never pushed) -> `git filter-repo`: every **old**
+         version (not in today's tree) of the JPS page snapshot, `data/fixtures/`, `tests/fixtures/jps_*`,
+         `data/replay/synthetic_anchors.csv`, `output_examples/` and `data/sample/live_traces/` stripped; in every
+         other old blob each real reading in **any written form** becomes "[JPS reading]" (except lines unchanged in
+         today's tree, cited replay values, thresholds / peaks, numbers that are not a level); `--prune-empty never`;
+         authors and commit dates kept; today's files untouched. Script kept outside the repo
+         (`veda-private/history-clean/public_dryrun.py`).
+      3. A working clone of the cleaned mirror gets ONE new commit: `docs/history/commit-map.txt` (filter-repo's
+         commit map, original ID -> public ID, IDs only), the README **"Repository history"** note (Husaini's text),
+         and `.gitleaksignore` with its commit IDs translated through the map (otherwise the known made-up test
+         values in the B-02 commit are reported again - measured in the dry run).
+      4. Before publishing: CI green on the new repo; history search **0 unexplained**; the clean-clone test
+         (fresh clone, empty `.env`, Zetaris and Nightshift stopped, SAMPLE_MODE); gitleaks over the full history.
+      5. Create the new public repo (suggested name: **`vedacool/veda-kelantan`**), push, check CI, then record it in
+         `docs/DECISIONS.md` and update links (README clone URL, `metadata.json` repository).
+      **Dry run 23 Oct 18:25 MYT** (scratch only, nothing created on GitHub, private repo untouched): 122 -> 122
+      commits, authors and dates unchanged, + 1 map commit = **123**; **first commit 22 Oct 2026 10:22:15 MYT
+      (02:22:15 UTC)**, same ID as the original (nothing to strip in it); **commit map 122 lines** (+1 header); 226
+      old blobs stripped, 105 old blobs rewritten; today's tree identical to the private HEAD; history search over
+      196 real values in any form: 322 hits on lines unchanged in today's tree, 160 cited replay values, 1 not a
+      level, **0 unexplained**; gitleaks v8.21.2 over the full history: **no leaks** (1 before translating
+      `.gitleaksignore`); in the scratch repo with no `.env`: 746 tests pass, evals 24/24. Not tested in the dry run:
+      CI on GitHub and the clean clone with Zetaris and Nightshift stopped (both on Monday).
 - [ ] JPS written consent - only if VEDA continues after the hackathon (`docs/OPEN.md` W-7).
 
 ## Running it
