@@ -126,6 +126,23 @@ unmodified) and certifi (MPL-2.0).
 - Questions stay in local log files on the machine running VEDA. Only intent tags go into the World Model, never the
   question.
 
+## Evaluations (test harness - not live use)
+These are controlled tests, kept apart from the live rates above.
+- **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
+  wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
+  exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 20 scenarios, 20 of 20 pass; pass^3
+  (all 3 repeat runs) 20 of 20.** They run offline on recorded data with stand-in models, so they test VEDA's own
+  logic, not Nemotron. They cover:
+  - quick and full paths;
+  - BM, EN and Kelantan dialect;
+  - stale and broken sources;
+  - unsafe, invented-number, wrong-verdict and flipped AI explanations;
+  - the Critic being down;
+  - the Nov 2024 replay scenes, including no hindsight;
+  - out-of-area places;
+  - someone trapped by the water.
+
 ## Limitations (honest list)
 - **Coverage:** four towns only (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat), with upstream gauges at Kuala Krai
   and Dabong. Other Kelantan places get "not covered yet" and the nearest covered place.
