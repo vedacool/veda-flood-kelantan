@@ -121,7 +121,7 @@ def test_old_snapshot_triggers_one_live_fetch(tmp_path, monkeypatch):
     finally:
         trace.end_run()
     assert source == "jps-live" and html == "<html>new</html>" and path.exists()
-    assert "contact" in calls[0]["User-Agent"] and len(calls) == 1
+    assert "github.com/vedacool/veda" in calls[0]["User-Agent"] and len(calls) == 1   # no personal email (public repo)
 
 
 def test_future_mtime_snapshot_is_not_trusted(tmp_path, monkeypatch):

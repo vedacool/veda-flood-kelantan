@@ -81,7 +81,7 @@ Scripts: `spikes/s1…s6` (throwaway — not VEDA code). Raw evidence: `logs/spi
 
 ### 7. Cursor CLI
 - `agent` is installed at `%LOCALAPPDATA%\cursor-agent`. The first run stops at **Workspace Trust Required**.
-- → **Action (Husaini):** run `agent` once interactively in `E:\Project\veda` and trust it. After that, `agent -p "…" --output-format json` will work for delegated jobs.
+- → **Action (Husaini):** run `agent` once interactively in the repo folder and trust it. After that, `agent -p "…" --output-format json` will work for delegated jobs.
 
 ## Clean-up state after the spikes
 - Zetaris: `VEDA_SPIKE` DB, all REST tables, the view and both test datasources dropped. **Left over:** empty SchemaStore container `veda_spike_views` (can't be dropped via SQL — delete in the Zetaris UI if wanted; harmless).
