@@ -146,6 +146,7 @@ def build(plan, evidence, forecast):
             "confidence": (fc.get("confidence") or {}).get("label", "low"), "gauge": None, "comparison": {},
             "thresholds": {}, "rain_24h_mm": None,
             "range_24h": None, "tidal": bool(trend.get("tide_influenced")), "falling": bool(trend.get("falling")),
+            "trend": _trend_word(trend),
             "peak": None, "upstream": [],
             "warnings": [w["heading"] for w in ((evidence or {}).get("met_warnings") or {}).get("active", [])],
             "sources": [], "excluded": None, "conflicts": [], "vs_2014": None, "rain_past_24h_mm": None,
@@ -214,14 +215,20 @@ WORDS = {  # key facts as words (Husaini 23 Oct): JPS level names, no minus sign
 }
 
 
+def _trend_word(trend):
+    """'rising' / 'falling' / 'steady' from the controlling gauge's rates, None when unknown or tide-influenced."""
+    rate = trend.get("rate_m_per_h") or {}
+    if not rate or trend.get("tide_influenced"):
+        return None
+    mid = (rate.get("min", 0) + rate.get("max", 0)) / 2
+    return "rising" if mid > 0 else "falling" if mid < 0 else "steady"
+
+
 def key_facts(card, forecast=None, lang="en"):
     """The card's key facts in the answer's language, as words (Husaini 23 Oct): what the Critic's AI review and
     the draft call get instead of the whole card / evidence. Only facts the card shows; no signed numbers."""
     lang = lang if lang in ("en", "ms") else "en"
     g = card.get("gauge") or {}
-    trend = next((c for c in (forecast or {}).get("controlling", []) if c.get("role") == "controlling"), {})
-    rate = trend.get("rate_m_per_h") or {}
-    mid = (rate.get("min", 0) + rate.get("max", 0)) / 2 if rate else None
     side = lambda d: T["above" if d >= 0 else "below"][lang]          # noqa: E731
     f = {"place": card.get("place"), "verdict": VERDICT_LABEL[card["verdict"]][lang],
          "jps_level": (card.get("level_name") or {}).get(lang),
@@ -232,8 +239,8 @@ def key_facts(card, forecast=None, lang="en"):
         if d is not None:
             f[f"vs_{key}"] = WORDS["level_vs"][lang].format(d=_num(abs(d)), side=side(d), name=T[key][lang],
                                                            t=_num(card["thresholds"][key]))
-    if mid is not None and not card.get("tidal"):
-        f["trend"] = WORDS["trend"]["rising" if mid > 0 else "falling" if mid < 0 else "steady"][lang]
+    if card.get("trend"):
+        f["trend"] = WORDS["trend"][card["trend"]][lang]
     if card.get("range_24h"):
         r = card["range_24h"]
         f["next_24h"] = f"{_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]})"
@@ -453,7 +460,17 @@ INDONESIAN = ("alarm", "aturan", "kondisi", "terpicu", "bisa", "mengungsi", "pen
 STYLE_PLACE = "tanah merah"     # the place in the draft prompt's style examples - never in a real explanation
 _INDONESIAN = re.compile(r"\b(" + "|".join(re.escape(w) for w in INDONESIAN) + r")\b", re.IGNORECASE)
 _INTERNAL = re.compile(r"\b(rules?|trigger(?:s|ed)?|verdicts?|sentinels?)\b", re.IGNORECASE)
+_TREND = re.compile(r"\b(naik|turun|surut|meningkat|menurun|rising|falling|rises|falls|risen|fallen)\b", re.IGNORECASE)
 _MINUS = re.compile(r"(?<![\w.])[-−–]\s?\d")             # "-0.57" - not the dash in a range "5.3-5.47"
+
+
+def trend_problem(text, card):
+    """No trend known for the controlling gauge (tidal, no rates) -> the explanation may not say the river is rising
+    or falling (Husaini 23 Oct: Tumpat 'tahap air turun' was invented). An upstream gauge that is rising is a fact."""
+    if card.get("trend") or any(u.get("rising") for u in card.get("upstream", [])):
+        return None
+    m = _TREND.search(text or "")
+    return f"wording: says {m.group(0)!r} but no trend is known for this gauge" if m else None
 
 
 def wording_problem(text, lang, place=None):
@@ -491,7 +508,7 @@ def explanation_problem(text, card, lang=None):
         return f"says the river is {', '.join(flipped)}, but the card says otherwise"
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
-    return wording_problem(text, lang, card.get("place"))
+    return trend_problem(text, card) or wording_problem(text, lang, card.get("place"))
 
 
 def unavailable_reply(lang):

@@ -282,3 +282,23 @@ def test_wording_failure_gets_one_rewrite_then_the_explanation_is_dropped(tmp_pa
         trace.end_run()
     assert len(sent) == 2 and "Indonesian word" in sent[1]["critic_problems"][0]       # one rewrite, with the reason
     assert a["explanation"] is None and a["drafted_by"] == "fallback"                 # still bad -> dropped
+
+
+# -- no trend known -> no trend words (Husaini 23 Oct) ----------------------------------------------------------
+TUMPAT = ("Air Tumpat 0.2 m, masih 1 m di bawah paras Waspada (1.2 m) dan 1.6 m di bawah paras Bahaya (1.8 m), tahap "
+          "air turun, tiada tanda banjir.")
+
+
+def test_invented_trend_on_a_tidal_gauge_is_rejected():
+    c = build(verdict="NORMAL", band="normal", tidal=True)
+    assert c["trend"] is None
+    assert "no trend is known" in card.trend_problem(TUMPAT, c)
+    assert card.trend_problem("Air Tumpat masih di bawah paras Waspada.", c) is None
+
+
+def test_trend_words_allowed_when_the_trend_is_known_or_upstream_rises():
+    rising = dict(build(verdict="WATCH"), trend="rising")    # a known trend (from the gauge's 1 h / 3 h rates)
+    assert card.trend_problem("The river is rising.", rising) is None
+    c = build(verdict="WATCH", tidal=True, upstream=[{"gauge": "Kuala Krai", "band": "alert", "rising": True,
+                                                       "arrives_in_h": None}])
+    assert card.trend_problem("Sungai di hulu sedang naik.", c) is None
