@@ -92,7 +92,7 @@ flowchart LR
 | **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Lightning, lane `fast`) |
 | **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT DATA. Per-source circuit breaker. | No |
 | **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain. Builds the 24 h range, the confidence, and the comparison with past floods. | No |
-| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Lightning via Nightshift) completed in **1 of the last 10 live full runs** (22–23 Oct; the rest: empty replies, provider cut-offs at ~45 s, one NVIDIA 500, one connection error). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
+| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Lightning via Nightshift) completed in **1 of 10 live full runs, 23 Oct** (the rest: empty replies, provider cut-offs at ~45 s, one NVIDIA 500, one connection error); a separate probe the same day: **0 of 9** Critic calls completed (empty replies, or no first token within 60 s). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title. | No |
 
 Models are reached only through Meterless **Nightshift** (`meterless/fast`, `meterless/deep`), never
@@ -133,7 +133,8 @@ unmodified) and certifi (MPL-2.0).
 - **Straight-line trend:** the 24 h range is a straight-line projection and overshoots on a steep rise (shown with
   medium confidence).
 - **AI review rarely completes today:** Nightshift cuts Nemotron calls at about 45 s and Lightning sometimes returns
-  an empty reply. Measured: the Critic's AI review completed in 1 of the last 10 live full runs (22–23 Oct). Every
+  an empty reply. Measured: the Critic's AI review completed in 1 of 10 live full runs, 23 Oct (probe the same day:
+  0 of 9 Critic calls). Every
   answer still gets the code checks and the Zetaris re-check; without the AI review VEDA sends the code-written card
   only and says why in the trace.
 - **Replay data:** the Nov 2024 replay uses a few real reported readings. Hours between two known readings are
