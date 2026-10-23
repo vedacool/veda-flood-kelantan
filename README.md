@@ -205,7 +205,7 @@ It is safe to re-run, and not needed in SAMPLE_MODE.
 ## Collecting river levels (live mode)
 ```
 python -m app.ingest.jps --loop     # JPS Kelantan levels every 15 minutes into veda-pg (Ctrl+C to stop)
-python -m app.ingest.jps --from-file data/snapshots/jps/kel-20261022-1040.html   # load a saved snapshot
+python -m app.ingest.jps --from-file <a JPS page you saved yourself>   # load a saved page (never committed)
 ```
 At most one request to JPS per 15 minutes, identified by our User-Agent. Agents read the stored levels only through
 Zetaris.

@@ -119,3 +119,19 @@ def test_access_log_drops_the_question():
                             ("127.0.0.1:1", "GET", "/run/stream?question=call+0123456789", "1.1", 200), None)
     main._NoQueryString().filter(rec)
     assert rec.getMessage() == '127.0.0.1:1 - "GET /run/stream HTTP/1.1" 200'
+
+
+# -- B-75: offline answers run on labelled scenes, never on JPS readings -----------------------------------------
+def test_sample_mode_question_runs_on_the_synthetic_calm_day(monkeypatch, tmp_path):
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    from app import gazetteer
+    gazetteer.clear_cache()
+    r = main._run("Tumpat ok?", None, None)
+    assert r["answer"]["text"].startswith("SYNTHETIC · calm day")
+    assert "River (SYNTHETIC)" in r["answer"]["text"] and "SYNTHETIC river levels (not JPS)" in r["answer"]["text"]
+
+
+def test_scene_picker_lists_replay_first_then_synthetic_scenes():
+    page = (main.WEB_PAGE).read_text(encoding="utf-8")
+    order = [page.index(x) for x in ("nov2024|2024-11-26 18:00", "synthetic_rising|", "synthetic_calm|")]
+    assert order == sorted(order) and 'id="live-option"' in page and "h.sample_mode" in page

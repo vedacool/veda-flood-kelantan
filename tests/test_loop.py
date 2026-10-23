@@ -36,7 +36,7 @@ def stub(effort="full"):
 def force(monkeypatch):
     """Make the router's data say quick (no reasons) or full (one reason), whatever the recorded data shows."""
     def set_route(effort):
-        monkeypatch.setattr(router, "data_triggers", lambda *a: [] if effort == "quick" else ["test: forced full"])
+        monkeypatch.setattr(router, "data_triggers", lambda *a, **k: [] if effort == "quick" else ["test: forced full"])
     return set_route
 
 

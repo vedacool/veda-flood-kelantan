@@ -51,7 +51,7 @@ Scripts: `spikes/s1…s6` (throwaway — not VEDA code). Raw evidence: `logs/spi
 
 ### 5. JPS + station-id match
 - The page parses cleanly via `data-th` columns: `Station ID, Station Name, District, Main Basin, Sub River Basin, Last Update, wl, Normal, Alert, Warning, Danger`.
-- Snapshot: `data/snapshots/jps/kel-20261022-1040.html`. The script reuses a snapshot < 15 min old (scrape rule) and identifies itself with a User-Agent.
+- Snapshot: a saved JPS page (no longer in the repo since B-75 - JPS readings are not redistributed; the parser tests use `tests/fixtures/jps_synthetic_page.html`). The script reuses a snapshot < 15 min old (scrape rule) and identifies itself with a User-Agent.
 - Our 5 stations:
   | Brief name | JPS row | Station ID |
   |---|---|---|

@@ -154,8 +154,10 @@ def code_checks(text, facts, evidence, card=None, explanation=None, lang=None):
     if (evidence.get("cross_check") or {}).get("status") == "stale" and not any(w in low for w in STALE_WORDS):
         found.append({"type": "missing_stale_note", "detail": "the excluded stale source (data.gov.my "
                                                               "/flood-warning) is not mentioned"})
-    if evidence.get("replay") and "replay" not in low:      # B-70: a replay always says so
-        found.append({"type": "other", "detail": "a replay answer must say REPLAY at the top"})
+    scene = (evidence.get("replay") or {}).get("scenario")
+    title = (config.REPLAYS.get(scene or "") or {}).get("title", "REPLAY")
+    if scene and title.lower() not in low:                 # B-70 / B-75: a scene always says its title
+        found.append({"type": "other", "detail": f"a scene answer must say '{title}' at the top"})
     if facts.get("conflicts_unresolved") and not any(w in low for w in CONFLICT_WORDS):
         found.append({"type": "missing_conflict", "detail": "an unresolved conflict between sources is not mentioned"})
     return [{**f, "by": "code"} for f in found]

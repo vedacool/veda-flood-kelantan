@@ -13,7 +13,7 @@ import json
 import re
 from datetime import datetime
 
-from app.config import MYT, REPLAYS
+from app.config import MYT, REPLAYS, synthetic
 
 ADVICE = {  # Husaini 22 Oct night, tentative - Dr Ariff to check (docs/review_pack_ariff.md section G)
     "NORMAL": {"en": "No action needed. Keep an eye on JPS updates.",
@@ -48,8 +48,10 @@ T = {  # fixed wording, BM + EN
     "peak": {"en": "the {event} peak", "ms": "puncak {event}"},
     "next24": {"en": "Next 24 h", "ms": "24 jam akan datang"},
     "rain": {"en": "Rain next 24 h: {mm} mm (Open-Meteo)", "ms": "Hujan 24 jam akan datang: {mm} mm (Open-Meteo)"},
-    "rain_past": {"en": "Rain past 24 h: {mm} mm (Open-Meteo archive); no rain forecast in a replay",
-                  "ms": "Hujan 24 jam lepas: {mm} mm (arkib Open-Meteo); tiada ramalan hujan dalam ulang tayang"},
+    "rain_past": {"en": "Rain past 24 h: {mm} mm (Open-Meteo archive, {date}); no rain forecast in a replay",
+                  "ms": "Hujan 24 jam lepas: {mm} mm (arkib Open-Meteo, {date}); tiada ramalan hujan dalam ulang tayang"},
+    "synthetic_tag": {"en": " (SYNTHETIC)", "ms": " (SYNTHETIC)"},
+    "synthetic_src": {"en": "SYNTHETIC river levels (not JPS)", "ms": "paras sungai SYNTHETIC (bukan JPS)"},
     "vs2014": {"en": "Compared with 2014: {d} m {rel} the Dec 2014 peak here ({p} m)",
                "ms": "Berbanding 2014: {d} m {rel} puncak Dis 2014 di sini ({p} m)"},
     "archive": {"en": "Open-Meteo archive (real rain up to the replay time)",
@@ -94,6 +96,10 @@ T = {  # fixed wording, BM + EN
     # replay (Husaini 23 Oct): the gap is in what was reported, not a gauge that went down
     "replay_gap": {"en": "This replay has no verified JPS reading near this time",
                    "ms": "Ulang tayang ini tiada bacaan JPS yang disahkan berhampiran masa ini"},
+    "synthetic_gap": {"en": "This SYNTHETIC scene has no reading near this time",
+                      "ms": "Senario SYNTHETIC ini tiada bacaan berhampiran masa ini"},
+    "synthetic_last": {"en": "Last SYNTHETIC reading: {m} m at {t} ({age}) - too far from this time to use",
+                       "ms": "Bacaan SYNTHETIC terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     "replay_last": {"en": "Last verified reading: {m} m at {t} ({age}) - too far from this time to use",
                     "ms": "Bacaan disahkan terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     "low_conf": {"en": "Low confidence: VEDA's reviewer did not approve the written explanation, so only the checked "
@@ -129,6 +135,14 @@ def months_ms(text):
     return _DATE_EN.sub(lambda m: (m.group(1) or "") + MONTHS_MS[m.group(2)], text)
 MAX_EXPLANATION = 200
 MAX_CARD_CHARS = 750          # Husaini 23 Oct: ~750 characters (2014 line kept), disclaimer + AI explanation extra
+
+
+def _day(iso):
+    """'2024-11-25T18:00:00+08:00' -> '25 Nov 2024' (the archive rain's date; BM months applied at render)."""
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(MYT).strftime("%d %b %Y").lstrip("0")
+    except ValueError:
+        return None
 
 
 def _hhmm(iso):
@@ -191,12 +205,15 @@ def build(plan, evidence, forecast):
     if last and verdict == "INSUFFICIENT_DATA":
         card["last_reading"] = {"level_m": last["level_m"], "at": _hhmm(last["observed_at"]),
                                 "age_minutes": last["age_minutes"]}
+    scene = ((evidence or {}).get("replay") or {})
+    card["synthetic"] = synthetic(scene.get("scenario"))
     if main and main["age_minutes"] is not None:
-        card["sources"].append(("jps", main["age_minutes"]))
+        card["sources"].append(("synthetic", None) if card["synthetic"] else ("jps", main["age_minutes"]))
     rain = ctx.get("rain")
     if rain and card["replay"]:
         card["sources"].append(("archive", None))
         card["rain_past_24h_mm"] = rain.get("rain_past_24h_mm")
+        card["rain_date"] = _day(scene.get("at"))
     elif rain:
         card["sources"].append(("open_meteo", rain.get("age_minutes")))
         card["rain_24h_mm"] = rain.get("rain_next_24h_mm")
@@ -280,7 +297,9 @@ def key_facts(card, forecast=None, lang="en"):
     return json.loads(months_ms(json.dumps(out, ensure_ascii=False))) if lang == "ms" else out
 
 
-LABEL_BM = (("estimated: reconstructed between the verified JPS readings",
+LABEL_BM = (("SYNTHETIC reading - made up for the offline demo, not a real JPS reading",
+             "bacaan SYNTHETIC - direka untuk demo luar talian, bukan bacaan JPS sebenar"),
+            ("estimated: reconstructed between the verified JPS readings",
              "anggaran: dibina semula antara bacaan JPS yang disahkan"),
             ("reported JPS reading (", "bacaan JPS dilaporkan ("), ("; time approximate", "; masa anggaran"),
             (" and ", " dan "))
@@ -375,7 +394,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
             parts.append(f"{_num(abs(p['diff_m']))} m {T['above' if p['diff_m'] >= 0 else 'below'][lang]} "
                          f"{T['peak'][lang].format(event=p['event'])} ({_num(p['peak_m'])} m)")
         gauge = short_gauge(g["name"], card.get("place")) if "short_gauge" in drop else g["name"]
-        out.append(("river", f"{T['river'][lang]}: {_num(g['level_m'])} m {T['at'][lang]} {g['read_at']} ({gauge})"
+        tag = T["synthetic_tag"][lang] if card.get("synthetic") else ""
+        out.append(("river", f"{T['river'][lang]}{tag}: {_num(g['level_m'])} m {T['at'][lang]} {g['read_at']} ({gauge})"
                     + ("; " + ", ".join(parts) if parts else "") + "."))
         if card.get("reading_label"):
             label = (short_label(card["reading_label"], g["read_at"]) if "short_label" in drop
@@ -384,13 +404,16 @@ def _lines(card, lang, explanation, low_confidence, drop):
         if card.get("vs_2014"):
             v = card["vs_2014"]
             out.append(("vs2014", T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
-                                                          rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + "."))
+                                                          rel=T["above" if v["diff_m"] >= 0 else "below"][lang])
+                        + tag + "."))
     elif card["verdict"] == "INSUFFICIENT_DATA":
         replay = bool(card.get("replay"))
-        out.append(("no_reading", (T["replay_gap"][lang] if replay else T["no_reading"][lang].capitalize()) + "."))
+        gap = "synthetic_gap" if card.get("synthetic") else "replay_gap"
+        out.append(("no_reading", (T[gap][lang] if replay else T["no_reading"][lang].capitalize()) + "."))
         if card.get("last_reading"):
             lr = card["last_reading"]
-            out.append(("last_reading", T["replay_last" if replay else "last"][lang].format(
+            last = "synthetic_last" if card.get("synthetic") else "replay_last" if replay else "last"
+            out.append(("last_reading", T[last][lang].format(
                 m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang)) + "."))
     if card.get("backup"):
         b = card["backup"]
@@ -399,7 +422,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
     conf = T["conf_label"].get(card["confidence"], T["conf_label"]["low"])[lang]
     if card.get("range_24h"):
         r = card["range_24h"]
-        out.append(("range", f"{T['next24'][lang]}: {_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
+        out.append(("range", f"{T['next24'][lang]}{T['synthetic_tag'][lang] if card.get('synthetic') else ''}: "
+                             f"{_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
                              f"{T['confidence'][lang]}: {conf}."))
     elif card.get("above_danger") and g:
         words = [T["above_trend"][card["trend"]][lang]] if card.get("trend") else []
@@ -418,7 +442,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
     if card.get("rain_24h_mm") is not None and "rain" not in drop:
         out.append(("rain", T["rain"][lang].format(mm=_num(card["rain_24h_mm"])) + "."))
     if card.get("rain_past_24h_mm") is not None and "rain" not in drop:
-        out.append(("rain", T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"])) + "."))
+        out.append(("rain", T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"]),
+                                                        date=card.get("rain_date") or "?") + "."))
     if explanation:
         out.append(("explanation", explanation.strip()))
     for u in ([] if "upstream" in drop else card.get("upstream", [])):
@@ -430,10 +455,10 @@ def _lines(card, lang, explanation, low_confidence, drop):
         out.append(("upstream", f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}."))
     for w in card.get("warnings", []):
         out.append(("warning", f"{T['warning'][lang]}: {w}."))
-    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None}
+    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None, "synthetic": None}
     archive = "archive_short" if "short_source" in drop else "archive"
-    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T[archive if k == "archive" else "met_today"][lang]
-            for k, m in card.get("sources", [])]
+    other = {"archive": archive, "met_forecast": "met_today", "synthetic": "synthetic_src"}
+    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T[other[k]][lang] for k, m in card.get("sources", [])]
     if srcs:
         out.append(("sources", f"{T['sources'][lang]}: " + "; ".join(srcs) + "."))
     if card.get("excluded"):                         # shortened, never dropped: the Critic checks it is mentioned

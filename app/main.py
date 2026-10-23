@@ -120,7 +120,7 @@ def result_json(r):
 
 def _run(question, replay, at, on_step=None):
     from app import loop
-    return loop.run(question, quiet=True, replay=replay, at=at, on_step=on_step)
+    return loop.run(question, quiet=True, replay=replay, at=at, on_step=on_step, default_scene=True)
 
 
 @app.get("/health")

@@ -229,6 +229,11 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
 SCENARIO = re.compile(r"^[a-z0-9_]+$")
 
 
+def rain_table(scenario):
+    """The scene's Open-Meteo archive rain table (B-75: synthetic scenes use the real archive of a real date)."""
+    return config.REPLAYS[scenario]["rain_table"]
+
+
 def replay_sqls(scenario, at):
     """The replay's two queries, CUT AT THE REPLAY TIME in SQL - nothing later ever enters VEDA (no hindsight).
     at = aware datetime. Gauge rows: veda_pg.replay_levels (UTC); rain: the archive REST table, hours in MYT."""
@@ -242,7 +247,7 @@ def replay_sqls(scenario, at):
     rain = ("SELECT COALESCE(r.location_id, 0) AS location_id, "
             f"ROUND(SUM(CASE WHEN t > '{hour(myt - timedelta(hours=24))}' THEN CAST(r.hourly.precipitation[i] AS DOUBLE) "
             "END), 1) AS rain_past_24h_mm, ROUND(SUM(CAST(r.hourly.precipitation[i] AS DOUBLE)), 1) AS rain_past_7d_mm, "
-            f"MAX(t) AS last_hour FROM veda_wx.om_rain_{scenario} r LATERAL VIEW posexplode(r.hourly.time) h AS i, t "
+            f"MAX(t) AS last_hour FROM veda_wx.{rain_table(scenario)} r LATERAL VIEW posexplode(r.hourly.time) h AS i, t "
             f"WHERE t > '{hour(myt - timedelta(days=7))}' AND t <= '{hour(myt)}' GROUP BY COALESCE(r.location_id, 0)")
     PURPOSES[levels] = f"replay {scenario}: gauge levels up to the replay time"
     PURPOSES[rain] = f"replay {scenario}: archive rain up to the replay time"
@@ -334,7 +339,7 @@ def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
         value = {"rain_past_24h_mm": r["rain_past_24h_mm"], "rain_past_7d_mm": r["rain_past_7d_mm"],
                  "rain_next_24h_mm": None, "rain_next_72h_mm": None, "max_prob_next_24h_pct": None,
                  "rain_point": pl["rain_location_id"]}
-        rsrc = _src(at_iso, qh_r, f"veda_wx.om_rain_{sqls['scenario']}", agent, run_id,
+        rsrc = _src(at_iso, qh_r, f"veda_wx.{rain_table(sqls['scenario'])}", agent, run_id,
                     "open_meteo_archive", check("open_meteo", value) if check else None)
         world.assert_fact(place_id(pl["place_id"]), "rain_mm", value, confidence=0.7, source=rsrc)
     return {"gauges": n, "places": len(by_loc), "unhealthy": unhealthy}

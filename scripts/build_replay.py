@@ -27,6 +27,7 @@ from app import config, trace  # noqa: E402
 from app.adapters import pg, zetaris  # noqa: E402
 
 ANCHORS = ROOT / "data" / "replay" / "nov2024_anchors.csv"
+SYNTHETIC_LABEL = "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
 AGENT = "Setup"
 TIME_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -60,10 +61,14 @@ def validate(rows, known_keys):
             float(r.get("level_m", ""))
         except ValueError:
             problems.append(f"{where}: level_m is not a number")
-        if urlparse(r.get("source_url", "")).scheme != "https":
-            problems.append(f"{where}: source_url must be https")
-        if not r.get("quote") or not r.get("source_name"):
-            problems.append(f"{where}: every anchor needs its source_name and the quoted sentence")
+        if r.get("scenario", "").startswith("synthetic_"):        # B-75: made-up readings, labelled SYNTHETIC
+            if r.get("source_name") != "SYNTHETIC":
+                problems.append(f"{where}: a synthetic scenario's rows must say source_name SYNTHETIC")
+        else:
+            if urlparse(r.get("source_url", "")).scheme != "https":
+                problems.append(f"{where}: source_url must be https")
+            if not r.get("quote") or not r.get("source_name"):
+                problems.append(f"{where}: every anchor needs its source_name and the quoted sentence")
         key = (r.get("scenario"), r.get("station_key"))
         if t is not None and key in last and t <= last[key]:
             problems.append(f"{where}: readings of one gauge must be in time order")
@@ -89,10 +94,12 @@ def reconstruct(rows):
         for a in anchors:
             out.append({"scenario": scenario, "station_key": key, "observed_at": a["t"], "level_m": a["level"],
                         "kind": "reported", "time_exact": a["exact"], "source_url": a["source_url"],
-                        "label": f"reported JPS reading ({a['source_name']})"
+                        "label": SYNTHETIC_LABEL if a["source_name"] == "SYNTHETIC" else
+                                 f"reported JPS reading ({a['source_name']})"
                                  + ("" if a["exact"] else "; time approximate")})
         for a, b in zip(anchors, anchors[1:]):
-            label = (f"reconstructed between the verified JPS readings {a['level']:g} m ({_when(a['t'], a['exact'])})"
+            label = (SYNTHETIC_LABEL if a["source_name"] == "SYNTHETIC" else
+                     f"reconstructed between the verified JPS readings {a['level']:g} m ({_when(a['t'], a['exact'])})"
                      f" and {b['level']:g} m ({_when(b['t'], b['exact'])})")
             span = (b["t"] - a["t"]).total_seconds()
             t = a["t"].replace(minute=0) + timedelta(hours=1)

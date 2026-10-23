@@ -1,15 +1,17 @@
 {
   "name": "wrong_verdict_explanation",
-  "about": "AI explanation names a different verdict -> dropped",
+  "about": "AI explanation names a different verdict -> dropped [SYNTHETIC rising river, Rantau Panjang]",
   "question": "Is Rantau Panjang at risk in the next two days?",
   "llm": {
     "explanation": "This is an ACT situation, leave now.",
     "critic": "approve"
   },
   "expect": {
-    "verdict": "WATCH",
+    "verdict": "PREPARE",
     "must_not": [
       "ACT situation"
     ]
-  }
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
 }

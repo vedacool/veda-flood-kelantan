@@ -1,18 +1,20 @@
 {
   "name": "en_full_watch",
-  "about": "River at Alert + 'next two days' -> full path, WATCH, explanation kept",
+  "about": "River at Alert + 'next two days' -> full path, PREPARE, explanation kept [SYNTHETIC rising river, Rantau Panjang]",
   "question": "Is Rantau Panjang at risk in the next two days?",
   "llm": {
     "explanation": "The river is above its Alert level, so keep watching official updates.",
     "critic": "approve"
   },
   "expect": {
-    "verdict": "WATCH",
+    "verdict": "PREPARE",
     "path": "full",
     "drafted_by": "llm",
     "must": [
       "JPS level Alert",
       "The river is above its Alert level, so keep watching official updates."
     ]
-  }
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
 }

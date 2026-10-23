@@ -180,6 +180,21 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 
 **Emergency (23 Oct, `router.emergency`):** a question saying the person is trapped / stranded (terkandas, terperangkap, tak boleh keluar, air keliling rumah, trapped, stranded…) gets the approved **ACT advice first** ("…Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991") - before the "which place" reply when no place is found, and as the card's action line when the place is known (the verdict line still shows the data). The card is labelled first ("Anda terkandas: utamakan keselamatan" / "You said you're stranded: safety first"), and under a NORMAL verdict it adds "Paras sungai normal, tetapi banjir setempat masih boleh memerangkap anda" / "River level is normal, but local flooding can still trap you" (Husaini 23 Oct; review pack G5). Trace `emergency`.
 
+## Scenes and SAMPLE_MODE (B-75, organiser ruling 23 Oct 2026)
+- **No JPS readings in the repo.** JPS levels are fetched live at runtime on the user's machine into the local
+  veda-pg (not committed). Recorded Zetaris fixtures that came from JPS tables were replaced by SYNTHETIC values
+  (flagged `"synthetic": true`; the trace says "SYNTHETIC values"); `tests/test_no_jps_readings.py` guards it.
+- **Scenes** (`config.REPLAYS`): `nov2024` (news-reported readings, each cited), `synthetic_rising` and
+  `synthetic_calm` (made-up readings from `data/replay/synthetic_anchors.csv`, seeded by `scripts/build_replay.py
+  --anchors data/replay/synthetic_anchors.csv`). Every scene has an Open-Meteo **archive** rain table (real rain,
+  CC BY 4.0) shown with its date; no MetMalaysia data in a scene (no archive), so the router does not count it missing.
+- **Labels:** a synthetic scene's card starts with its title ("SYNTHETIC · calm day"), its river, 2014 and range lines
+  say "(SYNTHETIC)", its reading label says "SYNTHETIC reading - made up for the offline demo, not a real JPS
+  reading", the sources say "SYNTHETIC river levels (not JPS)", and the Critic checks the title is there.
+- **SAMPLE_MODE default:** the entry points (CLI, API / web, evals, examples) run a bare question on the SYNTHETIC
+  calm day (`config.SAMPLE_SCENE`, trace `sample_scene`). The web page's picker lists the Nov 2024 replay first,
+  then SYNTHETIC rising, then SYNTHETIC calm; "Live" only appears outside SAMPLE_MODE.
+
 ## Entry points (B-19) — `app/main.py`, `app/web/index.html`, `app/progress.py`, `run.py`
 - **Start:** `python -m app.main` → http://127.0.0.1:8000 (`VEDA_HOST` / `VEDA_PORT`; 127.0.0.1 by default so it is not open to the LAN). CLI: `python run.py "<question>"` (`--verbose`, `--replay nov2024 --at "2024-11-26 18:00"`).
 - **`GET /health`:** `{status, sample_mode, zetaris, nightshift}` — Zetaris and Nightshift are pinged (not in SAMPLE_MODE); `degraded` if either does not answer.
@@ -200,7 +215,7 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - VEDA never reads `output_examples/` at runtime (guard test).
 
 ## Self-healing (B-15) — `data_agent.heal`, `data_agent.circuit_open` / `record_call`
-- **Ladder, for every gauge an answer needs** (each decision = one `data.heal` trace line): (1) fresh / aging reading → used · (2) silent or stale → a **backup gauge** with a fresh reading: the mapping's `backup_of` pair (today only Kusial ↔ Kusial Baru) and, for a place with a second controlling gauge (Tumpat: Kok Majid → Kuala Jambu), that one — the backup takes the controlling role, labelled; confidence is held at **medium** ("backup gauge in use (X silent)") · (3) no fresh backup → the **last reading is kept for context only** ("Last reading: [JPS reading] m at … – too old to use") and never used for the verdict, so the controlling gauge gives **INSUFFICIENT DATA**. Rantau Panjang, Kota Bharu and Pasir Mas have no controlling-gauge backup yet (a mapping question for Husaini / Dr Ariff).
+- **Ladder, for every gauge an answer needs** (each decision = one `data.heal` trace line): (1) fresh / aging reading → used · (2) silent or stale → a **backup gauge** with a fresh reading: the mapping's `backup_of` pair (today only Kusial ↔ Kusial Baru) and, for a place with a second controlling gauge (Tumpat: Kok Majid → Kuala Jambu), that one — the backup takes the controlling role, labelled; confidence is held at **medium** ("backup gauge in use (X silent)") · (3) no fresh backup → the **last reading is kept for context only** ("Last reading: [JPS reading] at … – too old to use") and never used for the verdict, so the controlling gauge gives **INSUFFICIENT DATA**. Rantau Panjang, Kota Bharu and Pasir Mas have no controlling-gauge backup yet (a mapping question for Husaini / Dr Ariff).
 - **Card:** "Note: Kok Majid has no reading since … – using the backup gauge Kuala Jambu" / "Nota: … menggunakan stesen ganti …"; the last-reading line in BM and EN.
 - **Circuit breaker, per source group** (`jps_levels`, `rain_and_forecast`, `mygov_warning`, `mygov_flood`): 3 failures in a row → its queries are **skipped for 15 minutes** (`data.circuit` trace line, "open until …"); then one trial call (half-open) — success closes it, failure opens it again. State = `fail_count` / `open_until` on the source's World Model context, so it survives across runs (live World Model on disk). It runs on real time, never in a replay. An open JPS circuit → INSUFFICIENT DATA at once with an honest note, instead of 30 s timeouts.
 - **Rain no longer takes the gauges down:** the rain + MET forecast view (`place_risk_inputs`) is now an optional query — if it fails or its circuit is open, the answer has no rain / forecast line but the gauges and verdict still work.

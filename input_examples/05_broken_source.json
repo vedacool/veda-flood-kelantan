@@ -1,5 +1,6 @@
 {
-  "about": "Broken source - the controlling gauge has had no reading for 5 hours; the frozen data.gov.my /flood-warning is excluded as always",
+  "about": "Broken source - SYNTHETIC calm day asked at 15:00, 5 hours after the scene's last reading: no fresh reading, so INSUFFICIENT DATA (never NORMAL); the frozen data.gov.my /flood-warning is excluded",
   "question": "Is Tumpat safe?",
-  "stale_hours": 5
+  "replay": "synthetic_calm",
+  "at": "2024-06-15 15:00"
 }

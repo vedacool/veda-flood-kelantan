@@ -34,7 +34,7 @@ VEDA gives one verdict per place for the next 24–48 h. Current rule set (from 
 > Answer: ______
 
 **A5b.** (added 23 Oct, Husaini) **The straight-line projection itself - rising and falling cases.**
-- *Falling:* on 23 Oct Pasir Mas (1.75 m, falling) was projected to "-2.33-1.51 m" - a level below the river bed. VEDA
+- *Falling:* on 23 Oct Pasir Mas ([JPS reading], falling) was projected to a range reaching about -2.3 m - a level below the river bed. VEDA
   now shows **"turun / falling - no level projected"** when both trends point down, and any range shown is **never
   below the gauge's lowest level in the past 7 days**.
 - *Rising:* a steep rise overshoots (replay 27 Nov 19:30: 13.75-14.54 m projected, the real peak was ~11.4 m; see A5).

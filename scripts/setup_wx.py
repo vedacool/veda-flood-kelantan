@@ -89,7 +89,8 @@ def open_meteo_url(points):
 
 # B-70 flood replays: the REAL hourly rain at the same points from the Open-Meteo archive (ERA5). The replay cuts it
 # at the replay time, so no rain that fell later is ever used (Husaini 22 Oct night: hourly, not daily totals).
-REPLAYS = {"om_rain_nov2024": ("2024-11-15", "2024-12-02")}
+REPLAYS = {"om_rain_nov2024": ("2024-11-15", "2024-12-02"),
+           "om_rain_jun2024": ("2024-06-07", "2024-06-16")}      # B-75: the SYNTHETIC calm day's real rain
 
 
 def archive_url(points, start, end):

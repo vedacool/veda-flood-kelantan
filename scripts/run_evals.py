@@ -65,7 +65,7 @@ def run_one(sc, log_dir):
         finally:
             trace.end_run()
     r = loop.run(sc["question"], llm=stand_in(sc.get("llm")), log_dir=log_dir, quiet=True, replay=sc.get("replay"),
-                 at=at, now=now)
+                 at=at, now=now, default_scene=True)
     text = r["answer"]["text"] + "\n" + r["answer"]["safety_line"]
     ex, problems = sc.get("expect", {}), []
     verdict = (r.get("forecast") or {}).get("verdict")

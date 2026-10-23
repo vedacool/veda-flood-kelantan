@@ -270,7 +270,7 @@ def test_generator_form(fake):
 
 def test_sample_mode_refuses_live_calls(fake, monkeypatch):
     monkeypatch.setenv("SAMPLE_MODE", "true")
-    with pytest.raises(nightshift.NightshiftError, match="B-18"):
+    with pytest.raises(nightshift.NightshiftError, match="no live model calls"):
         nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
     assert fake["calls"] == []
 

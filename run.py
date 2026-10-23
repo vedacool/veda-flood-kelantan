@@ -39,7 +39,7 @@ def main(argv):
         at = datetime.strptime(args.at or config.REPLAYS[args.replay]["default_at"], "%Y-%m-%d %H:%M").replace(
             tzinfo=config.MYT)
     result = loop.run(question, quiet=not args.verbose, on_step=None if args.verbose else progress_printer(),
-                      replay=args.replay, at=at)
+                      replay=args.replay, at=at, default_scene=True)
     answer = result["answer"]
     print("\n" + "=" * 72)
     print(trace.redact(answer["text"]))

@@ -41,9 +41,24 @@ def secret_env_values(environ=None, min_len=8):
 
 # --- Flood replays (B-70) -------------------------------------------------------------------------------------
 # A replay always says its title at the top of the answer (Husaini 22 Oct night). default_at = the first scene.
-REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "default_at": "2024-11-26 18:00",
+# B-75 (organiser ruling 23 Oct): JPS readings are never redistributed, so SAMPLE_MODE runs on scenes - the Nov 2024
+# replay (news-reported readings, each cited) or SYNTHETIC scenes (made-up readings, labelled everywhere). Each scene
+# names its Open-Meteo archive rain table (real rain, CC BY 4.0, shown with its date).
+REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "kind": "replay", "rain_table": "om_rain_nov2024",
+                       "default_at": "2024-11-26 18:00",
                        "window": ("2024-11-26 08:00", "2024-11-27 19:30"),     # first and last verified reading
-                       "scenes": ["2024-11-26 18:00", "2024-11-27 08:00", "2024-11-27 19:30"]}}
+                       "scenes": ["2024-11-26 18:00", "2024-11-27 08:00", "2024-11-27 19:30"]},
+           "synthetic_rising": {"title": "SYNTHETIC · rising river", "kind": "synthetic",
+                                "rain_table": "om_rain_nov2024", "default_at": "2024-11-25 18:00",
+                                "window": ("2024-11-25 12:00", "2024-11-25 18:00"), "scenes": ["2024-11-25 18:00"]},
+           "synthetic_calm": {"title": "SYNTHETIC · calm day", "kind": "synthetic",
+                              "rain_table": "om_rain_jun2024", "default_at": "2024-06-15 10:00",
+                              "window": ("2024-06-15 04:00", "2024-06-15 10:00"), "scenes": ["2024-06-15 10:00"]}}
+SAMPLE_SCENE = "synthetic_calm"          # a bare question in SAMPLE_MODE runs on this scene (Husaini 23 Oct)
+
+
+def synthetic(scenario):
+    return (REPLAYS.get(scenario or "") or {}).get("kind") == "synthetic"
 
 
 # --- Personal data (B-56: no personal data in traces) --------------------------------------------------------

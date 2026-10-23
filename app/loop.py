@@ -23,6 +23,7 @@ deadline ends the run with whatever is safe to say.
 """
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 from app import card as card_mod
 from app import config, gazetteer, router, safety, trace
@@ -50,7 +51,7 @@ def open_world(run_id):
 
 
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
-        on_step=None, replay=None, at=None):
+        on_step=None, replay=None, at=None, default_scene=False):
     """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, card, reviews, timing,
     trace}.
     budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live.
@@ -60,6 +61,14 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
     run_ = trace.start_run(question, log_dir=log_dir, quiet=quiet, listener=on_step)
     t0 = time.monotonic()
     own_world = world is None
+    if not replay and default_scene and config.sample_mode():   # entry points (CLI, API, evals) ask for it
+        # B-75 (organiser ruling 23 Oct): no JPS readings offline - a bare question runs on the SYNTHETIC calm day
+        replay = config.SAMPLE_SCENE
+        at = datetime.strptime(config.REPLAYS[replay]["default_at"], "%Y-%m-%d %H:%M").replace(tzinfo=config.MYT)
+        trace.step("System", "sample_scene", input_summary=replay,
+                   output_summary=config.REPLAYS[replay]["title"],
+                   decision="SAMPLE_MODE has no live data and redistributes no JPS readings -> the SYNTHETIC calm-day "
+                            "scene (choose another scene with --replay)")
     if replay:
         if replay not in config.REPLAYS or at is None:
             raise ValueError(f"unknown replay {replay!r} or no replay time")

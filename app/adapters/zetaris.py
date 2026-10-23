@@ -280,11 +280,13 @@ def run_sql(sql, agent, purpose=None, limit=1000, budget_s=None):
                        details={"query_hash": qh, "sql": text})
             raise ZetarisError("no_fixture", f"SAMPLE_MODE: no recorded result for this query ({qh})")
         columns, raw_rows, fetched_at, source = doc["columns"], doc["rows"], doc["recorded_at"], "zetaris-replay"
+        synthetic = bool(doc.get("synthetic"))          # B-75: a fixture whose JPS readings were replaced
     else:
         payload, attempts = _live(text, limit, agent, label, budget_s=budget_s)
         columns, raw_rows = payload.get("headers") or [], payload.get("data") or []
         fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         source = "zetaris-live"
+        synthetic = False
 
     if not isinstance(raw_rows, list) or any(not isinstance(r, list) or len(r) != len(columns) for r in raw_rows):
         trace.step(agent, "zetaris.run_sql", input_summary=label, output_summary="rows do not match the column list",
@@ -301,7 +303,8 @@ def run_sql(sql, agent, purpose=None, limit=1000, budget_s=None):
     trace.step(agent, "zetaris.run_sql", input_summary=label,
                output_summary=f"{len(rows)} rows x {len(columns)} columns ({', '.join(map(str, columns[:6]))})",
                source=source, retry_count=attempts - 1, duration_ms=ms,
-               decision=("Recorded fixture for SAMPLE_MODE" if recorded else None),
+               decision=("Recorded fixture for SAMPLE_MODE" if recorded else
+                         "SYNTHETIC values (recorded JPS readings replaced, B-75)" if synthetic else None),
                details={"query_hash": qh, "sql": text, "rows": len(rows), "fetched_at": fetched_at})
     return SqlResult(sql=text, query_hash=qh, columns=columns, rows=rows, source=source, duration_ms=ms,
                      fetched_at=fetched_at, records=records)

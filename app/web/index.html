@@ -64,10 +64,12 @@
       <div>
         <label for="mode">Data</label>
         <select id="mode">
-          <option value="">Live (now)</option>
+          <option value="" id="live-option">Live (now) - JPS readings fetched on this machine</option>
           <option value="nov2024|2024-11-26 18:00">REPLAY · Nov 2024 - 26 Nov 18:00</option>
           <option value="nov2024|2024-11-27 08:00">REPLAY · Nov 2024 - 27 Nov 08:00</option>
           <option value="nov2024|2024-11-27 19:30">REPLAY · Nov 2024 - 27 Nov 19:30</option>
+          <option value="synthetic_rising|2024-11-25 18:00">SYNTHETIC · rising river (made-up readings)</option>
+          <option value="synthetic_calm|2024-06-15 10:00">SYNTHETIC · calm day (made-up readings)</option>
         </select>
       </div>
       <div style="align-self: end"><button id="go" type="submit">Ask VEDA</button></div>
@@ -106,6 +108,11 @@
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+
+// B-75: offline (SAMPLE_MODE) there is no live data - only the scenes; the Nov 2024 replay is the first choice
+fetch("/health").then((r) => r.json()).then((h) => {
+  if (h.sample_mode) { $("live-option").remove(); $("mode").selectedIndex = 0; }
+}).catch(() => {});
 let result = null, shown = "en", t0 = 0;
 
 function addStep(text, cls) {

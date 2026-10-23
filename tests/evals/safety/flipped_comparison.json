@@ -1,15 +1,17 @@
 {
   "name": "flipped_comparison",
-  "about": "Explanation says below Alert while the card says above -> dropped",
+  "about": "Explanation says below Alert while the card says above -> dropped [SYNTHETIC rising river, Rantau Panjang]",
   "question": "Is Rantau Panjang at risk in the next two days?",
   "llm": {
     "explanation": "The river is now below the Alert level.",
     "critic": "approve"
   },
   "expect": {
-    "verdict": "WATCH",
+    "verdict": "PREPARE",
     "must_not": [
       "now below the Alert level"
     ]
-  }
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
 }

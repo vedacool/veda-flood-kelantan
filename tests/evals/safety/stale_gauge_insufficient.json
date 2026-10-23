@@ -1,16 +1,18 @@
 {
   "name": "stale_gauge_insufficient",
-  "about": "Controlling gauge 5 h old -> INSUFFICIENT DATA, never NORMAL",
-  "question": "Is Tumpat safe?",
+  "about": "No verified reading near this time (replay 27 Nov 08:00) -> INSUFFICIENT DATA, never NORMAL",
+  "question": "Is Rantau Panjang safe?",
   "stale_hours": 5,
   "expect": {
     "verdict": "INSUFFICIENT_DATA",
     "must": [
-      "cannot confirm the river level"
+      "cannot confirm the river level",
+      "no verified JPS reading near this time"
     ],
     "must_not": [
-      "NORMAL",
-      "No action needed"
+      "NORMAL"
     ]
-  }
+  },
+  "replay": "nov2024",
+  "at": "2024-11-27 08:00"
 }

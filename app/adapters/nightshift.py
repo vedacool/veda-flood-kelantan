@@ -236,7 +236,7 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     cuts a call at ~45 s, so a retry mostly burns another 45 s - the caller falls back instead)."""
     deadline = time.monotonic() + budget_s if budget_s else None
     if config.sample_mode():
-        raise NightshiftError("SAMPLE_MODE: offline SampleGenerator arrives in B-18; no live model calls allowed")
+        raise NightshiftError("SAMPLE_MODE: no live model calls offline - the agents use their code fallbacks")
     model = lane_model(lane)
     body = {"model": model, "messages": list(messages), "temperature": temperature,
             "max_tokens": max(int(max_tokens), MIN_MAX_TOKENS),

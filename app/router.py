@@ -91,7 +91,7 @@ def question_triggers(question):
     return [(kind, ph) for kind, phrases in QUESTION_TRIGGERS.items() for ph in phrases if f" {ph} " in text]
 
 
-def data_triggers(ctx, warnings, clock):
+def data_triggers(ctx, warnings, clock, scene=False):
     """Reasons from the data for one place (World Model context + MetMalaysia warnings)."""
     reasons = []
     linked = ctx.get("gauges", []) + ctx.get("sentinels", [])
@@ -108,7 +108,7 @@ def data_triggers(ctx, warnings, clock):
         reasons.append("no controlling gauge data")
     if ctx.get("rain") is None:
         reasons.append("no rain forecast data")
-    if ctx.get("met_forecast") is None:
+    if ctx.get("met_forecast") is None and not scene:   # a scene has no MET data on purpose (no 2024 archive)
         reasons.append("no MetMalaysia forecast for today")
     for w in (warnings or {}).get("active", []):
         reasons.append(f"active MetMalaysia warning: {w['heading']}")
@@ -129,7 +129,7 @@ def route(question, place, world, pre):
         warnings = data_agent.met_warnings(pre["results"].get(data_agent.WARNING_SQL), place, clock, world)
         if warnings["status"] != "ok":
             notes.append(warnings["note"])
-        reasons += data_triggers(ctx, warnings, clock)
+        reasons += data_triggers(ctx, warnings, clock, scene=bool(pre.get("replay")))
     effort = "full" if reasons else "quick"
     trace.step(AGENT, "route", input_summary=question,
                output_summary=f"{effort} path, answer in {'BM' if lang == 'ms' else 'English'}",

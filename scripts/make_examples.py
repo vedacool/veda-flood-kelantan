@@ -37,7 +37,8 @@ def run_example(ex, log_dir):
             now = run_evals._clock_plus(ex["stale_hours"])
         finally:
             trace.end_run()
-    r = loop.run(ex["question"], quiet=True, log_dir=log_dir, replay=ex.get("replay"), at=at, now=now)
+    r = loop.run(ex["question"], quiet=True, log_dir=log_dir, replay=ex.get("replay"), at=at, now=now,
+                 default_scene=True)
     return r, result_json(r)
 
 
