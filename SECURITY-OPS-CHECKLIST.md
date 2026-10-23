@@ -42,8 +42,14 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       gone, recorded live traces are redacted; `tests/test_no_jps_readings.py` guards it.
 - [ ] **History clean** (B-75, Husaini's option b) - just before going public, in this order:
       1. a private local **mirror backup** (`git clone --mirror`), kept on this machine and never pushed;
-      2. `git filter-repo` removing the JPS files from every commit (the JPS page snapshot, the original fixtures,
-         examples and traces), **keeping original commit dates and authors**;
+      2. `git filter-repo` stripping only the **old blob versions** (today's synthetic / redacted files at the same
+         paths stay): `--strip-blobs-with-ids` with the list built from history (every old version of the JPS page
+         snapshot, of the fixtures from JPS / MetMalaysia / flood-warning tables, of `output_examples/` and of
+         `data/sample/live_traces/`), plus `--replace-text` turning the known real reading values quoted in old docs
+         and tests ("N m") into "[JPS reading]", and `--prune-empty never` so every commit, date and author stays.
+         Dry run 23 Oct on a private mirror clone: 125 old blobs stripped, 183 values replaced, 104 -> 104 commits
+         with authors and dates unchanged, today's tree identical, history search: 0 real values, 0 snapshot
+         commits, 0 stripped blobs left;
       3. CI green on the rewritten history; **one** force push;
       4. a history search (`git log -p --all | grep` for the removed files and known reading values) finds nothing;
       5. record it in `docs/DECISIONS.md`.
