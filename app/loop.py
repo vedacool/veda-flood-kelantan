@@ -150,6 +150,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 card = card_mod.build(p, evidence, fc)
                 if router.emergency(question) and card["action"] is not card_mod.ADVICE["ACT"]:
                     card["action"] = card_mod.ADVICE["ACT"]  # trapped / stranded: ACT advice whatever the river says
+                    card["emergency"] = True                  # labelled "safety first" + a note under a NORMAL verdict
                     trace.step("System", "emergency", input_summary=router.emergency(question),
                                output_summary="action line = ACT advice", decision="the question says the person "
                                "is trapped / stranded -> ACT advice on the card; the verdict still shows the data")

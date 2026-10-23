@@ -57,6 +57,10 @@ T = {  # fixed wording, BM + EN
     "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
     "falling": {"en": "falling - no level projected", "ms": "turun - tiada unjuran paras"},
+    # trapped / stranded (Husaini 23 Oct; tentative, review pack G5)
+    "stranded": {"en": "You said you're stranded: safety first", "ms": "Anda terkandas: utamakan keselamatan"},
+    "stranded_normal": {"en": "River level is normal, but local flooding can still trap you",
+                        "ms": "Paras sungai normal, tetapi banjir setempat masih boleh memerangkap anda"},
     # above Danger (Husaini 23 Oct): no number range, only the direction (+ 2014 when higher)
     "above_trend": {"rising": {"en": "still rising", "ms": "masih naik"}, "falling": {"en": "falling", "ms": "turun"},
                     "steady": {"en": "steady", "ms": "stabil"}},
@@ -350,10 +354,14 @@ def _lines(card, lang, explanation, low_confidence, drop):
     out = [("replay", card["replay"])] if card.get("replay") else []     # a replay always says so first
     if low_confidence:
         out.append(("low_conf", T["low_conf"][lang]))
+    if card.get("emergency"):                                            # safety first, labelled (Husaini 23 Oct)
+        out.append(("stranded", T["stranded"][lang] + "."))
     out.append(("action", f"{T['action'][lang]}: {card['action'][lang]}"))
     level = (card.get("level_name") or {}).get(lang)
     out.append(("verdict", f"{card['place']}: {VERDICT_LABEL[card['verdict']][lang]}"
                             + (f" - {T['level'][lang]} {level}" if level else "")))
+    if card.get("emergency") and card["verdict"] == "NORMAL":          # so the card does not look contradictory
+        out.append(("stranded_note", T["stranded_normal"][lang] + "."))
     g = card.get("gauge")
     if g:
         parts = []
@@ -528,7 +536,7 @@ def explanation_problem(text, card, lang=None):
 def emergency_reply(lang, rest):
     """Someone trapped / stranded and no place found: the ACT advice first (it ends with 'if trapped: stay on high
     ground, save phone battery, call 999 / 991'), then the usual place reply."""
-    return f"{T['action'][lang]}: {ADVICE['ACT'][lang]}\n{rest}"
+    return f"{T['stranded'][lang]}.\n{T['action'][lang]}: {ADVICE['ACT'][lang]}\n{rest}"
 
 
 def unavailable_reply(lang):

@@ -181,6 +181,17 @@ bisa, mengungsi, pengungsian, siaga, rumah sakit, ponsel, kabupaten, banget, tel
 (normal BM), *sehingga* (normal BM for "until") and *Waspada* (a JPS level name). Anything to add or remove?
 > Answer: ______
 
+**G5.** (added 23 Oct, Husaini) **Someone says they are trapped / stranded** (terkandas, terperangkap, tak boleh
+keluar, air keliling rumah, trapped, stranded ...). VEDA then puts safety first, whatever the river data says:
+1. "Anda terkandas: utamakan keselamatan." / "You said you're stranded: safety first."
+2. The ACT advice (as in the table above, ending "Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon,
+   hubungi 999 / 991").
+3. The river verdict as usual; when it is NORMAL, also: "Paras sungai normal, tetapi banjir setempat masih boleh
+   memerangkap anda." / "River level is normal, but local flooding can still trap you."
+Without a place name, VEDA gives 1 and 2, then asks for the place. Is this the right advice for someone already
+trapped? Anything to add (e.g. a rescue number other than 999 / 991, or "go to the highest floor / roof")?
+> Answer: ______
+
 ---
 
 ## H. Backup gauges for Rantau Panjang, Kota Bharu and Pasir Mas — ~10 min (added 23 Oct, B-15)

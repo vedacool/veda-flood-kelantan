@@ -184,3 +184,4 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | B-14: the Coordinator only drafts; all explanation checks are the Critic's (reject -> rewrite -> re-check visible in the trace). Before: 16 live runs, 0 rejections (the Coordinator filtered its own drafts) | Husaini 23 Oct |
 | 2026-10-23 | Trapped / stranded question -> the approved ACT advice first (no place: before the place reply; known place: the card's action line, verdict unchanged); evals 20/20 | Husaini 23 Oct (eval) |
 | 2026-10-23 | 'tingkat air' added to the Indonesian word list (BM: paras air); 'tingkat' alone allowed | Husaini 23 Oct |
+| 2026-10-23 | Stranded rule approved; labelled 'Anda terkandas: utamakan keselamatan' first, and a 'local flooding can still trap you' note under a NORMAL verdict (review pack G5) | Husaini 23 Oct |
