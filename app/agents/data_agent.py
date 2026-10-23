@@ -696,6 +696,33 @@ class SimpleResult:
     records = []
 
 
+def approved_context(world, place, clock, replay, run_id):
+    """B-71(c): gauges a person approved for this place -> [{'name', 'band', 'age_minutes', 'approved_by'}].
+    Context only: they never join the gauges the Forecast agent reads (no role in the verdict until Dr Ariff
+    approves one). The band is given only for a fresh, healthy reading."""
+    rows = [e["attrs"] for e in world.store.state["entities"].values()
+            if e.get("type") == DISCOVERED and e["attrs"].get("status") == "approved"
+            and e["attrs"].get("approved_place") == (place or {}).get("place_id")]
+    if not rows:
+        return []
+    if not replay and not config.sample_mode():
+        try:
+            _load_latest_all(world, run_id)
+        except zetaris.ZetarisError:
+            pass                                       # no reading -> the line says so
+    builder, out = ContextBuilder(world), []
+    for a in rows:
+        g = builder.gauge(station_id(a["station_key"]), "discovered", "approved discovered gauge (context only)", clock)
+        g["freshness"] = freshness("jps_levels", g["age_minutes"])
+        out.append({"name": a.get("name"), "band": g["band"] if _gap_reason(g) is None else None,
+                    "age_minutes": g["age_minutes"], "approved_by": a.get("approved_by")})
+    trace.step(AGENT, "data.discovered_context", input_summary=(place or {}).get("name"),
+               output_summary="; ".join(f"{d['name']}: {d['band'] or 'no fresh reading'}" for d in out),
+               source="world_model", decision="approved by a person - context on the card only, never in the verdict "
+                                              "until Dr Ariff approves a role", details={"gauges": out})
+    return out
+
+
 # B-71(b): the Critic's missing-source request. Live: one query for every mapped gauge's latest reading.
 LATEST_ALL_SQL = "SELECT station_key, level_m, observed_at_utc, age_minutes, band FROM veda.river_status_latest"
 PURPOSES[LATEST_ALL_SQL] = "Critic's request: the latest reading of every mapped gauge"
@@ -947,6 +974,7 @@ def gather(plan, world, now=None, pre=None):
                 "kind": "agent_check", "at": _iso(clock), "agent": AGENT, "run_id": run_id, "origin": "Data & Reconciler agent"})
         trace.step(AGENT, "data.health", input_summary=key, output_summary=f"{s['status']}: {s['note']}",
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
+    discovered = (approved_context(world, plan.get("place"), clock, replay, run_id) if ctx.get("found") else [])
     selected = sources_selected(plan, ctx, sources, cross, osm) if ctx.get("found") else None
     if selected:                                   # B-71(a): what was chosen for this place, what was skipped and why
         trace.step(AGENT, "data.sources", input_summary=(ctx.get("place") or {}).get("name"),
@@ -956,7 +984,7 @@ def gather(plan, world, now=None, pre=None):
                    decision=f"{len(selected['chosen'])} source(s) used, {len(selected['skipped'])} skipped",
                    details=selected)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
-            "selected": selected,
+            "selected": selected, "discovered_context": discovered,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
             "met_warnings": warnings, "replay": replay, "healing": healing, "osm": osm,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

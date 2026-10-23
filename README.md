@@ -104,6 +104,11 @@ flowchart LR
 ```
 - **One question, one plain state machine** (`app/loop.py`): plan → gather → forecast → draft → critique →
   (revise) → done.
+- **Agents that work together:** the Data & Reconciler says which sources it chose and skipped (and why); when the
+  Critic finds a gap (a silent upstream gauge), it asks the Data & Reconciler for another source and the verdict is
+  recomputed if one is found ("verdict recomputed after the Critic's request: NORMAL → WATCH"); every run, gauges JPS
+  publishes that VEDA has not mapped yet are noticed as "discovered" - a person approves one (`python -m app.discover`)
+  before it appears, and then only as context, never in the verdict.
 - **Code decides the path.** The quick path (about 6 s, written by code) is used when nothing is wrong. The full path
   (≤150 s, with Nemotron) is used when a gauge is at Alert or above, the river is rising, a MET warning is active, a
   source is stale or missing, or the question is about evacuation, being cut off, or the next days.
