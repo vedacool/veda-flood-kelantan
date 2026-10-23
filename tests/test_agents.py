@@ -295,3 +295,42 @@ def test_reconcile_ignores_a_source_without_a_value():
     assert (r["rule"], r["chosen"], r["value"]) == ("single", "a", 1.7)
     r = data_agent.reconcile("level", [_cand("a", None, None, 0.9), _cand("b", "n/a", None, 0.9)])
     assert r["rule"] == "single" and r["chosen"] is None
+
+
+# -- draft retry (Husaini 23 Oct): once, only on a fast failure with enough budget left ------------------------
+def _flaky(fails):
+    calls = []
+
+    def llm(lane, messages, agent, **kw):
+        calls.append(kw.get("budget_s"))
+        if len(calls) <= fails:
+            raise nightshift.NightshiftError("empty response")
+        return SimpleNamespace(data={"explanation": "ok"}, text="")
+    llm.calls = calls
+    return llm
+
+
+def test_draft_is_retried_once_after_a_fast_failure(tmp_path):
+    from app import trace
+    trace.start_run("t", log_dir=tmp_path, quiet=True)
+    try:
+        llm = _flaky(1)
+        assert coordinator._draft_call(llm, {}, None, 120).data == {"explanation": "ok"} and len(llm.calls) == 2
+        llm = _flaky(2)
+        with pytest.raises(nightshift.NightshiftError):
+            coordinator._draft_call(llm, {}, None, 120)
+        assert len(llm.calls) == 2                                     # one retry only
+        llm = _flaky(1)
+        with pytest.raises(nightshift.NightshiftError):
+            coordinator._draft_call(llm, {}, None, 30)                 # < 45 s left: no retry
+        assert len(llm.calls) == 1
+    finally:
+        trace.end_run()
+
+
+def test_slow_draft_failure_is_not_retried(monkeypatch):
+    monkeypatch.setattr(coordinator, "DRAFT_FAST_FAIL_S", -1)
+    llm = _flaky(1)
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 120)
+    assert len(llm.calls) == 1

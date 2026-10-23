@@ -12,6 +12,7 @@ The safety line is always added by code, not left to the model.
 """
 import json
 import re
+import time
 from datetime import datetime, timezone
 
 from app import card as card_mod
@@ -251,6 +252,32 @@ def draft_problem(text, facts):
     return None
 
 
+DRAFT_FAST_FAIL_S = 15          # Husaini 23 Oct: retry the draft once, only when it failed this fast ...
+DRAFT_RETRY_MIN_LEFT_S = 45     # ... and this much budget is left (a second draft + the Critic's review)
+
+
+def _draft_call(llm, request, feedback, budget_s):
+    """One Nemotron draft call, retried once on a fast failure (an empty reply or error within DRAFT_FAST_FAIL_S)
+    when enough budget is left; otherwise the NightshiftError goes to the caller (card without an explanation)."""
+    msgs = [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
+            {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
+    start = time.monotonic()
+    for attempt in (1, 2):
+        t = time.monotonic()
+        left = None if budget_s is None else budget_s - (t - start)
+        try:
+            return llm("fast", msgs, agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS,
+                       budget_s=left, max_attempts=1)
+        except nightshift.NightshiftError as e:
+            took = time.monotonic() - t
+            room = budget_s is None or budget_s - (time.monotonic() - start) >= DRAFT_RETRY_MIN_LEFT_S
+            if attempt == 2 or took >= DRAFT_FAST_FAIL_S or not room:
+                raise
+            trace.step(AGENT, "draft.retry", input_summary=f"draft failed after {took:.0f} s",
+                       output_summary=str(e)[:150], status="retrying",
+                       decision=f"failed fast (< {DRAFT_FAST_FAIL_S} s) and enough time left -> one more try")
+
+
 def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=None, feedback=None, previous=None,
           use_model=True, skip_reason=None):
     """The answer -> {'text', 'language', 'drafted_by', 'explanation', 'safety_line'}. Never raises.
@@ -274,10 +301,7 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
             request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
             request["critic_fix"] = feedback.get("fix")
         try:
-            r = llm("fast", [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
-                             {"role": "user", "content": json.dumps(request, ensure_ascii=False)}],
-                    agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS, budget_s=budget_s,
-                    max_attempts=1)
+            r = _draft_call(llm, request, feedback, budget_s)
             explanation = (r.data or {}).get("explanation") if isinstance(r.data, dict) else None
             problem = card_mod.explanation_problem(explanation, card)
             if problem:
