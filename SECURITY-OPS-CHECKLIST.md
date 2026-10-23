@@ -35,8 +35,11 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
 - [ ] Recorded traces (`data/sample/live_traces/`, `output_examples/`) hold no personal data. Their questions were
       written by the team; re-read them before publishing.
 - [ ] `LICENSE` (MIT, Hujung Lab), `NOTICE` (Apache-2.0 Meterless ports) and the README credits are in place.
-- [ ] A **clean clone** (fresh `git clone`, empty `.env`, Zetaris and Nightshift stopped) runs SAMPLE_MODE: tests
-      pass and `python run.py "…"` answers.
+- [x] A **clean clone** (fresh `git clone`, empty `.env`, Zetaris and Nightshift stopped) runs SAMPLE_MODE: tests
+      pass and `python run.py "…"` answers. Run 23 Oct 16:53 MYT at `70e31c3` (new venv from `requirements.txt`):
+      698 tests pass, conformance 8/8, evals 20/20, CLI answers (bare question and Nov 2024 replay in BM), web
+      `/health` and `POST /run` 200; every data read came from the offline scenes, no network call. Re-run before
+      publishing.
 - [x] JPS credit on the page and in the README: "Data: Jabatan Pengairan dan Saliran (JPS) Malaysia,
       publicinfobanjir.water.gov.my, used for non-commercial public-safety research". The collector stays at most once
       per 15 min.
