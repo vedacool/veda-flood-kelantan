@@ -1,11 +1,11 @@
 {
-  "lastAuditCommit": "4d4e31d",
-  "lastFullAuditCommit": "4d4e31d",
-  "lastAuditDate": "2026-10-22",
-  "report": "docs/audit/2026-10-22-audit.md",
-  "note": "First run had no baseline, so it covered the whole codebase (functional, security, data, reliability, code quality). A/11y, privacy, performance, deploy skipped as N/A at this stage - re-run all before submission.",
+  "lastAuditCommit": "44f33b0",
+  "lastFullAuditCommit": "44f33b0",
+  "lastAuditDate": "2026-10-23",
+  "report": "docs/audit/2026-10-23-audit.md",
+  "note": "Full run, all 10 dimensions. No P0, 10 P1 (all re-verified). NO-GO for submission until P1s fixed.",
   "verifiedGood": {
-    "secrets-in-history": "4d4e31d",
+    "secrets-in-history": "44f33b0",
     "app/ingest/jps.py:parse": "4d4e31d",
     "app/ingest/jps.py:store-transaction": "4d4e31d",
     "app/adapters/zetaris.py:coerce": "4d4e31d",
@@ -14,7 +14,14 @@
     "app/adapters/zetaris.py:read-only+ddl-lockdown": "f82485e",
     "app/ingest/jps.py:store-coalesce+loop": "f82485e",
     "veda-pg:bind-127.0.0.1+writer-role": "f82485e",
-    "dependencies:pip-audit-clean": "f82485e"
+    "dependencies:pip-audit-clean": "f82485e",
+    "app/forecast_agent:D-06-boundaries+failsafe": "44f33b0",
+    "app/agents/data_agent:reconcile+heal+breaker": "44f33b0",
+    "app/web/index.html:no-xss-sinks": "44f33b0",
+    "sql-injection:not-reachable": "44f33b0",
+    "replay:rain-cut+peak-filter": "44f33b0",
+    "dependencies:licences-no-gpl": "44f33b0",
+    "docker:digest-pinned+nonroot": "44f33b0"
   },
   "fixesApplied": {
     "date": "2026-10-22",
@@ -27,7 +34,7 @@
       "f82485e"
     ],
     "open": [
-      "SAMPLE_MODE fixtures (B-18)"
+      "audit 2026-10-23: 10 P1 (see report)"
     ],
     "wontFix": [
       "trace/snapshot rotation"
