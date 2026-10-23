@@ -157,7 +157,7 @@ def months_ms(text):
     return _DATE_EN.sub(lambda m: (m.group(1) or "") + MONTHS_MS[m.group(2)], text)
 MAX_EXPLANATION = 200
 MAX_CARD_CHARS = 750          # Husaini 23 Oct: ~750 characters (2014 line kept), disclaimer + AI explanation extra
-PPS_SHOWN, BRIDGES_SHOWN = 3, 2     # B-73: OSM lines on the card (one each when the card must be shortened)
+PPS_SHOWN, BRIDGES_SHOWN = 3, 2     # B-73: OSM lines on the card, outside the cap (Husaini 23 Oct)
 
 
 def _day(iso):
@@ -366,9 +366,10 @@ def _age(minutes, lang):
 # there, shorten the excluded-source line (the Critic checks it is there), then drop the rain and upstream lines.
 # A line whose rule fired the verdict (card["keep"]: upstream / rain) is never dropped. The action, verdict, river
 # level, the 2014 line, range + confidence, MET warnings and sources always stay.
-FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream", "osm")
-# B-73: the OSM lines answer what the user asked, so they are shortened last ("osm": one PPS / one bridge), never
-# dropped.
+FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream")
+# B-73 (Husaini 23 Oct): the OSM lines answer what the user asked (evacuation / cut-off questions only - the card has
+# them for no other intent), so they sit outside the cap like the explanation: up to 3 possible PPS and 2 bridges.
+OSM_LINES = ("pps", "bridge", "low_ground", "osm")
 
 
 def bridge_name(name, lang):
@@ -389,20 +390,20 @@ def bridge_text(b, lang):
     return T["bridge"][lang].format(name=bridge_name(b["name"], lang), river=b["river"], km=_num(b["km"]), level=level)
 
 
-def _osm_lines(card, lang, drop):
+def _osm_lines(card, lang):
     """B-73 lines: possible PPS (evacuation question) or bridges + low ground (cut-off question)."""
     osm = card.get("osm")
     if not osm:
         return []
     if osm["status"] != "ok":
         return [("osm", T["osm_failed"][lang] + ".")]
-    out, short = [], "osm" in drop
+    out = []
     if osm.get("pps") is not None:
-        pps = osm["pps"][:1] if short else osm["pps"]
+        pps = osm["pps"]
         out.append(("pps", T["pps"][lang].format(items="; ".join(f"{p['name']} ({_num(p['km'])} km)" for p in pps))
                     + "." if pps else T["pps_none"][lang] + "."))
     if osm.get("bridges") is not None:
-        bridges = osm["bridges"][:1] if short else osm["bridges"]
+        bridges = osm["bridges"]
         out += [("bridge", bridge_text(b, lang) + ".") for b in bridges] or [("bridge", T["bridge_none"][lang] + ".")]
         out.append(("low_ground", T["low_ground"][lang] + "."))
     return out
@@ -425,7 +426,7 @@ def render(card, lang, explanation=None, low_confidence=False):
 
 
 def _length(lines):
-    return len("\n".join(t for key, t in lines if key != "explanation"))
+    return len("\n".join(t for key, t in lines if key != "explanation" and key not in OSM_LINES))
 
 
 def short_label(label, read_at):
@@ -533,7 +534,7 @@ def _lines(card, lang, explanation, low_confidence, drop):
         out.append(("upstream", f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}."))
     for w in card.get("warnings", []):
         out.append(("warning", f"{T['warning'][lang]}: {w}."))
-    out += _osm_lines(card, lang, drop)
+    out += _osm_lines(card, lang)
     names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None, "synthetic": None,
              "osm": None}
     archive = "archive_short" if "short_source" in drop else "archive"

@@ -57,6 +57,7 @@ WARNING_SQL = ("SELECT w.heading_en, w.text_en, w.text_bm, w.valid_from, w.valid
 OSM_SQL = ("SELECT place_id, kind, osm_ref, name, category, river, km, station_key, gauge_km, loaded_at "
            "FROM veda_pg.osm_place_features")
 OSM_INTENTS = ("evacuation", "cut_off")            # the questions that get OSM lines on the card
+PPS_RANK = {"school": 0, "community_hall": 0, "masjid": 1, "surau": 1}   # Husaini 23 Oct: schools / halls first
 PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock",
                  WARNING_SQL: "MetMalaysia warnings", OSM_SQL: "OpenStreetMap: possible PPS + bridges (B-73)"})
 # Which breaker guards which query (B-15). The rain + MET forecast view is one query (place_risk_inputs).
@@ -596,7 +597,8 @@ def osm_features(result, place, world, clock):
     rows = [r for r in result.records if r["place_id"] == (place or {}).get("place_id")]
     out = {"status": "ok", "loaded_at": max((str(r["loaded_at"]) for r in rows), default=None),
            "pps": [{"name": str(r["name"]), "category": r["category"], "km": r["km"]}
-                   for r in sorted(rows, key=lambda r: r["km"]) if r["kind"] == "pps_candidate"],
+                   for r in sorted(rows, key=lambda r: (PPS_RANK.get(r["category"], 1), r["km"]))
+                   if r["kind"] == "pps_candidate"],
            "bridges": []}
     builder = ContextBuilder(world)
     for r in sorted((r for r in rows if r["kind"] == "bridge"), key=lambda r: r["km"]):

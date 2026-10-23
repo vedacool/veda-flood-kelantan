@@ -172,9 +172,15 @@ def river_name(tags):
     return n
 
 
+NOT_PPS_WORDS = ("musalla", "musolla", "mushola", "prayer room")      # Husaini 23 Oct: prayer rooms are not PPS
+PPS_RANK = {"school": 0, "community_hall": 0, "masjid": 1, "surau": 1}  # schools / halls before masjid / surau
+
+
 def pps_category(tags):
     """school | masjid | surau | community_hall, or None when the element is not a possible PPS."""
     name = (tags.get("name") or "").lower()
+    if any(w in name for w in NOT_PPS_WORDS):
+        return None
     if tags.get("amenity") == "school":
         return "school"
     if tags.get("amenity") == "place_of_worship" and tags.get("religion") == "muslim":
@@ -202,7 +208,7 @@ def features(place, doc, stations):
                 seen.add(name.lower())
                 rows.append({"kind": "pps_candidate", "osm_ref": f"{e['type']}/{e['id']}", "name": name,
                              "category": cat, "river": None, "km": round(d, 1), "station_key": None, "gauge_km": None})
-    pps = sorted(rows, key=lambda r: r["km"])[:TOP_PPS]
+    pps = sorted(rows, key=lambda r: (PPS_RANK[r["category"]], r["km"]))[:TOP_PPS]
     bridges, seen = [], set()
     for e in els:
         tags = e.get("tags") or {}

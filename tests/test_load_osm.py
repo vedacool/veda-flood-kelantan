@@ -61,16 +61,16 @@ def rows(*els, stations=STATIONS):
     return load_osm.features(PLACE, {"elements": [RIVER, *els]}, stations)
 
 
-def test_named_possible_pps_within_the_radius_nearest_first():
+def test_named_possible_pps_within_the_radius():
     out = rows(node(10, 6.01, 102.0, amenity="school", name="SK Contoh"),
                node(11, 6.0, 102.0, amenity="school"),                                    # unnamed: skipped
                node(12, 6.2, 102.0, amenity="school", name="SK Jauh"),                    # ~22 km: skipped
                node(13, 6.005, 102.0, amenity="place_of_worship", religion="muslim", name="Masjid Contoh"),
                node(14, 6.006, 102.0, amenity="place_of_worship", religion="muslim", name="masjid contoh"))  # same name
     pps = [r for r in out if r["kind"] == "pps_candidate"]
-    assert [(r["name"], r["km"], r["category"]) for r in pps] == [("Masjid Contoh", [JPS reading], "masjid"),
-                                                                  ("SK Contoh", [JPS reading], "school")]
-    assert pps[0]["osm_ref"] == "node/13"
+    assert [(r["name"], r["km"], r["category"]) for r in pps] == [("SK Contoh", 1.1, "school"),     # schools first
+                                                                  ("Masjid Contoh", 0.6, "masjid")]
+    assert pps[1]["osm_ref"] == "node/13"
 
 
 def test_at_most_top_pps():
@@ -110,3 +110,17 @@ def test_a_real_crossing_wins_over_a_nearby_river():
     bridge = way(32, [(6.0, 102.0102), (6.0, 102.0108)], highway="primary", bridge="yes", name="Jambatan Anak")
     b = load_osm.features(PLACE, {"elements": [RIVER, stream, bridge]}, STATIONS)
     assert [(r["name"], r["river"]) for r in b if r["kind"] == "bridge"] == [("Jambatan Anak", "Sg. Anak")]
+
+
+def test_prayer_rooms_are_not_possible_pps():
+    for name in ("Musalla Contoh", "Surau Musolla A", "Mushola B", "Prayer Room C"):
+        assert load_osm.pps_category({"amenity": "place_of_worship", "religion": "muslim", "name": name}) is None
+
+
+def test_schools_and_halls_rank_before_masjid_and_surau():
+    """Husaini 23 Oct: within the distance limit, schools and dewan / balai raya come before masjid / surau."""
+    out = rows(node(40, 6.001, 102.0, amenity="place_of_worship", religion="muslim", name="Masjid Dekat"),
+               node(41, 6.05, 102.0, amenity="school", name="SK Jauh Sikit"),
+               node(42, 6.04, 102.0, name="Balai Raya Contoh"))
+    assert [r["name"] for r in out if r["kind"] == "pps_candidate"] == ["Balai Raya Contoh", "SK Jauh Sikit",
+                                                                       "Masjid Dekat"]

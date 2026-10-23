@@ -70,14 +70,18 @@ def test_risk_question_gets_no_osm_lines():
     assert "PPS" not in text.split("\n", 1)[1].replace(card.ADVICE["WATCH"]["en"], "") and "crosses" not in text
 
 
-def test_long_card_shortens_osm_lines_last_never_drops_them():
+def test_osm_lines_sit_outside_the_cap_and_other_lines_still_fit():
+    """Husaini 23 Oct: up to 3 possible PPS and 2 bridges past the ~750 cap (evacuation / cut-off questions only)."""
     full = card.render(build("cut_off", base=EVIDENCE), "ms")          # stale source + rain + forecast: over the cap
-    assert "Jambatan Contoh merentasi" in full and "Jalan Contoh merentasi" not in full and "tidak dinilai" in full
+    assert "Jambatan Contoh merentasi" in full and "Jalan Contoh merentasi" in full and "tidak dinilai" in full
+    rest = [l for k, l in card._lines(build("cut_off", base=EVIDENCE), "ms", None, False, set(card.FIT_STEPS))
+            if k not in card.OSM_LINES]
+    assert card._length([(None, l) for l in rest]) <= card.MAX_CARD_CHARS + 100     # the cap still trims the rest
     c = build("evacuation", verdict="ACT")
     c["upstream"] = [{"gauge": f"Sg. Contoh di Hulu {i} (F1)", "band": "danger", "rising": True,
                       "arrives_in_h": {"min": 3, "max": 6}} for i in range(4)]
     text = card.render(c, "ms")
-    assert "bukan senarai rasmi" in text and "SK Contoh (1.2 km)" in text
+    assert "SK Contoh (1.2 km); Masjid Contoh (0.8 km); Surau Contoh (2.5 km)" in text
 
 
 def test_key_facts_carry_the_label_and_the_bridge_facts():
@@ -132,3 +136,15 @@ def test_a_numeric_road_ref_is_still_a_name():
     c = build("cut_off", osm)
     assert "Bridge on 223 crosses Sg. Pengkalan Chepa (2 km)" in card.render(c, "en")
     assert card.key_facts(c, lang="en")["bridges"][0].startswith("Bridge on 223")
+
+
+def test_card_lists_schools_and_halls_first():
+    from types import SimpleNamespace
+    from app.agents import data_agent
+    rec = lambda name, cat, km: {"place_id": "p", "kind": "pps_candidate", "osm_ref": name, "name": name,  # noqa: E731
+                                 "category": cat, "river": None, "km": km, "station_key": None, "gauge_km": None,
+                                 "loaded_at": "x"}
+    osm = data_agent.osm_features(SimpleNamespace(records=[rec("Masjid A", "masjid", 0.1), rec("SK B", "school", 2.0),
+                                                           rec("Dewan C", "community_hall", 1.0)]),
+                                  {"place_id": "p"}, None, None)
+    assert [p["name"] for p in osm["pps"]] == ["Dewan C", "SK B", "Masjid A"]
