@@ -155,7 +155,7 @@ def test_phone_and_ic_numbers_are_masked(text, masked):
 
 
 @pytest.mark.parametrize("text", [
-    "station:jps:5521044_DKKI0014", "6021065_DPMS0001", "run 20261022-185555-bcc9", "2026-10-22T10:30:00Z",
+    "station:jps:5521044_DKKI0014", "6021065_DPMS0001", "run 20261022-185555-bcc9", "run 20261023-091453-4139", "2026-10-22T10:30:00Z",
     "5.756620964560449, 102.14462513200138", "hash 645376666066d288", "level 7.18 m (2339 ms)", "26296",
 ])
 def test_ids_times_and_coordinates_are_not_masked(text):
