@@ -43,13 +43,26 @@ def test_good_draft_passes_code_checks():
     (" You can still drive through the water on the main road.", "unsafe"),
     (" Boleh redah air di jalan kampung.", "unsafe"),
     (" Wade across carefully if needed.", "unsafe"),
+    # audit 23 Oct: a negation elsewhere in the sentence no longer clears it
+    (" Don't worry, you can drive through the water to reach the PPS.", "unsafe"),
+    (" Jangan risau, boleh redah air untuk ke PPS.", "unsafe"),
+    (" Never mind the warning, walk through the flood to get home.", "unsafe"),
+    (" You can still wade across the road; avoid the river bank.", "unsafe"),
+    (" You can go through the flooded road on foot.", "unsafe"),
+    (" It is safe to use the road by the river tonight.", "unsafe"),
+    (" Boleh lalu jalan yang banjir dengan kereta.", "unsafe"),
+    (" Drive through the water, it is not dangerous.", "unsafe"),
 ])
 def test_unsafe_advice_is_caught_in_english_and_malay(extra, problem):
     assert problem in kinds(critic.code_checks(GOOD + extra, facts(), EVIDENCE))
 
 
 @pytest.mark.parametrize("extra", [" Do not drive through floodwater.", " Jangan redah air banjir.",
-                                   " Never walk through moving water."])
+                                   " Never walk through moving water.",
+                                   " Do not, under any circumstances, drive through water.",
+                                   " Driving through floodwater is deadly.", " It is not safe to drive through water.",
+                                   " Tidak selamat untuk meredah air.", " Elakkan daripada meredah air banjir.",
+                                   " Avoid crossing the flooded road."])
 def test_warnings_against_going_into_water_are_fine(extra):
     assert critic.code_checks(GOOD + extra, facts(), EVIDENCE) == []
 

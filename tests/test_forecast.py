@@ -62,6 +62,7 @@ def test_jps_level_name_comes_with_the_verdict():
 def test_missing_or_stale_data_is_never_normal(ev):
     fc = verdict(ev)
     assert fc["verdict"] == "INSUFFICIENT_DATA" and fc["confidence"]["label"] == "low"
+    assert fc["level_name"] is None                     # audit 23 Oct: no JPS band from an unusable reading
 
 
 # -- trend ----------------------------------------------------------------------------------------------------

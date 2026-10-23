@@ -46,12 +46,53 @@ RAW_LATEST_SQL = ("SELECT station_key, level_m, observed_at FROM veda_pg.river_l
                   "ORDER BY observed_at DESC")
 FLOOD_NEWEST_SQL = ("SELECT MAX(s.water_level_update_datetime) AS newest "
                     "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s")
-# Advice to go into floodwater. A sentence that also says don't / never / avoid / jangan is a warning, not advice.
-UNSAFE = re.compile(r"\b(wade|wading|walk(ing)? through|driv(e|ing) through|cross(ing)? (the )?(flood|water)|"
-                    r"swim|redah|meredah|harung|mengharung|lalu (jalan|kawasan)\s+(yang\s+)?(banjir|dinaiki air))",
-                    re.IGNORECASE)
-NEGATION = re.compile(r"\b(do not|don't|never|avoid|not safe|jangan|elak|elakkan|tidak selamat|dilarang)\b",
-                      re.IGNORECASE)
+# Advice to go into floodwater (EN + BM). It is a warning, not advice, only when a negation stands right before the
+# phrase (at most 4 words between: "Do not, under any circumstances, drive through") or a danger word follows it
+# ("Driving through floodwater is deadly"). "Don't worry" / "jangan risau" is not a negation (audit 23 Oct).
+UNSAFE = re.compile(
+    r"\b(wade|wading|walk(ing)? (through|across|in)|driv(e|ing) (through|across|into)|swim(ming)?|"
+    r"(go|going|get|getting|head|heading) (through|across|into) (the )?(flood|water|flooded|river)|"
+    r"cross(ing)? (the )?(flooded |flood )?(flood|water|road|river|floodwater)|"
+    r"(use|using|take|taking) the (flooded )?road|safe to (travel|drive|cross|go out|use the road|walk)|"
+    r"redah|meredah|harung|mengharung|"
+    r"(lalu|melalui|melintas|merentas)( jalan| kawasan| sungai)?( yang)? (banjir|dinaiki air|berair|air)|"
+    r"selamat untuk (melalui|meredah|memandu|berjalan|keluar|melintas))", re.IGNORECASE)
+NEGATION = re.compile(r"\b(do not|don't|dont|never|avoid|avoiding|should not|shouldn't|must not|mustn't|cannot|"
+                      r"can't|not safe|not to|jangan|elak|elakkan|tidak selamat|tidak boleh|tak boleh|dilarang|"
+                      r"usah)\b", re.IGNORECASE)
+NOT_A_NEGATION = re.compile(r"\b(don't|dont|do not|never|jangan|tak|tidak|usah|no)\s+(worry|worries|mind|panic|"
+                            r"risau|bimbang|takut|perlu risau|need to worry)\b", re.IGNORECASE)
+DANGER = re.compile(r"\b(dangerous|deadly|unsafe|fatal|berbahaya|bahaya|maut)\b", re.IGNORECASE)
+DANGER_DENIED = re.compile(r"\b(not|no|isn't|tidak|tak|bukan|tiada)\b", re.IGNORECASE)
+NEGATION_GAP = 4                                    # words allowed between the negation and the unsafe phrase
+
+
+def _negated(before):
+    """True when the words just before an unsafe phrase end in a real negation ("don't worry" does not count)."""
+    words = re.findall(r"[\w']+", NOT_A_NEGATION.sub(" ", before))
+    if words and words[-1].lower() in ("not", "tidak", "tak", "bukan"):       # "not safe to ...", "tidak selamat"
+        return True
+    return bool(NEGATION.search(" ".join(words[-(NEGATION_GAP + 2):])))
+
+
+def _danger_after(after):
+    """True when a danger word follows within 6 words and is not denied ("... is deadly", not "is not dangerous")."""
+    words = re.findall(r"[\w']+", after)[:7]
+    for i, w in enumerate(words):
+        if DANGER.fullmatch(w):
+            return not DANGER_DENIED.search(" ".join(words[max(0, i - 2):i]))
+    return False
+
+
+def unsafe_sentences(text):
+    """Sentences that advise going into floodwater - the one check used by the Critic and the safety gate."""
+    out = []
+    for s in _sentences(text or ""):
+        for m in UNSAFE.finditer(s):
+            if not _negated(s[:m.start()]) and not _danger_after(s[m.end():]):
+                out.append(s.strip())
+                break
+    return out
 CONFIDENCE_WORDS = {"high": ("high", "tinggi"), "medium": ("medium", "sederhana"), "low": ("low", "rendah")}
 STALE_WORDS = ("data.gov.my", "flood-warning", "stale", "excluded", "lapuk", "usang", "dikecualikan", "diketepikan",
                "tidak dikemas kini")
@@ -90,9 +131,8 @@ def code_checks(text, facts, evidence, card=None, explanation=None):
         problem = coordinator.draft_problem(text, facts)
     if problem:
         found.append({"type": "wrong_verdict" if "verdict" in problem else "unsupported", "detail": problem})
-    for s in _sentences(text or ""):
-        if UNSAFE.search(s) and not NEGATION.search(s):
-            found.append({"type": "unsafe", "detail": f"advises going into water: {s.strip()[:120]!r}"})
+    for s in unsafe_sentences(text):
+        found.append({"type": "unsafe", "detail": f"advises going into water: {s[:120]!r}"})
     low = (text or "").lower()
     fc = facts.get("forecast")
     if fc and fc["verdict"] != "INSUFFICIENT_DATA":

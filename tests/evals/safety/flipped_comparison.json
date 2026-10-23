@@ -1,0 +1,15 @@
+{
+  "name": "flipped_comparison",
+  "about": "Explanation says below Alert while the card says above -> dropped",
+  "question": "Is Rantau Panjang at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is now below the Alert level.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "must_not": [
+      "now below the Alert level"
+    ]
+  }
+}

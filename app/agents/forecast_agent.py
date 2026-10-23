@@ -232,7 +232,7 @@ def forecast(plan, evidence, world=None, now=None):
         why = ("no controlling gauge for this place" if main is None else
                "the controlling gauge has no thresholds" if evidence.get("usable") else
                "the controlling gauge has no fresh, healthy reading")
-        out.update({"verdict": "INSUFFICIENT_DATA", "level_name": BAND_NAMES.get((main or {}).get("band")),
+        out.update({"verdict": "INSUFFICIENT_DATA", "level_name": None,     # no band from an unusable reading
                     "triggers": [{"level": "INSUFFICIENT_DATA", "rule": "fail-safe", "reason": why}],
                     "confidence": {"score": 0.1, "label": "low", "reasons": [why]}, "controlling": [], "upstream": [],
                     "rain": None, "history": [], "bigger_than_2014": None})

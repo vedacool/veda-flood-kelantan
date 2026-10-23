@@ -20,8 +20,7 @@ AGENT = "System"
 
 
 def _unsafe(text):
-    return [s.strip() for s in critic._sentences(text or "")
-            if critic.UNSAFE.search(s) and not critic.NEGATION.search(s)]
+    return critic.unsafe_sentences(text)
 
 
 def _render(answer, card, lang):

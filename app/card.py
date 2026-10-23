@@ -266,6 +266,26 @@ def numbers(card):
     return _values(render(card, "en") + "\n" + render(card, "ms"))
 
 
+SIDE = r"(above|below|over|under|di atas|di bawah|melebihi|bawah)"
+MARK = r"(alert|warning|danger|waspada|amaran|bahaya|peak|puncak)"
+COMPARISON = re.compile(rf"\b(?P<side>{SIDE})\s+(?:[\w.]+\s+){{0,3}}?(?P<mark>{MARK})\b", re.IGNORECASE)
+SIDE_OF = {"above": "above", "over": "above", "di atas": "above", "melebihi": "above",
+           "below": "below", "under": "below", "di bawah": "below", "bawah": "below"}
+MARK_OF = {"waspada": "alert", "amaran": "warning", "bahaya": "danger", "puncak": "peak"}
+# Words that tell a worried resident all is well - never under a WATCH / PREPARE / ACT card (audit 23 Oct).
+REASSURE = re.compile(
+    r"\b(calm|nothing to worry|no need to (worry|move|evacuate|leave|act|prepare)|no (danger|risk)|"
+    r"(is|are|stays?|remains?|still) (safe|fine|okay|ok|under control)|all (is )?(safe|fine|clear)|"
+    r"tenang|tiada (bahaya|risiko)|tidak perlu (risau|bimbang|pindah|berpindah|keluar|bersedia)|"
+    r"tak perlu (risau|bimbang|pindah|keluar)|jangan (risau|bimbang)|(masih|adalah|kekal) (selamat|terkawal)|"
+    r"keadaan (selamat|terkawal|normal))\b", re.IGNORECASE)
+
+
+def _comparisons(text):
+    return {(MARK_OF.get(m["mark"].lower(), m["mark"].lower()), SIDE_OF[m["side"].lower()])
+            for m in COMPARISON.finditer(text or "")}
+
+
 def explanation_problem(text, card):
     """None if Nemotron's explanation may be inserted, else why not (Husaini 22 Oct night: numbers from the card)."""
     if not isinstance(text, str) or not text.strip():
@@ -278,6 +298,12 @@ def explanation_problem(text, card):
     unknown = sorted(_values(text) - numbers(card))
     if unknown:
         return f"number(s) not in the card: {', '.join(_num(u) for u in unknown[:4])}"
+    shown = _comparisons(render(card, "en") + "\n" + render(card, "ms"))
+    flipped = sorted(f"{s} {m}" for m, s in _comparisons(text) - shown if any(m == k for k, _ in shown))
+    if flipped:
+        return f"says the river is {', '.join(flipped)}, but the card says otherwise"
+    if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
+        return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
     return None
 
 

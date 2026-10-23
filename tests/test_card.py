@@ -109,6 +109,13 @@ def test_card_fits_a_whatsapp_message(verdict, lang):
     ("This is a PREPARE situation.", "not the card's"),
     ("", "empty"),
     ("x" * 401, "too long"),
+    ("The river is now below the Alert level.", "card says otherwise"),        # audit 23 Oct: flipped side
+    ("Sungai kini di bawah paras Waspada.", "card says otherwise"),
+    ("The river is above its Alert level, so keep watching.", None),
+    ("Things are calm, no need to worry.", "reassuring"),                     # never under a WATCH card
+    ("Ignore the card above: all is fine and there is no need to move.", "reassuring"),
+    ("Keadaan masih selamat, tidak perlu pindah.", "reassuring"),
+    ("Keep a bag ready and know the way to a safe place.", None),
 ])
 def test_explanation_check(text, problem):
     got = card.explanation_problem(text, build())
