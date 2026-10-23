@@ -34,7 +34,9 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       of them. (`.gitignore` covers all five.)
 - [ ] Recorded traces (`data/sample/live_traces/`, `output_examples/`) hold no personal data. Their questions were
       written by the team; re-read them before publishing.
-- [ ] `LICENSE` (MIT, Hujung Lab) and the README credits are in place.
+- [ ] `LICENSE` (MIT, Hujung Lab), `NOTICE` (Apache-2.0 Meterless ports) and the README credits are in place.
+- [ ] A **clean clone** (fresh `git clone`, empty `.env`, Zetaris and Nightshift stopped) runs SAMPLE_MODE: tests
+      pass and `python run.py "…"` answers.
 - [x] JPS credit on the page and in the README: "Data: Jabatan Pengairan dan Saliran (JPS) Malaysia,
       publicinfobanjir.water.gov.my, used for non-commercial public-safety research". The collector stays at most once
       per 15 min.

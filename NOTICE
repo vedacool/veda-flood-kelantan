@@ -1,0 +1,12 @@
+VEDA - Vast Earth Data Analyser
+Copyright (c) 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin). Released under the MIT License (LICENSE).
+
+This product includes software adapted from the Meterless project (https://github.com/Meterless/Meterless),
+licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0):
+
+- app/engines/world_model/resolve.py      - Python port of engines/world-model/reference/resolve.ts
+- app/engines/world_model/stable_ids.py   - Python port of engines/world-model/reference/stableIds.ts
+- tests/conformance/test_world_model.py   - Python port of engines/world-model/conformance/runner.ts
+
+Changes: translated from TypeScript to Python; field names in Python style (external_id, external_key, valid_from);
+behaviour, ids, inputs and thresholds unchanged. The original files are Copyright their respective Meterless authors.

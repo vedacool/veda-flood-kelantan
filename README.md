@@ -107,8 +107,8 @@ flowchart LR
 | **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Lightning via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Measured on **23 Oct 2026, 10 live full runs (12:29-13:29 MYT): the AI review completed in 8 of 10**. Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title. | No |
 
-Models are reached only through Meterless **Nightshift** (`meterless/fast`, `meterless/deep`), never
-`meterless/auto` and never NVIDIA directly. Agents get data only through `run_sql()` on **Zetaris**.
+Models are reached only through Meterless **Nightshift** (`meterless/fast`, answered by NVIDIA Nemotron 3.5 Lightning),
+never `meterless/auto` and never NVIDIA directly. Agents get data only through `run_sql()` on **Zetaris**.
 
 ## Data sources and licences
 Every third-party source VEDA uses, its licence or terms, and how VEDA uses it. **No JPS readings are stored in this
@@ -205,19 +205,31 @@ Every commit then:
 Commit messages must carry a backlog ID (`B-xx`). GitHub CI (`.github/workflows/ci.yml`) runs the same checks, plus
 a dependency vulnerability scan and a secret scan of the whole history on every push.
 
-## Developer setup — Postgres store (live mode)
-With Zetaris running and `.env` filled (`VEDA_PG_PASSWORD`, `VEDA_PG_RO_PASSWORD`, `VEDA_PG_WRITER_PASSWORD`,
-`ZETARIS_*`; role passwords 16+ letters/digits):
-```
-python scripts/setup_pg.py
-```
-This script:
-- creates and starts the `veda-pg` container (127.0.0.1:5433 only) and joins it to the Zetaris network;
-- creates the read-only and writer roles;
-- applies `db/schema.sql` and its constraints;
-- registers it in Zetaris as datasource `veda_pg`.
-
-It is safe to re-run, and not needed in SAMPLE_MODE.
+## Live setup (Zetaris + Nightshift, one command)
+Live mode needs Zetaris and Meterless Nightshift running on your machine (SAMPLE_MODE needs neither).
+1. **Zetaris:** run it locally in Docker (Zetaris Participant Setup Guide). In the Zetaris UI, *Management → API
+   Tokens*, create a token - the one manual step on the Zetaris side.
+2. **Nightshift:** install it, add your NVIDIA key **only in Nightshift's Providers tab** (never in `.env`), and pin
+   lane `fast` to `nvidia/nemotron-3.5-lightning-30b-a3b` with an app id `veda-fast` allowed only that lane (Nightshift
+   UI; VEDA checks every answer's served model against it).
+3. **`.env`** (copy `.env.example`): `ZETARIS_API_URL`, `ZETARIS_API_KEY`, `ZETARIS_ORG_ID`, `METERLESS_BASE_URL`,
+   `METERLESS_RUNTIME_TOKEN`, and three `VEDA_PG_*` passwords (16+ letters / digits).
+4. **Everything else is scripted** (idempotent, safe to re-run):
+   ```
+   python scripts/setup_all.py
+   ```
+   veda-pg container (127.0.0.1 only) on the Zetaris network → roles → schema → Zetaris datasource `veda_pg` → curated
+   gauges, peaks and places → Zetaris REST tables (Open-Meteo, data.gov.my) → Zetaris views → the Nov 2024 replay and
+   the SYNTHETIC scenes. Each step is its own script in `scripts/` and stops with a clear message on failure.
+5. **Run in Docker against your local Zetaris and Nightshift:** inside the container `localhost` is the container
+   itself, so point the URLs at the host:
+   ```
+   ZETARIS_API_URL=http://host.docker.internal:8888/api/v1.0
+   METERLESS_BASE_URL=http://host.docker.internal:8088/v1
+   docker run --rm -p 8000:8000 --env-file .env veda
+   ```
+   (Without Docker keep `localhost` / `127.0.0.1`.) Zetaris itself reaches veda-pg at `veda-pg:5432` on the Zetaris
+   Docker network.
 
 ## Collecting river levels (live mode)
 ```
@@ -237,8 +249,68 @@ Pre-existing data components (researched before 22 Oct 2026, from the planning n
   NST); every row keeps its source and URL.
 - Third-party data and its terms: see **Data sources and licences** above.
 
-## AI usage
-Built in Cursor with Claude Code (Anthropic) and the Cursor agent as coding assistants. Delegated agent work is
-logged in `docs/cursor-log.md`. The team designed, reviewed and can explain every module. At runtime VEDA uses NVIDIA
-Nemotron 3.5 Lightning through Meterless Nightshift (the Coordinator and the Critic both use the `fast` lane; see the
-limitation above).
+## AI and Model Usage
+1. **Models (through Meterless Nightshift):** NVIDIA **Nemotron 3.5 Lightning** (`nvidia/nemotron-3.5-lightning-30b-a3b`)
+   on lane `fast`, for two jobs - the Coordinator's short explanation, and the Critic's AI review. No other model
+   answers in VEDA (Super VL is not used). Every call's trace line names the model that **actually answered**, taken
+   from Nightshift's response (`served_model`), with its receipt id; the web page and CLI show it live.
+2. **Agent framework:** none - four agents in plain Python (`app/agents/`) driven by a small state machine
+   (`app/loop.py`); FastAPI + uvicorn serve the API and the web page.
+3. **Sponsor technology:**
+   - **Zetaris** - the data layer: every agent reads data only through `run_sql()` - Postgres `veda_pg` (gauges,
+     thresholds, places, peaks, live JPS levels, replay rows), REST tables (Open-Meteo, data.gov.my) and views.
+   - **Meterless Engine: World Model** (see below) - VEDA's shared world state.
+   - **Meterless Nightshift** - the only AI provider; OpenAI-format HTTP from `app/adapters/nightshift.py`, model route
+     `meterless/fast`, app id `veda-fast`, streaming.
+   - **NVIDIA** - Nemotron 3.5 Lightning, served by NVIDIA's endpoint through Nightshift.
+4. **AI coding tool:** Claude Code (Anthropic) inside Cursor, with the Cursor agent for a few small delegated jobs
+   (logged in `docs/cursor-log.md`); planning and reviews with Claude Cowork. The team designed, reviewed, tested and
+   can explain every module.
+5. **External tools and libraries:** Python 3.13; FastAPI, uvicorn, httpx, requests, beautifulsoup4, psycopg,
+   python-dotenv, pytest (pinned in `requirements.txt` / `requirements-lock.txt`); Docker; Postgres 16 (alpine);
+   gitleaks and pip-audit in CI.
+6. **Data sources:** see **Data sources and licences** - including which data are SYNTHETIC (the SYNTHETIC scenes and
+   all offline fixtures from JPS / MetMalaysia / flood-feed tables, made by `scripts/make_synthetic_scenes.py`).
+7. **Adapted open-source code:** `app/engines/world_model/resolve.py` and `stable_ids.py` are Python ports of the
+   Meterless World Model reference (`resolve.ts`, `stableIds.ts`), and `tests/conformance/test_world_model.py` ports
+   its conformance runner - github.com/Meterless/Meterless, Apache-2.0 (see `NOTICE`).
+8. **Known limitations:** see **Limitations (honest list)**.
+9. **Fallback and sample mode:** `SAMPLE_MODE=true` runs the real agent logic offline on scenes (Nov 2024 replay,
+   SYNTHETIC scenes) and recorded open / synthetic fixtures, with no calls to Zetaris, Nightshift or anything else; the
+   models are replaced by the agents' code fallbacks (the card is code-written; no AI explanation). In live mode, when
+   a model is slow or fails, the card goes out without the AI explanation and the trace says why.
+
+### Meterless Engine: World Model
+- **What it is:** `app/engines/world_model/` - one shared, provenance-stamped store of entities (gauges, places,
+  sources), facts and time-bounded relationships. Every write carries its source; ids are stable; re-ingesting the
+  same data changes nothing; every change is audited.
+- **The feature it powers:** VEDA's shared memory between agents - every reading and forecast fact with its source
+  and time, the source health and circuit-breaker state, the 15-minute memory of each source's status, the Forecast
+  agent's stored verdict that the Critic reads back, the Critic's reviews, and the question radar (intent tags only).
+- **Its passing test:** the conformance checks ported from Meterless (8 checks) plus VEDA's engine tests:
+  ```
+  python -m pytest tests/conformance -v
+  python -m pytest tests/test_world_model_engine.py -v
+  ```
+
+### How VEDA uses Nemotron through Meterless Nightshift
+- **Two AI roles, both Nemotron 3.5 Lightning on lane `fast`:**
+  - **Explanation:** the Coordinator sends the card's key facts, as words in the user's language, and gets back 1-2
+    sentences.
+  - **Critic AI review:** the Critic sends the same key facts plus that explanation and asks one question: does it
+    contradict, exaggerate or downplay any fact? It replies `{ok, reason}`; `ok=false` means one rewrite, then a
+    re-check.
+- **Every call:** streamed, one try, a hard time limit inside the 150 s answer budget, a trace line with the model
+  that actually answered and the Nightshift receipt id.
+- **Measured (real numbers, dated):**
+  - Nightshift cut Nemotron calls at about **45 s** (HTTP 502, measured 22 Oct 2026). VEDA caps each call at **60 s**.
+  - Lightning spends hidden tokens even with reasoning off. Critic-call tests (test harness, 10 calls each,
+    23 Oct): **200 tokens 0/10, 1000 tokens 5/10, 2000 tokens 10/10** completed.
+  - The small facts-only Critic call (test harness, 23 Oct): **10/10 completed twice, 2/2 planted errors rejected
+    each time** (one EN, one BM). Before it, the full-evidence Critic call completed in **1 of 10** live full runs
+    (22-23 Oct).
+  - Live, 10 full runs on **23 Oct 2026, 12:29-13:29 MYT**: explanation shown in **8 of 10**, Critic AI review
+    completed in **8 of 10**.
+- **When the model is slow or fails:** the code-written card always goes out (it never waits on the model). An
+  explanation the AI Critic has not approved is dropped. The Critic's code checks and its own Zetaris re-check run on
+  every answer anyway. The trace says which step fell back and why.
