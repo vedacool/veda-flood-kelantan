@@ -37,7 +37,7 @@ RAIN_WATCH_72H_MM = 100.0
 RAIN_PREPARE_72H_MM = 200.0
 RAIN_PREPARE_24H_MM = 150.0
 BAND_NAMES = {  # JPS level names shown with every verdict (B-21)
-    "below_normal": {"en": "Below normal", "ms": "Bawah normal"},
+    "below_normal": {"en": "Normal", "ms": "Normal"},   # JPS shows Normal / Alert / Warning / Danger only (23 Oct)
     "normal": {"en": "Normal", "ms": "Normal"},
     "alert": {"en": "Alert", "ms": "Waspada"},
     "warning": {"en": "Warning", "ms": "Amaran"},

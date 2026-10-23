@@ -101,7 +101,7 @@ T = {  # fixed wording, BM + EN
                  "ms": "Keyakinan rendah: penyemak VEDA tidak meluluskan penjelasan bertulis, jadi hanya data yang "
                        "telah disemak dipaparkan."},
 }
-BAND = {"below_normal": {"en": "Below normal", "ms": "Bawah normal"}, "normal": {"en": "Normal", "ms": "Normal"},
+BAND = {"below_normal": {"en": "Normal", "ms": "Normal"}, "normal": {"en": "Normal", "ms": "Normal"},   # JPS names only
         "alert": {"en": "Alert", "ms": "Waspada"}, "warning": {"en": "Warning", "ms": "Amaran"},
         "danger": {"en": "Danger", "ms": "Bahaya"}}
 # The verdict as the user reads it (Husaini 23 Oct; tentative, review pack G). Not Waspada / Amaran / Bahaya: those

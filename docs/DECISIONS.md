@@ -185,3 +185,4 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Trapped / stranded question -> the approved ACT advice first (no place: before the place reply; known place: the card's action line, verdict unchanged); evals 20/20 | Husaini 23 Oct (eval) |
 | 2026-10-23 | 'tingkat air' added to the Indonesian word list (BM: paras air); 'tingkat' alone allowed | Husaini 23 Oct |
 | 2026-10-23 | Stranded rule approved; labelled 'Anda terkandas: utamakan keselamatan' first, and a 'local flooding can still trap you' note under a NORMAL verdict (review pack G5) | Husaini 23 Oct |
+| 2026-10-23 | Card shows the JPS level name exactly as JPS does (Normal / Waspada / Amaran / Bahaya); 'Below normal / Bawah normal' was our internal band, not a JPS status - now shown as Normal; stranded guard also rejects 'jangan risau' / 'tak perlu risau' | Husaini 23 Oct |
