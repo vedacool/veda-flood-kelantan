@@ -180,3 +180,4 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Wording check in code (not the model): minus signs, internal terms, Indonesian words in BM (list in review pack G4; not 'aman', never 'Waspada') -> one rewrite, then drop the explanation | Husaini 23 Oct |
 | 2026-10-23 | Draft: 8000 tokens, no retry; never names the verdict; 3 BM + 2 EN style examples (Tanah Merah, style only; code rejects copying the place); 'telepon' added to G4, 'sehingga' stays allowed | Husaini 23 Oct |
 | 2026-10-23 | No trend known -> explanation may not say rising / falling (code check; Tumpat 'turun' was invented); prompt: 24 h range in words | Husaini 23 Oct |
+| 2026-10-23 | At or above Danger: no projected number range (card and AI facts) - 'masih naik / still rising' (+ 'melebihi paras 2014'); straight-line issue stays with Dr Ariff (A5/A5b) | Husaini 23 Oct |

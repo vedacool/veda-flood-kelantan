@@ -132,3 +132,15 @@ def test_critic_rechecks_the_replay_table_in_a_replay():
     assert "veda_pg.replay_levels" in sql and "kind = 'reported'" in sql
     assert "TIMESTAMP '2024-11-27 11:30:00'" in sql                              # MYT 19:30 = UTC 11:30
     assert "river_levels" in critic._raw_sql("_DPMS0003", None)
+
+
+def test_above_danger_shows_direction_not_numbers(offline):
+    """Husaini 23 Oct: 27 Nov 19:30 (10.94 m, Danger 9 m) - no 13.75-14.54 m range, 'masih naik' + 2014."""
+    r = loop.run("Rantau Panjang selamat ke?", llm=approve_llm(), log_dir=offline, quiet=True, replay="nov2024",
+                 at=SCENE_2)
+    text, c = r["answer"]["text"], r["card"]
+    assert c["above_danger"] and c["range_24h"] is None
+    assert "24 jam akan datang: masih naik, melebihi paras 2014." in text
+    assert "13.75" not in text and "14.54" not in text
+    facts = __import__("app.card", fromlist=["key_facts"]).key_facts(c, r["forecast"], "ms")
+    assert "next_24h" not in facts and facts["trend"] == "naik"

@@ -57,6 +57,10 @@ T = {  # fixed wording, BM + EN
     "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
     "falling": {"en": "falling - no level projected", "ms": "turun - tiada unjuran paras"},
+    # above Danger (Husaini 23 Oct): no number range, only the direction (+ 2014 when higher)
+    "above_trend": {"rising": {"en": "still rising", "ms": "masih naik"}, "falling": {"en": "falling", "ms": "turun"},
+                    "steady": {"en": "steady", "ms": "stabil"}},
+    "higher_2014": {"en": "higher than 2014", "ms": "melebihi paras 2014"},
     "tidal": {"en": "trend not projected (tide-influenced gauge)", "ms": "trend tidak diunjurkan (stesen dipengaruhi pasang surut)"},
     "confidence": {"en": "Confidence", "ms": "Keyakinan"},
     "conf_label": {"high": {"en": "high", "ms": "tinggi"}, "medium": {"en": "medium", "ms": "sederhana"},
@@ -161,7 +165,8 @@ def build(plan, evidence, forecast):
                 card["comparison"][key] = round(main["level_m"] - th[f"{key}_m"], 2)
                 card["thresholds"][key] = th[f"{key}_m"]
         rng = (trend.get("projection_m") or {}).get("24h")
-        card["range_24h"] = rng
+        card["above_danger"] = th.get("danger_m") is not None and main["level_m"] >= th["danger_m"]
+        card["range_24h"] = None if card["above_danger"] else rng      # Husaini 23 Oct: no number above Danger
         hist = fc.get("history") or []
         if hist:
             top = max(hist, key=lambda h: h["peak_m"])
@@ -388,6 +393,15 @@ def _lines(card, lang, explanation, low_confidence, drop):
         r = card["range_24h"]
         out.append(("range", f"{T['next24'][lang]}: {_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
                              f"{T['confidence'][lang]}: {conf}."))
+    elif card.get("above_danger") and g:
+        words = [T["above_trend"][card["trend"]][lang]] if card.get("trend") else []
+        peak = card.get("peak") or {}
+        above_2014 = (card.get("vs_2014") or {}).get("diff_m", -1) > 0 or (
+            peak.get("event") == "Dec 2014" and peak.get("diff_m", -1) > 0)
+        if above_2014:
+            words.append(T["higher_2014"][lang])
+        out.append(("range", (f"{T['next24'][lang]}: {', '.join(words)}. " if words else "")
+                    + f"{T['confidence'][lang]}: {conf}."))
     elif card.get("falling") and g:
         out.append(("range", f"{T['next24'][lang]}: {T['falling'][lang]}. {T['confidence'][lang]}: {conf}."))
     else:
