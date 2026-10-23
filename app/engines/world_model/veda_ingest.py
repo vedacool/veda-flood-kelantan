@@ -172,7 +172,7 @@ def build_network(world, agent, run_id, results=None):
             "sources": len(SOURCES)}
 
 
-def ingest_readings(world, agent, run_id, check=None, results=None):
+def ingest_readings(world, agent, run_id, check=None, results=None, rain_alone=True):
     """Current facts for covered places. River facts carry the gauge's reading time; rain the forecast window end;
     the forecast its date. check(kind, row) -> health dict (the Data & Reconciler agent's checks) is stored with each fact;
     a reading that fails a check is still written, with low confidence, so the gap stays visible.
@@ -212,15 +212,17 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
     windows, _ = optional(RAIN_WINDOW_SQL, "world: rain forecast windows")
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
     inputs, qh = optional(PLACE_INPUTS_SQL, "world: place risk inputs")
-    view = "veda.place_risk_inputs"
-    if results is not None and results.get(PLACE_INPUTS_SQL, True) is None:
+    view, rain = "veda.place_risk_inputs", "joined"
+    if results is not None and results.get(PLACE_INPUTS_SQL, True) is None and not rain_alone:
+        inputs, rain = [], "skipped"                  # Open-Meteo circuit open: not called for 15 min
+    elif results is not None and results.get(PLACE_INPUTS_SQL, True) is None:
         # Husaini 23 Oct: one source failing never takes another down. place_risk_inputs also joins the MetMalaysia
         # forecast (data.gov.my, may answer HTTP 429) - read the Open-Meteo rain on its own instead.
         try:
             inputs, qh = _sql(PLACE_RAIN_SQL, agent, PURPOSES[PLACE_RAIN_SQL])
-            view = "veda.rain_24h_by_point"
+            view, rain = "veda.rain_24h_by_point", "alone"
         except zetaris.ZetarisError:
-            inputs = []
+            inputs, rain = [], "failed"
     today_myt = datetime.now(config.MYT).date().isoformat()   # the forecast row is "today" in Malaysia time
     for p in inputs:
         pid = place_id(p["place_id"])
@@ -234,7 +236,7 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
                         check("mygov_forecast", p) if check else None)
             world.assert_fact(pid, "met_forecast_today", {"summary": p["forecast_today"],
                                                           "when": p["forecast_today_when"]}, confidence=0.7, source=fsrc)
-    return {"gauges": n, "places": len(inputs), "unhealthy": unhealthy}
+    return {"gauges": n, "places": len(inputs), "unhealthy": unhealthy, "rain": rain}
 
 
 

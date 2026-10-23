@@ -61,10 +61,59 @@ def test_data_gov_my_429_still_gives_the_river_answer(down, question, lang):
     assert not any(s["action"] == "data.unavailable" for s in steps)
 
 
-def test_place_lookup_retries_the_known_names_next_time(down, monkeypatch):
+def test_place_lookup_retries_the_known_names_after_15_minutes(down, monkeypatch):
     from app import trace
     trace.start_run("t", log_dir=down, quiet=True)
     assert gazetteer.resolve("Tumpat").status == "found"
     monkeypatch.setattr(gazetteer.zetaris, "run_sql", REAL)                   # data.gov.my is back
-    assert gazetteer.resolve("Machang").known == "Machang"                    # not cached as "unknown"
+    assert gazetteer.resolve("Machang").known is None                         # < 15 min: not asked again yet
+    later = gazetteer.time.monotonic() + gazetteer.KNOWN_RETRY_S + 1
+    monkeypatch.setattr(gazetteer.time, "monotonic", lambda: later)
+    assert gazetteer.resolve("Machang").known == "Machang"                    # retried: not cached as "unknown"
     trace.end_run("success")
+
+
+# -- Husaini 23 Oct: one breaker per SOURCE - a long data.gov.my outage never trips Open-Meteo ---------------------
+def test_long_data_gov_my_outage_keeps_rain_and_recovers(down, monkeypatch):
+    """10 questions over 30 min while data.gov.my answers 429: rain keeps arriving, MetMalaysia says 'not checked',
+    the data.gov.my breaker opens (so data.gov.my is not hammered) and Open-Meteo's never counts a failure; when
+    data.gov.my is back, the half-open trial closes its breaker."""
+    from datetime import datetime, timedelta, timezone
+    from app import trace
+    t0 = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+    clock = {"now": t0}
+
+    class Wall(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock["now"]
+    monkeypatch.setattr(data_agent, "datetime", Wall)
+    asked = []
+
+    def counting(sql, agent, purpose=None, **kw):
+        if any(t in sql for t in MYGOV):
+            asked.append(clock["now"])
+        return mygov_429(sql, agent, purpose, **kw)
+    monkeypatch.setattr(zetaris, "run_sql", counting)
+    w = WorldModel()
+    trace.start_run("long outage", log_dir=down, quiet=True)
+    try:
+        plan = {"intent": "risk_check", "effort": "full", "place": gazetteer.resolve("Tumpat").place,
+                "sources": ["jps_levels", "open_meteo", "mygov_forecast", "mygov_warning"]}
+        for i in range(10):                                            # every 3 min for 30 min
+            clock["now"] = t0 + timedelta(minutes=3 * i)
+            ev = data_agent.gather(plan, w, pre=data_agent.prefetch(w))
+            assert ev["usable"] and ev["context"]["rain"]["rain_next_24h_mm"] == 12.5, i
+            assert ev["sources"]["mygov_forecast"]["status"] == "not_checked", i
+            assert ev["sources"]["mygov_warning"]["status"] == "not_checked", i
+            assert data_agent._breaker_state(w, "open_meteo") == (0, None), i
+        fails, until = data_agent._breaker_state(w, "data_gov_my")
+        assert until is not None and fails >= 3                        # open: data.gov.my left alone
+        assert sorted({(a - t0).seconds // 60 for a in asked}) == [0, 3, 6, 21]   # 3 fails, open; one trial at 21 min
+        monkeypatch.setattr(zetaris, "run_sql", REAL)                  # data.gov.my is back
+        clock["now"] = until + timedelta(minutes=1)                    # half-open: one trial call
+        ev = data_agent.gather(plan, w, pre=data_agent.prefetch(w))
+        assert data_agent._breaker_state(w, "data_gov_my") == (0, None)
+        assert ev["sources"]["mygov_warning"]["status"] != "not_checked"
+    finally:
+        trace.end_run("success")

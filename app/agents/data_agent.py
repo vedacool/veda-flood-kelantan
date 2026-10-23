@@ -62,9 +62,13 @@ PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", C
                  WARNING_SQL: "MetMalaysia warnings", OSM_SQL: "OpenStreetMap: possible PPS + bridges (B-73)"})
 # Which breaker guards which query (B-15). The rain + MET forecast view is one query (place_risk_inputs).
 JPS_CORE = set(READINGS_SQL[:2])                       # gauge reading times + gauge status
+# Husaini 23 Oct: one breaker per SOURCE, so a data.gov.my outage never trips Open-Meteo. place_risk_inputs joins
+# Open-Meteo rain and the data.gov.my forecast: it sits behind data.gov.my, and when it fails the rain is read on its
+# own (veda_ingest.PLACE_RAIN_SQL) - which also tells whose failure it was (record_sources).
 BREAKER_OF = {READINGS_SQL[0]: "jps_levels", READINGS_SQL[1]: "jps_levels",
-              READINGS_SQL[2]: "rain_and_forecast", READINGS_SQL[3]: "rain_and_forecast",
-              WARNING_SQL: "mygov_warning", FLOOD_WARNING_SQL: "mygov_flood"}
+              READINGS_SQL[2]: "open_meteo", READINGS_SQL[3]: "data_gov_my",
+              WARNING_SQL: "data_gov_my", FLOOD_WARNING_SQL: "data_gov_my"}
+BREAKER_OF_TABLE = {"open_meteo": "open_meteo", "mygov_forecast": "data_gov_my"}    # REFRESHABLE key -> breaker
 OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL, OSM_SQL}
 FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
@@ -528,6 +532,25 @@ def record_call(world, key, ok, wall, run_id, why=None):
                status="success" if ok else "fallback", decision="circuit breaker (B-15)")
 
 
+def record_sources(world, sqls, skipped, results, rain, wall, run_id):
+    """One breaker update per SOURCE that was asked this run (Husaini 23 Oct). rain = how the place rain arrived
+    (veda_ingest.ingest_readings): 'joined' | 'alone' | 'failed' | 'skipped'."""
+    asked = [q for q in sqls if q in BREAKER_OF and q not in skipped]
+    ok = {"jps_levels": None, "open_meteo": None, "data_gov_my": None}
+    for q in asked:
+        key = BREAKER_OF[q]
+        if q == READINGS_SQL[3] and results.get(q) is None:
+            if rain == "alone":                       # rain read on its own -> the data.gov.my part failed
+                ok["data_gov_my"] = False
+            continue                                  # rain unreadable too: not data.gov.my's failure to count
+        ok[key] = (ok[key] is not False) and results.get(q) is not None
+    if rain in ("joined", "alone", "failed") and READINGS_SQL[2] in asked:
+        ok["open_meteo"] = ok["open_meteo"] is not False and rain != "failed"
+    for key, good in ok.items():
+        if good is not None:
+            record_call(world, key, good, wall, run_id)
+
+
 def prefetch(world, now=None, replay=None):
     """The part of gathering that needs no plan: refresh an old forecast table, then fetch the network, the
     readings, the data clock and /flood-warning AT THE SAME TIME and load them into the World Model. The loop runs
@@ -539,9 +562,15 @@ def prefetch(world, now=None, replay=None):
     run_id = run.run_id if run else None
     events_before = len(world.store.events)
     wall = datetime.now(timezone.utc)               # the breaker runs on real time, also in a replay's past clock
-    # audit 23 Oct: the refresh sits behind the breaker - Zetaris down means no refresh tries at all
-    refresh = not replay and not any(_is_open(world, k, wall) for k in ("jps_levels", "rain_and_forecast"))
-    notes = [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n] if refresh else []
+    # audit 23 Oct: the refresh sits behind the breaker - Zetaris down means no refresh tries at all; and a table
+    # is not refreshed while its own source's circuit is open (Husaini 23 Oct: per source)
+    refresh = not replay and not _is_open(world, "jps_levels", wall)
+    notes = []
+    for key in REFRESHABLE if refresh else ():
+        if _is_open(world, BREAKER_OF_TABLE[key], wall):
+            notes.append(f"{LABEL[key]}: not refreshed - {BREAKER_OF_TABLE[key]} circuit open.")
+        else:
+            notes += [n for n in (_refresh_if_old(world, key, now, run_id),) if n]
     if not replay and not refresh:
         notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
@@ -563,14 +592,13 @@ def prefetch(world, now=None, replay=None):
     try:
         results = fetch_all([q for q in sqls if q not in skipped], AGENT, optional=OPTIONAL_SQL)
         results.update({q: None for q in skipped})
-        if not replay:
-            for key in {BREAKER_OF[q] for q in sqls if q in BREAKER_OF and q not in skipped}:
-                ok = all(results.get(q) is not None for q in sqls if BREAKER_OF.get(q) == key)
-                record_call(world, key, ok, wall, run_id)
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
         counts = (ingest_replay(world, AGENT, run_id, rsql, now, check=check, results=results) if replay else
-                  ingest_readings(world, AGENT, run_id, check=check, results=results))
+                  ingest_readings(world, AGENT, run_id, check=check, results=results,
+                                  rain_alone=not _is_open(world, "open_meteo", wall)))
+        if not replay:
+            record_sources(world, sqls, skipped, results, counts.get("rain"), wall, run_id)
     except zetaris.ZetarisError as e:
         if not replay:
             record_call(world, "jps_levels", False, wall, run_id, f"{e.kind}: {e}")

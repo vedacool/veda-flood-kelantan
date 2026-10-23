@@ -117,15 +117,15 @@ def test_insufficient_card_shows_the_last_reading_as_too_old():
 def test_three_failures_open_the_circuit_for_15_minutes_then_half_open():
     w = WorldModel()
     for i in range(2):
-        data_agent.record_call(w, "rain_and_forecast", False, NOW, "r")
-        assert not data_agent.circuit_open(w, "rain_and_forecast", NOW)
-    data_agent.record_call(w, "rain_and_forecast", False, NOW, "r")
-    assert data_agent.circuit_open(w, "rain_and_forecast", NOW + timedelta(minutes=14))
-    assert not data_agent.circuit_open(w, "rain_and_forecast", NOW + timedelta(minutes=16))      # half-open trial
-    data_agent.record_call(w, "rain_and_forecast", False, NOW + timedelta(minutes=16), "r")      # trial fails
-    assert data_agent.circuit_open(w, "rain_and_forecast", NOW + timedelta(minutes=20))          # open again
-    data_agent.record_call(w, "rain_and_forecast", True, NOW + timedelta(minutes=40), "r")       # trial succeeds
-    assert data_agent._breaker_state(w, "rain_and_forecast") == (0, None)
+        data_agent.record_call(w, "open_meteo", False, NOW, "r")
+        assert not data_agent.circuit_open(w, "open_meteo", NOW)
+    data_agent.record_call(w, "open_meteo", False, NOW, "r")
+    assert data_agent.circuit_open(w, "open_meteo", NOW + timedelta(minutes=14))
+    assert not data_agent.circuit_open(w, "open_meteo", NOW + timedelta(minutes=16))      # half-open trial
+    data_agent.record_call(w, "open_meteo", False, NOW + timedelta(minutes=16), "r")      # trial fails
+    assert data_agent.circuit_open(w, "open_meteo", NOW + timedelta(minutes=20))          # open again
+    data_agent.record_call(w, "open_meteo", True, NOW + timedelta(minutes=40), "r")       # trial succeeds
+    assert data_agent._breaker_state(w, "open_meteo") == (0, None)
 
 
 def test_a_success_resets_the_count():
@@ -169,7 +169,8 @@ def test_rain_failure_does_not_take_the_gauges_down(offline, monkeypatch):
             "sources": ["jps_levels", "open_meteo", "mygov_forecast"]}
     ev = data_agent.gather(plan, w)
     assert ev["usable"] and ev["context"]["rain"] is None and ev["sources"]["open_meteo"]["status"] == "failed"
-    assert data_agent._breaker_state(w, "rain_and_forecast")[0] == 1
+    assert data_agent._breaker_state(w, "open_meteo")[0] == 1        # rain unreadable alone too: Open-Meteo's failure
+    assert data_agent._breaker_state(w, "data_gov_my")[0] == 0       # not counted against data.gov.my
 
 
 # -- audit 23 Oct: a hung or down Zetaris cannot stretch a run --------------------------------------------------
@@ -191,7 +192,8 @@ def test_failed_refresh_is_remembered_and_not_retried_for_15_minutes(monkeypatch
 def test_open_breaker_skips_the_refresh(offline, monkeypatch):
     w = WorldModel()
     for _ in range(3):
-        data_agent.record_call(w, "rain_and_forecast", False, datetime.now(timezone.utc), "r")
+        for key in ("open_meteo", "data_gov_my"):
+            data_agent.record_call(w, key, False, datetime.now(timezone.utc), "r")
     monkeypatch.setattr(data_agent, "_refresh_if_old", lambda *a, **k: pytest.fail("refresh must be skipped"))
     pre = data_agent.prefetch(w)
     assert any("not refreshed" in n for n in pre["notes"])
@@ -247,7 +249,7 @@ def test_critic_does_not_requery_a_remembered_or_broken_source(monkeypatch):
     assert r["flood_warning"]["status"] == "skipped" and not r["problems"] and not calls
     w2 = WorldModel()
     for _ in range(3):
-        data_agent.record_call(w2, "mygov_flood", False, datetime.now(timezone.utc), "r")
+        data_agent.record_call(w2, "data_gov_my", False, datetime.now(timezone.utc), "r")
     r = critic.requery({"context": {"gauges": []}, "cross_check": {"status": "not_checked"}}, w2, "r")
     assert r["flood_warning"]["detail"] == "not re-queried (circuit open)" and not calls
 

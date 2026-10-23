@@ -14,6 +14,7 @@ close spelling (difflib, "Did you mean...?") -> known Kelantan place not covered
 import difflib
 import math
 import re
+import time
 from dataclasses import dataclass, field
 
 from app import trace
@@ -24,6 +25,7 @@ FILLER = {"bandar", "jajahan", "daerah", "pekan", "town", "city", "district", "o
           "dekat", "the", "kawasan", "area"}
 CLOSE_MATCH = 0.75          # difflib ratio for "Did you mean ...?" (plain spelling similarity)
 AGENT = "Gazetteer"
+KNOWN_RETRY_S = 15 * 60     # after a failed read of the known names, wait like the circuit breaker (data.gov.my 429)
 
 PLACES_SQL = ("SELECT a.alias_norm, p.place_id, p.name, p.district, p.kind, p.lat, p.lon "
               "FROM veda_pg.place_aliases a JOIN veda_pg.places p ON p.place_id = a.place_id")
@@ -61,10 +63,12 @@ def _load(agent):
     """Aliases (veda-pg) and known Kelantan place names, read once per process through Zetaris.
     The known names come from the MetMalaysia forecast list - a data.gov.my REST table that Zetaris may call live.
     They only shape the reply for an UNCOVERED name, so a failure there (e.g. data.gov.my HTTP 429, found live 23 Oct)
-    never blocks finding a covered place: it is traced as "not checked" and tried again on the next call."""
+    never blocks finding a covered place: it is traced as "not checked" and tried again after 15 min."""
     if "aliases" not in _cache:
         rows = zetaris.run_sql(PLACES_SQL, agent=agent, purpose="gazetteer: covered places and aliases").records
         _cache["aliases"] = {r["alias_norm"]: r for r in rows}
+    if "known" not in _cache and time.monotonic() < _cache.get("known_retry_at", 0):
+        return _cache["aliases"], {}                  # failed < 15 min ago: data.gov.my not asked again yet
     if "known" not in _cache:
         try:
             known = zetaris.run_sql(KNOWN_KELANTAN_SQL, agent=agent,
@@ -74,7 +78,8 @@ def _load(agent):
             trace.step(agent, "gazetteer.known", output_summary=f"not checked: {e.kind}", status="fallback",
                        source="data.gov.my", decision="Known Kelantan names (MetMalaysia list, data.gov.my) could not "
                        "be read -> covered places are still found; an uncovered name gets the plain 'not covered' "
-                       "reply; tried again next time")
+                       f"reply; tried again in {KNOWN_RETRY_S // 60} min")
+            _cache["known_retry_at"] = time.monotonic() + KNOWN_RETRY_S
             return _cache["aliases"], {}
     return _cache["aliases"], _cache["known"]
 
