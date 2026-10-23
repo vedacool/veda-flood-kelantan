@@ -44,7 +44,8 @@ BAND_NAMES = {  # JPS level names shown with every verdict (B-21)
     "danger": {"en": "Danger", "ms": "Bahaya"},
 }
 NOT_CHECKED = ["MetMalaysia warnings (used to pick the full path, not yet in the verdict)", "official warnings / evacuation orders (no source yet)",
-               "step-down wait of 12-24 h (A3, needs a verdict history)"]
+               "step-down wait of 12-24 h (A3, needs a verdict history)",
+               "JKR road closures and official PPS openings (no source; OSM shows possible PPS and bridges only)"]
 
 
 def _usable(g):

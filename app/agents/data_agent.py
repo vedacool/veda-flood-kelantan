@@ -25,7 +25,7 @@ from app.adapters import zetaris
 from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
 from app.engines.world_model.veda_ingest import (MIN_7D_SQL, NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
-                                                 ingest_readings, ingest_replay, place_id, replay_sqls)
+                                                 ingest_readings, ingest_replay, place_id, replay_sqls, station_id)
 
 AGENT = "Data & Reconciler"
 SOURCES = ("jps_levels", "open_meteo", "mygov_forecast", "mygov_warning")   # what a plan may ask for
@@ -52,14 +52,18 @@ FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current
                      "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s")
 WARNING_SQL = ("SELECT w.heading_en, w.text_en, w.text_bm, w.valid_from, w.valid_to, w.warning_issue.issued AS issued "
                "FROM veda_wx.mygov_warning LATERAL VIEW explode(data) AS w")
+# B-73: OpenStreetMap features near each place (possible PPS, bridges over rivers), loaded once by scripts/load_osm.py
+OSM_SQL = ("SELECT place_id, kind, osm_ref, name, category, river, km, station_key, gauge_km, loaded_at "
+           "FROM veda_pg.osm_place_features")
+OSM_INTENTS = ("evacuation", "cut_off")            # the questions that get OSM lines on the card
 PURPOSES.update({FLOOD_WARNING_SQL: "cross-check: data.gov.my /flood-warning", CLOCK_SQL: "data clock",
-                 WARNING_SQL: "MetMalaysia warnings"})
+                 WARNING_SQL: "MetMalaysia warnings", OSM_SQL: "OpenStreetMap: possible PPS + bridges (B-73)"})
 # Which breaker guards which query (B-15). The rain + MET forecast view is one query (place_risk_inputs).
 JPS_CORE = set(READINGS_SQL[:2])                       # gauge reading times + gauge status
 BREAKER_OF = {READINGS_SQL[0]: "jps_levels", READINGS_SQL[1]: "jps_levels",
               READINGS_SQL[2]: "rain_and_forecast", READINGS_SQL[3]: "rain_and_forecast",
               WARNING_SQL: "mygov_warning", FLOOD_WARNING_SQL: "mygov_flood"}
-OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL}
+OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL, OSM_SQL}
 FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
@@ -539,8 +543,9 @@ def prefetch(world, now=None, replay=None):
     if not replay and not refresh:
         notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
-    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
-            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL] + ([] if now else [CLOCK_SQL]))
+    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL, OSM_SQL] if replay else
+            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL, OSM_SQL]
+            + ([] if now else [CLOCK_SQL]))
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
     if not replay and FLOOD_WARNING_SQL in sqls and FLOOD_WARNING_SQL not in skipped and remembered(world, "mygov_flood",
                                                                                                     wall):
@@ -578,6 +583,32 @@ def prefetch(world, now=None, replay=None):
                details={"network": net, "unhealthy": counts["unhealthy"], "queries_in_parallel": len(sqls)})
     return {"clock": clock, "notes": notes, "results": results, "events_added": added,
             "replay": {"scenario": replay, "at": _iso(clock)} if replay else None}
+
+
+def osm_features(result, place, world, clock):
+    """B-73: OpenStreetMap features for one place - {'status', 'pps', 'bridges', 'loaded_at'}. Possible PPS are
+    never official or open; a bridge is a fact (it crosses this river, this far away) plus the band of the nearest JPS
+    gauge on that river, only when that gauge has a fresh or aging, healthy reading. No prediction (Husaini 23 Oct)."""
+    if result is None:
+        return {"status": "failed", "pps": [], "bridges": [], "loaded_at": None}
+    # names are text even when Zetaris reads a road ref such as "223" as a number (found live 23 Oct)
+    rows = [r for r in result.records if r["place_id"] == (place or {}).get("place_id")]
+    out = {"status": "ok", "loaded_at": max((str(r["loaded_at"]) for r in rows), default=None),
+           "pps": [{"name": str(r["name"]), "category": r["category"], "km": r["km"]}
+                   for r in sorted(rows, key=lambda r: r["km"]) if r["kind"] == "pps_candidate"],
+           "bridges": []}
+    builder = ContextBuilder(world)
+    for r in sorted((r for r in rows if r["kind"] == "bridge"), key=lambda r: r["km"]):
+        band = gauge_name = None
+        if r["station_key"]:
+            g = builder.gauge(station_id(r["station_key"]), "bridge", "nearest JPS gauge on the bridge's river", clock)
+            gauge_name = g["name"]
+            if (g["level_m"] is not None and freshness("jps_levels", g["age_minutes"]) in ("fresh", "aging")
+                    and (g["health"] or {"ok": True})["ok"]):
+                band = g["band"]
+        out["bridges"].append({"name": str(r["name"]), "river": str(r["river"]), "km": r["km"], "band": band,
+                               "gauge": gauge_name, "gauge_km": r["gauge_km"], "has_gauge": bool(r["station_key"])})
+    return out
 
 
 def gather(plan, world, now=None, pre=None):
@@ -666,6 +697,15 @@ def gather(plan, world, now=None, pre=None):
                    decision="; ".join(f"{r['quantity']}: {r['rule']} - {r['reason']}" for r in reconciliation[:3]),
                    details={"reconciliation": reconciliation})
 
+    osm = None
+    if plan.get("intent") in OSM_INTENTS and ctx["found"]:
+        osm = osm_features(pre.get("results", {}).get(OSM_SQL), plan["place"], world, clock)
+        trace.step(AGENT, "data.osm", input_summary=f"{plan['intent']}: {ctx['place'].get('name')}",
+                   output_summary=(f"{len(osm['pps'])} possible PPS, {len(osm['bridges'])} bridge(s)"
+                                   if osm["status"] == "ok" else "OpenStreetMap table could not be read"),
+                   source="openstreetmap", status="success" if osm["status"] == "ok" else "fallback",
+                   decision="Possible PPS are not an official list; bridges are facts only, no prediction")
+
     controlling = next((g for g in ctx.get("gauges", []) if g["role"] == "controlling"), None)
     usable = bool(controlling and controlling["level_m"] is not None and controlling["freshness"] in ("fresh", "aging")
                   and (controlling["health"] or {"ok": True})["ok"])
@@ -679,5 +719,5 @@ def gather(plan, world, now=None, pre=None):
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
-            "met_warnings": warnings, "replay": replay, "healing": healing,
+            "met_warnings": warnings, "replay": replay, "healing": healing, "osm": osm,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

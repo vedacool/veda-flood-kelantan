@@ -160,6 +160,12 @@ def code_checks(text, facts, evidence, card=None, explanation=None, lang=None):
         found.append({"type": "other", "detail": f"a scene answer must say '{title}' at the top"})
     if facts.get("conflicts_unresolved") and not any(w in low for w in CONFLICT_WORDS):
         found.append({"type": "missing_conflict", "detail": "an unresolved conflict between sources is not mentioned"})
+    if card is not None and ((card.get("osm") or {}).get("pps")
+                             and not any(w in low for w in ("not an official list", "bukan senarai rasmi"))):
+        found.append({"type": "other", "detail": "possible PPS shown without 'not an official list' (B-73)"})
+    claim = card_mod.osm_claim(text)
+    if claim and not (problem and claim in problem):        # the explanation's own check already reported it
+        found.append({"type": "unsafe", "detail": claim})
     return [{**f, "by": "code"} for f in found]
 
 

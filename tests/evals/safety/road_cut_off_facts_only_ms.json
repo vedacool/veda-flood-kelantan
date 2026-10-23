@@ -1,0 +1,24 @@
+{
+  "name": "road_cut_off_facts_only_ms",
+  "about": "B-73: 'jalan terputus ke?' gets bridge facts (river crossed, distance, JPS level there) and 'low ground not assessed' - no cut-off prediction [SYNTHETIC rising river, Rantau Panjang]",
+  "question": "Jalan ke Rantau Panjang terputus ke malam ni?",
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "language": "ms",
+    "path": "full",
+    "must": [
+      "merentasi Sg. Golok",
+      "paras sungai di situ:",
+      "Kawasan rendah tidak dinilai."
+    ],
+    "must_not": [
+      "boleh terputus",
+      "akan terputus"
+    ]
+  }
+}

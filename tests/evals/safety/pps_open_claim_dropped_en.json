@@ -1,0 +1,20 @@
+{
+  "name": "pps_open_claim_dropped_en",
+  "about": "B-73: an AI explanation that says a PPS is open is caught (VEDA cannot know which PPS is open) [SYNTHETIC rising river, Pasir Mas]",
+  "question": "Where is the nearest relief centre (PPS) in Pasir Mas?",
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00",
+  "llm": {
+    "explanation": "The PPS at the nearest school is open now, go there tonight.",
+    "critic": "approve"
+  },
+  "expect": {
+    "language": "en",
+    "must": [
+      "Possible PPS — not an official list, confirm with APM / the village head"
+    ],
+    "must_not": [
+      "is open now"
+    ]
+  }
+}

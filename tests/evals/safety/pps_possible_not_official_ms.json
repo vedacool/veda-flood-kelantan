@@ -1,0 +1,22 @@
+{
+  "name": "pps_possible_not_official_ms",
+  "about": "B-73: 'PPS terdekat?' lists possible PPS from OpenStreetMap, labelled not official, credited ODbL; never 'dibuka' [SYNTHETIC rising river, Rantau Panjang]",
+  "question": "PPS terdekat dengan Rantau Panjang kat mana?",
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "language": "ms",
+    "path": "full",
+    "must": [
+      "Kemungkinan PPS — bukan senarai rasmi, sahkan dengan APM / ketua kampung:",
+      "© OpenStreetMap contributors (ODbL)"
+    ],
+    "must_not": [
+      "dibuka"
+    ]
+  }
+}

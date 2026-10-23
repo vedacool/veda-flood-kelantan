@@ -221,6 +221,31 @@ backup's **own JPS band** (Normal / Alert / Warning / Danger) and its trend, and
 **H3.** Any travel times you know for Jenob → Rantau Panjang, Salor → Tambatan D'Raja, Air Mulih → Tendong?
 > Answer: ______
 
+## I. Bridges and "will my road be cut off?" — ~10 min (added 23 Oct, B-73)
+
+Since 23 Oct, a question such as "jalan ke Rantau Panjang terputus ke?" gets **facts only** from OpenStreetMap: each
+road bridge within 10 km that crosses a named river, its distance, and the JPS level at the nearest JPS gauge on that
+river (only a gauge within 10 km of the bridge, only a fresh reading). Example: *"Jambatan X merentasi Sg Golok
+(2.1 km); paras sungai di situ: Bahaya."* plus *"Kawasan rendah tidak dinilai."* VEDA says nothing about whether the
+road will be cut off. Husaini 23 Oct: no "boleh terputus" / "may be cut off" until you approve a rule.
+
+**Proposed rule (TENTATIVE - not built):** when the nearest JPS gauge on the bridge's river (within 10 km) is at
+**Warning or above**, the bridge line adds *"jalan di sini boleh terputus - jangan merentas jika air di atas jalan"* /
+*"this crossing may be cut off - never cross water over the road"*. At Alert: no extra words.
+
+**I1.** Is "Warning or above at the nearest gauge on the same river" a fair trigger for "may be cut off"? Or Danger
+only? Or should a bridge never get a prediction, only the level?
+> Answer: ______
+
+**I2.** Is 10 km between the bridge and the gauge too far for "paras sungai di situ" (river level there)? Should the
+line name the gauge and its distance instead (e.g. "stesen Rantau Panjang, 0.5 km: Bahaya")?
+> Answer: ______
+
+**I3.** Low-lying roads away from rivers (e.g. roads that flood from rain or backwater) are not assessed (no
+elevation data). Is the line "Kawasan rendah tidak dinilai" enough, or should VEDA point to a source (JKR road
+closure notices)?
+> Answer: ______
+
 ---
 
 _After your answers: we update the three CSV files, re-run `scripts/seed_stations.py` / `seed_peaks.py`, and change each status from "tentative" to "verified — Dr Ariff, <date>"._

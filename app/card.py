@@ -102,6 +102,22 @@ T = {  # fixed wording, BM + EN
                        "ms": "Bacaan SYNTHETIC terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     "replay_last": {"en": "Last verified reading: {m} m at {t} ({age}) - too far from this time to use",
                     "ms": "Bacaan disahkan terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
+    # B-73 (Husaini 23 Oct): OpenStreetMap lines - possible PPS are never official or open; bridges are facts only
+    "pps": {"en": "Possible PPS — not an official list, confirm with APM / the village head: {items}",
+            "ms": "Kemungkinan PPS — bukan senarai rasmi, sahkan dengan APM / ketua kampung: {items}"},
+    "pps_none": {"en": "Possible PPS: none named in OpenStreetMap within 10 km — ask APM / the village head",
+                 "ms": "Kemungkinan PPS: tiada yang bernama dalam OpenStreetMap dalam 10 km — tanya APM / ketua kampung"},
+    "bridge": {"en": "{name} crosses {river} ({km} km); river level there: {level}",
+               "ms": "{name} merentasi {river} ({km} km); paras sungai di situ: {level}"},
+    "bridge_on": {"en": "Bridge on {road}", "ms": "Jambatan di {road}"},
+    "bridge_none": {"en": "Bridges: none over a named river in OpenStreetMap within 10 km",
+                    "ms": "Jambatan: tiada yang merentasi sungai bernama dalam OpenStreetMap dalam 10 km"},
+    "no_level": {"en": "no recent reading", "ms": "tiada bacaan terkini"},
+    "no_gauge": {"en": "no JPS gauge nearby on this river", "ms": "tiada stesen JPS berdekatan di sungai ini"},
+    "low_ground": {"en": "Low ground not assessed", "ms": "Kawasan rendah tidak dinilai"},
+    "osm_failed": {"en": "Not checked: OpenStreetMap (could not be read)",
+                   "ms": "Tidak disemak: OpenStreetMap (tidak dapat dibaca)"},
+    "osm_src": {"en": "© OpenStreetMap contributors (ODbL)", "ms": "© OpenStreetMap contributors (ODbL)"},
     "low_conf": {"en": "Low confidence: VEDA's reviewer did not approve the written explanation, so only the checked "
                        "data is shown.",
                  "ms": "Keyakinan rendah: penyemak VEDA tidak meluluskan penjelasan bertulis, jadi hanya data yang "
@@ -135,6 +151,7 @@ def months_ms(text):
     return _DATE_EN.sub(lambda m: (m.group(1) or "") + MONTHS_MS[m.group(2)], text)
 MAX_EXPLANATION = 200
 MAX_CARD_CHARS = 750          # Husaini 23 Oct: ~750 characters (2014 line kept), disclaimer + AI explanation extra
+PPS_SHOWN, BRIDGES_SHOWN = 3, 2     # B-73: OSM lines on the card (one each when the card must be shortened)
 
 
 def _day(iso):
@@ -224,6 +241,14 @@ def build(plan, evidence, forecast):
         card["excluded"] = (cross.get("newest") or "").split(" ")[0] or "?"
     card["not_checked"] = cross.get("status") == "not_checked"
     card["conflicts"] = [c["quantity"] for c in (evidence or {}).get("conflicts_unresolved", [])]
+    osm, intent = (evidence or {}).get("osm"), plan.get("intent")
+    card["osm"] = None
+    if osm:                                            # B-73: only for evacuation / cut-off questions (data agent)
+        card["osm"] = {"status": osm["status"],
+                       "pps": osm["pps"][:PPS_SHOWN] if intent == "evacuation" else None,
+                       "bridges": osm["bridges"][:BRIDGES_SHOWN] if intent == "cut_off" else None}
+        if osm["status"] == "ok":
+            card["sources"].append(("osm", None))
     rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
     card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
                           | {"rain" for r in rules if r.startswith("rain")})
@@ -291,6 +316,12 @@ def key_facts(card, forecast=None, lang="en"):
         lr = card.get("last_reading")
         if lr:
             f["last_reading"] = WORDS["last"][lang].format(m=_num(lr["level_m"]), t=lr["at"])
+    osm = card.get("osm") or {}
+    if osm.get("status") == "ok" and osm.get("pps"):
+        f["possible_pps"] = {"note": T["pps"][lang].split(":")[0],
+                             "places": [f"{p['name']} ({_num(p['km'])} km)" for p in osm["pps"]]}
+    if osm.get("status") == "ok" and osm.get("bridges"):
+        f["bridges"] = [bridge_text(b, lang) for b in osm["bridges"]] + [T["low_ground"][lang]]
     if card.get("replay"):
         f["replay"] = card["replay"]
     out = {k: v for k, v in f.items() if v not in (None, [], "")}
@@ -327,7 +358,46 @@ def _age(minutes, lang):
 # there, shorten the excluded-source line (the Critic checks it is there), then drop the rain and upstream lines.
 # A line whose rule fired the verdict (card["keep"]: upstream / rain) is never dropped. The action, verdict, river
 # level, the 2014 line, range + confidence, MET warnings and sources always stay.
-FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream")
+FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream", "osm")
+# B-73: the OSM lines answer what the user asked, so they are shortened last ("osm": one PPS / one bridge), never
+# dropped.
+
+
+def bridge_name(name, lang):
+    """'Jambatan Sultan Yahya Petra' stays; a road name or ref -> 'Jambatan di Jalan Pasir Mas' / 'Bridge on ...'."""
+    if re.match(r"(jambatan|bridge)\b", name or "", re.IGNORECASE):
+        return name
+    return T["bridge_on"][lang].format(road=name)
+
+
+def bridge_text(b, lang):
+    """One bridge as a fact: what it crosses, how far, and the river level at the nearest JPS gauge on that river."""
+    if not b.get("has_gauge"):
+        level = T["no_gauge"][lang]
+    elif b.get("band"):
+        level = BAND.get(b["band"], {}).get(lang, b["band"])
+    else:
+        level = T["no_level"][lang]
+    return T["bridge"][lang].format(name=bridge_name(b["name"], lang), river=b["river"], km=_num(b["km"]), level=level)
+
+
+def _osm_lines(card, lang, drop):
+    """B-73 lines: possible PPS (evacuation question) or bridges + low ground (cut-off question)."""
+    osm = card.get("osm")
+    if not osm:
+        return []
+    if osm["status"] != "ok":
+        return [("osm", T["osm_failed"][lang] + ".")]
+    out, short = [], "osm" in drop
+    if osm.get("pps") is not None:
+        pps = osm["pps"][:1] if short else osm["pps"]
+        out.append(("pps", T["pps"][lang].format(items="; ".join(f"{p['name']} ({_num(p['km'])} km)" for p in pps))
+                    + "." if pps else T["pps_none"][lang] + "."))
+    if osm.get("bridges") is not None:
+        bridges = osm["bridges"][:1] if short else osm["bridges"]
+        out += [("bridge", bridge_text(b, lang) + ".") for b in bridges] or [("bridge", T["bridge_none"][lang] + ".")]
+        out.append(("low_ground", T["low_ground"][lang] + "."))
+    return out
 
 
 def render(card, lang, explanation=None, low_confidence=False):
@@ -455,9 +525,11 @@ def _lines(card, lang, explanation, low_confidence, drop):
         out.append(("upstream", f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}."))
     for w in card.get("warnings", []):
         out.append(("warning", f"{T['warning'][lang]}: {w}."))
-    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None, "synthetic": None}
+    out += _osm_lines(card, lang, drop)
+    names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None, "synthetic": None,
+             "osm": None}
     archive = "archive_short" if "short_source" in drop else "archive"
-    other = {"archive": archive, "met_forecast": "met_today", "synthetic": "synthetic_src"}
+    other = {"archive": archive, "met_forecast": "met_today", "synthetic": "synthetic_src", "osm": "osm_src"}
     srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T[other[k]][lang] for k, m in card.get("sources", [])]
     if srcs:
         out.append(("sources", f"{T['sources'][lang]}: " + "; ".join(srcs) + "."))
@@ -511,6 +583,29 @@ _TREND = re.compile(r"\b(naik|turun|surut|meningkat|menurun|rising|falling|rises
 _MINUS = re.compile(r"(?<![\w.])[-−–]\s?\d")             # "-0.57" - not the dash in a range "5.3-5.47"
 
 
+# B-73 (approved 23 Oct): no text may say a PPS is open, or predict a road / bridge being cut off or flooded - OSM
+# knows neither, and no cut-off rule is approved yet (review pack, Dr Ariff).
+PPS_OPEN = re.compile(
+    r"\b(PPS|pusat pemindahan|relief cent(?:re|er)s?|evacuation cent(?:re|er)s?)\b[^.\n]{0,60}?"
+    r"\b(dibuka|beroperasi|is open|are open|(?:has|have) opened|now open|operating|open now)\b|"
+    r"\b(dibuka|opened)\b[^.\n]{0,20}?\b(PPS|pusat pemindahan)\b", re.IGNORECASE)
+CUT_OFF = re.compile(
+    r"\b(akan|boleh|mungkin|pasti|dijangka)\s+(ter)?putus\b|"
+    r"\b(will|may|might|could|is likely to|are likely to)\s+be\s+cut\s+off\b|"
+    r"\b(jalan|jambatan|roads?|bridges?)\b[^.\n]{0,30}?\b(akan|boleh|mungkin|will|may|might|could)\s+(be\s+)?"
+    r"(ditenggelami|tenggelam|dinaiki air|ditutup|flood(?:ed)?|closed|submerged)\b", re.IGNORECASE)
+
+
+def osm_claim(text):
+    """None, or the claim VEDA may never make: an open PPS, or a road / bridge predicted to be cut off."""
+    for pattern, what in ((PPS_OPEN, "says a PPS is open (VEDA cannot know)"),
+                          (CUT_OFF, "predicts a road / bridge being cut off (no approved rule)")):
+        m = pattern.search(text or "")
+        if m:
+            return f"{what}: {m.group(0)!r}"
+    return None
+
+
 def trend_problem(text, card):
     """No trend known for the controlling gauge (tidal, no rates) -> the explanation may not say the river is rising
     or falling (Husaini 23 Oct: Tumpat 'tahap air turun' was invented). An upstream gauge that is rising is a fact."""
@@ -555,7 +650,7 @@ def explanation_problem(text, card, lang=None):
         return f"says the river is {', '.join(flipped)}, but the card says otherwise"
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
-    return trend_problem(text, card) or wording_problem(text, lang, card.get("place"))
+    return osm_claim(text) or trend_problem(text, card) or wording_problem(text, lang, card.get("place"))
 
 
 def emergency_reply(lang, rest):

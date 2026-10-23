@@ -164,3 +164,21 @@ CREATE TABLE IF NOT EXISTS replay_levels (
     source_url   text,
     PRIMARY KEY (scenario, station_key, observed_at)
 );
+
+-- B-73: OpenStreetMap features near each covered place, loaded once by scripts/load_osm.py (never by agents).
+-- kind 'pps_candidate' = a named school / masjid / surau / community hall: a POSSIBLE relief centre (PPS), never an
+-- official or open one; 'bridge' = a road bridge whose line crosses a named river, with the nearest JPS gauge on the
+-- same river (if one is within the loader's GAUGE_KM). Data (c) OpenStreetMap contributors, ODbL.
+CREATE TABLE IF NOT EXISTS osm_place_features (
+    place_id     text NOT NULL REFERENCES places (place_id),
+    kind         text NOT NULL CHECK (kind IN ('pps_candidate', 'bridge')),
+    osm_ref      text NOT NULL,                 -- 'way/123', 'node/456'
+    name         text NOT NULL,
+    category     text NOT NULL,                 -- school | masjid | surau | community_hall | road class of a bridge
+    river        text,                          -- bridges: the river crossed, as 'Sg. Golok'
+    km           double precision NOT NULL,     -- straight-line distance from the place
+    station_key  text REFERENCES stations (station_key),
+    gauge_km     double precision,              -- bridge -> that gauge, straight line
+    loaded_at    timestamptz NOT NULL,          -- when the Overpass answer was fetched
+    PRIMARY KEY (place_id, kind, osm_ref)
+);

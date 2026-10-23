@@ -10,6 +10,7 @@ Rules (each fix is one `System | safety` trace line; a clean answer gets one "al
   3. the disclaimer + 999 / 991 in the answer's language
   4. ranges, never one precise number: a projected range whose low and high are equal is dropped (Husaini 22 Oct)
   5. a replay answer starts with its "REPLAY · ..." title
+  6. (B-73) never says a PPS is open, never predicts a road / bridge being cut off -> the card alone
 """
 from app import card as card_mod
 from app import trace
@@ -52,6 +53,13 @@ def gate(answer, card=None, evidence=None, forecast=None):
             fixes.append(f"unsafe advice removed: {bad[0][:80]!r} -> card without the explanation")
             if _unsafe(answer["text"]):
                 fixes.append("the card itself contains unsafe wording - BUG, check card.ADVICE")
+        claim = card_mod.osm_claim(answer["text"])
+        if claim:                                                                                       # rule 6
+            answer.update(explanation=None, drafted_by="code", card=card)
+            answer["text"] = _render(answer, card, lang)
+            fixes.append(f"{claim} -> card without the explanation")
+            if card_mod.osm_claim(answer["text"]):
+                fixes.append("the card itself claims an open PPS or a cut-off road - BUG, check card.T")
         title = card.get("replay")
         if title and not answer["text"].startswith(title):                                              # rule 5
             answer["text"] = f"{title}\n{answer['text']}"
@@ -64,5 +72,5 @@ def gate(answer, card=None, evidence=None, forecast=None):
                output_summary="; ".join(fixes) if fixes else "all safety checks passed",
                status="fallback" if fixes else "success",
                decision="BUILD_BRIEF section 7: never NORMAL on missing data, never into water, disclaimer, ranges, "
-                        "replay label", details={"fixes": fixes})
+                        "replay label, no open-PPS / cut-off claims", details={"fixes": fixes})
     return answer

@@ -10,6 +10,7 @@ Order (each step is its own script, traced; the first failure stops the run):
   2. seed_stations  curated JPS gauges + thresholds + links (data/stations_mapping.csv)
   3. seed_peaks     historic peaks incl. Dec 2014 (data/historic_peaks.csv)
   4. seed_places    the place gazetteer (data/places.csv)
+  4b. load_osm      OpenStreetMap possible PPS + bridges near each place (Overpass, once; cached in data/cache/osm)
   5. setup_wx       Zetaris REST tables: Open-Meteo forecast + archives, data.gov.my forecast / warnings / flood feed
   6. setup_views    Zetaris views over the tables above (db/views/*.sql)
   7. build_replay   the Nov 2024 replay (cited news readings)
@@ -21,7 +22,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = [["setup_pg.py"], ["seed_stations.py"], ["seed_peaks.py"], ["seed_places.py"], ["setup_wx.py"],
+STEPS = [["setup_pg.py"], ["seed_stations.py"], ["seed_peaks.py"], ["seed_places.py"], ["load_osm.py"],
+         ["setup_wx.py"],
          ["setup_views.py"], ["build_replay.py"],
          ["build_replay.py", "--anchors", str(ROOT / "data" / "replay" / "synthetic_anchors.csv")]]
 
