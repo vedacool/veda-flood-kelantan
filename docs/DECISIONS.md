@@ -169,3 +169,4 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Backup gauges for Rantau Panjang / Kota Bharu / Pasir Mas: candidates proposed (review pack H), tentative, NOT wired in until Dr Ariff answers | Husaini 23 Oct |
 | 2026-10-23 | BM verdict words on the card: NORMAL / BERJAGA-JAGA / BERSEDIA / BERTINDAK / DATA TIDAK MENCUKUPI (EN: INSUFFICIENT DATA without underscore); BM month names; tentative, review pack G3 | Husaini 23 Oct |
 | 2026-10-23 | Card cap ~750 characters (BM + EN), 2014 line always kept, lines that fired the verdict never dropped; short reading label keeps its time; reconstructed readings say estimated / anggaran; AI explanation <= 200 characters | Husaini 23 Oct |
+| 2026-10-23 | A BM ACT card with a MET warning may reach ~784 characters (all its lines are protected); accepted above the ~750 cap | Husaini 23 Oct |
