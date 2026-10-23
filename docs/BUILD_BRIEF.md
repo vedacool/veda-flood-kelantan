@@ -22,9 +22,9 @@ Track: **Solving Fragmented Intelligence** (GenAI Works Open Agent Hackathon 202
 | Coordinator | LLM | Nightshift lane `fast` (Nemotron 3.5 Lightning) | Tag intent + user type + area → write a **plan** (sources, methods, effort) → delegate → draft answer → revise after Critic |
 | Data & Reconciler agent | code | — | Fetch **only via Zetaris SQL**; health-check each source (fresh / schema / plausible / agreement); self-healing ladder; write facts to World Model |
 | Forecast agent | code | — | Trend, upstream→downstream lag, "bigger than the 2014 flood?", verdict rules → range + confidence |
-| Critic | LLM | Nightshift lane `deep` (Nemotron 3.5 Super VL) | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
+| Critic | code + LLM | code checks + own Zetaris re-check on every answer; AI review = a small facts-only call on Nightshift lane `fast` (Nemotron 3.5 Lightning) when the model replies in time (23 Oct) | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
 
-Caps: Critic ≤ 2 rejections · bounded retries with backoff (Nightshift 3, Zetaris 2) · per-call timeouts Zetaris 30 s / Nightshift 60 s · answer budget **quick ≤ 30 s / full ≤ 90 s** · 10-minute hard deadline · temperature 0.2 · agents exchange structured JSON, not chat history.
+Caps: Critic ≤ 2 rejections · bounded retries with backoff (Nightshift 3, Zetaris 2) · per-call timeouts Zetaris 30 s / Nightshift 60 s · answer budget **quick ≤ 30 s / full ≤ 150 s** (replay 240 s) · 10-minute hard deadline · temperature 0.2 · agents exchange structured JSON, not chat history.
 
 Loop: plain Python state machine `plan → gather → forecast → draft → critique → (revise → critique) → done` (no LangGraph). The **quick path really skips steps** (fewer sources, no forecast refresh/cross-check); the full path runs everything.
 
@@ -48,7 +48,7 @@ Links shown in answers (not pulled): JKM InfoBencana, MyIBJKM, NADMA portal, 999
 
 ## 6. Self-healing / self-organising / self-growing
 - **Healing ladder:** retry with backoff → backup source (JPS live → last good snapshot → Open-Meteo/GloFAS) → lower confidence → INSUFFICIENT_DATA. Circuit breaker: 3 failures → skip source for 15 min. The answer says what happened in plain words.
-- **Plan per question:** quick path for simple questions (really fewer steps, ≤ 30 s), full path (all sources, forecast, Critic, ≤ 90 s) when rivers are rising or people may need to move.
+- **Plan per question:** quick path for simple questions (really fewer steps, ≤ 30 s), full path (all sources, forecast, Critic, ≤ 150 s) when rivers are rising or people may need to move.
 - **Growth (with human gates):** lessons memory from Critic rejections (stretch); source promotion candidate → trusted; question radar (log + intent tag every question, no personal data).
 - VEDA never rewrites its own code or prompts.
 

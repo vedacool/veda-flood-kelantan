@@ -4,7 +4,7 @@ Only two kinds of item live here (Husaini 23 Oct): **open audit findings** and *
 (what to build, in what order) is the backlog in the private planning folder; IDs `B-xx` / `S-xx` point there.
 Status lives here and in the backlog, never in Claude's memory. A finished item is deleted (git keeps the history).
 
-Last updated: 23 Oct 2026 (after the full audit of 23 Oct and its fixes).
+Last updated: 23 Oct 2026 (afternoon: W-3, W-4, W-6, A-P2-6, A-P2-8 closed; W-7 added).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
 IDs are never reused. Severity: P2 = schedule, P3 = polish.
@@ -16,9 +16,7 @@ IDs are never reused. Severity: P2 = schedule, P3 = polish.
 | A-P2-3 | P2 | A stalled Nightshift stream is only cut when the next line arrives (can pass its limit) | `app/adapters/nightshift.py:128` | B-03 | after Gate 1 |
 | A-P2-4 | P2 | No backup of `veda-pg` / `world.sqlite`, no restore drill | `scripts/` | B-65 (software-start item 4) | after Gate 1 |
 | A-P2-5 | P2 | `/health` does not check Postgres, the newest reading's age or open circuit breakers | `app/main.py:110` | B-19 | after Gate 1 |
-| A-P2-6 | P2 | `VEDA_FAULTS` is documented (`.env.example`, CLAUDE.md rule 9) but not implemented | `.env.example:19` | B-15 | decide (see W-6) |
 | A-P2-7 | P2 | Unused model-planning code (`coordinator.plan` and helpers, `nightshift.get_llm`, `loop.STATES`) | `app/agents/coordinator.py` | B-65 | after Gate 1 |
-| A-P2-8 | P2 | Docs out of date: BUILD_BRIEF says full budget ≤ 90 s (code 150 s); CLAUDE.md rule 6 says the Critic uses `meterless/deep` (it reviews on `fast`) | `docs/BUILD_BRIEF.md`, `CLAUDE.md` | B-23 | before Gate 1 if cheap |
 | A-P2-9 | P2 | `load_dotenv` at import in `app/main.py` leaks the developer's `.env` into the test session | `app/main.py:32` | B-65 | after Gate 1 |
 | A-P3-1 | P3 | Lockfile has no hashes (`--require-hashes`) | `requirements-lock.txt` | B-65 (software-start item 6) | after Gate 1 |
 | A-P3-2 | P3 | No security headers (CSP, nosniff, frame-ancestors) | `app/main.py` | B-19 (software-start item 7) | after Gate 1 |
@@ -28,14 +26,12 @@ IDs are never reused. Severity: P2 = schedule, P3 = polish.
 | A-P3-6 | P3 | Router: "Kampung" / "air" / "di" in an English question switch the answer to BM | `app/router.py` | B-21 | later |
 
 Fixed since the audit (deleted from this list): the 10 P1s, BM verdict words + months, card length, masking gaps,
-answer language, flipped-comparison check, Critic replay re-check, CI builds the Docker image.
+answer language, flipped-comparison check, Critic replay re-check, CI builds the Docker image, `VEDA_FAULTS` removed (A-P2-6), BUILD_BRIEF / CLAUDE.md brought up to date (A-P2-8).
 
 ## Waiting on Husaini
 | ID | Item | Raised | Recommendation | Backlog |
 |---|---|---|---|---|
 | W-1 | Dr Ariff's review pack (`docs/review_pack_ariff.md`, sections A-H incl. A5b projection, G3-G5 words + stranded advice, H backup gauges) - Husaini sends it | 22 Oct | send as is; nothing in VEDA waits on it for Gate 1 | B-67 |
 | W-2 | Backup gauges for Rantau Panjang / Kota Bharu / Pasir Mas: candidates proposed, not wired until Dr Ariff answers H1-H3 | 23 Oct | wire the first candidate per town after his answer | B-15 |
-| W-3 | Add an `S-12` row (check-with-Cowork rule) to BACKLOG.md - Claude may not add rows | 23 Oct | one line, status ✅ 23 Oct | S-12 |
-| W-4 | Add a "Last reconciled" line to BACKLOG.md (Cowork) | 23 Oct | Cowork adds it when it next edits the backlog | - |
 | W-5 | Meterless: can the ~45-60 s cut-off on Nemotron calls be raised? (affects how often the AI explanation arrives) | 22 Oct | keep asking; VEDA works without it | D-09 |
-| W-6 | `VEDA_FAULTS`: implement (fault injection for tests, never in SAMPLE_MODE / demo) or remove it from `.env.example` and CLAUDE.md rule 9 | 23 Oct | remove for Gate 1; implement later only if a demo needs it | B-15 |
+| W-7 | JPS consent: Infobanjir has no terms of its own and its robots.txt does not disallow the water-level pages, but the JPS website's copyright notice (water.gov.my, 2017) requires "express prior written consent of JPS" to copy, display or reproduce its content. VEDA credits JPS on the page and in the README, collects at most once per 15 min, and is non-commercial | 23 Oct | email JPS (Bahagian Pengurusan Banjir / Infobanjir contact) asking consent for non-commercial public-safety research use, before the repo goes public; keep the credit meanwhile | - |

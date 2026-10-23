@@ -35,6 +35,11 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
 - [ ] Recorded traces (`data/sample/live_traces/`, `output_examples/`) hold no personal data. Their questions were
       written by the team; re-read them before publishing.
 - [ ] `LICENSE` (MIT, Hujung Lab) and the README credits are in place.
+- [x] JPS credit on the page and in the README: "Data: Jabatan Pengairan dan Saliran (JPS) Malaysia,
+      publicinfobanjir.water.gov.my, used for non-commercial public-safety research". The collector stays at most once
+      per 15 min.
+- [ ] JPS written consent requested. The JPS website's copyright notice asks for it before reproducing content
+      (`docs/OPEN.md` W-7).
 
 ## Running it
 - [x] Tests run on every push (CI); nothing deploys automatically, so there is no deploy gate to bypass.
