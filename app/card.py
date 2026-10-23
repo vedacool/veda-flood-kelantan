@@ -53,6 +53,7 @@ T = {  # fixed wording, BM + EN
                "ms": "Berbanding 2014: {d} m {rel} puncak Dis 2014 di sini ({p} m)"},
     "archive": {"en": "Open-Meteo archive (real rain up to the replay time)",
                 "ms": "arkib Open-Meteo (hujan sebenar sehingga masa ulang tayang)"},
+    "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
     "tidal": {"en": "trend not projected (tide-influenced gauge)", "ms": "trend tidak diunjurkan (stesen dipengaruhi pasang surut)"},
     "confidence": {"en": "Confidence", "ms": "Keyakinan"},
@@ -69,6 +70,8 @@ T = {  # fixed wording, BM + EN
     "met_today": {"en": "MetMalaysia forecast for today", "ms": "ramalan MetMalaysia hari ini"},
     "excluded": {"en": "Excluded: data.gov.my flood-warning (stale, last update {when})",
                  "ms": "Diketepikan: data.gov.my flood-warning (lapuk, kemas kini terakhir {when})"},
+    "excluded_short": {"en": "Excluded: data.gov.my flood-warning (stale)",      # the Critic still needs to see it
+                       "ms": "Diketepikan: data.gov.my flood-warning (lapuk)"},
     "conflict": {"en": "Sources disagree on {q}; VEDA did not pick one", "ms": "Sumber tidak sepakat tentang {q}; VEDA tidak memilih"},
     "no_reading": {"en": "no fresh reading from the controlling gauge", "ms": "tiada bacaan terkini dari stesen utama"},
     "backup": {"en": "Note: {primary} {silent} - using the backup gauge {backup}",
@@ -112,8 +115,8 @@ def verdict_codes(text):
 def months_ms(text):
     """'27 Nov 19:30', 'Dec 2023' -> BM month names ('Dis 2023'); only month abbreviations followed by a number."""
     return _DATE_EN.sub(lambda m: (m.group(1) or "") + MONTHS_MS[m.group(2)], text)
-MAX_EXPLANATION = 400
-MAX_CARD_CHARS = 900          # about one phone screen in WhatsApp (BM ACT card with the agreed advice: ~760)
+MAX_EXPLANATION = 200
+MAX_CARD_CHARS = 750          # Husaini 23 Oct: ~750 characters (2014 line kept), disclaimer + AI explanation extra
 
 
 def _hhmm(iso):
@@ -188,16 +191,23 @@ def build(plan, evidence, forecast):
     if cross.get("status") == "stale":
         card["excluded"] = (cross.get("newest") or "").split(" ")[0] or "?"
     card["conflicts"] = [c["quantity"] for c in (evidence or {}).get("conflicts_unresolved", [])]
+    rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
+    card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
+                          | {"rain" for r in rules if r.startswith("rain")})
     return card
 
 
-LABEL_BM = (("reconstructed between the verified JPS readings", "dibina semula antara bacaan JPS yang disahkan"),
-            ("reported JPS reading", "bacaan JPS yang dilaporkan"), ("; time approximate", "; masa anggaran"),
+LABEL_BM = (("estimated: reconstructed between the verified JPS readings",
+             "anggaran: dibina semula antara bacaan JPS yang disahkan"),
+            ("reported JPS reading (", "bacaan JPS dilaporkan ("), ("; time approximate", "; masa anggaran"),
             (" and ", " dan "))
 
 
 def label_text(label, lang):
-    """A replay reading's label (written in English in the data) in the answer's language - same facts."""
+    """A replay reading's label (written in English in the data) in the answer's language - same facts. A
+    reconstructed reading always says estimated / anggaran on the card (Husaini 23 Oct)."""
+    if label.startswith("reconstructed"):
+        label = "estimated: " + label
     if lang == "ms":
         for en, ms in LABEL_BM:
             label = label.replace(en, ms)
@@ -210,16 +220,61 @@ def _age(minutes, lang):
     return T["min_ago"][lang].format(n=minutes) if minutes < 120 else T["h_ago"][lang].format(n=minutes // 60)
 
 
+# Over MAX_CARD_CHARS, these are applied one by one until the card fits (Husaini 23 Oct): shorter gauge name and
+# replay source, shorter reading label (still with its reading time), drop the "vs peak" part when the 2014 line is
+# there, shorten the excluded-source line (the Critic checks it is there), then drop the rain and upstream lines.
+# A line whose rule fired the verdict (card["keep"]: upstream / rain) is never dropped. The action, verdict, river
+# level, the 2014 line, range + confidence, MET warnings and sources always stay.
+FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream")
+
+
 def render(card, lang, explanation=None, low_confidence=False):
-    """Plain text for WhatsApp / SMS in 'en' or 'ms'. Only `explanation` comes from a model."""
+    """Plain text for WhatsApp / SMS in 'en' or 'ms', at most ~MAX_CARD_CHARS (the explanation is extra). Only
+    `explanation` comes from a model."""
     lang = lang if lang in ("en", "ms") else "en"
-    out = [card["replay"]] if card.get("replay") else []          # a replay always says so first
+    drop = set()
+    lines = _lines(card, lang, explanation, low_confidence, drop)
+    for step in FIT_STEPS:
+        if _length(lines) <= MAX_CARD_CHARS:
+            break
+        if step not in card.get("keep", ()):
+            drop.add(step)
+            lines = _lines(card, lang, explanation, low_confidence, drop)
+    text = "\n".join(t for _, t in lines)
+    return months_ms(text) if lang == "ms" else text
+
+
+def _length(lines):
+    return len("\n".join(t for key, t in lines if key != "explanation"))
+
+
+def short_label(label, read_at):
+    """'reported JPS reading (Kosmo, 27 Nov 2024 20:19 (citing ...)); time approximate' -> 'reported JPS reading
+    (Kosmo), 27 Nov 19:30; time approximate' - the reading time stays: it shows nothing later was used (Husaini
+    23 Oct). Other labels unchanged."""
+    m = re.match(r"reported JPS reading \(([^,(]+)", label or "")
+    if not m:
+        return label
+    return (f"reported JPS reading ({m.group(1).strip()}), {read_at}"
+            + ("; time approximate" if "time approximate" in label else ""))
+
+
+def short_gauge(name, place):
+    """'Sg. Golok di Rantau Panjang (F1)' at Rantau Panjang -> 'Sg. Golok'; other gauges lose only '(F1)'."""
+    name = re.sub(r"\s*\(F\d\)$", "", name or "")
+    tail = f" di {place}"
+    return name[:-len(tail)] if place and name.endswith(tail) else name
+
+
+def _lines(card, lang, explanation, low_confidence, drop):
+    """The card's lines as (key, text) in reading order; `drop` = the FIT_STEPS applied so far."""
+    out = [("replay", card["replay"])] if card.get("replay") else []     # a replay always says so first
     if low_confidence:
-        out.append(T["low_conf"][lang])
-    out.append(f"{T['action'][lang]}: {card['action'][lang]}")
+        out.append(("low_conf", T["low_conf"][lang]))
+    out.append(("action", f"{T['action'][lang]}: {card['action'][lang]}"))
     level = (card.get("level_name") or {}).get(lang)
-    out.append(f"{card['place']}: {VERDICT_LABEL[card['verdict']][lang]}"
-               + (f" - {T['level'][lang]} {level}" if level else ""))
+    out.append(("verdict", f"{card['place']}: {VERDICT_LABEL[card['verdict']][lang]}"
+                            + (f" - {T['level'][lang]} {level}" if level else "")))
     g = card.get("gauge")
     if g:
         parts = []
@@ -228,63 +283,67 @@ def render(card, lang, explanation=None, low_confidence=False):
             if d is not None:
                 parts.append(f"{_num(abs(d))} m {T['above' if d >= 0 else 'below'][lang]} {T[key][lang]} "
                              f"({_num(card['thresholds'][key])} m)")
-        if card.get("peak"):
+        if card.get("peak") and not ("peak_part" in drop and card.get("vs_2014")):
             p = card["peak"]
             parts.append(f"{_num(abs(p['diff_m']))} m {T['above' if p['diff_m'] >= 0 else 'below'][lang]} "
                          f"{T['peak'][lang].format(event=p['event'])} ({_num(p['peak_m'])} m)")
-        out.append(f"{T['river'][lang]}: {_num(g['level_m'])} m {T['at'][lang]} {g['read_at']} ({g['name']})"
-                   + ("; " + ", ".join(parts) if parts else "") + ".")
+        gauge = short_gauge(g["name"], card.get("place")) if "short_gauge" in drop else g["name"]
+        out.append(("river", f"{T['river'][lang]}: {_num(g['level_m'])} m {T['at'][lang]} {g['read_at']} ({gauge})"
+                    + ("; " + ", ".join(parts) if parts else "") + "."))
         if card.get("reading_label"):
-            out.append(f"({label_text(card['reading_label'], lang)})")
+            label = (short_label(card["reading_label"], g["read_at"]) if "short_label" in drop
+                     else card["reading_label"])
+            out.append(("label", f"({label_text(label, lang)})"))
         if card.get("vs_2014"):
             v = card["vs_2014"]
-            out.append(T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
-                                                rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + ".")
+            out.append(("vs2014", T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
+                                                          rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + "."))
     elif card["verdict"] == "INSUFFICIENT_DATA":
         replay = bool(card.get("replay"))
-        out.append((T["replay_gap"][lang] if replay else T["no_reading"][lang].capitalize()) + ".")
+        out.append(("no_reading", (T["replay_gap"][lang] if replay else T["no_reading"][lang].capitalize()) + "."))
         if card.get("last_reading"):
             lr = card["last_reading"]
-            out.append(T["replay_last" if replay else "last"][lang].format(
-                m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang)) + ".")
+            out.append(("last_reading", T["replay_last" if replay else "last"][lang].format(
+                m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang)) + "."))
     if card.get("backup"):
         b = card["backup"]
         silent = T["silent"][lang].format(t=b["since"]) if b.get("since") else T["silent_never"][lang]
-        out.append(T["backup"][lang].format(primary=b["primary"], silent=silent, backup=b["backup"]) + ".")
+        out.append(("backup", T["backup"][lang].format(primary=b["primary"], silent=silent, backup=b["backup"]) + "."))
     conf = T["conf_label"].get(card["confidence"], T["conf_label"]["low"])[lang]
     if card.get("range_24h"):
         r = card["range_24h"]
-        out.append(f"{T['next24'][lang]}: {_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
-                   f"{T['confidence'][lang]}: {conf}.")
+        out.append(("range", f"{T['next24'][lang]}: {_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
+                             f"{T['confidence'][lang]}: {conf}."))
     else:
-        out.append((f"{T['tidal'][lang].capitalize()}. " if card.get("tidal") and g else "")
-                   + f"{T['confidence'][lang]}: {conf}.")
-    if card.get("rain_24h_mm") is not None:
-        out.append(T["rain"][lang].format(mm=_num(card["rain_24h_mm"])) + ".")
-    if card.get("rain_past_24h_mm") is not None:
-        out.append(T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"])) + ".")
+        out.append(("range", (f"{T['tidal'][lang].capitalize()}. " if card.get("tidal") and g else "")
+                    + f"{T['confidence'][lang]}: {conf}."))
+    if card.get("rain_24h_mm") is not None and "rain" not in drop:
+        out.append(("rain", T["rain"][lang].format(mm=_num(card["rain_24h_mm"])) + "."))
+    if card.get("rain_past_24h_mm") is not None and "rain" not in drop:
+        out.append(("rain", T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"])) + "."))
     if explanation:
-        out.append(explanation.strip())
-    for u in card.get("upstream", []):
+        out.append(("explanation", explanation.strip()))
+    for u in ([] if "upstream" in drop else card.get("upstream", [])):
         bits = [BAND.get(u["band"], {}).get(lang, u["band"])] if u.get("band") else []
         if u.get("rising"):
             bits.append(T["rising"][lang])
         a = u.get("arrives_in_h")
         tail = f", {T['may_reach'][lang].format(a=_num(a['min']), b=_num(a['max']))}" if a and a.get("min") is not None else ""
-        out.append(f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}.")
+        out.append(("upstream", f"{T['upstream'][lang]}: {u['gauge']} ({', '.join(bits)}){tail}."))
     for w in card.get("warnings", []):
-        out.append(f"{T['warning'][lang]}: {w}.")
+        out.append(("warning", f"{T['warning'][lang]}: {w}."))
     names = {"jps": "JPS", "open_meteo": "Open-Meteo", "met_forecast": None, "archive": None}
-    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T["archive" if k == "archive" else "met_today"][lang]
+    archive = "archive_short" if "short_source" in drop else "archive"
+    srcs = [f"{names[k]} {_age(m, lang)}" if names[k] else T[archive if k == "archive" else "met_today"][lang]
             for k, m in card.get("sources", [])]
     if srcs:
-        out.append(f"{T['sources'][lang]}: " + "; ".join(srcs) + ".")
-    if card.get("excluded"):
-        out.append(T["excluded"][lang].format(when=card["excluded"]) + ".")
+        out.append(("sources", f"{T['sources'][lang]}: " + "; ".join(srcs) + "."))
+    if card.get("excluded"):                         # shortened, never dropped: the Critic checks it is mentioned
+        out.append(("excluded", (T["excluded_short"][lang] if "excluded" in drop else
+                                 T["excluded"][lang].format(when=card["excluded"])) + "."))
     for q in card.get("conflicts", []):
-        out.append(T["conflict"][lang].format(q=q) + ".")
-    text = "\n".join(out)
-    return months_ms(text) if lang == "ms" else text
+        out.append(("conflict", T["conflict"][lang].format(q=q) + "."))
+    return out
 
 
 def _values(text):

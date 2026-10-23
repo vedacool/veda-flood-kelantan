@@ -184,3 +184,46 @@ def test_insufficient_data_has_no_underscore():
 def test_bm_months():
     assert card.months_ms("puncak Dec 2023; 27 Nov 19:30; 3 Aug 08:00") == "puncak Dis 2023; 27 Nov 19:30; 3 Ogo 08:00"
     assert card.months_ms("May I help") == "May I help"                     # not a date
+
+
+# -- the ~750 character cap (Husaini 23 Oct) ---------------------------------------------------------------------
+def _long_card(**kw):
+    c = build(verdict="ACT", upstream=[{"gauge": "Kuala Krai", "band": "danger", "rising": True,
+                                        "arrives_in_h": {"min": 9, "max": 17}}], **kw)
+    c.update(excluded="2024-02-23", rain_24h_mm=120.5, warnings=["CONTINUOUS RAIN WARNING (DANGER LEVEL)"],
+             reading_label="reported JPS reading (Kosmo, 27 Nov 2024 20:19 (citing Infobanjir / JPS))",
+             vs_2014={"peak_m": 10.84, "diff_m": 0.1})
+    return c
+
+
+@pytest.mark.parametrize("lang", ["en", "ms"])
+def test_long_card_is_trimmed_to_the_cap_and_keeps_what_matters(lang):
+    c = _long_card()
+    text = card.render(c, lang)
+    # every allowed cut is made; what is left may still pass ~750 when all protected lines are needed (BM: 784)
+    assert len(text) <= card.MAX_CARD_CHARS + 50 and T_UP[lang] not in text and "120.5" not in text
+    assert card.ADVICE["ACT"][lang] in text and ("2014" in text)                       # action + 2014 line stay
+    assert "CONTINUOUS RAIN WARNING" in text and "data.gov.my flood-warning" in text   # warning + excluded stay
+    assert card.months_ms("(Kosmo), 22 Oct 20:45") in card.months_ms(text)            # short label keeps the time
+
+
+@pytest.mark.parametrize("lang", ["en", "ms"])
+def test_a_line_that_triggered_the_verdict_is_never_dropped(lang):
+    c = _long_card()
+    assert T_UP[lang] not in card.render(c, lang)                    # trimmed when it did not fire the verdict
+    c["keep"] = ["upstream"]
+    assert T_UP[lang] in card.render(c, lang)                        # kept when a sentinel rule fired it
+
+
+T_UP = {"en": "Upstream: Kuala Krai", "ms": "Hulu: Kuala Krai"}
+
+
+def test_reconstructed_reading_says_estimated():
+    label = "reconstructed between the verified JPS readings 8.41 m (26 Nov ~18:00) and 10.94 m (27 Nov 2024 19:30)"
+    assert card.label_text(label, "en").startswith("estimated: ")
+    assert card.label_text(label, "ms").startswith("anggaran: ")
+
+
+def test_short_gauge_name():
+    assert card.short_gauge("Sg. Golok di Rantau Panjang (F1)", "Rantau Panjang") == "Sg. Golok"
+    assert card.short_gauge("Sg. Kelantan di Jambatan Tendong (F2)", "Pasir Mas") == "Sg. Kelantan di Jambatan Tendong"

@@ -51,9 +51,10 @@ def test_scene_1_prepare_with_labels_and_no_hindsight(offline):
     text = r["answer"]["text"]
     assert text.split("\n")[0] == "REPLAY · Nov 2024"
     assert r["forecast"]["verdict"] == "PREPARE" and r["forecast"]["confidence"]["label"] == "medium"
-    assert "bacaan JPS yang dilaporkan (Bernama" in text and "masa anggaran" in text
+    assert "bacaan JPS dilaporkan (Bernama" in text and "masa anggaran" in text
+    assert "26 Nov 18:00; masa anggaran" in text or "(Bernama, 26 Nov" in text       # the reading time stays
     assert "11.43" not in text and "10.94" not in text and "29 Nov" not in text          # later readings never leak
-    assert "Berbanding 2014" in text and "tiada ramalan hujan dalam ulang tayang" in text
+    assert "Berbanding 2014" in text                       # the 2014 line is never trimmed (rain may be, ~750 cap)
     assert r["evidence"]["sources"]["mygov_forecast"]["note"].startswith("not available in replay")
     events = [h["event"] for h in r["forecast"]["history"]]
     assert not any("2024" in e for e in events)                                          # peaks after 26 Nov hidden
