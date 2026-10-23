@@ -61,7 +61,9 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
          search for 196 real values (snapshot, JPS-table fixtures, the private unredacted traces) in any form:
          309 hits on lines unchanged in today's tree (synthetic / cited / redacted, guarded by
          `tests/test_no_jps_readings.py`), 160 cited Nov 2024 replay values, 1 not a level, **0 unexplained**;
-      3. CI green on the rewritten history; **one** force push;
+      3. CI green on the rewritten history; **one** force push; then delete every **old GitHub Actions workflow
+         run, artifact and cache** (`gh run list` / `gh run delete`, `gh cache delete --all`, artifacts via the
+         API) - CI logs from before the scrub may hold JPS values printed by tests;
       4. a history search (`git log -p --all | grep` for the removed files and known reading values) finds nothing;
       5. record it in `docs/DECISIONS.md`.
 - [ ] The repo stays private until B-75 steps 3-4 and the history clean are done.
