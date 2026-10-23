@@ -62,13 +62,16 @@ def _sql(sql, agent, purpose, results=None):
 PURPOSES = {}          # sql -> trace purpose, filled below
 
 
-def fetch_all(sqls, agent, workers=10, optional=()):
+FETCH_BUDGET_S = 40      # one parallel query, all tries included (audit 23 Oct: was up to 3 x 30 s + waits each)
+
+
+def fetch_all(sqls, agent, workers=10, optional=(), budget_s=FETCH_BUDGET_S):
     """Run independent read-only queries at the same time (B-17: ~28 s one by one -> ~6 s together).
     Returns {sql: SqlResult}. A failed query in `optional` maps to None (its run_sql trace line says why);
-    any other failure raises its ZetarisError."""
+    any other failure raises its ZetarisError. budget_s caps each query's total time (all tries)."""
     def run_one(q):
         try:
-            return zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch"))
+            return zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch"), budget_s=budget_s)
         except zetaris.ZetarisError as e:
             if q in optional:
                 return None

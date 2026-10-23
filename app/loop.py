@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from app import card as card_mod
 from app import config, gazetteer, router, safety, trace
+from app.adapters import zetaris
 from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
@@ -110,8 +111,20 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
             current, started = state, elapsed()
             if state == "plan":
                 lang = router.language(question)
-                res = gazetteer.resolve(question, agent=coordinator.AGENT)
-                if res.status != "found":
+                try:
+                    res, down = gazetteer.resolve(question, agent=coordinator.AGENT), None
+                except zetaris.ZetarisError as e:        # audit 23 Oct: Zetaris down / no keys -> an answer, not a 500
+                    res, down = None, e
+                if down is not None:
+                    trace.step("System", "data.unavailable", output_summary=f"{down.kind}: {down}", status="fallback",
+                               decision="Zetaris cannot be reached -> 'cannot check now' answer, no place, no verdict"
+                                        + (" (set SAMPLE_MODE=true to run offline on recorded data)"
+                                           if down.kind == "auth" else ""))
+                    p = {"question_language": lang, "place": None, "place_status": "unavailable",
+                         "place_message": str(down), "planned_by": "code"}
+                    answer = {"text": card_mod.unavailable_reply(lang), "language": lang, "drafted_by": "code"}
+                    status, state = "fallback", "done"
+                elif res.status != "found":
                     p = {"question_language": lang, "place": None, "place_status": res.status,
                          "place_message": res.message, "planned_by": "code"}
                     answer = {"text": card_mod.place_reply(res, lang), "language": lang, "drafted_by": "code"}

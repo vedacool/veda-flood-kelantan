@@ -146,6 +146,8 @@ async def run(request: Request):
         r = await run_in_threadpool(_run, question, replay, at)
     except nightshift.NightshiftError as e:            # should not happen (agents fall back), but never a 500 page
         return _error(503, "model_unavailable", str(e))
+    except zetaris.ZetarisError as e:                  # the loop answers "cannot check now"; this is the backstop
+        return _error(503, "data_unavailable", str(e))
     finally:
         _busy.release()
     return result_json(r)

@@ -36,6 +36,8 @@ FRESHNESS = {  # minutes: (fresh up to, aging up to); older = stale. Tentative, 
     "mygov_warning": (720, 1440),
 }
 REFRESHABLE = {"open_meteo": "veda_wx.om_rain", "mygov_forecast": "veda_wx.mygov_forecast"}
+REFRESH_BUDGET_S = 10      # one UNCACHE / CACHE call, all tries included (audit 23 Oct)
+REFRESH_RETRY_MIN = 15     # after a failed refresh, don't try again for this long (same as the circuit breaker)
 LABEL = {"jps_levels": "JPS river levels", "open_meteo": "Open-Meteo rain forecast",
          "mygov_forecast": "MetMalaysia forecast", "mygov_warning": "MetMalaysia warnings"}
 LEVEL_RANGE_M = (-5.0, 120.0)     # every Kelantan gauge datum fits (Gua Musang reads ~50 m); outside = broken
@@ -150,12 +152,25 @@ def _refresh_if_old(world, key, clock, run_id):
         trace.step(AGENT, "data.refresh", input_summary=table, output_summary="skipped", status="fallback",
                    source="zetaris-replay", decision=f"{why}, but SAMPLE_MODE replays recorded data - no refresh")
         return f"{LABEL[key]}: recorded data, refresh time unknown."
+    failed = world.facts_about(source_id(key), "refresh_failed_at")
+    failed_at = datetime.fromisoformat(failed[-1]["value"].replace("Z", "+00:00")) if failed else None
+    wall = datetime.now(timezone.utc)
+    if failed_at and (not last or failed_at > last) and wall - failed_at < timedelta(minutes=REFRESH_RETRY_MIN):
+        trace.step(AGENT, "data.refresh", input_summary=table, output_summary="skipped", status="fallback",
+                   source="zetaris", decision=f"{why}; the last refresh failed at {_iso(failed_at)} -> no new try "
+                                              f"for {REFRESH_RETRY_MIN} min")
+        return f"{LABEL[key]}: refresh failed recently, its age is unknown."
     try:
-        zetaris.run_ddl(f"UNCACHE TABLE {table}", agent=AGENT, purpose=f"refresh {table} ({why})")
-        zetaris.run_ddl(f"CACHE TABLE {table}", agent=AGENT, purpose=f"re-cache {table}")
+        zetaris.run_ddl(f"UNCACHE TABLE {table}", agent=AGENT, purpose=f"refresh {table} ({why})",
+                        budget_s=REFRESH_BUDGET_S)
+        zetaris.run_ddl(f"CACHE TABLE {table}", agent=AGENT, purpose=f"re-cache {table}", budget_s=REFRESH_BUDGET_S)
     except zetaris.ZetarisError as e:
+        at = _iso(datetime.now(timezone.utc))
+        world.assert_fact(source_id(key), "refresh_failed_at", at, confidence=1.0, source={
+            "kind": "agent_check", "at": at, "agent": AGENT, "run_id": run_id, "origin": f"refresh {table}"})
         trace.step(AGENT, "data.refresh", input_summary=table, output_summary=f"{e.kind}: {e}", status="fallback",
-                   source="zetaris", decision=f"{why}; refresh failed -> using whatever Zetaris has, age unknown")
+                   source="zetaris", decision=f"{why}; refresh failed -> using whatever Zetaris has, age unknown; "
+                                              f"no new try for {REFRESH_RETRY_MIN} min")
         return f"{LABEL[key]}: refresh failed ({e.kind}), its age is unknown."
     at = _iso(datetime.now(timezone.utc))
     world.assert_fact(source_id(key), "refreshed_at", at, confidence=1.0, source={
@@ -170,9 +185,12 @@ def _age_since(clock, dt):
     return int((clock - dt).total_seconds() // 60) if dt else None
 
 
-def _cross_check(ctx, clock, world, run_id, r=None):
+def _cross_check(ctx, clock, world, run_id, r=None, prefetched=False):
     """data.gov.my /flood-warning vs JPS for this place's gauges. Returns the result and writes source status.
-    r = the already-fetched /flood-warning result (prefetch), else it is queried here."""
+    r = the already-fetched /flood-warning result (prefetch), else it is queried here. prefetched with r None =
+    the prefetch's query failed or its breaker was open -> not asked again (audit 23 Oct)."""
+    if r is None and prefetched:
+        return {"status": "failed", "note": "data.gov.my /flood-warning could not be read in this run"}
     if r is None:
         try:
             r = zetaris.run_sql(FLOOD_WARNING_SQL, agent=AGENT, purpose=PURPOSES[FLOOD_WARNING_SQL])
@@ -424,6 +442,12 @@ def _breaker_state(world, key):
     return attrs.get("fail_count") or 0, datetime.fromisoformat(until.replace("Z", "+00:00")) if until else None
 
 
+def _is_open(world, key, wall):
+    """The breaker's state without a trace line (circuit_open traces it)."""
+    _, until = _breaker_state(world, key)
+    return until is not None and wall < until
+
+
 def circuit_open(world, key, wall):
     """True while the source's circuit is open (its queries are skipped). Traced either way when not closed."""
     fails, until = _breaker_state(world, key)
@@ -468,11 +492,15 @@ def prefetch(world, now=None, replay=None):
     run = trace.current_run()
     run_id = run.run_id if run else None
     events_before = len(world.store.events)
-    notes = [] if replay else [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n]
+    wall = datetime.now(timezone.utc)               # the breaker runs on real time, also in a replay's past clock
+    # audit 23 Oct: the refresh sits behind the breaker - Zetaris down means no refresh tries at all
+    refresh = not replay and not any(_is_open(world, k, wall) for k in ("jps_levels", "rain_and_forecast"))
+    notes = [n for n in (_refresh_if_old(world, key, now, run_id) for key in REFRESHABLE) if n] if refresh else []
+    if not replay and not refresh:
+        notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
     sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
             NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL]))
-    wall = datetime.now(timezone.utc)               # the breaker runs on real time, also in a replay's past clock
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
     if skipped & JPS_CORE:
         e = zetaris.ZetarisError("source_unavailable", "JPS river levels skipped: circuit open after repeated failures")
@@ -579,7 +607,8 @@ def gather(plan, world, now=None, pre=None):
         trace.step(AGENT, "data.quick", output_summary="cross-check and reconciliation skipped", source="plan",
                    decision="Quick plan: current readings only (the full path cross-checks data.gov.my)")
     elif "jps_levels" in wanted and ctx["found"]:
-        cross = _cross_check(ctx, clock, world, run_id, pre.get("results", {}).get(FLOOD_WARNING_SQL))
+        cross = _cross_check(ctx, clock, world, run_id, pre.get("results", {}).get(FLOOD_WARNING_SQL),
+                             prefetched=FLOOD_WARNING_SQL in pre.get("results", {}))
     if cross:
         notes.insert(0, cross["note"])         # the excluded source matters more than refresh details
     reconciliation = _reconcile_levels(cross, world)

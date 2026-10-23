@@ -196,3 +196,19 @@ def test_explanation_stays_when_the_ai_critic_approved_it(offline, force):
     force("full")
     r = loop.run("Is Rantau Panjang at risk?", llm=stub("full"), log_dir=offline, quiet=True)
     assert r["answer"]["explanation"] == "The river is steady for now." and r["answer"]["drafted_by"] == "llm"
+
+
+# -- audit 23 Oct: no Zetaris at all (clean clone without SAMPLE_MODE, or an outage) ----------------------------
+@pytest.mark.parametrize("question, lang", [("Is Tumpat safe?", "en"), ("Tumpat banjir tak?", "ms")])
+def test_no_zetaris_gives_a_cannot_check_now_answer_not_a_crash(monkeypatch, tmp_path, question, lang):
+    monkeypatch.setenv("SAMPLE_MODE", "false")
+    for key in ("ZETARIS_API_KEY", "ZETARIS_API_URL"):
+        monkeypatch.delenv(key, raising=False)
+    gazetteer.clear_cache()
+    r = loop.run(question, llm=stub(), world=WorldModel(), log_dir=tmp_path, quiet=True)
+    gazetteer.clear_cache()
+    assert r["status"] == "fallback" and r["forecast"] is None
+    assert r["answer"]["text"].startswith({"en": "VEDA cannot reach", "ms": "VEDA tidak dapat mencapai"}[lang])
+    assert "999" in r["answer"]["text"]
+    steps = [json.loads(x) for x in open(r["trace"], encoding="utf-8")]
+    assert any(s.get("action") == "data.unavailable" and "SAMPLE_MODE" in s["decision"] for s in steps)

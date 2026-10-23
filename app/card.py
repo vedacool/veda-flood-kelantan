@@ -307,6 +307,14 @@ def explanation_problem(text, card):
     return None
 
 
+def unavailable_reply(lang):
+    """The reply when VEDA's data (Zetaris) cannot be reached at all - no place, no verdict (audit 23 Oct)."""
+    return {"en": "VEDA cannot reach its river data right now, so it cannot check any place. "
+                  + ADVICE["INSUFFICIENT_DATA"]["en"],
+            "ms": "VEDA tidak dapat mencapai data sungainya sekarang, jadi tidak dapat menyemak mana-mana tempat. "
+                  + ADVICE["INSUFFICIENT_DATA"]["ms"]}[lang]
+
+
 def place_reply(res, lang):
     """The reply when the place is not found: 'Did you mean...?' or 'not covered yet' + the nearest covered place,
     in the user's language."""

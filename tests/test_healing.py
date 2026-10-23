@@ -170,3 +170,34 @@ def test_rain_failure_does_not_take_the_gauges_down(offline, monkeypatch):
     ev = data_agent.gather(plan, w)
     assert ev["usable"] and ev["context"]["rain"] is None and ev["sources"]["open_meteo"]["status"] == "failed"
     assert data_agent._breaker_state(w, "rain_and_forecast")[0] == 1
+
+
+# -- audit 23 Oct: a hung or down Zetaris cannot stretch a run --------------------------------------------------
+def test_failed_refresh_is_remembered_and_not_retried_for_15_minutes(monkeypatch):
+    calls = []
+
+    def ddl(sql, agent, purpose=None, budget_s=None, **kw):
+        calls.append(budget_s)
+        raise data_agent.zetaris.ZetarisError("network", "timed out")
+    monkeypatch.setattr(data_agent.config, "sample_mode", lambda: False)
+    monkeypatch.setattr(data_agent.zetaris, "run_ddl", ddl)
+    w = WorldModel()
+    assert "refresh failed (network)" in data_agent._refresh_if_old(w, "open_meteo", NOW, "r")
+    assert calls == [data_agent.REFRESH_BUDGET_S]                  # one capped try, not 3 x 30 s
+    assert "failed recently" in data_agent._refresh_if_old(w, "open_meteo", NOW, "r")
+    assert len(calls) == 1                                         # remembered: no second try
+
+
+def test_open_breaker_skips_the_refresh(offline, monkeypatch):
+    w = WorldModel()
+    for _ in range(3):
+        data_agent.record_call(w, "rain_and_forecast", False, datetime.now(timezone.utc), "r")
+    monkeypatch.setattr(data_agent, "_refresh_if_old", lambda *a, **k: pytest.fail("refresh must be skipped"))
+    pre = data_agent.prefetch(w)
+    assert any("not refreshed" in n for n in pre["notes"])
+
+
+def test_failed_prefetch_flood_warning_is_not_asked_again(monkeypatch):
+    monkeypatch.setattr(data_agent.zetaris, "run_sql", lambda *a, **k: pytest.fail("no second /flood-warning query"))
+    got = data_agent._cross_check({"gauges": []}, NOW, WorldModel(), "r", None, prefetched=True)
+    assert got["status"] == "failed"
