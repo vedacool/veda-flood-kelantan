@@ -259,6 +259,25 @@ def write_page(rnd, check):
     return [PAGE.name] if text != html else []
 
 
+def write_discover_fixture(check):
+    """B-71(c): SAMPLE_MODE's discovery query finds ONE made-up unmapped gauge, labelled SYNTHETIC (live mode finds the
+    real unmapped JPS gauges at runtime)."""
+    sys.path.insert(0, str(ROOT))
+    from app.adapters.zetaris import query_hash
+    from app.agents.data_agent import DISCOVER_SQL
+    doc = {"sql": DISCOVER_SQL, "query_hash": query_hash(DISCOVER_SQL), "recorded_at": "2026-10-24T00:00:00Z",
+           "columns": ["station_key", "name", "river", "district"],
+           "rows": [["_SYN0001", "Sg. Kelantan di Kg. Contoh (SYNTHETIC)", "Sg. Kelantan", "Pasir Mas"]],
+           "synthetic": True, "note": NOTE + " One made-up unmapped gauge for the discovery step (B-71c)."}
+    path = FIXTURES / f"{doc['query_hash']}.json"
+    text = json.dumps(doc, ensure_ascii=False, indent=1)
+    if path.exists() and path.read_text(encoding="utf-8") == text:
+        return []
+    if not check:
+        path.write_text(text, encoding="utf-8")
+    return [path.name]
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true", help="only report outputs that differ from the method")
@@ -274,6 +293,7 @@ def main(argv=None):
         ANCHORS.write_text(text, encoding="utf-8", newline="")
     changed += write_fixtures(gauges, rnd, args.check)
     changed += write_page(rnd, args.check)
+    changed += write_discover_fixture(args.check)
     print(("differs: " if args.check else "written: ") + (", ".join(changed) or "nothing"))
     return 1 if (args.check and changed) else 0
 

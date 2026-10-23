@@ -1,0 +1,21 @@
+{
+ "sql": "SELECT station_key, name, river, district FROM veda_pg.stations WHERE mapping_status IS NULL",
+ "query_hash": "9b91b66f596d2bc7",
+ "recorded_at": "2026-10-24T00:00:00Z",
+ "columns": [
+  "station_key",
+  "name",
+  "river",
+  "district"
+ ],
+ "rows": [
+  [
+   "_SYN0001",
+   "Sg. Kelantan di Kg. Contoh (SYNTHETIC)",
+   "Sg. Kelantan",
+   "Pasir Mas"
+  ]
+ ],
+ "synthetic": true,
+ "note": "SYNTHETIC values (B-75): made by scripts/make_synthetic_scenes.py from cited thresholds, 2014 peaks and travel times - not JPS readings. One made-up unmapped gauge for the discovery step (B-71c)."
+}

@@ -147,14 +147,19 @@ def _read_stream(r, stop_at):
     closes the connection at stop_at, so a stream that goes silent is cut on time too (audit A-P2-3: it used to be
     cut only when the next line arrived)."""
     parts, model, meta, usage, err = [], None, {}, {}, None
-    watchdog = threading.Timer(max(0.0, stop_at - time.monotonic()), r.close)
+    fired = threading.Event()
+
+    def cut():                                              # the watchdog marks that IT closed the stream (timers can
+        fired.set()                                         # fire a few ms early - never judge by the clock here)
+        r.close()
+    watchdog = threading.Timer(max(0.0, stop_at - time.monotonic()), cut)
     watchdog.daemon = True
     watchdog.start()
     try:
         try:
             lines = list(_lines_until(r, stop_at))
         except Exception:                                   # noqa: BLE001 - the watchdog closed the connection
-            if time.monotonic() >= stop_at:
+            if fired.is_set() or time.monotonic() >= stop_at:
                 raise requests.Timeout("streamed answer took longer than the time allowed") from None
             raise
         for line in lines:

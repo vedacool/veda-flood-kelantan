@@ -134,7 +134,7 @@ def test_prefetch_runs_while_planning_and_feeds_gather(offline):
     steps = {x["action"]: x["step"] for x in lines(r) if x["action"] in ("world.write", "plan")}
     assert r["evidence"]["usable"] and steps                                    # one prefetch, used by gather
     writes = [x for x in lines(r) if x["action"] == "world.write" and x["agent_name"] == "Data & Reconciler"]
-    assert len(writes) == 1 and writes[0]["details"]["queries_in_parallel"] == 13      # B-73: + the OSM table
+    assert len(writes) == 1 and writes[0]["details"]["queries_in_parallel"] == 14      # B-73 OSM + B-71 discovery
 
 
 def test_parallel_fetch_returns_the_same_rows_as_one_by_one(offline):

@@ -24,6 +24,7 @@ from app import config, trace
 from app.adapters import zetaris
 from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
+from app.engines.world_model import veda_ingest
 from app.engines.world_model.veda_ingest import (MIN_7D_SQL, NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
                                                  ingest_readings, ingest_replay, place_id, replay_sqls, station_id)
 
@@ -574,8 +575,8 @@ def prefetch(world, now=None, replay=None):
     if not replay and not refresh:
         notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
-    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL, OSM_SQL] if replay else
-            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL, OSM_SQL]
+    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL, OSM_SQL, DISCOVER_SQL] if replay else
+            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL, OSM_SQL, DISCOVER_SQL]
             + ([] if now else [CLOCK_SQL]))
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
     if not replay and FLOOD_WARNING_SQL in sqls and FLOOD_WARNING_SQL not in skipped and remembered(world, "mygov_flood",
@@ -594,6 +595,7 @@ def prefetch(world, now=None, replay=None):
         results.update({q: None for q in skipped})
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
+        discover(world, results, run_id)              # B-71(c): unmapped JPS gauges -> discovered (never used yet)
         counts = (ingest_replay(world, AGENT, run_id, rsql, now, check=check, results=results) if replay else
                   ingest_readings(world, AGENT, run_id, check=check, results=results,
                                   rain_alone=not _is_open(world, "open_meteo", wall)))
@@ -640,6 +642,58 @@ def osm_features(result, place, world, clock):
         out["bridges"].append({"name": str(r["name"]), "river": str(r["river"]), "km": r["km"], "band": band,
                                "gauge": gauge_name, "gauge_km": r["gauge_km"], "has_gauge": bool(r["station_key"])})
     return out
+
+
+# B-71(c): gauge discovery - JPS gauges the collector stores that VEDA has not mapped (no mapping_status).
+DISCOVER_SQL = "SELECT station_key, name, river, district FROM veda_pg.stations WHERE mapping_status IS NULL"
+PURPOSES[DISCOVER_SQL] = "discovery: JPS gauges VEDA has not mapped yet"
+OPTIONAL_SQL.add(DISCOVER_SQL)
+DISCOVERED = "discovered_gauge"          # World Model entity type; attrs.status: discovered | approved
+
+
+def discover(world, results, run_id):
+    """B-71(c): every unmapped JPS gauge becomes a `discovered_gauge` in the World Model with a proposed fit (its river
+    and district from JPS, a covered place in the same district, mapped gauges on the same river). It is NEVER used
+    until a person approves it (`python -m app.discover approve`), and then only as context - never in the verdict
+    until Dr Ariff approves a role. A later scan updates the fit but never the status. -> [names] or None."""
+    r = (results or {}).get(DISCOVER_SQL)
+    if r is None:
+        return None
+    stations = (results.get(veda_ingest.STATIONS_SQL) or SimpleResult()).records
+    places = (results.get(veda_ingest.PLACES_SQL) or SimpleResult()).records
+    place_in = {}
+    for p in places:
+        place_in.setdefault((p.get("district") or "").lower(), {"place_id": p["place_id"], "name": p["name"]})
+    on_river = {}
+    for s in stations:
+        on_river.setdefault(s.get("river"), []).append(s["name"])
+    src = {"kind": "zetaris", "at": _iso(datetime.now(timezone.utc)), "sql": r.sql, "query_hash": r.query_hash,
+           "view": "veda_pg.stations", "agent": AGENT, "run_id": run_id, "origin": "discovery"}
+    names, new = [], []
+    for row in r.records:
+        fit = {"river": row.get("river"), "district": row.get("district"),
+               "place": place_in.get((row.get("district") or "").lower()),
+               "same_river_as": (on_river.get(row.get("river")) or [])[:3],
+               "use": "context only, after a person approves; any role in the verdict needs Dr Ariff"}
+        eid = external_id(DISCOVERED, "jps", row["station_key"])
+        exists = world.entity(eid) is not None
+        attrs = {"station_key": row["station_key"], "name": row.get("name"), "fit": fit}
+        if not exists:
+            attrs["status"] = "discovered"
+            new.append(row.get("name"))
+        world.upsert_entity(DISCOVERED, external_key={"system": "jps", "id": row["station_key"]}, attrs=attrs,
+                            source=src)
+        names.append(row.get("name"))
+    trace.step(AGENT, "data.discover", input_summary="JPS gauges without a VEDA mapping",
+               output_summary=f"{len(names)} unmapped JPS gauge(s) noticed ({len(new)} new) - discovered, not used "
+                              "until a person approves", source="world_model",
+               decision="written to the World Model with a proposed fit; list them: python -m app.discover list",
+               details={"gauges": names[:40], "new": new[:40]})
+    return names
+
+
+class SimpleResult:
+    records = []
 
 
 # B-71(b): the Critic's missing-source request. Live: one query for every mapped gauge's latest reading.
