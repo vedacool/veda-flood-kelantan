@@ -1,4 +1,12 @@
 # VEDA — review pack for Dr Ariff
+
+> **Start here (5 lines)**
+> 1. **What VEDA is:** a helper that answers "is my place in Kelantan at risk of flooding in the next day or two, and what should we do?" in BM or English, using JPS river gauges, rain forecasts and MetMalaysia warnings.
+> 2. **What you are checking:** the flood rules and numbers a person must sign off - which gauge speaks for which town, when a level means WATCH / PREPARE / ACT, how old a reading may be, what VEDA tells people to do.
+> 3. **How to reply:** under each item write its ID and your answer - "A3: OK", or "A3: change to …", or "A3: ?" if you are unsure. A short note is enough.
+> 4. **Order:** A, G, K first; then B to I. J is parked (no answer needed).
+> 5. **Deadline:** Saturday 24 Oct, night.
+
 _Prepared 22 Oct 2026 (evening). Everything VEDA currently treats as **"tentative — needs Dr Ariff"**, in one place. Estimated time: **about 1 hour**. Sections are in priority order — if time runs out, A–C matter most._
 
 **How to answer:** for each item write **Yes** (assumption correct) or **Correct to: …** on the answer line (a short note is enough). Husaini or Claude will update the data files and re-seed. The underlying files, if you want to look: `data/stations_mapping.csv` (gauges + links, with map links), `data/rain_points.csv`, `data/historic_peaks.csv`.
@@ -254,6 +262,46 @@ closure notices)?
 
 _After your answers: we update the three CSV files, re-run `scripts/seed_stations.py` / `seed_peaks.py`, and change each status from "tentative" to "verified — Dr Ariff, <date>"._
 
+
+## K. Gauges VEDA asks for or finds by itself (B-71) — ~10 min (added 24 Oct)
+
+**K1.** When the gauge upstream of a town has no fresh reading, VEDA's checker (the Critic) asks the data part of
+VEDA for another fresh gauge **further up the same river**. It never replaces the town's own gauge. If one is found,
+the risk level is worked out again with the same rules. Example (made-up test scene): Pasir Mas - the upstream gauge
+at Kuala Krai is silent -> the data part finds Kg. Temangan at Warning (Amaran) -> Pasir Mas goes from NORMAL to
+WATCH. If nothing fresh is found, the answer says which gauge is missing. Is this acceptable?
+> Reply: OK, or your correction: ______
+
+**K2.** JPS publishes 20 Kelantan gauges that VEDA does not use yet. VEDA notices them on every question and lists
+them as "discovered"; it never uses one unless a person approves it, and then only as extra information on the answer,
+never in the risk level. Please give each a **Role**: *town gauge* (speaks for a town), *upstream warning* (an early
+sign for a town downstream - say which), or *context only*. Until you fill this in, **all stay context only**.
+"Nearest town" = a town VEDA covers in the same district (— = none).
+
+| Key | Station name | River | District | Nearest town | Role |
+|---|---|---|---|---|---|
+| _DPMS0419 | Empangan Bukit Kwong (F1) | Sg. Golok | Pasir Mas | Pasir Mas | |
+| _DGMG0023 | Sg. Aring di Jalan Felda Aring (F1) | Sg. Lebir | Gua Musang | — | |
+| 26292 | Sg. Buaya Ikat di Kg. Pulau Lima (F2) | Sg. Buaya Ikat | Pasir Puteh | — | |
+| _DGMG0045 | Sg. Galas di Kg. Lembaga (F1) | Sg. Galas | Gua Musang | — | |
+| _DGMG0014 | Sg. Galas di Kg. Pulai (F1) | Sg. Galas | Gua Musang | — | |
+| _DKBR0010 | Sg. Kelantan di Kuala Besar (F1) | Sg. Kelantan | Kota Bharu | Kota Bharu | |
+| _DJLI0011 | Sg. Lanas di Air Lanas (F1) | Sg. Lanas | Jeli | — | |
+| _DKKI0082 | Sg. Lebir di Kg. Karangan (F1) | Sg. Lebir | Kuala Krai | — | |
+| 4824001_DGMG0021 | Sg. Lebir di Kuala Koh (F1) | Sg. Lebir | Gua Musang | — | |
+| 26296 | Sg. Melor di Jambatan Melor (F2) | Sg. Melor | Bachok | — | |
+| _DKKI0015 | Sg. Nal di Kg. Sungai Nal (F1) | Sg. Nal | Kuala Krai | — | |
+| _DGMG0002 | Sg. Nenggiri di Belatop (F1) | Sg. Nenggiri | Gua Musang | — | |
+| _DGMG0011 | Sg. Nenggiri di Bertam (F1) | Sg. Nenggiri | Gua Musang | — | |
+| _DKKI0109 | Sg. Pahi di Kg. Pahi (F1) | Sg. Lebir | Kuala Krai | — | |
+| _DJLI0002 | Sg. Pergau di Air Bol (F1) | Sg. Pergau | Jeli | — | |
+| _DJLI0005 | Sg. Pergau di Jambatan Jerimbong, Kuala Balah (F1) | Sg. Pergau | Jeli | — | |
+| _DJLI0007 | Sg. Pergau di Kg. Lawar (F1) | Sg. Pergau | Jeli | — | |
+| _DPPH0001 | Sg. Semerak di Pasir Puteh (F1) | Sg. Semerak | Pasir Puteh | — | |
+| 26289 | Sg. Semerak di Tok Bali (F2) | Sg. Semerak | Pasir Puteh | — | |
+| _DTMH0004 | Sg. Sokor di Kg. Sokor (F1) | Sg. Kelantan | Tanah Merah | — | |
+
+> Reply: OK, or your correction (fill the Role column, or write e.g. "_DKBR0010: upstream warning for Kota Bharu"): ______
 
 ## J. Ground height (B-74, PARKED until after the hackathon - for later, no answer needed now)
 
