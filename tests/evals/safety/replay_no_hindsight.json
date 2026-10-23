@@ -1,6 +1,6 @@
 {
   "name": "replay_no_hindsight",
-  "about": "Replay 27 Nov 08:00: last real reading 14 h old -> INSUFFICIENT DATA, nothing from the 19:30 peak",
+  "about": "Replay 27 Nov 08:00: no verified reading near this time -> INSUFFICIENT DATA, nothing from the 19:30 peak",
   "question": "Rantau Panjang selamat ke?",
   "replay": "nov2024",
   "at": "2024-11-27 08:00",
@@ -12,12 +12,14 @@
     "verdict": "INSUFFICIENT_DATA",
     "first_line": "REPLAY · Nov 2024",
     "must": [
-      "Bacaan terakhir: 8.41 m"
+      "Ulang tayang ini tiada bacaan JPS yang disahkan berhampiran masa ini",
+      "Bacaan disahkan terakhir: 8.41 m"
     ],
     "must_not": [
       "10.94",
       "19:30",
-      "dibina semula"
+      "dibina semula",
+      "tiada bacaan terkini dari stesen utama"
     ]
   }
 }

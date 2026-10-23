@@ -76,6 +76,11 @@ T = {  # fixed wording, BM + EN
     "silent": {"en": "has no reading since {t}", "ms": "tiada bacaan sejak {t}"},
     "silent_never": {"en": "has no reading", "ms": "tiada bacaan"},
     "last": {"en": "Last reading: {m} m at {t} ({age}) - too old to use", "ms": "Bacaan terakhir: {m} m pada {t} ({age}) - terlalu lama untuk digunakan"},
+    # replay (Husaini 23 Oct): the gap is in what was reported, not a gauge that went down
+    "replay_gap": {"en": "This replay has no verified JPS reading near this time",
+                   "ms": "Ulang tayang ini tiada bacaan JPS yang disahkan berhampiran masa ini"},
+    "replay_last": {"en": "Last verified reading: {m} m at {t} ({age}) - too far from this time to use",
+                    "ms": "Bacaan disahkan terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     "low_conf": {"en": "Low confidence: VEDA's reviewer did not approve the written explanation, so only the checked "
                        "data is shown.",
                  "ms": "Keyakinan rendah: penyemak VEDA tidak meluluskan penjelasan bertulis, jadi hanya data yang "
@@ -213,11 +218,12 @@ def render(card, lang, explanation=None, low_confidence=False):
             out.append(T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
                                                 rel=T["above" if v["diff_m"] >= 0 else "below"][lang]) + ".")
     elif card["verdict"] == "INSUFFICIENT_DATA":
-        out.append(T["no_reading"][lang].capitalize() + ".")
+        replay = bool(card.get("replay"))
+        out.append((T["replay_gap"][lang] if replay else T["no_reading"][lang].capitalize()) + ".")
         if card.get("last_reading"):
             lr = card["last_reading"]
-            out.append(T["last"][lang].format(m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang))
-                       + ".")
+            out.append(T["replay_last" if replay else "last"][lang].format(
+                m=_num(lr["level_m"]), t=lr["at"], age=_age(lr["age_minutes"], lang)) + ".")
     if card.get("backup"):
         b = card["backup"]
         silent = T["silent"][lang].format(t=b["since"]) if b.get("since") else T["silent_never"][lang]
