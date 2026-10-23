@@ -37,3 +37,21 @@ def test_scene_rows_are_cited_or_synthetic():
                 assert row["source_name"] == "SYNTHETIC"
             else:
                 assert row["source_url"].startswith("https://") and row["quote"]
+
+
+def test_recorded_live_traces_carry_no_jps_readings():
+    """Only cited thresholds / peaks may appear as metre values; readings read '[JPS reading — not redistributed]'."""
+    import csv
+    import re
+    keep = set()
+    for r in csv.DictReader((ROOT / "data" / "stations_mapping.csv").open(encoding="utf-8")):
+        keep |= {round(float(v), 2) for k, v in r.items() if k.startswith("jps") and k.endswith("_m") and v}
+    for r in csv.DictReader((ROOT / "data" / "historic_peaks.csv").open(encoding="utf-8")):
+        keep.add(round(float(r["peak_m"]), 2))
+    metres = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s?m(?![m\w])")
+    for path in sorted((ROOT / "data" / "sample" / "live_traces").glob("*.trace.jsonl")):
+        text = path.read_text(encoding="utf-8")
+        assert "[JPS reading — not redistributed]" in text, path.name
+        assert not re.search(r'"value": -?\d', text), path.name
+        left = [m.group(0) for m in metres.finditer(text) if round(float(m.group(1)), 2) not in keep]
+        assert left == [], (path.name, left[:5])
