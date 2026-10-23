@@ -24,7 +24,7 @@ from app import config, trace
 from app.adapters import zetaris
 from app.engines.world_model.context import ContextBuilder
 from app.engines.world_model.stable_ids import external_id
-from app.engines.world_model.veda_ingest import (NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
+from app.engines.world_model.veda_ingest import (MIN_7D_SQL, NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
                                                  ingest_readings, ingest_replay, place_id, replay_sqls)
 
 AGENT = "Data & Reconciler"
@@ -59,7 +59,7 @@ JPS_CORE = set(READINGS_SQL[:2])                       # gauge reading times + g
 BREAKER_OF = {READINGS_SQL[0]: "jps_levels", READINGS_SQL[1]: "jps_levels",
               READINGS_SQL[2]: "rain_and_forecast", READINGS_SQL[3]: "rain_and_forecast",
               WARNING_SQL: "mygov_warning", FLOOD_WARNING_SQL: "mygov_flood"}
-OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3]}
+OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL}
 FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
@@ -540,7 +540,7 @@ def prefetch(world, now=None, replay=None):
         notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
     sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
-            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL]))
+            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL] + ([] if now else [CLOCK_SQL]))
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
     if not replay and FLOOD_WARNING_SQL in sqls and FLOOD_WARNING_SQL not in skipped and remembered(world, "mygov_flood",
                                                                                                     wall):

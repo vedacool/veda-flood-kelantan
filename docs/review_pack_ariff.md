@@ -33,6 +33,15 @@ VEDA gives one verdict per place for the next 24–48 h. Current rule set (from 
 **A5.** (added 22 Oct, B-16) Projections are straight-line from the last 1 h and 3 h, and stop at **24 h**; so the code uses "reaches Alert within 24 h" (WATCH) and "Danger within 24 h" (PREPARE) instead of 48 h. Beyond 24 h only upstream gauges and rain count. OK for the hackathon?
 > Answer: ______
 
+**A5b.** (added 23 Oct, Husaini) **The straight-line projection itself - rising and falling cases.**
+- *Falling:* on 23 Oct Pasir Mas (1.75 m, falling) was projected to "-2.33-1.51 m" - a level below the river bed. VEDA
+  now shows **"turun / falling - no level projected"** when both trends point down, and any range shown is **never
+  below the gauge's lowest level in the past 7 days**.
+- *Rising:* a steep rise overshoots (replay 27 Nov 19:30: 13.75-14.54 m projected, the real peak was ~11.4 m; see A5).
+  Should a rising projection be capped (e.g. at the record peak + a margin), shortened (12 h), or shown only as
+  "rising - may reach Danger in about X h"?
+> Answer: ______
+
 **A6.** (added 22 Oct, B-16) **Tidal gauges** are judged on their level only (a rise of a few hours may just be the tide). Marked tidal: Tambatan Diraja, and **Kg Kok Majid (tentative)**. Is Kok Majid tide-influenced? Is **Kuala Jambu** (Sg Golok near its mouth) tide-influenced too?
 > Answer: ______
 

@@ -175,3 +175,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Draft (explanation) call gets the card's key facts too, not the card text or the question; max_tokens chosen after a 2000 vs 4000 measurement | Husaini 23 Oct |
 | 2026-10-23 | Draft call: 4000 tokens (2000: 0/5, 4000: 3/5 measured), one retry on a fast failure (< 15 s) with >= 45 s left | Husaini 23 Oct |
 | 2026-10-23 | Unreadable source: known stale -> excluded on the card; unknown -> 'not checked'; only a real disagreement is a Critic conflict; the Critic's re-check respects the breaker; source status remembered 15 min in the World Model (data.gov.my HTTP 429 seen 23 Oct) | Husaini 23 Oct |
+| 2026-10-23 | Falling trend -> 'turun / falling', no range; any range floored at the gauge's 7-day low (Pasir Mas showed -2.33-1.51 m); straight-line projection flagged for Dr Ariff (A5b) | Husaini 23 Oct |
+| 2026-10-23 | Draft gets the key facts as words in the user's language (JPS level names, no minus signs, no rule names) + standard Malaysian BM rule; the Critic's AI question stays as proven (clarity question dropped: re-probe gate not met) | Husaini 23 Oct |

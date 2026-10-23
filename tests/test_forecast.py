@@ -82,7 +82,19 @@ def test_reaching_alert_within_24h_is_watch_and_danger_within_12h_is_act():
 
 def test_falling_river_has_no_time_to_threshold():
     c = verdict(evidence(gauge(6.0, -0.1, -0.3)))["controlling"][0]
-    assert c["hours_to"] == {} and c["projection_m"]["24h"]["max"] < 6.0
+    assert c["hours_to"] == {} and c["projection_m"] == {} and c["falling"]      # Husaini 23 Oct: no range
+
+
+def test_projected_range_never_goes_below_the_7_day_low():
+    """The Pasir Mas case, 23 Oct: 1.75 m falling about 0.17 m/h projected '-2.33-1.51 m'."""
+    g = gauge(1.75, -0.04, 0.2)                                   # mixed trends -> still a range
+    g["min_7d_m"] = 1.6
+    c = verdict(evidence(g))["controlling"][0]
+    assert c["projection_m"]["24h"]["min"] >= 1.6 and not c["falling"]
+    g = gauge(1.75, -0.1, -0.5)
+    g["min_7d_m"] = 1.6
+    c = verdict(evidence(g))["controlling"][0]
+    assert c["projection_m"] == {} and c["falling"]
 
 
 def test_rising_fast_moves_up_one_level():

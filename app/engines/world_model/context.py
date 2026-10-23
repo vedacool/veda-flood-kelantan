@@ -50,7 +50,7 @@ class ContextBuilder:
                 "health": level["source"].get("health") if level else None,
                 "mapping_status": entity["attrs"].get("mapping_status"), "selection_reason": reason,
                 "tide_influenced": "tide-influenced" in (entity["attrs"].get("role") or "")}
-        for pred in ("change_1h_m", "change_3h_m"):
+        for pred in ("change_1h_m", "change_3h_m", "min_7d_m"):
             f = self._fact(station_id, pred)
             item[pred] = f["value"] if f else None
         if lag:

@@ -134,7 +134,7 @@ def test_prefetch_runs_while_planning_and_feeds_gather(offline):
     steps = {x["action"]: x["step"] for x in lines(r) if x["action"] in ("world.write", "plan")}
     assert r["evidence"]["usable"] and steps                                    # one prefetch, used by gather
     writes = [x for x in lines(r) if x["action"] == "world.write" and x["agent_name"] == "Data & Reconciler"]
-    assert len(writes) == 1 and writes[0]["details"]["queries_in_parallel"] == 11
+    assert len(writes) == 1 and writes[0]["details"]["queries_in_parallel"] == 12
 
 
 def test_parallel_fetch_returns_the_same_rows_as_one_by_one(offline):
@@ -239,5 +239,5 @@ def test_draft_gets_key_facts_intent_and_user_type(offline, force):
         return base(lane, messages, agent, **kw)
     loop.run("My mother is in Rantau Panjang, is she ok?", llm=llm, log_dir=offline, quiet=True)
     req = seen[0]
-    assert {"language", "intent", "user_type", "FACTS", "WHY"} <= set(req) and "question" not in req
+    assert {"language", "intent", "user_type", "FACTS"} <= set(req) and "question" not in req and "WHY" not in req
     assert req["user_type"] == "family_far_away" and req["FACTS"]["place"] == "Rantau Panjang"

@@ -53,15 +53,17 @@ PLAN_SYSTEM = (
 DRAFT_SYSTEM = (
     "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. VEDA already shows the user a "
     "card with the action to take, the verdict, the river level, the range, the confidence, the sources and the "
-    "disclaimer - all written by code; FACTS are its key facts. Your job: write ONLY a short explanation (1-2 "
-    "sentences, max 30 words, under 200 characters) of WHY the verdict is what it is, for this user, using the WHY "
-    "list. Rules:\n"
+    "disclaimer - all written by code; FACTS are its key facts, already in the user's language. Your job: write "
+    "ONLY a short explanation (1-2 sentences, max 30 words, under 200 characters) of WHY the verdict is what it is, "
+    "for this user, from FACTS. Rules:\n"
     "1. Use only numbers that appear in FACTS (no other numbers at all).\n"
     "2. Do not repeat the action, the verdict line, the sources or the disclaimer.\n"
     "3. Do not name any verdict other than the card's.\n"
     "4. Never advise walking, wading or driving through floodwater.\n"
     "5. For family_far_away users, say what they can do from afar (call, check on them).\n"
-    "6. Write in `language`: ms = standard Bahasa Melayu, en = English.\n"
+    "6. Write in `language`: ms = standard Malaysian Bahasa Melayu (never Indonesian words such as alarm, aturan, "
+    "kondisi, aman, terpicu), using the JPS level names in FACTS (Waspada, Amaran, Bahaya); en = plain English.\n"
+    "7. No minus signs, no internal terms (rule, trigger, verdict, sentinel, gauge codes).\n"
     "Reply with ONE JSON object: {\"explanation\": \"...\"}.")
 
 
@@ -293,9 +295,9 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
         why = (skip_reason or "model not used") + " -> card written by code"
     else:
         # Husaini 23 Oct: the card's key facts only (no card text, no question - user_type carries who is asking)
+        # facts as words in the answer's language - no rule names, no signed numbers (Husaini 23 Oct)
         request = {"language": language, "intent": p["intent"], "user_type": p["user_type"],
-                   "FACTS": card_mod.key_facts(card, forecast),
-                   "WHY": [t["reason"] for t in (forecast or {}).get("triggers", [])]}
+                   "FACTS": card_mod.key_facts(card, forecast, language)}
         if feedback:                # revise after a Critic rejection: the previous explanation + what to fix
             request["previous_explanation"] = (previous or {}).get("explanation")
             request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]

@@ -4,6 +4,8 @@ passes the Critic's code checks by construction."""
 import re
 from types import SimpleNamespace
 
+import json
+
 import pytest
 
 from app import card
@@ -227,3 +229,16 @@ def test_reconstructed_reading_says_estimated():
 def test_short_gauge_name():
     assert card.short_gauge("Sg. Golok di Rantau Panjang (F1)", "Rantau Panjang") == "Sg. Golok"
     assert card.short_gauge("Sg. Kelantan di Jambatan Tendong (F2)", "Pasir Mas") == "Sg. Kelantan di Jambatan Tendong"
+
+
+# -- key facts as words in the user's language (Husaini 23 Oct) ------------------------------------------------
+def test_key_facts_are_words_without_minus_signs():
+    c = build(verdict="WATCH")
+    ms = card.key_facts(c, None, "ms")
+    assert ms["vs_alert"] == "[distance] di atas paras Waspada (7 m)" and ms["vs_danger"].startswith("[distance] di bawah paras Bahaya")
+    assert ms["verdict"] == "BERJAGA-JAGA" and ms["jps_level"] == "Waspada"
+    en = card.key_facts(c, None, "en")
+    assert en["vs_danger"] == "[distance] below the Danger level (9 m)"
+    for facts in (ms, en):
+        text = json.dumps(facts, ensure_ascii=False)
+        assert "-0." not in text and "-1." not in text and "rule" not in text.lower()

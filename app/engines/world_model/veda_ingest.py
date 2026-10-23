@@ -32,6 +32,9 @@ READING_TIMES_SQL = ("SELECT station_key, observed_at_utc FROM veda.river_status
 PLACE_INPUTS_SQL = ("SELECT place_id, rain_point, rain_past_24h_mm, rain_past_7d_mm, rain_next_24h_mm, rain_next_72h_mm, "
                     "max_prob_next_24h_pct, forecast_today, forecast_today_when FROM veda.place_risk_inputs")
 RAIN_WINDOW_SQL = "SELECT point_key, forecast_until_myt FROM veda.rain_24h_by_point"
+# Husaini 23 Oct: a projected range never goes below the gauge's lowest level in the past 7 days
+MIN_7D_SQL = ("SELECT station_key, MIN(level_m) AS min_7d_m FROM veda_pg.river_levels "
+              "WHERE observed_at > current_timestamp() - INTERVAL 7 DAYS GROUP BY station_key")
 
 # Contexts: where VEDA's facts come from. `reliability` (0-1, TENTATIVE - Dr Ariff) decides conflicts first,
 # recency second: official gauge data 0.9, official forecasts/warnings 0.8-0.9, a global weather model 0.6.
@@ -195,6 +198,13 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
             return [], None
         return _sql(sql, agent, purpose, results)
 
+    if results is not None and MIN_7D_SQL in results:
+        lows, qh_m = optional(MIN_7D_SQL, "world: lowest level per gauge, past 7 days")
+        for row in lows:
+            at = observed.get(row["station_key"])
+            if at and row["min_7d_m"] is not None:
+                world.assert_fact(station_id(row["station_key"]), "min_7d_m", row["min_7d_m"], confidence=0.9,
+                                  source=_src(at, qh_m, "veda_pg.river_levels", agent, run_id, "jps_levels"))
     windows, _ = optional(RAIN_WINDOW_SQL, "world: rain forecast windows")
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
     inputs, qh = optional(PLACE_INPUTS_SQL, "world: place risk inputs")
@@ -310,6 +320,8 @@ def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
         for pred in ("change_1h_m", "change_3h_m"):
             if g[pred] is not None:
                 world.assert_fact(sid, pred, g[pred], confidence=0.6, source=src)
+        week = [r["level_m"] for r in readings if r["t"] > latest["t"] - timedelta(days=7)]
+        world.assert_fact(sid, "min_7d_m", min(week), confidence=0.6, source=src)   # replay rows up to the replay time
         n += 1
     rain, qh_r = _sql(sqls["rain"], agent, PURPOSES[sqls["rain"]], results)
     by_loc = {r["location_id"]: r for r in rain}
@@ -330,6 +342,7 @@ def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
 NETWORK_SQL = [STATIONS_SQL, LINKS_SQL, PLACES_SQL, PEAKS_SQL]
 READINGS_SQL = [READING_TIMES_SQL, GAUGE_STATUS_SQL, RAIN_WINDOW_SQL, PLACE_INPUTS_SQL]
 PURPOSES.update({
+    MIN_7D_SQL: "world: lowest level per gauge, past 7 days",
     STATIONS_SQL: "world: curated gauges",
     LINKS_SQL: "world: gauge links",
     PLACES_SQL: "world: places and their gauges",

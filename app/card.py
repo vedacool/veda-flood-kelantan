@@ -9,6 +9,7 @@ excluded stale sources, unresolved conflicts. The disclaimer + 999 / 991 is the 
 Everything except the explanation is inserted verbatim by code (Husaini 22 Oct night); the explanation may only use
 numbers that are in the card (`explanation_problem`). Advice texts are TENTATIVE (review pack section G).
 """
+import json
 import re
 from datetime import datetime
 
@@ -55,6 +56,7 @@ T = {  # fixed wording, BM + EN
                 "ms": "arkib Open-Meteo (hujan sebenar sehingga masa ulang tayang)"},
     "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
+    "falling": {"en": "falling - no level projected", "ms": "turun - tiada unjuran paras"},
     "tidal": {"en": "trend not projected (tide-influenced gauge)", "ms": "trend tidak diunjurkan (stesen dipengaruhi pasang surut)"},
     "confidence": {"en": "Confidence", "ms": "Keyakinan"},
     "conf_label": {"high": {"en": "high", "ms": "tinggi"}, "medium": {"en": "medium", "ms": "sederhana"},
@@ -143,7 +145,8 @@ def build(plan, evidence, forecast):
             "verdict": verdict, "level_name": fc.get("level_name"), "action": ADVICE[verdict],
             "confidence": (fc.get("confidence") or {}).get("label", "low"), "gauge": None, "comparison": {},
             "thresholds": {}, "rain_24h_mm": None,
-            "range_24h": None, "tidal": bool(trend.get("tide_influenced")), "peak": None, "upstream": [],
+            "range_24h": None, "tidal": bool(trend.get("tide_influenced")), "falling": bool(trend.get("falling")),
+            "peak": None, "upstream": [],
             "warnings": [w["heading"] for w in ((evidence or {}).get("met_warnings") or {}).get("active", [])],
             "sources": [], "excluded": None, "conflicts": [], "vs_2014": None, "rain_past_24h_mm": None,
             "replay": (REPLAYS.get(((evidence or {}).get("replay") or {}).get("scenario")) or {}).get("title"),
@@ -200,33 +203,65 @@ def build(plan, evidence, forecast):
     return card
 
 
-def key_facts(card, forecast=None):
-    """The card's key facts as a small dict (Husaini 23 Oct): what the Critic's AI review and the draft call get
-    instead of the whole card / evidence. Only facts the card shows (no numbers it does not show)."""
+WORDS = {  # key facts as words (Husaini 23 Oct): JPS level names, no minus signs, no rule names
+    "level_vs": {"en": "{d} m {side} the {name} level ({t} m)", "ms": "{d} m {side} paras {name} ({t} m)"},
+    "trend": {"rising": {"en": "rising", "ms": "naik"}, "falling": {"en": "falling", "ms": "turun"},
+              "steady": {"en": "steady", "ms": "stabil"}},
+    "vs2014": {"en": "{d} m {side} the Dec 2014 peak ({p} m)", "ms": "{d} m {side} puncak Dis 2014 ({p} m)"},
+    "excluded": {"en": "data.gov.my flood-warning (stale, excluded)", "ms": "data.gov.my flood-warning (lapuk, diketepikan)"},
+    "no_verified": {"en": "no verified reading near this time", "ms": "tiada bacaan yang disahkan berhampiran masa ini"},
+    "last": {"en": "{m} m at {t}, too old to use", "ms": "{m} m pada {t}, terlalu lama untuk digunakan"},
+}
+
+
+def key_facts(card, forecast=None, lang="en"):
+    """The card's key facts in the answer's language, as words (Husaini 23 Oct): what the Critic's AI review and
+    the draft call get instead of the whole card / evidence. Only facts the card shows; no signed numbers."""
+    lang = lang if lang in ("en", "ms") else "en"
     g = card.get("gauge") or {}
     trend = next((c for c in (forecast or {}).get("controlling", []) if c.get("role") == "controlling"), {})
     rate = trend.get("rate_m_per_h") or {}
     mid = (rate.get("min", 0) + rate.get("max", 0)) / 2 if rate else None
-    f = {"place": card.get("place"), "verdict": card["verdict"], "jps_level": (card.get("level_name") or {}).get("en"),
-         "river_m": g.get("level_m"), "read_at": g.get("read_at"),
-         "vs_alert_m": card["comparison"].get("alert"), "vs_danger_m": card["comparison"].get("danger"),
-         "trend": None if mid is None or card.get("tidal") else "rising" if mid > 0 else "falling" if mid < 0 else "steady",
-         "range_next_24h_m": [card["range_24h"]["min"], card["range_24h"]["max"]] if card.get("range_24h") else None,
-         "confidence": card.get("confidence"),
-         "vs_dec2014_peak_m": (card.get("vs_2014") or {}).get("diff_m"),
-         "excluded_sources": ["data.gov.my flood-warning (stale)"] if card.get("excluded") else [],
-         "conflicts": card.get("conflicts", []),
-         "upstream": [f"{u['gauge']} {u.get('band') or ''}{' rising' if u.get('rising') else ''}".strip()
-                      for u in card.get("upstream", [])],
-         "met_warnings": card.get("warnings", [])}
+    side = lambda d: T["above" if d >= 0 else "below"][lang]          # noqa: E731
+    f = {"place": card.get("place"), "verdict": VERDICT_LABEL[card["verdict"]][lang],
+         "jps_level": (card.get("level_name") or {}).get(lang),
+         "river": f"{_num(g['level_m'])} m {T['at'][lang]} {g['read_at']}" if g else None,
+         "confidence": T["conf_label"].get(card.get("confidence"), T["conf_label"]["low"])[lang]}
+    for key in ("alert", "danger"):
+        d = card["comparison"].get(key)
+        if d is not None:
+            f[f"vs_{key}"] = WORDS["level_vs"][lang].format(d=_num(abs(d)), side=side(d), name=T[key][lang],
+                                                           t=_num(card["thresholds"][key]))
+    if mid is not None and not card.get("tidal"):
+        f["trend"] = WORDS["trend"]["rising" if mid > 0 else "falling" if mid < 0 else "steady"][lang]
+    if card.get("range_24h"):
+        r = card["range_24h"]
+        f["next_24h"] = f"{_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]})"
+    if card.get("vs_2014"):
+        v = card["vs_2014"]
+        f["vs_2014"] = WORDS["vs2014"][lang].format(d=_num(abs(v["diff_m"])), side=side(v["diff_m"]),
+                                                    p=_num(v["peak_m"]))
+    ups = []
+    for u in card.get("upstream", []):
+        bits = ([BAND.get(u["band"], {}).get(lang, u["band"])] if u.get("band") else []) + (
+            [T["rising"][lang]] if u.get("rising") else [])
+        ups.append(f"{u['gauge']} ({', '.join(bits)})")
+    f["upstream"] = ups
+    if card.get("warnings"):
+        f["met_warnings"] = card["warnings"]
+    if card.get("excluded"):
+        f["excluded"] = [WORDS["excluded"][lang]]
+    if card.get("conflicts"):
+        f["conflicts"] = card["conflicts"]
     if card["verdict"] == "INSUFFICIENT_DATA":
-        f["note"] = "no verified reading near this time" if card.get("replay") else "no fresh reading"
+        f["note"] = WORDS["no_verified"][lang] if card.get("replay") else T["no_reading"][lang]
         lr = card.get("last_reading")
         if lr:
-            f["last_reading"] = f"{_num(lr['level_m'])} m at {lr['at']} - too old to use"
+            f["last_reading"] = WORDS["last"][lang].format(m=_num(lr["level_m"]), t=lr["at"])
     if card.get("replay"):
         f["replay"] = card["replay"]
-    return {k: v for k, v in f.items() if v not in (None, [], "")}
+    out = {k: v for k, v in f.items() if v not in (None, [], "")}
+    return json.loads(months_ms(json.dumps(out, ensure_ascii=False))) if lang == "ms" else out
 
 
 LABEL_BM = (("estimated: reconstructed between the verified JPS readings",
@@ -346,6 +381,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
         r = card["range_24h"]
         out.append(("range", f"{T['next24'][lang]}: {_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
                              f"{T['confidence'][lang]}: {conf}."))
+    elif card.get("falling") and g:
+        out.append(("range", f"{T['next24'][lang]}: {T['falling'][lang]}. {T['confidence'][lang]}: {conf}."))
     else:
         out.append(("range", (f"{T['tidal'][lang].capitalize()}. " if card.get("tidal") and g else "")
                     + f"{T['confidence'][lang]}: {conf}."))

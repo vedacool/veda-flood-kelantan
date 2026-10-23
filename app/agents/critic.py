@@ -278,7 +278,7 @@ def _small_review(answer, forecast, llm, budget_s, lane):
     """-> (decision, problems, fix) or raises NightshiftError. Retries a fast failure (< FAST_FAIL_S) up to
     MAX_RETRIES times while the budget allows."""
     msgs = [{"role": "system", "content": SMALL_SYSTEM},
-            {"role": "user", "content": json.dumps({"FACTS": card_mod.key_facts(answer["card"], forecast),
+            {"role": "user", "content": json.dumps({"FACTS": card_mod.key_facts(answer["card"], forecast, answer.get("language")),
                                                     "EXPLANATION": answer["explanation"]}, ensure_ascii=False)}]
     start, tries = time.monotonic(), 0
     while True:

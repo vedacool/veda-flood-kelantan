@@ -62,11 +62,18 @@ def rates(g):
     return out
 
 
-def projection(level, rs):
-    """{'6h': {'min', 'max'}, ...} straight-line range, or {} without a rate."""
-    if not rs:
+def falling(rs):
+    """Both trends point down (Husaini 23 Oct: a falling river gets 'falling', no projected range)."""
+    return bool(rs) and all(r <= 0 for r in rs) and any(r < 0 for r in rs)
+
+
+def projection(level, rs, floor=None):
+    """{'6h': {'min', 'max'}, ...} straight-line range, or {} without a rate or when falling. Never below `floor`
+    (the gauge's lowest level in the past 7 days, Husaini 23 Oct)."""
+    if not rs or falling(rs):
         return {}
-    return {f"{h}h": {"min": round(level + min(rs) * h, 2), "max": round(level + max(rs) * h, 2)}
+    low = (lambda v: max(v, floor)) if floor is not None else (lambda v: v)          # noqa: E731
+    return {f"{h}h": {"min": round(low(level + min(rs) * h), 2), "max": round(low(level + max(rs) * h), 2)}
             for h in HORIZONS_H}
 
 
@@ -108,7 +115,8 @@ def _gauge_rules(g, now_only):
     trend = {"station": g["station"], "gauge": name, "role": g["role"], "level_m": level, "band": g["band"],
              "band_name": BAND_NAMES.get(g["band"]), "observed_at": g["observed_at"],
              "rate_m_per_h": {"min": min(rs), "max": max(rs)} if rs else None,
-             "projection_m": projection(level, rs), "hours_to": {k: v for k, v in to.items() if v},
+             "projection_m": projection(level, rs, g.get("min_7d_m")), "falling": falling(rs),
+             "hours_to": {k: v for k, v in to.items() if v},
              "rising_fast": bool(fast), "tide_influenced": tidal,
              "trend_note": "tide-influenced: trend not projected" if tidal and not now_only else None}
     return fired, trend, bool(fast)
