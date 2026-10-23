@@ -171,7 +171,7 @@ These are controlled tests, kept apart from the live rates above.
   returns an empty reply. Measured on 23 Oct 2026, 10 live full runs (12:29-13:29 MYT): explanation shown in 8 of 10,
   the Critic's AI review completed in 8 of 10 (earlier the same day, before the smaller AI calls: 1 of 10). Every
   answer still gets the code checks and the Zetaris re-check; without the AI review VEDA sends the code-written card
-  only and says why in the trace. Recorded traces of these runs: `data/sample/live_traces/`.
+  only and says why in the trace. Recorded traces of these runs: `data/sample/live_traces/` (JPS readings not redistributed, per organiser ruling 23 Oct 2026; each trace's first line says what was redacted).
 - **Replay data:** the Nov 2024 replay uses a few real reported readings. Hours between two known readings are
   reconstructed on a straight line and labelled as such. Times reported as "about" lower the confidence.
 - **No river-flow model yet:** GloFAS river-flow forecasts are not used.

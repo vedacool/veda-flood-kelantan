@@ -52,6 +52,8 @@ def test_recorded_live_traces_carry_no_jps_readings():
     metres = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s?m(?![m\w])")
     for path in sorted((ROOT / "data" / "sample" / "live_traces").glob("*.trace.jsonl")):
         text = path.read_text(encoding="utf-8")
+        head = json.loads(text.splitlines()[0])          # first line says what was redacted and why
+        assert "per organiser ruling 23 Oct" in head["redaction"] and head["run_id"] in path.name, path.name
         assert "[JPS reading — not redistributed]" in text, path.name
         assert not re.search(r'"value": -?\d', text), path.name
         left = [m.group(0) for m in metres.finditer(text) if round(float(m.group(1)), 2) not in keep]
