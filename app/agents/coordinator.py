@@ -27,7 +27,7 @@ USER_TYPES = ("resident", "family_far_away", "school", "unknown")
 EFFORTS = ("quick", "full")
 LANGUAGES = ("en", "ms")
 QUICK_SOURCES = ["jps_levels", "mygov_forecast"]
-MAX_TOKENS = 4000          # B-17: at 2000 Lightning often returned empty (hidden reasoning) and was retried
+MAX_TOKENS = 8000          # Husaini 23 Oct: 4000 -> 0/6 live (empty), 8000 -> 4/5 in ~40-54 s; no retry
 SAFETY = {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
     "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
@@ -58,12 +58,24 @@ DRAFT_SYSTEM = (
     "for this user, from FACTS. Rules:\n"
     "1. Use only numbers that appear in FACTS (no other numbers at all).\n"
     "2. Do not repeat the action, the verdict line, the sources or the disclaimer.\n"
-    "3. Do not name any verdict other than the card's.\n"
+    "3. Do not name the verdict at all (no NORMAL, WATCH, PREPARE, ACT, BERJAGA-JAGA, BERSEDIA, BERTINDAK) - "
+    "the card already shows it.\n"
     "4. Never advise walking, wading or driving through floodwater.\n"
     "5. For family_far_away users, say what they can do from afar (call, check on them).\n"
     "6. Write in `language`: ms = standard Malaysian Bahasa Melayu (never Indonesian words such as alarm, aturan, "
-    "kondisi, aman, terpicu), using the JPS level names in FACTS (Waspada, Amaran, Bahaya); en = plain English.\n"
+    "kondisi, terpicu, telepon), using the JPS level names in FACTS (Waspada, Amaran, Bahaya); en = plain English.\n"
     "7. No minus signs, no internal terms (rule, trigger, verdict, sentinel, gauge codes).\n"
+    "STYLE EXAMPLES - style only, never copy the place or the numbers (Tanah Merah is not the user's place):\n"
+    "ms NORMAL: Paras air di Tanah Merah 5.20 m, masih 1.30 m di bawah paras Waspada dan sedang turun. Buat masa ini "
+    "tiada tanda banjir.\n"
+    "ms PREPARE: Paras air di Tanah Merah 7.10 m sudah melepasi paras Amaran, dan sungai di hulu sudah di paras "
+    "Bahaya. Air dijangka terus naik dalam beberapa jam.\n"
+    "ms ACT: Paras air di Tanah Merah 9.80 m, 0.80 m di atas paras Bahaya dan masih naik, lebih tinggi daripada "
+    "banjir 2014.\n"
+    "en NORMAL: The river at Tanah Merah is 5.20 m, still 1.30 m below the Alert level and falling. For now there is "
+    "no sign of flooding.\n"
+    "en ACT: The river at Tanah Merah is 9.80 m, 0.80 m above the Danger level and still rising, higher than the "
+    "2014 flood.\n"
     "Reply with ONE JSON object: {\"explanation\": \"...\"}.")
 
 
@@ -254,8 +266,9 @@ def draft_problem(text, facts):
     return None
 
 
-DRAFT_FAST_FAIL_S = 15          # Husaini 23 Oct: retry the draft once, only when it failed this fast ...
-DRAFT_RETRY_MIN_LEFT_S = 45     # ... and this much budget is left (a second draft + the Critic's review)
+DRAFT_TRIES = 1                 # Husaini 23 Oct (later): at 8000 tokens a draft takes ~50 s - no retry
+DRAFT_FAST_FAIL_S = 15          # (kept for DRAFT_TRIES > 1: retry only a failure this fast ...)
+DRAFT_RETRY_MIN_LEFT_S = 70     # ... and the wording rewrite only with this much budget left (draft ~50 s + Critic)
 
 
 def _draft_call(llm, request, feedback, budget_s):
@@ -264,7 +277,7 @@ def _draft_call(llm, request, feedback, budget_s):
     msgs = [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
             {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
     start = time.monotonic()
-    for attempt in (1, 2):
+    for attempt in range(1, DRAFT_TRIES + 1):
         t = time.monotonic()
         left = None if budget_s is None else budget_s - (t - start)
         try:
@@ -273,7 +286,7 @@ def _draft_call(llm, request, feedback, budget_s):
         except nightshift.NightshiftError as e:
             took = time.monotonic() - t
             room = budget_s is None or budget_s - (time.monotonic() - start) >= DRAFT_RETRY_MIN_LEFT_S
-            if attempt == 2 or took >= DRAFT_FAST_FAIL_S or not room:
+            if attempt == DRAFT_TRIES or took >= DRAFT_FAST_FAIL_S or not room:
                 raise
             trace.step(AGENT, "draft.retry", input_summary=f"draft failed after {took:.0f} s",
                        output_summary=str(e)[:150], status="retrying",

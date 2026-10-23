@@ -253,6 +253,9 @@ def test_key_facts_are_words_without_minus_signs():
     ("Next 24 h stays near 6.9-7.4 m.", "en", None),                                         # a range dash is fine
     ("No rule was triggered for this verdict.", "en", "internal term"),
     ("The river is near the alarm level.", "en", None),                                      # Indonesian list: BM only
+    ("Dari jauh, telepon keluarga anda.", "ms", "Indonesian word"),
+    ("Air naik sehingga petang ini.", "ms", None),                                          # 'sehingga' is normal BM
+    ("Paras air di Tanah Merah 5.20 m, masih di bawah paras Waspada.", "ms", "style example"),
 ])
 def test_wording_check(text, lang, problem):
     got = card.wording_problem(text, lang)

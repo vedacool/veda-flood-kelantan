@@ -449,14 +449,17 @@ def _comparisons(text):
 # Husaini 23 Oct (tentative, review pack G4): Indonesian words that should not appear in a Malaysian BM
 # explanation. Not "aman" (normal BM) and never "Waspada" (a JPS level name).
 INDONESIAN = ("alarm", "aturan", "kondisi", "terpicu", "bisa", "mengungsi", "pengungsian", "siaga", "rumah sakit",
-              "ponsel", "kabupaten", "banget")
+              "ponsel", "kabupaten", "banget", "telepon")
+STYLE_PLACE = "tanah merah"     # the place in the draft prompt's style examples - never in a real explanation
 _INDONESIAN = re.compile(r"\b(" + "|".join(re.escape(w) for w in INDONESIAN) + r")\b", re.IGNORECASE)
 _INTERNAL = re.compile(r"\b(rules?|trigger(?:s|ed)?|verdicts?|sentinels?)\b", re.IGNORECASE)
 _MINUS = re.compile(r"(?<![\w.])[-−–]\s?\d")             # "-0.57" - not the dash in a range "5.3-5.47"
 
 
-def wording_problem(text, lang):
+def wording_problem(text, lang, place=None):
     """None, or why the explanation's wording is not fit for residents (code check, no model)."""
+    if STYLE_PLACE in (text or "").lower() and (place or "").strip().lower() != STYLE_PLACE:
+        return "wording: copied the style example's place (Tanah Merah) - write about the user's place"
     m = _MINUS.search(text or "")
     if m:
         return f"wording: a minus sign before a number ({m.group(0)!r})"
@@ -488,7 +491,7 @@ def explanation_problem(text, card, lang=None):
         return f"says the river is {', '.join(flipped)}, but the card says otherwise"
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
-    return wording_problem(text, lang)
+    return wording_problem(text, lang, card.get("place"))
 
 
 def unavailable_reply(lang):

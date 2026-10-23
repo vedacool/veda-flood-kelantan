@@ -310,8 +310,16 @@ def _flaky(fails):
     return llm
 
 
-def test_draft_is_retried_once_after_a_fast_failure(tmp_path):
+def test_draft_is_not_retried_by_default():
+    llm = _flaky(1)                                    # Husaini 23 Oct (later): 8000 tokens, ~50 s - no retry
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 150)
+    assert len(llm.calls) == 1 and coordinator.MAX_TOKENS == 8000
+
+
+def test_draft_retry_when_switched_on(tmp_path, monkeypatch):
     from app import trace
+    monkeypatch.setattr(coordinator, "DRAFT_TRIES", 2)
     trace.start_run("t", log_dir=tmp_path, quiet=True)
     try:
         llm = _flaky(1)
@@ -322,13 +330,14 @@ def test_draft_is_retried_once_after_a_fast_failure(tmp_path):
         assert len(llm.calls) == 2                                     # one retry only
         llm = _flaky(1)
         with pytest.raises(nightshift.NightshiftError):
-            coordinator._draft_call(llm, {}, None, 30)                 # < 45 s left: no retry
+            coordinator._draft_call(llm, {}, None, 30)                 # too little budget left: no retry
         assert len(llm.calls) == 1
     finally:
         trace.end_run()
 
 
 def test_slow_draft_failure_is_not_retried(monkeypatch):
+    monkeypatch.setattr(coordinator, "DRAFT_TRIES", 2)
     monkeypatch.setattr(coordinator, "DRAFT_FAST_FAIL_S", -1)
     llm = _flaky(1)
     with pytest.raises(nightshift.NightshiftError):
