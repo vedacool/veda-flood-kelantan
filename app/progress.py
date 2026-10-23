@@ -23,6 +23,14 @@ def describe(rec):
         return f"  ! {out}"
     if a == "replay":
         return f"  {out} ({rec.get('decision')})"
+    if a == "nightshift.chat":       # B-76: which model ACTUALLY answered, from the response (not the request)
+        d = rec.get("details") or {}
+        who = rec.get("agent_name")
+        if rec.get("status") == "success" and d.get("served_model"):
+            receipt = f", receipt {d['receipt_id']}" if d.get("receipt_id") else ""
+            took = f", {rec['duration_ms'] / 1000:.1f} s" if rec.get("duration_ms") else ""
+            return f"  {who}: answered by {d['served_model']} via Nightshift{receipt}{took}"
+        return f"  ! {who}: no model answered ({out})"
     if a == "safety" and rec.get("status") != "success":
         return f"  safety: {out}"
     if rec.get("status") == "failed" and a != "run_end":
