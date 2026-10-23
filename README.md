@@ -32,7 +32,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 20 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 23 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -149,8 +149,8 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 20 scenarios, 20 of 20 pass; pass^3
-  (all 3 repeat runs) 20 of 20.** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 23 scenarios, 23 of 23 pass; pass^3
+  (all 3 repeat runs) 23 of 23 (23 Oct, after B-73).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
