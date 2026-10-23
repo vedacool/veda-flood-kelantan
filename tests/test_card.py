@@ -242,3 +242,40 @@ def test_key_facts_are_words_without_minus_signs():
     for facts in (ms, en):
         text = json.dumps(facts, ensure_ascii=False)
         assert "-0." not in text and "-1." not in text and "rule" not in text.lower()
+
+
+# -- wording check (Husaini 23 Oct): code, not the model -------------------------------------------------------
+@pytest.mark.parametrize("text, lang, problem", [
+    ("Tahap air di bawah alarm, tidak ada aturan lain aktif.", "ms", "Indonesian word"),
+    ("Penduduk bisa mengungsi ke rumah sakit.", "ms", "Indonesian word"),
+    ("Sungai [distance] di atas paras Waspada (7 m); keadaan masih aman di rumah.", "ms", None),   # 'aman', 'Waspada' ok
+    ("The river is -0.57 m from Alert.", "en", "minus sign"),
+    ("Next 24 h stays near 6.9-7.4 m.", "en", None),                                         # a range dash is fine
+    ("No rule was triggered for this verdict.", "en", "internal term"),
+    ("The river is near the alarm level.", "en", None),                                      # Indonesian list: BM only
+])
+def test_wording_check(text, lang, problem):
+    got = card.wording_problem(text, lang)
+    assert (got is None) if problem is None else (problem in got)
+
+
+def test_wording_failure_gets_one_rewrite_then_the_explanation_is_dropped(tmp_path):
+    from types import SimpleNamespace
+    from app import trace
+    from app.agents import coordinator
+    replies = iter(["Tahap air di bawah alarm.", "Masih di bawah alarm."])
+    sent = []
+
+    def llm(lane, messages, agent, **kw):
+        sent.append(json.loads(messages[1]["content"]))
+        return SimpleNamespace(data={"explanation": next(replies)}, text="")
+    trace.start_run("t", log_dir=tmp_path, quiet=True)
+    try:
+        c = build(verdict="NORMAL", band="normal")
+        a = coordinator.draft("q", {"question_language": "ms", "intent": "risk_check", "user_type": "resident",
+                                    "effort": "full"}, EVIDENCE, forecast(verdict="NORMAL", band="normal"), c, llm=llm,
+                              budget_s=120)
+    finally:
+        trace.end_run()
+    assert len(sent) == 2 and "Indonesian word" in sent[1]["critic_problems"][0]       # one rewrite, with the reason
+    assert a["explanation"] is None and a["drafted_by"] == "fallback"                 # still bad -> dropped

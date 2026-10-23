@@ -446,7 +446,31 @@ def _comparisons(text):
             for m in COMPARISON.finditer(text or "")}
 
 
-def explanation_problem(text, card):
+# Husaini 23 Oct (tentative, review pack G4): Indonesian words that should not appear in a Malaysian BM
+# explanation. Not "aman" (normal BM) and never "Waspada" (a JPS level name).
+INDONESIAN = ("alarm", "aturan", "kondisi", "terpicu", "bisa", "mengungsi", "pengungsian", "siaga", "rumah sakit",
+              "ponsel", "kabupaten", "banget")
+_INDONESIAN = re.compile(r"\b(" + "|".join(re.escape(w) for w in INDONESIAN) + r")\b", re.IGNORECASE)
+_INTERNAL = re.compile(r"\b(rules?|trigger(?:s|ed)?|verdicts?|sentinels?)\b", re.IGNORECASE)
+_MINUS = re.compile(r"(?<![\w.])[-−–]\s?\d")             # "-0.57" - not the dash in a range "5.3-5.47"
+
+
+def wording_problem(text, lang):
+    """None, or why the explanation's wording is not fit for residents (code check, no model)."""
+    m = _MINUS.search(text or "")
+    if m:
+        return f"wording: a minus sign before a number ({m.group(0)!r})"
+    m = _INTERNAL.search(text or "")
+    if m:
+        return f"wording: internal term {m.group(0)!r}"
+    if lang == "ms":
+        m = _INDONESIAN.search(text or "")
+        if m:
+            return f"wording: Indonesian word {m.group(0)!r} - use standard Malaysian BM"
+    return None
+
+
+def explanation_problem(text, card, lang=None):
     """None if Nemotron's explanation may be inserted, else why not (Husaini 22 Oct night: numbers from the card)."""
     if not isinstance(text, str) or not text.strip():
         return "empty explanation"
@@ -464,7 +488,7 @@ def explanation_problem(text, card):
         return f"says the river is {', '.join(flipped)}, but the card says otherwise"
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
-    return None
+    return wording_problem(text, lang)
 
 
 def unavailable_reply(lang):

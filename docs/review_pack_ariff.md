@@ -175,6 +175,12 @@ Every answer starts with one fixed advice line for its verdict, written by code 
 **G3.** (added 23 Oct) The verdict in BM cards: NORMAL / **BERJAGA-JAGA** (WATCH) / **BERSEDIA** (PREPARE) / **BERTINDAK** (ACT) / **DATA TIDAK MENCUKUPI**. We avoided Waspada / Amaran / Bahaya because those are JPS's own level names, shown next to the verdict ("BERSEDIA - paras JPS Amaran"). Clear for residents?
 > Answer: ______
 
+**G4.** (added 23 Oct) VEDA's code rejects an AI explanation in BM that contains these **Indonesian words** (then the
+AI rewrites it once; if it still fails, the card goes out without the explanation): *alarm, aturan, kondisi, terpicu,
+bisa, mengungsi, pengungsian, siaga, rumah sakit, ponsel, kabupaten, banget*. Deliberately **not** on the list: *aman*
+(normal BM) and *Waspada* (a JPS level name). Anything to add or remove?
+> Answer: ______
+
 ---
 
 ## H. Backup gauges for Rantau Panjang, Kota Bharu and Pasir Mas — ~10 min (added 23 Oct, B-15)
