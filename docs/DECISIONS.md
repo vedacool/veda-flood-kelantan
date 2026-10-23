@@ -164,3 +164,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Into-water check: a negation counts only right before the phrase; 'don't worry' / 'jangan risau' is not a negation. Explanations with a flipped above/below or reassuring words under WATCH+ are dropped | audit 2026-10-23 |
 | 2026-10-23 | Zetaris time caps: refresh call 10 s, parallel query 40 s, Critic re-query 10 s; refresh behind the circuit breaker; a failed refresh is not retried for 15 min; no Zetaris -> 'cannot check now' answer, not a 500 | audit 2026-10-23 |
 | 2026-10-23 | Privacy: the question is masked before Nemotron and never in the access log; a short EN + BM notice under the box; data credits (Open-Meteo CC BY 4.0, JPS, data.gov.my) in the page footer | audit 2026-10-23 |
+| 2026-10-23 | SAMPLE_MODE (B-18) marked done: recorded Zetaris fixtures + code fallbacks, no SampleGenerator | Husaini 23 Oct |
+| 2026-10-23 | Code licence MIT, (c) 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) | Husaini 23 Oct |
+| 2026-10-23 | Backup gauges for Rantau Panjang / Kota Bharu / Pasir Mas: candidates proposed (review pack H), tentative, NOT wired in until Dr Ariff answers | Husaini 23 Oct |
