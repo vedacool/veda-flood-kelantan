@@ -253,3 +253,16 @@ closure notices)?
 ---
 
 _After your answers: we update the three CSV files, re-run `scripts/seed_stations.py` / `seed_peaks.py`, and change each status from "tentative" to "verified — Dr Ariff, <date>"._
+
+
+## J. Ground height (B-74, PARKED until after the hackathon - for later, no answer needed now)
+
+Idea: a ground height per place from an open elevation model (Copernicus DEM GLO-90 via Open-Meteo, CC BY 4.0), as
+context only, never changing a verdict. Parked (Husaini 23 Oct): JPS river readings are measured against each
+gauge's own reference point, not sea level, so a ground height on the same card invites a wrong comparison ("the
+river is 9 m, my house is 5 m up"). If it comes back later, it needs a **no-comparison rule**: VEDA never puts a river
+level and a ground height in one sentence, and a code check rejects any text that compares them.
+
+**J1 (later).** Do the JPS gauges in Kelantan have published datum heights (gauge zero above sea level) that would make
+a correct comparison possible?
+> Answer: ______
