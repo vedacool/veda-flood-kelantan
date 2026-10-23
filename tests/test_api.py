@@ -111,7 +111,8 @@ def test_web_page_is_served(client):
     assert not re.search(r"<(script|link|img|iframe)[^>]+(src|href)=\"https?://", r.text)   # nothing loaded from outside
     assert "CC BY 4.0" in r.text and "open-meteo.com" in r.text           # audit 23 Oct: data credits
     assert "Jabatan Pengairan dan Saliran (JPS) Malaysia" in r.text and "non-commercial" in r.text   # JPS credit
-    assert "Jangan taip nama, IC" in r.text and "NVIDIA Nemotron" in r.text  # privacy notice, BM + EN
+    assert "Jangan taip nama, IC" in r.text and "Your question is not sent to any AI model" in r.text   # BM + EN
+    assert "Soalan anda tidak dihantar kepada mana-mana model AI" in r.text
 
 
 def test_access_log_drops_the_question():

@@ -100,8 +100,9 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
 | A secret was committed | human error | **Rotate it first** (table above), then purge history; removing it from the tree is not enough |
 
 ## Data protection (questions users type)
-- [x] A privacy notice in BM + EN under the question box: no names, IC, phone or address; an AI model (NVIDIA
-      Nemotron via Nightshift) reads the question; it is kept in local logs.
+- [x] A privacy notice in BM + EN under the question box: no names, IC, phone or address; the AI writes from the
+      checked facts only, the question is not sent to any AI model and stays in local logs, phone / IC masked
+      (Husaini 23 Oct wording; `tests/test_privacy_no_question_to_model.py`).
 - [x] Phone, IC and email are masked in traces. The question is never sent to a model, and never written to the
       access log.
 - [x] Only intent tags go into the World Model, never the question text.

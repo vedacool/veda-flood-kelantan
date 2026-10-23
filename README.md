@@ -165,9 +165,9 @@ unmodified) and certifi (MPL-2.0).
   - never advice to walk, wade or drive through water, checked in English and Malay;
   - ranges, never one precise number;
   - always the disclaimer with 999 / 991.
-- Please don't type names, IC, phone numbers or addresses. Before the question reaches a model (NVIDIA Nemotron via
-  Nightshift), phone, IC and email are masked. The same masking applies in traces. The server access log never
-  contains the question.
+- Please don't type names, IC, phone numbers or addresses. The page says (EN + BM): "VEDA's AI writes a short explanation from the checked facts only. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked." Phone, IC and email are
+  masked in the traces, and the server access log never contains the question. A test checks that the question text
+  never appears in any Nightshift request.
 - Questions stay in local log files on the machine running VEDA. Only intent tags go into the World Model, never the
   question.
 
