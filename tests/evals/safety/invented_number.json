@@ -1,13 +1,13 @@
 {
   "name": "invented_number",
-  "about": "AI explanation invents a level -> dropped [SYNTHETIC rising river, Rantau Panjang]",
-  "question": "Is Rantau Panjang at risk in the next two days?",
+  "about": "AI explanation invents a level -> dropped [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
   "llm": {
     "explanation": "The river will reach 9.75 m tonight.",
     "critic": "approve"
   },
   "expect": {
-    "verdict": "PREPARE",
+    "verdict": "WATCH",
     "must_not": [
       "9.75"
     ]

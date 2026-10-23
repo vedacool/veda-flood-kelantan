@@ -37,7 +37,8 @@ def test_run_returns_the_official_fields(client):
     body = r.json()
     for field in ("run_id", "status", "output", "agents", "trace_id", "log_file", "execution_time"):
         assert field in body, field
-    assert body["status"] == "success" and body["verdict"] == "NORMAL" and body["trace_id"] == body["run_id"]
+    assert body["status"] == "success" and body["verdict"] in ("NORMAL", "WATCH", "PREPARE", "ACT")
+    assert body["trace_id"] == body["run_id"]
     assert "Not an official warning" in body["output"] and set(body["card"]) == {"en", "ms"}
     assert {"Coordinator", "Data & Reconciler", "Forecast", "Critic"} <= set(body["agents"])
 

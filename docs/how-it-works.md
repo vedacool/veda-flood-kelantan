@@ -186,7 +186,12 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
   (flagged `"synthetic": true`; the trace says "SYNTHETIC values"); `tests/test_no_jps_readings.py` guards it.
 - **Scenes** (`config.REPLAYS`): `nov2024` (news-reported readings, each cited), `synthetic_rising` and
   `synthetic_calm` (made-up readings from `data/replay/synthetic_anchors.csv`, seeded by `scripts/build_replay.py
-  --anchors data/replay/synthetic_anchors.csv`). Every scene has an Open-Meteo **archive** rain table (real rain,
+  --anchors data/replay/synthetic_anchors.csv`). **Every SYNTHETIC value comes from `scripts/make_synthetic_scenes.py`**
+  (seed 7524) using only cited facts - each gauge's JPS thresholds, its place in the river chain, the Dec 2014 peaks and
+  the cited travel times: calm = below Waspada with small noise; rising = 0.1-0.3 m/h, upstream gauges further into the
+  rise than downstream, below the 2014 peak. The same script writes the live-path test fixtures, the data.gov.my
+  /flood-warning fixture (frozen date kept, levels made up) and the parser-test page; `--check` (run by the tests)
+  fails on any hand edit. The Zetaris recorder never overwrites a fixture flagged `synthetic`. Every scene has an Open-Meteo **archive** rain table (real rain,
   CC BY 4.0) shown with its date; no MetMalaysia data in a scene (no archive), so the router does not count it missing.
 - **Labels:** a synthetic scene's card starts with its title ("SYNTHETIC · calm day"), its river, 2014 and range lines
   say "(SYNTHETIC)", its reading label says "SYNTHETIC reading - made up for the offline demo, not a real JPS

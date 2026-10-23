@@ -157,7 +157,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
             elif state == "forecast":
                 fc = forecast_agent.forecast(p, evidence, world)
                 card = card_mod.build(p, evidence, fc)
-                if router.emergency(question) and card["action"] is not card_mod.ADVICE["ACT"]:
+                if router.emergency(question):            # also when the verdict is already ACT: the label stays
                     card["action"] = card_mod.ADVICE["ACT"]  # trapped / stranded: ACT advice whatever the river says
                     card["emergency"] = True                  # labelled "safety first" + a note under a NORMAL verdict
                     trace.step("System", "emergency", input_summary=router.emergency(question),

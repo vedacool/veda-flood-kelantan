@@ -1,0 +1,19 @@
+{
+ "sql": "SELECT station_key, level_m, observed_at FROM veda_pg.river_levels WHERE station_key = '_DPMS0003' ORDER BY observed_at DESC",
+ "query_hash": "12fb5649db342679",
+ "recorded_at": "2026-10-22T15:38:29Z",
+ "columns": [
+  "station_key",
+  "level_m",
+  "observed_at"
+ ],
+ "rows": [
+  [
+   "_DPMS0003",
+   "7.2",
+   "2026-10-22 13:18:00.0"
+  ]
+ ],
+ "synthetic": true,
+ "note": "SYNTHETIC values (B-75): made by scripts/make_synthetic_scenes.py from cited thresholds, 2014 peaks and travel times - not JPS readings."
+}

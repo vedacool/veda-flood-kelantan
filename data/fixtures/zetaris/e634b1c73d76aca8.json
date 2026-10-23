@@ -1,0 +1,17 @@
+{
+ "sql": "SELECT station_key, level_m, observed_at FROM veda_pg.replay_levels WHERE scenario = 'synthetic_calm' AND station_key = '_DTPT0002' AND kind = 'reported' AND observed_at <= TIMESTAMP '2024-06-15 02:00:00' ORDER BY observed_at DESC",
+ "query_hash": "e634b1c73d76aca8",
+ "recorded_at": "2026-10-23T07:30:41Z",
+ "columns": [
+  "station_key",
+  "level_m",
+  "observed_at"
+ ],
+ "rows": [
+  [
+   "_DTPT0002",
+   "0.58",
+   "2024-06-15 02:00:00.0"
+  ]
+ ]
+}

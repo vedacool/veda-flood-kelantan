@@ -1,0 +1,13 @@
+{
+ "sql": "SELECT MAX(s.water_level_update_datetime) AS newest FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s",
+ "query_hash": "a334986e7de0b6a7",
+ "recorded_at": "2026-10-23T07:31:18Z",
+ "columns": [
+  "newest"
+ ],
+ "rows": [
+  [
+   "2024-02-23 14:45:00"
+  ]
+ ]
+}

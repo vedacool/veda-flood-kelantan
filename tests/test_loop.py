@@ -252,3 +252,13 @@ def test_trapped_with_a_known_place_gets_act_advice_whatever_the_river(offline):
         assert "Paras sungai normal, tetapi banjir setempat masih boleh memerangkap anda." in lines_
     assert r["forecast"]["verdict"] in ("NORMAL", "WATCH", "PREPARE", "ACT", "INSUFFICIENT_DATA")   # data unchanged
     assert any(x["action"] == "emergency" for x in lines(r))
+
+
+def test_trapped_label_stays_when_the_verdict_is_already_act(offline):
+    """Regression (23 Oct): with an ACT card the stranded label used to be skipped."""
+    from datetime import datetime
+    from app import config
+    r = loop.run("Saya terkandas di Rantau Panjang, air keliling rumah", llm=stub(), log_dir=offline, quiet=True,
+                 replay="synthetic_rising", at=datetime(2024, 11, 25, 18, 0, tzinfo=config.MYT))
+    assert r["forecast"]["verdict"] == "ACT"
+    assert "Anda terkandas: utamakan keselamatan." in r["answer"]["text"].split("\n")

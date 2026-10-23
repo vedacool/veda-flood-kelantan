@@ -55,3 +55,12 @@ def test_recorded_live_traces_carry_no_jps_readings():
         assert not re.search(r'"value": -?\d', text), path.name
         left = [m.group(0) for m in metres.finditer(text) if round(float(m.group(1)), 2) not in keep]
         assert left == [], (path.name, left[:5])
+
+
+def test_synthetic_values_are_exactly_what_the_seeded_method_makes():
+    """Every SYNTHETIC output comes from scripts/make_synthetic_scenes.py (cited thresholds, 2014 peaks, travel
+    times, fixed seed) - a hand edit, or a value adapted from a real reading, fails here."""
+    import sys
+    out = subprocess.run([sys.executable, "scripts/make_synthetic_scenes.py", "--check"], cwd=ROOT, capture_output=True,
+                         text=True)
+    assert out.returncode == 0, out.stdout + out.stderr

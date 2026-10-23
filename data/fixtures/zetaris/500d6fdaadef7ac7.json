@@ -1,0 +1,167 @@
+{
+ "sql": "SELECT station_key, event, peak_m, observed_when, source_type, source_name, source_url, reconstructed FROM veda_pg.historic_peaks",
+ "query_hash": "500d6fdaadef7ac7",
+ "recorded_at": "2026-10-23T07:31:11Z",
+ "columns": [
+  "station_key",
+  "event",
+  "peak_m",
+  "observed_when",
+  "source_type",
+  "source_name",
+  "source_url",
+  "reconstructed"
+ ],
+ "rows": [
+  [
+   "_DPMS0003",
+   "Nov 2024 (27 Nov 19:30)",
+   "10.94",
+   "27 Nov 2024 19:30",
+   "news",
+   "Kosmo, 27 Nov 2024",
+   "https://www.kosmo.com.my/2024/11/27/paras-air-sungai-golok-lepasi-bacaan-bah-kuning-2014/",
+   "false"
+  ],
+  [
+   "_DPMS0003",
+   "Nov 2024 (29 Nov)",
+   "11.43",
+   "29 Nov 2024",
+   "news",
+   "Malay Mail, 29 Nov 2024",
+   "https://www.malaymail.com/news/malaysia/2024/11/29/worsening-floods-hit-eight-states-nearly-100000-displaced-as-kelantan-and-terengganu-endure-worst-impact/158425",
+   "false"
+  ],
+  [
+   "_DKBR0007",
+   "Nov 2024 (29 Nov - Malay Mail)",
+   "5.47",
+   "29 Nov 2024",
+   "news",
+   "Malay Mail, 29 Nov 2024",
+   "https://www.malaymail.com/news/malaysia/2024/11/29/worsening-floods-hit-eight-states-nearly-100000-displaced-as-kelantan-and-terengganu-endure-worst-impact/158425",
+   "false"
+  ],
+  [
+   "_DKBR0007",
+   "Nov 2024 (29 Nov 21:00 - NST)",
+   "5.53",
+   "29 Nov 2024 21:00",
+   "news",
+   "NST, 29 Nov 2024 (citing JPS/DID)",
+   "https://www.nst.com.my/news/nation/2024/11/1141578/kota-baru-residents-high-alert-sungai-kelantan-rises",
+   "false"
+  ],
+  [
+   "_DTMH0008",
+   "Nov 2024 (29 Nov)",
+   "28.99",
+   "29 Nov 2024",
+   "news",
+   "Malay Mail, 29 Nov 2024",
+   "https://www.malaymail.com/news/malaysia/2024/11/29/worsening-floods-hit-eight-states-nearly-100000-displaced-as-kelantan-and-terengganu-endure-worst-impact/158425",
+   "false"
+  ],
+  [
+   "5320038_DKKI0003",
+   "Dec 2014",
+   "46.47",
+   "24 Dec 2014 16:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "5222052_DKKI0005",
+   "Dec 2014",
+   "42.17",
+   "24 Dec 2014 06:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "5521044_DKKI0014",
+   "Dec 2014",
+   "34.17",
+   "25 Dec 2014 15:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DMCG0215",
+   "Dec 2014",
+   "22.74",
+   "26 Dec 2014 00:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DKBR0007",
+   "Dec 2014",
+   "6.89",
+   "26 Dec 2014 00:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DTMH0008",
+   "Dec 2014",
+   "24.93",
+   "printed '1/12/2014 2:00' - ambiguous",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DPMS0003",
+   "Dec 2014",
+   "10.84",
+   "18 Dec 2014 11:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DPPH0001",
+   "Dec 2014",
+   "2.67",
+   "18 Dec 2014 07:00",
+   "official",
+   "JPS Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015 (updated 10-02-2015), in USM CGSS slides by Prof. Ir. Mohd Nordin Adlan",
+   "https://cgss.usm.my/images/Air_-_Prof._Ir._Mohd_Nordin_Adlan.pdf",
+   "false"
+  ],
+  [
+   "_DPMS0003",
+   "Dec 2014 (as reported by Kosmo)",
+   "10.52",
+   "2014",
+   "news",
+   "Kosmo, 27 Nov 2024 (same figure in Kosmo 25 Dec 2023)",
+   "https://www.kosmo.com.my/2024/11/27/paras-air-sungai-golok-lepasi-bacaan-bah-kuning-2014/",
+   "false"
+  ],
+  [
+   "_DPMS0003",
+   "Dec 2023",
+   "11.03",
+   "25 Dec 2023 23:30",
+   "news",
+   "NST, 26 Dec 2023 ('highest point in nine years')",
+   "https://www.nst.com.my/news/nation/2023/12/994165/sungai-golok-water-level-hits-nine-year-high-more-11m-nsttv",
+   "false"
+  ]
+ ]
+}

@@ -271,3 +271,13 @@ def test_live_record_and_replay(tmp_path, monkeypatch):
         trace.end_run()
     assert live.rows == [[1, "Pasir Mas", 2.5]] and replay.rows == live.rows
     assert live.source == "zetaris-live" and replay.source == "zetaris-replay"
+
+
+def test_recording_never_overwrites_a_synthetic_fixture(tmp_path, monkeypatch):
+    """B-75: a live recording run must not put real rows back over a SYNTHETIC fixture."""
+    import json as _json
+    monkeypatch.setattr(zetaris, "FIXTURES", tmp_path)
+    (tmp_path / "abc.json").write_text(_json.dumps({"sql": "x", "columns": ["a"], "rows": [["1"]],
+                                                    "recorded_at": "t", "synthetic": True}), encoding="utf-8")
+    assert zetaris._save_fixture("abc", "x", ["a"], [["real"]], "t2") is False
+    assert _json.loads((tmp_path / "abc.json").read_text(encoding="utf-8"))["rows"] == [["1"]]

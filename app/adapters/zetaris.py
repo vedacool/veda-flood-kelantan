@@ -245,7 +245,12 @@ def _live(sql, limit, agent, label, tolerate=None, budget_s=None):
 
 
 def _save_fixture(qh, sql, columns, raw_rows, fetched_at):
+    """Record a live result for SAMPLE_MODE - never over a SYNTHETIC fixture (B-75: those come only from
+    scripts/make_synthetic_scenes.py, so live JPS / data.gov.my rows can't slip back in by recording)."""
     FIXTURES.mkdir(parents=True, exist_ok=True)
+    old = _load_fixture(qh)
+    if old and old.get("synthetic"):
+        return False
     doc = {"sql": sql, "query_hash": qh, "recorded_at": fetched_at, "columns": columns, "rows": raw_rows}
     (FIXTURES / f"{qh}.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8",
                                          newline="\n")

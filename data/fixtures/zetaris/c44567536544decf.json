@@ -1,0 +1,169 @@
+{
+ "sql": "SELECT a.alias_norm, p.place_id, p.name, p.district, p.kind, p.lat, p.lon FROM veda_pg.place_aliases a JOIN veda_pg.places p ON p.place_id = a.place_id",
+ "query_hash": "c44567536544decf",
+ "recorded_at": "2026-10-23T07:31:11Z",
+ "columns": [
+  "alias_norm",
+  "place_id",
+  "name",
+  "district",
+  "kind",
+  "lat",
+  "lon"
+ ],
+ "rows": [
+  [
+   "kota bharu",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "kota baru",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "kota bahru",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "kotabharu",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "kotabaru",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "kb",
+   "kota_bharu",
+   "Kota Bharu",
+   "Kota Bharu",
+   "town",
+   "6.12361",
+   "102.24333"
+  ],
+  [
+   "pasir mas",
+   "pasir_mas",
+   "Pasir Mas",
+   "Pasir Mas",
+   "town",
+   "6.04934",
+   "102.13987"
+  ],
+  [
+   "pasirmas",
+   "pasir_mas",
+   "Pasir Mas",
+   "Pasir Mas",
+   "town",
+   "6.04934",
+   "102.13987"
+  ],
+  [
+   "psr mas",
+   "pasir_mas",
+   "Pasir Mas",
+   "Pasir Mas",
+   "town",
+   "6.04934",
+   "102.13987"
+  ],
+  [
+   "pasir mass",
+   "pasir_mas",
+   "Pasir Mas",
+   "Pasir Mas",
+   "town",
+   "6.04934",
+   "102.13987"
+  ],
+  [
+   "rantau panjang",
+   "rantau_panjang",
+   "Rantau Panjang",
+   "Pasir Mas",
+   "town",
+   "6.0219",
+   "101.9767"
+  ],
+  [
+   "rantaupanjang",
+   "rantau_panjang",
+   "Rantau Panjang",
+   "Pasir Mas",
+   "town",
+   "6.0219",
+   "101.9767"
+  ],
+  [
+   "rtu panjang",
+   "rantau_panjang",
+   "Rantau Panjang",
+   "Pasir Mas",
+   "town",
+   "6.0219",
+   "101.9767"
+  ],
+  [
+   "r panjang",
+   "rantau_panjang",
+   "Rantau Panjang",
+   "Pasir Mas",
+   "town",
+   "6.0219",
+   "101.9767"
+  ],
+  [
+   "rantau panjng",
+   "rantau_panjang",
+   "Rantau Panjang",
+   "Pasir Mas",
+   "town",
+   "6.0219",
+   "101.9767"
+  ],
+  [
+   "tumpat",
+   "tumpat",
+   "Tumpat",
+   "Tumpat",
+   "town",
+   "6.19775",
+   "102.17098"
+  ],
+  [
+   "tumpak",
+   "tumpat",
+   "Tumpat",
+   "Tumpat",
+   "town",
+   "6.19775",
+   "102.17098"
+  ]
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "sql": "SELECT DISTINCT place FROM veda.forecast_kelantan",
+ "query_hash": "a7a72126ed7ac4b8",
+ "recorded_at": "2026-10-23T07:31:14Z",
+ "columns": [
+  "place"
+ ],
+ "rows": [
+  [
+   "Rantau Panjang"
+  ],
+  [
+   "Kuala Krai"
+  ],
+  [
+   "Kelantan"
+  ],
+  [
+   "Pasir Puteh"
+  ],
+  [
+   "Kota Bharu"
+  ],
+  [
+   "Jeli"
+  ],
+  [
+   "Gua Musang"
+  ],
+  [
+   "Tumpat"
+  ],
+  [
+   "Machang"
+  ],
+  [
+   "Tanah Merah"
+  ],
+  [
+   "Bachok"
+  ],
+  [
+   "Pasir Mas"
+  ]
+ ]
+}

@@ -1,0 +1,169 @@
+{
+ "sql": "SELECT from_key, to_key, link_type, lag_min_h, lag_max_h, lag_source, status FROM veda_pg.station_links",
+ "query_hash": "92fe5d99258c0f4c",
+ "recorded_at": "2026-10-23T07:31:11Z",
+ "columns": [
+  "from_key",
+  "to_key",
+  "link_type",
+  "lag_min_h",
+  "lag_max_h",
+  "lag_source",
+  "status"
+ ],
+ "rows": [
+  [
+   "5020030_DGMG0016",
+   "5320038_DKKI0003",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "5320038_DKKI0003",
+   "5521044_DKKI0014",
+   "upstream_of",
+   "23.0",
+   "23.0",
+   "reported, tentative - single event, low confidence",
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "5222052_DKKI0005",
+   "_DKKI0011",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DKKI0011",
+   "5521044_DKKI0014",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "5521044_DKKI0014",
+   "_DMCG0001",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DMCG0001",
+   "_DTMH0003",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DTMH0003",
+   "_DMCG0215",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "verified - Husaini (738 m apart, Kusial Baru upstream)"
+  ],
+  [
+   "_DMCG0215",
+   "6021065_DPMS0001",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "6021065_DPMS0001",
+   "27133",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "27133",
+   "_DKBR0002",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DKBR0002",
+   "_DKBR0007",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DKBR0007",
+   "_DTPT0002",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DTMH0008",
+   "_DPMS0003",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DPMS0003",
+   "_DPMS0008",
+   "upstream_of",
+   null,
+   null,
+   null,
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "_DTMH0003",
+   "_DMCG0215",
+   "backup_for",
+   null,
+   null,
+   null,
+   "verified - Husaini 22 Oct (use when Kusial is stale)"
+  ],
+  [
+   "5521044_DKKI0014",
+   "_DMCG0215",
+   "travel_time",
+   "6.0",
+   "9.0",
+   "reported, tentative - Dec 2014 (planning notes: Krai->Guillemard ~6 h; peak 25 Dec 15:00 -> 26 Dec 00:00 ~9 h)",
+   "tentative - needs Dr Ariff"
+  ],
+  [
+   "5521044_DKKI0014",
+   "_DKBR0007",
+   "travel_time",
+   "9.0",
+   "17.0",
+   "reported, tentative - Dec 2014 (peak ~9 h; planning notes Krai->KB ~17 h)",
+   "tentative - needs Dr Ariff"
+  ]
+ ]
+}
