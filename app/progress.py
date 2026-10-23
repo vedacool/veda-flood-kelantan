@@ -31,6 +31,8 @@ def describe(rec):
             took = f", {rec['duration_ms'] / 1000:.1f} s" if rec.get("duration_ms") else ""
             return f"  {who}: answered by {d['served_model']} via Nightshift{receipt}{took}"
         return f"  ! {who}: no model answered ({out})"
+    if a == "ai.fallback":             # B-86: AI fallback marked plainly, next to the served-model lines
+        return f"  ! {rec.get('agent_name')}: {out}"
     if a == "safety" and rec.get("status") != "success":
         return f"  safety: {out}"
     if rec.get("status") == "failed" and a != "run_end":

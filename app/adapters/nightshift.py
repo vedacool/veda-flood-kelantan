@@ -314,11 +314,14 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     ms = int((time.perf_counter() - t0) * 1000)
     rc = _receipt(payload)
     want = expected_model(lane)
-    lane_ok = rc["mode_coerced"] is not True and rc["routed_mode"] in (lane, model)
+    by_name = model == want and not model.startswith("meterless/")       # B-85/B-86: the model asked for by name
+    lane_ok = rc["mode_coerced"] is not True and (rc["routed_mode"] in (lane, model) or
+                                                 (by_name and rc["routed_mode"] is None))
     model_ok = rc["served_model"] == want
     pinned = lane_ok and model_ok
     if pinned:
-        decision = f"Answered by {rc['served_model']} on lane '{lane}'"
+        decision = (f"Answered by {rc['served_model']} (requested by name, lane '{lane}')" if by_name
+                    else f"Answered by {rc['served_model']} on lane '{lane}'")
     elif not lane_ok:
         decision = (f"Lane NOT pinned: asked '{lane}', Nightshift routed '{rc['routed_mode']}'"
                     f"{' (app rule coerced it)' if rc['mode_coerced'] else ''}; answered by {rc['served_model']}")

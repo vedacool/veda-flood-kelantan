@@ -272,21 +272,53 @@ python -m app.ingest.jps --from-file <a JPS page you saved yourself>   # load a 
 At most one request to JPS per 15 minutes, identified by our User-Agent. Agents read the stored levels only through
 Zetaris.
 
-## Pre-existing materials
-Design notes summarised in `docs/BUILD_BRIEF.md` were written 20–22 Oct 2026, before the build window. All code in
-this repository was written inside the window.
+## Sponsor technology explanation
+(The organisers asked for this in the README and the deck, 23 Oct.)
+- **Zetaris - the one data layer.** Every agent reads data only through `run_sql()` (`app/adapters/zetaris.py`), as
+  read-only SQL: VEDA's Postgres (`veda_pg`: gauges and thresholds, live JPS levels every 15 min, places,
+  historic peaks, replay readings, OpenStreetMap features), Zetaris REST tables over Open-Meteo and data.gov.my, and
+  Zetaris views that join them (`db/views/`). Agents run single read-only SELECTs; the only other statements they
+  may send are on a short allow-list (refreshing a cached forecast table; `zetaris.ddl_problem`); setup scripts create
+  the tables and views. Each answer's trace lists every Zetaris query.
+- **Meterless Engine: World Model - VEDA's shared memory.** `app/engines/world_model/` (Python port of the Meterless
+  reference, see Pre-existing components): every fact carries its source and time; the Data agent writes readings and
+  source health, the Forecast agent stores its verdict, the Critic reads that verdict back and stores its reviews,
+  and the circuit breakers and the 15-min source memory live there. Tests, with results on 23 Oct 2026:
+  `python -m pytest tests/conformance -v` -> **8 passed** (the ported Meterless conformance checks);
+  `python -m pytest tests/test_world_model_engine.py -v` -> **9 passed**.
+- **Meterless Nightshift - how VEDA reaches the model.** `app/adapters/nightshift.py` sends OpenAI-format requests to
+  `METERLESS_BASE_URL` with app id `veda-deep`, asks for the model **by name**, streams the answer with a hard time
+  limit, and writes one trace line per call with the model that actually answered and the Nightshift receipt id. A
+  call that falls back is marked with an `ai.fallback` line (organiser rule, 23 Oct). Never `meterless/auto`, never
+  NVIDIA directly.
+- **NVIDIA Nemotron 3.5 Super VL - where it contributes.** It writes the 1-2 sentence explanation in the user's
+  language (BM or English) from the card's key facts, and it is the Critic's AI reviewer: one question - does the
+  explanation contradict, exaggerate or downplay a fact? Measured live, 23 Oct 2026, 22:47-23:07 MYT: explanation
+  shown in 8 of 10 full runs, AI review completed in 8 of 10.
+- **What is unique:** the model never decides - code reads, checks and reconciles the data and sets the verdict with
+  rules a person can read; the model explains, a second model call checks the explanation against the facts, and a
+  safety gate checks every answer last. The served model is verified on every call; one source failing never blocks
+  the river answer (per-source circuit breakers); a flood replay cuts every source at the replay time so nothing from
+  later leaks in.
 
-Pre-existing data components (researched before 22 Oct 2026, from the planning notes):
-- **The 2014 peaks table** (`data/historic_peaks.csv`, Dec 2014 rows): peak levels per gauge from JPS "Laporan Catatan
-  Aras Air Tertinggi 01-12-2014 to 10-02-2015" (as published in USM CGSS slides) and news reports (Kosmo, Malay Mail,
-  NST); every row keeps its source and URL.
-- Third-party data and its terms: see **Data sources and licences** above.
+## Pre-existing components
+(Declared at the organisers' request, 23 Oct.)
+- **The 2014 flood peak table** (`data/historic_peaks.csv`, Dec 2014 rows) was **compiled before 22 Oct 2026**: peak
+  levels per gauge from JPS "Laporan Catatan Aras Air Tertinggi 01-12-2014 to 10-02-2015" (as published in USM CGSS
+  slides) and news reports (Kosmo, Malay Mail, NST). Every row keeps its source and URL; the sources are listed under
+  **Data sources and licences**.
+- **Meterless World Model code (Apache-2.0):** `app/engines/world_model/resolve.py` and `stable_ids.py` are Python
+  ports of the Meterless reference (`resolve.ts`, `stableIds.ts`) and `tests/conformance/test_world_model.py` ports
+  its conformance runner - github.com/Meterless/Meterless; attribution in `NOTICE`.
+- Design notes summarised in `docs/BUILD_BRIEF.md` were written 20-22 Oct 2026, before the build window. All other
+  code in this repository was written inside the window.
 
 ## AI and Model Usage
 1. **Models (through Meterless Nightshift):** NVIDIA **Nemotron 3.5 Super VL**, requested by name (`nvidia/nemotron-3.5-super-vl-120b-a12b`) on the
    deep lane, for two jobs - the Coordinator's short explanation, and the Critic's AI review. No other model answers in
    VEDA; Lightning was used until 23 Oct evening and is not used now (B-85). Every call's trace line names the model that **actually answered**, taken
-   from Nightshift's response (`served_model`), with its receipt id; the web page and CLI show it live.
+   from Nightshift's response (`served_model`), with its receipt id; the web page and CLI show it live. Every
+   AI step that falls back is marked with its own `ai.fallback` trace line, and the run's last line lists them.
 2. **Agent framework:** none - four agents in plain Python (`app/agents/`) driven by a small state machine
    (`app/loop.py`); FastAPI + uvicorn serve the API and the web page.
 3. **Sponsor technology:**

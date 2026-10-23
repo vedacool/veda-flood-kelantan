@@ -337,6 +337,9 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
                 explanation = explanation.strip()
         except nightshift.NightshiftError as e:
             drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> card without an explanation"
+    if drafted_by == "fallback":            # B-86: the run says plainly that the AI explanation was not used
+        trace.ai_fallback(AGENT, "code-only card, explanation dropped" if use_model else
+                          "code-only card, AI explanation not requested", why)
     answer = {"text": card_mod.render(card, language, explanation), "language": language, "drafted_by": drafted_by,
               "explanation": explanation, "card": card, "safety_line": SAFETY.get(language, SAFETY["en"])}
     trace.step(AGENT, "revise" if feedback else "draft", input_summary=question, output_summary=answer["text"],

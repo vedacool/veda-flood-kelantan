@@ -34,6 +34,7 @@ class Run:
         self.listener = listener        # called with every record as it is written (live progress: CLI, web page)
         self.step = 0
         self.lock = threading.Lock()
+        self.fallbacks = []             # B-86: every AI fallback in this run ("<agent>: <what>"), repeated at run_end
 
 
 _current: ContextVar = ContextVar("veda_trace_run", default=None)
@@ -164,6 +165,19 @@ def step(agent, action, input_summary=None, output_summary=None, status="success
     return record
 
 
+def ai_fallback(agent, what, reason):
+    """B-86 (organiser answer, 23 Oct): mark plainly where an AI step fell back - one `ai.fallback` line
+    ("fallback: <what> (<reason>)"), next to the served-model line that every successful AI call writes. The run
+    keeps the list and repeats it on run_end."""
+    run = _current.get()
+    if run is not None:
+        with run.lock:
+            run.fallbacks.append(f"{agent}: {what}")
+    return step(agent, "ai.fallback", output_summary=f"fallback: {what} ({summarize(reason, 160)})",
+                status="fallback", decision="AI step not used for this answer - the code-checked card still goes out",
+                details={"what": what, "reason": summarize(reason, 300)})
+
+
 def end_run(status="success", output_summary=None):
     """Write the run_end line and clear the current run. Returns the trace file path."""
     run = _current.get()
@@ -173,7 +187,8 @@ def end_run(status="success", output_summary=None):
         status = "failed"  # never leave a run open because of a bad status
     try:
         step("System", "run_end", output_summary=output_summary or f"Run finished after {run.step} steps",
-             status=status)
+             status=status, decision=("AI fallback used: " + "; ".join(run.fallbacks)) if run.fallbacks
+             else "no AI fallback in this run", details={"ai_fallbacks": list(run.fallbacks)})
     finally:
         _current.set(None)
     return run.path

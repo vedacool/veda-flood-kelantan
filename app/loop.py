@@ -181,6 +181,8 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     # Husaini 22 Oct night: nothing goes out that the AI Critic has not checked
                     answer = coordinator.template_answer(card, p["question_language"],
                                                          "the Critic's AI review did not run or timed out")
+                    trace.ai_fallback("System", "explanation dropped, not reviewed by AI",
+                                      "the Critic's AI review did not run or timed out - nothing unreviewed goes out")
                 if reviews[-1]["decision"] == "approve":
                     answer["approved"] = True
                     state = "done"

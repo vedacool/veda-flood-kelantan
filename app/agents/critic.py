@@ -391,6 +391,9 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         except nightshift.NightshiftError as e:
             decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
             status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
+    if answer.get("explanation") and "model" not in checked_by:      # B-86: an AI text the AI review did not check
+        trace.ai_fallback(AGENT, "critic code + Zetaris only, AI review unavailable",
+                          status_note or "model review not run")
     if code_problems and decision == "approve":
         decision = "reject"
         status_note = (status_note + "; " if status_note else "") + "model approved, but code checks found problems"
