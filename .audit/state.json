@@ -3,7 +3,7 @@
   "lastFullAuditCommit": "44f33b0",
   "lastAuditDate": "2026-10-23",
   "report": "docs/audit/2026-10-23-audit.md",
-  "note": "Full run, all 10 dimensions. No P0, 10 P1 (all re-verified). NO-GO for submission until P1s fixed.",
+  "note": "Full run 23 Oct, all 10 dimensions. No P0; 10 P1 found and fixed the same day (see report). P2/P3 open.",
   "verifiedGood": {
     "secrets-in-history": "44f33b0",
     "app/ingest/jps.py:parse": "4d4e31d",
@@ -24,20 +24,19 @@
     "docker:digest-pinned+nonroot": "44f33b0"
   },
   "fixesApplied": {
-    "date": "2026-10-22",
+    "date": "2026-10-23",
     "commits": [
-      "c9eb9e7",
-      "71177ea",
-      "08a8e68",
-      "3c8322b",
-      "ee32ba8",
-      "f82485e"
+      "3a07e03",
+      "3fb1ab8",
+      "d475c5f",
+      "1b7cb20",
+      "30e8acf"
     ],
     "open": [
-      "audit 2026-10-23: 10 P1 (see report)"
+      "P2/P3 list in docs/audit/2026-10-23-audit.md",
+      "B-24 metadata.json + demo link",
+      "code licence file"
     ],
-    "wontFix": [
-      "trace/snapshot rotation"
-    ]
+    "wontFix": []
   }
 }
