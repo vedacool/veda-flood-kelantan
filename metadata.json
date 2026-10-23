@@ -1,0 +1,73 @@
+{
+  "schema_note": "No official schema was published for this hackathon; shape proposed in our backlog (D-12): where each sponsor sits, as the sponsor overviews ask. Every value here is also stated in README.md (tests/test_metadata.py checks it).",
+  "project": {
+    "name": "VEDA",
+    "full_name": "VEDA — Vast Earth Data Analyser",
+    "summary": "A multi-agent system for flood-prone Kelantan, Malaysia: it cross-checks scattered and sometimes stale flood data and answers, in English or Bahasa Melayu, \"Is my place at risk in the next 24–48 hours, and what should we do now?\", with every claim traced to its source and age.",
+    "disclaimer": "Not an official flood warning. Decision support only. Always follow JPS, APM and police instructions. Emergency: 999 · APM (Civil Defence): 991.",
+    "licence": "MIT",
+    "notice": "NOTICE (Apache-2.0 Meterless ports; OpenStreetMap data under the ODbL)",
+    "repository": "https://github.com/vedacool/veda"
+  },
+  "hackathon": "GenAI Works Open Agent Hackathon 2026",
+  "track": "Solving Fragmented Intelligence",
+  "team": {
+    "name": "Hujung Lab",
+    "members": ["Mohd Husaini Mohd Fauzi", "Muhammad Ariff Baharudin"]
+  },
+  "agents": [
+    {"name": "Coordinator", "files": ["app/agents/coordinator.py", "app/router.py"], "role": "Finds the place, picks the answer language, decides quick or full and writes the plan; writes the short explanation on the full path.", "uses": "AI for the explanation only; plan and routing in code", "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "via": "Meterless Nightshift, meterless/fast"},
+    {"name": "Data & Reconciler", "files": ["app/agents/data_agent.py"], "role": "Fetches every source through Zetaris in parallel, checks freshness and plausibility, reconciles disagreeing sources, heals (backup gauge, last reading, INSUFFICIENT DATA), circuit breaker per source.", "uses": "code", "model": null, "via": null},
+    {"name": "Forecast", "files": ["app/agents/forecast_agent.py"], "role": "Applies the verdict rules to the controlling gauges, upstream gauges and rain; builds the 24 h outlook, the confidence and the comparison with past floods.", "uses": "code", "model": null, "via": null},
+    {"name": "Critic", "files": ["app/agents/critic.py"], "role": "Code checks and a Zetaris re-check on every answer; a small AI review of the explanation against the card's key facts when the model replies in time.", "uses": "code + AI review", "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "via": "Meterless Nightshift, meterless/fast"},
+    {"name": "Safety gate", "files": ["app/safety.py"], "role": "Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never 'a PPS is open' or 'the road will be cut off'.", "uses": "code", "model": null, "via": null}
+  ],
+  "agent_framework": "none - plain Python agents driven by a small state machine (app/loop.py)",
+  "sponsors": {
+    "zetaris": {
+      "role": "The data layer: every agent reads data only through run_sql() - Postgres veda_pg (gauges, thresholds, places, peaks, live JPS levels, replay rows, OpenStreetMap features), REST tables (Open-Meteo, data.gov.my) and views.",
+      "code": ["app/adapters/zetaris.py", "db/views/"]
+    },
+    "meterless_engine": {
+      "engine": "World Model",
+      "role": "VEDA's shared, provenance-stamped memory between agents: readings and forecast facts with source and time, source health and circuit breakers, the Forecast agent's stored verdict, the Critic's reviews, the question radar (intent tags only).",
+      "code": ["app/engines/world_model/"],
+      "tests": ["python -m pytest tests/conformance -v", "python -m pytest tests/test_world_model_engine.py -v"]
+    },
+    "meterless_nightshift": {
+      "role": "The only AI provider: OpenAI-format HTTP, model route meterless/fast, app id veda-fast, streaming; every call's trace line names the model that actually answered and the Nightshift receipt id.",
+      "code": ["app/adapters/nightshift.py"],
+      "route": "meterless/fast"
+    },
+    "nvidia": {
+      "models": ["nvidia/nemotron-3.5-lightning-30b-a3b"],
+      "role": "Nemotron 3.5 Lightning writes the explanation and does the Critic's AI review, served through Nightshift; no other model answers in VEDA."
+    },
+    "cursor": {
+      "role": "AI coding tool: Claude Code (Anthropic) inside Cursor, with the Cursor agent for a few small delegated jobs (logged in docs/cursor-log.md)."
+    }
+  },
+  "data_sources": [
+    {"name": "JPS Public Infobanjir river levels", "url": "https://publicinfobanjir.water.gov.my/", "licence": "© JPS Malaysia; fetched live at runtime only, not redistributed", "mode": "live"},
+    {"name": "JPS thresholds", "licence": "Cited facts, © JPS Malaysia", "mode": "committed (data/stations_mapping.csv)"},
+    {"name": "Historic peaks incl. Dec 2014", "licence": "Cited facts with source and URL per row", "mode": "committed (data/historic_peaks.csv)"},
+    {"name": "Nov 2024 replay readings", "licence": "Facts as reported by Bernama and Kosmo (citing JPS), source URL and quote per row", "mode": "replay (data/replay/nov2024_anchors.csv)"},
+    {"name": "SYNTHETIC scenes and offline fixtures", "licence": "Made up by scripts/make_synthetic_scenes.py from cited facts only (MIT)", "mode": "synthetic"},
+    {"name": "data.gov.my API: MetMalaysia forecast and warnings, JPS /flood-warning feed", "url": "https://data.gov.my/", "licence": "Malaysian government open data; no specific licence named on the API pages checked 23 Oct", "mode": "live"},
+    {"name": "Open-Meteo forecast and historical archive", "url": "https://open-meteo.com/", "licence": "CC BY 4.0", "mode": "live + archive"},
+    {"name": "OpenStreetMap", "url": "https://www.openstreetmap.org/", "licence": "ODbL", "mode": "loaded once at setup; SAMPLE_MODE fixture"}
+  ],
+  "sample_mode": {
+    "how": "SAMPLE_MODE=true",
+    "what": "Runs the real agent logic offline on scenes (Nov 2024 replay, SYNTHETIC scenes) and recorded open / synthetic fixtures, with no calls to Zetaris, Nightshift or anything else; the models are replaced by the agents' code fallbacks.",
+    "needs": "Python 3.13 and requirements.txt; no .env, no keys"
+  },
+  "entrypoints": {
+    "cli": "python run.py \"Is Rantau Panjang at risk?\"",
+    "cli_replay": "python run.py --replay nov2024 --at \"2024-11-27 19:30\" \"Rantau Panjang selamat ke?\"",
+    "web": "python -m app.main",
+    "evals": "python scripts/run_evals.py",
+    "docker": "docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda",
+    "live_setup": "python scripts/setup_all.py"
+  }
+}

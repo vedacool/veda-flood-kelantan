@@ -1,6 +1,7 @@
 # VEDA — Vast Earth Data Analyser
 
-**Team Hujung Lab** · GenAI Works Open Agent Hackathon 2026 · Track: Solving Fragmented Intelligence
+**Team Hujung Lab** (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) · GenAI Works Open Agent Hackathon 2026 ·
+Track: Solving Fragmented Intelligence · Machine-readable summary: [`metadata.json`](metadata.json)
 
 VEDA is a multi-agent system for flood-prone Kelantan, Malaysia. Kelantan's flood data is scattered and sometimes
 stale or contradictory. VEDA cross-checks it and answers one question for anyone asking about a place, in English or
