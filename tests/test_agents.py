@@ -29,8 +29,9 @@ def stub_llm(plan=None, answer=None, fail=False, review=None):
             raise nightshift.NightshiftError("stub: Nightshift down")
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             data = plan
-        elif messages[0]["content"] == critic.CRITIC_SYSTEM:      # Critic (any lane): approve unless told otherwise
-            data = {"decision": review or "approve", "problems": [], "fix": ""}
+        elif messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):   # Critic (any lane): approve unless told otherwise
+            d = review or "approve"
+            data = {"decision": d, "problems": [], "fix": "", "ok": d == "approve", "reason": "stub"}
         else:                                   # draft: only the explanation (B-21) - the card is code
             data = {"explanation": answer if answer is not None else "The river is steady for now."}
         return SimpleNamespace(data=data, text=json.dumps(data))

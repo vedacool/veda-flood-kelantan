@@ -30,12 +30,13 @@ def stand_in(spec):
     spec = spec or {}
 
     def llm(lane, messages, agent, **kw):
-        if messages[0]["content"] == critic.CRITIC_SYSTEM:       # the Critic, on the deep or the fallback fast lane
+        if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):   # the Critic, on the deep or the fallback fast lane
             if spec.get("critic", "approve") == "down" or (spec.get("critic") == "deep_down" and lane == "deep"):
                 raise nightshift.NightshiftError("eval: Critic AI unavailable")
             decision = "approve" if spec.get("critic") == "deep_down" else spec.get("critic", "approve")
             problems = [] if decision == "approve" else [{"type": "unclear", "detail": "eval rejection"}]
-            return SimpleNamespace(data={"decision": decision, "problems": problems, "fix": "eval"}, text="")
+            return SimpleNamespace(data={"decision": decision, "problems": problems, "fix": "eval",
+                                         "ok": decision == "approve", "reason": "eval rejection"}, text="")
         if spec.get("explanation") is None:
             raise nightshift.NightshiftError("eval: no explanation")
         return SimpleNamespace(data={"explanation": spec["explanation"]}, text="")

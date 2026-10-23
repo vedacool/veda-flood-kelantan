@@ -242,14 +242,59 @@ SMALL_EVIDENCE_NOTE = ("Every line of the draft except the explanation was writt
                        "(checked against the evidence by code). The card as written by code: ")
 
 
-def _model_review(question, answer, facts, findings, recheck, llm, budget_s, lane="deep"):
+# The AI review with a card (Husaini 23 Oct): the card's key facts + the model-written explanation only, one yes/no
+# question. Probe 23 Oct: 10/10 completed, 2/2 planted errors rejected at 2000 tokens (200 -> all empty: Lightning
+# spends hidden tokens even with reasoning off).
+SMALL_SYSTEM = ("You check one short explanation that a flood assistant for Kelantan will show to residents. FACTS "
+                "were written by code from verified data. Does the explanation contradict, exaggerate or downplay any "
+                "fact? The explanation may be in English or Malay. Reply JSON only: {\"ok\": true or false, "
+                "\"reason\": \"at most 20 words\"}")
+SMALL_MAX_TOKENS = 2000
+FAST_FAIL_S, MAX_RETRIES = 10, 2      # retry only a failure that came back fast; a ~45 s cut-off is never retried
+
+
+def _small_review(answer, forecast, llm, budget_s, lane):
+    """-> (decision, problems, fix) or raises NightshiftError. Retries a fast failure (< FAST_FAIL_S) up to
+    MAX_RETRIES times while the budget allows."""
+    msgs = [{"role": "system", "content": SMALL_SYSTEM},
+            {"role": "user", "content": json.dumps({"FACTS": card_mod.key_facts(answer["card"], forecast),
+                                                    "EXPLANATION": answer["explanation"]}, ensure_ascii=False)}]
+    start, tries = time.monotonic(), 0
+    while True:
+        tries += 1
+        t = time.monotonic()
+        left = None if budget_s is None else budget_s - (t - start)
+        try:
+            r = llm(lane, msgs, agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator",
+                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1)
+            break
+        except nightshift.NightshiftError as e:
+            took = time.monotonic() - t
+            room = budget_s is None or budget_s - (time.monotonic() - start) > FAST_FAIL_S
+            if took < FAST_FAIL_S and tries <= MAX_RETRIES and room:
+                trace.step(AGENT, "critic.retry", input_summary=f"try {tries} failed after {took:.0f} s",
+                           output_summary=str(e)[:150], status="retrying",
+                           decision=f"failed fast (< {FAST_FAIL_S} s) -> try again ({tries + 1} of {MAX_RETRIES + 1})")
+                continue
+            raise
+    data = r.data if isinstance(r.data, dict) else {}
+    if data.get("ok") is True:
+        return "approve", [], ""
+    reason = str(data.get("reason") or "model rejected without a usable reason")[:300]
+    return "reject", [{"type": "unsupported", "detail": reason, "by": "model"}], reason
+
+
+def _model_review(question, answer, facts, findings, recheck, llm, budget_s, lane="deep", forecast=None):
     """The model review on `lane` (deep normally; fast as the fallback) -> (decision, problems, fix) or raises
-    NightshiftError.
+    NightshiftError. With a card the small facts-only call is used (_small_review); this full call remains for
+    drafts without a card.
     With a card (B-21) the model gets the SMALL input: the card text instead of the whole evidence - measured 22 Oct
     night: full input 0/3 (cut at 45 s), small input 3/3 when streamed. The code checks already hold every card
     line to the evidence; the model judges the explanation, clarity and safety."""
     card = answer.get("card")
-    evidence = (SMALL_EVIDENCE_NOTE + card_mod.render(card, answer.get("language") or "en")) if card else facts
+    if card is not None:
+        return _small_review(answer, forecast, llm, budget_s, lane)
+    evidence = facts
     r = llm(lane, [{"role": "system", "content": CRITIC_SYSTEM},
                      {"role": "user", "content": json.dumps({
                          "question": trace.redact(question), "language": answer.get("language"),
@@ -298,6 +343,8 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     else:
         recheck = {"problems": [], "note": "re-query done in round 1"}
     code_problems = findings + recheck["problems"]
+    if use_model and answer.get("card") is not None and not answer.get("explanation"):
+        use_model, skip_reason = False, "no AI-written text to check (card written by code)"
     if not use_model:
         decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
         status_note = skip_reason or "model review skipped"
@@ -306,7 +353,8 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         try:
             remaining = None if budget_s is None else max(1.0, budget_s - (time.monotonic() - t_start))
             decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm,
-                                                          remaining, lane=first)   # re-query time already used
+                                                          remaining, lane=first,   # re-query time already used
+                                                          forecast=forecast)
             checked_by.append("model")
             critic_lane_used = first
         except nightshift.NightshiftError as e:
@@ -320,7 +368,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                            decision=f"{'unlimited' if left is None else f'{left:.0f} s'} left -> fast-lane review")
                 try:
                     decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck,
-                                                                  llm, left, lane="fast")
+                                                                  llm, left, lane="fast", forecast=forecast)
                     checked_by.append("model")
                     critic_lane_used, status_note = "fast", "deep lane failed -> reviewed on the fast lane"
                 except nightshift.NightshiftError as e2:

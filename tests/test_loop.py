@@ -25,8 +25,8 @@ def stub(effort="full"):
         calls.append(lane)
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             return SimpleNamespace(data={**PLAN, "effort": effort}, text="")
-        if messages[0]["content"] == critic.CRITIC_SYSTEM:
-            return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": ""}, text="")
+        if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):
+            return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": "", "ok": True}, text="")
         return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")
     llm.calls = calls
     return llm
@@ -182,7 +182,7 @@ def test_explanation_is_dropped_when_the_ai_critic_cannot_check_it(offline, forc
     base = stub("full")
 
     def llm(lane, messages, agent, **kw):
-        if messages[0]["content"] == critic.CRITIC_SYSTEM:        # both Critic lanes down
+        if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):        # both Critic lanes down
             raise nightshift.NightshiftError(f"stub: {lane} lane timed out")
         return base(lane, messages, agent, **kw)
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
@@ -224,4 +224,20 @@ def test_models_never_see_the_users_phone_number(offline, force):
         return base(lane, messages, agent, **kw)
     loop.run("Is Rantau Panjang ok? My mother is there, call 012-345 6789", llm=llm, log_dir=offline, quiet=True)
     assert len(seen) >= 4                                        # draft + Critic both called the model
-    assert not any("345 6789" in s for s in seen) and any("[phone]" in s for s in seen)
+    assert not any("345 6789" in s for s in seen)                # 23 Oct: the question is not sent to a model at all
+
+
+def test_draft_gets_key_facts_intent_and_user_type(offline, force):
+    """Regression (23 Oct): a comment once swallowed intent / user_type from the draft request."""
+    force("full")
+    seen = []
+    base = stub()
+
+    def llm(lane, messages, agent, **kw):
+        if messages[0]["content"].startswith("You are the Coordinator"):
+            seen.append(json.loads(messages[1]["content"]))
+        return base(lane, messages, agent, **kw)
+    loop.run("My mother is in Rantau Panjang, is she ok?", llm=llm, log_dir=offline, quiet=True)
+    req = seen[0]
+    assert {"language", "intent", "user_type", "FACTS", "WHY"} <= set(req) and "question" not in req
+    assert req["user_type"] == "family_far_away" and req["FACTS"]["place"] == "Rantau Panjang"

@@ -197,6 +197,35 @@ def build(plan, evidence, forecast):
     return card
 
 
+def key_facts(card, forecast=None):
+    """The card's key facts as a small dict (Husaini 23 Oct): what the Critic's AI review and the draft call get
+    instead of the whole card / evidence. Only facts the card shows (no numbers it does not show)."""
+    g = card.get("gauge") or {}
+    trend = next((c for c in (forecast or {}).get("controlling", []) if c.get("role") == "controlling"), {})
+    rate = trend.get("rate_m_per_h") or {}
+    mid = (rate.get("min", 0) + rate.get("max", 0)) / 2 if rate else None
+    f = {"place": card.get("place"), "verdict": card["verdict"], "jps_level": (card.get("level_name") or {}).get("en"),
+         "river_m": g.get("level_m"), "read_at": g.get("read_at"),
+         "vs_alert_m": card["comparison"].get("alert"), "vs_danger_m": card["comparison"].get("danger"),
+         "trend": None if mid is None or card.get("tidal") else "rising" if mid > 0 else "falling" if mid < 0 else "steady",
+         "range_next_24h_m": [card["range_24h"]["min"], card["range_24h"]["max"]] if card.get("range_24h") else None,
+         "confidence": card.get("confidence"),
+         "vs_dec2014_peak_m": (card.get("vs_2014") or {}).get("diff_m"),
+         "excluded_sources": ["data.gov.my flood-warning (stale)"] if card.get("excluded") else [],
+         "conflicts": card.get("conflicts", []),
+         "upstream": [f"{u['gauge']} {u.get('band') or ''}{' rising' if u.get('rising') else ''}".strip()
+                      for u in card.get("upstream", [])],
+         "met_warnings": card.get("warnings", [])}
+    if card["verdict"] == "INSUFFICIENT_DATA":
+        f["note"] = "no verified reading near this time" if card.get("replay") else "no fresh reading"
+        lr = card.get("last_reading")
+        if lr:
+            f["last_reading"] = f"{_num(lr['level_m'])} m at {lr['at']} - too old to use"
+    if card.get("replay"):
+        f["replay"] = card["replay"]
+    return {k: v for k, v in f.items() if v not in (None, [], "")}
+
+
 LABEL_BM = (("estimated: reconstructed between the verified JPS readings",
              "anggaran: dibina semula antara bacaan JPS yang disahkan"),
             ("reported JPS reading (", "bacaan JPS dilaporkan ("), ("; time approximate", "; masa anggaran"),

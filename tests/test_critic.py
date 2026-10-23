@@ -133,10 +133,11 @@ def test_stale_source_not_excluded_by_evidence_is_caught(run, monkeypatch):
 # -- the review: model + code ---------------------------------------------------------------------------------
 def model(decision, problems=(), fail=False):
     def llm(lane, messages, agent, **kw):
-        assert messages[0]["content"] == critic.CRITIC_SYSTEM
+        assert messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM)
         if fail:
             raise nightshift.NightshiftError(f"stub: {lane} lane down")
-        data = {"decision": decision, "problems": list(problems), "fix": "say it plainly"}
+        data = {"decision": decision, "problems": list(problems), "fix": "say it plainly",
+                "ok": decision == "approve", "reason": "say it plainly"}
         return SimpleNamespace(data=data, text=json.dumps(data))
     return llm
 
@@ -198,16 +199,17 @@ def scripted(reviews):
     def llm(lane, messages, agent, **kw):
         if messages[0]["content"] == coordinator.PLAN_SYSTEM:
             return SimpleNamespace(data=GOOD_PLAN, text="")
-        if messages[0]["content"] == critic.CRITIC_SYSTEM:
+        if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):
             d = reviews[min(calls["reviews"], len(reviews) - 1)]
             calls["reviews"] += 1
             return SimpleNamespace(data={"decision": d, "problems": [] if d == "approve" else
-                                         [{"type": "unclear", "detail": "too technical"}], "fix": "simpler"}, text="")
+                                         [{"type": "unclear", "detail": "too technical"}], "fix": "simpler",
+                                         "ok": d == "approve", "reason": "too technical"}, text="")
         calls["drafts"] += 1
         req = json.loads(messages[1]["content"])
         text = ["First explanation.", "Second explanation.", "Third explanation."][calls["drafts"] - 1]
         if calls["drafts"] > 1:
-            assert req["critic_problems"] == ["unclear: too technical"]
+            assert req["critic_problems"] == ["unsupported: too technical"]     # the small call's reason
             assert req["previous_explanation"].endswith("explanation.")
         return SimpleNamespace(data={"explanation": text}, text=text)
     llm.calls = calls
@@ -283,3 +285,86 @@ def test_both_lanes_down_means_code_and_zetaris_only(run, quiet_zetaris, deep_fi
     llm = lanes_llm(fast_fails=True)
     r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
     assert llm.calls == ["deep", "fast"] and r["checked_by"] == ["code", "zetaris"]
+
+
+# -- the small facts-only AI review (Husaini 23 Oct) -----------------------------------------------------------
+from app import card as card_mod                                   # noqa: E402
+
+EXPL = "The river is just above the Alert level."
+
+
+@pytest.fixture
+def traced(tmp_path):
+    trace.start_run("small review test", log_dir=tmp_path, quiet=True)
+    yield
+    trace.end_run()
+
+
+def small_answer(explanation=EXPL):
+    c = card_mod.build({"place": {"name": "Rantau Panjang"}}, EVIDENCE, FORECAST)
+    return {"text": card_mod.render(c, "en", explanation), "language": "en", "card": c,
+            "explanation": explanation, "drafted_by": "llm"}
+
+
+def small_llm(replies):
+    """replies: list of 'ok' / 'no' / 'fail'; records every request."""
+    seen = []
+
+    def llm(lane, messages, agent, **kw):
+        seen.append({"system": messages[0]["content"], "user": messages[1]["content"], "kw": kw})
+        r = replies[min(len(seen) - 1, len(replies) - 1)]
+        if r == "fail":
+            raise nightshift.NightshiftError("empty response")
+        return SimpleNamespace(data={"ok": r == "ok", "reason": "says falling, facts say rising"}, text="")
+    llm.seen = seen
+    return llm
+
+
+def test_small_review_sends_only_key_facts_and_the_explanation():
+    llm = small_llm(["ok"])
+    assert critic._small_review(small_answer(), FORECAST, llm, 60, "fast") == ("approve", [], "")
+    req = llm.seen[0]
+    assert req["system"] == critic.SMALL_SYSTEM and req["kw"]["max_tokens"] == 2000 and not req["kw"]["thinking"]
+    body = json.loads(req["user"])
+    assert set(body) == {"FACTS", "EXPLANATION"} and body["EXPLANATION"] == EXPL
+    assert body["FACTS"]["verdict"] == "WATCH" and "question" not in req["user"]
+
+
+def test_small_review_rejection_carries_the_reason():
+    decision, problems, fix = critic._small_review(small_answer(), FORECAST, small_llm(["no"]), 60, "fast")
+    assert decision == "reject" and fix == "says falling, facts say rising"
+    assert problems == [{"type": "unsupported", "detail": "says falling, facts say rising", "by": "model"}]
+
+
+def test_fast_failures_are_retried_twice_then_given_up(traced):
+    llm = small_llm(["fail", "fail", "ok"])
+    assert critic._small_review(small_answer(), FORECAST, llm, 60, "fast")[0] == "approve" and len(llm.seen) == 3
+    llm = small_llm(["fail"])
+    with pytest.raises(nightshift.NightshiftError):
+        critic._small_review(small_answer(), FORECAST, llm, 60, "fast")
+    assert len(llm.seen) == 3                                          # 1 try + 2 retries
+
+
+def test_a_slow_failure_is_not_retried(monkeypatch, traced):
+    monkeypatch.setattr(critic, "FAST_FAIL_S", -1)                     # every failure counts as slow (a 45 s cut-off)
+    llm = small_llm(["fail", "ok"])
+    with pytest.raises(nightshift.NightshiftError):
+        critic._small_review(small_answer(), FORECAST, llm, 60, "fast")
+    assert len(llm.seen) == 1
+
+
+def test_no_retry_without_budget_left(traced):
+    llm = small_llm(["fail", "ok"])
+    with pytest.raises(nightshift.NightshiftError):
+        critic._small_review(small_answer(), FORECAST, llm, 5, "fast")   # less than FAST_FAIL_S left
+    assert len(llm.seen) == 1
+
+
+def test_card_without_explanation_skips_the_ai_review(tmp_path):
+    trace.start_run("t", log_dir=tmp_path, quiet=True)
+    try:
+        r = critic.review("q", {}, EVIDENCE, FORECAST, small_answer(None), llm=small_llm(["ok"]),
+                          recheck_data=False)
+    finally:
+        trace.end_run()
+    assert "model" not in r["checked_by"]
