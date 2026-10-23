@@ -89,7 +89,29 @@ T = {  # fixed wording, BM + EN
 BAND = {"below_normal": {"en": "Below normal", "ms": "Bawah normal"}, "normal": {"en": "Normal", "ms": "Normal"},
         "alert": {"en": "Alert", "ms": "Waspada"}, "warning": {"en": "Warning", "ms": "Amaran"},
         "danger": {"en": "Danger", "ms": "Bahaya"}}
-VERDICT_WORDS = re.compile(r"\b(NORMAL|WATCH|PREPARE|ACT|INSUFFICIENT[ _]DATA)\b")
+# The verdict as the user reads it (Husaini 23 Oct; tentative, review pack G). Not Waspada / Amaran / Bahaya: those
+# are JPS's own level names, which the card shows next to the verdict.
+VERDICT_LABEL = {"NORMAL": {"en": "NORMAL", "ms": "NORMAL"}, "WATCH": {"en": "WATCH", "ms": "BERJAGA-JAGA"},
+                 "PREPARE": {"en": "PREPARE", "ms": "BERSEDIA"}, "ACT": {"en": "ACT", "ms": "BERTINDAK"},
+                 "INSUFFICIENT_DATA": {"en": "INSUFFICIENT DATA", "ms": "DATA TIDAK MENCUKUPI"}}
+_CODE_OF = {label: code for code, labels in VERDICT_LABEL.items() for label in labels.values()}
+_CODE_OF["INSUFFICIENT_DATA"] = "INSUFFICIENT_DATA"
+# Verdict words in capitals, EN or BM (case-sensitive: "Normal" the JPS level and "bersedia" the verb don't count).
+VERDICT_WORDS = re.compile(r"\b(BERJAGA-JAGA|DATA TIDAK MENCUKUPI|BERSEDIA|BERTINDAK|NORMAL|WATCH|PREPARE|ACT|"
+                           r"INSUFFICIENT[ _]DATA)\b")
+MONTHS_MS = {"Jan": "Jan", "Feb": "Feb", "Mar": "Mac", "Apr": "Apr", "May": "Mei", "Jun": "Jun", "Jul": "Jul",
+             "Aug": "Ogo", "Sep": "Sep", "Oct": "Okt", "Nov": "Nov", "Dec": "Dis"}
+_DATE_EN = re.compile(r"\b(\d{1,2} )?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b(?= \d)")
+
+
+def verdict_codes(text):
+    """The verdict codes a text names, from EN or BM verdict words."""
+    return {_CODE_OF.get(w, w) for w in VERDICT_WORDS.findall(text or "")}
+
+
+def months_ms(text):
+    """'27 Nov 19:30', 'Dec 2023' -> BM month names ('Dis 2023'); only month abbreviations followed by a number."""
+    return _DATE_EN.sub(lambda m: (m.group(1) or "") + MONTHS_MS[m.group(2)], text)
 MAX_EXPLANATION = 400
 MAX_CARD_CHARS = 900          # about one phone screen in WhatsApp (BM ACT card with the agreed advice: ~760)
 
@@ -196,7 +218,8 @@ def render(card, lang, explanation=None, low_confidence=False):
         out.append(T["low_conf"][lang])
     out.append(f"{T['action'][lang]}: {card['action'][lang]}")
     level = (card.get("level_name") or {}).get(lang)
-    out.append(f"{card['place']}: {card['verdict']}" + (f" - {T['level'][lang]} {level}" if level else ""))
+    out.append(f"{card['place']}: {VERDICT_LABEL[card['verdict']][lang]}"
+               + (f" - {T['level'][lang]} {level}" if level else ""))
     g = card.get("gauge")
     if g:
         parts = []
@@ -260,7 +283,8 @@ def render(card, lang, explanation=None, low_confidence=False):
         out.append(T["excluded"][lang].format(when=card["excluded"]) + ".")
     for q in card.get("conflicts", []):
         out.append(T["conflict"][lang].format(q=q) + ".")
-    return "\n".join(out)
+    text = "\n".join(out)
+    return months_ms(text) if lang == "ms" else text
 
 
 def _values(text):
@@ -298,7 +322,7 @@ def explanation_problem(text, card):
         return "empty explanation"
     if len(text) > MAX_EXPLANATION:
         return f"explanation too long ({len(text)} > {MAX_EXPLANATION} characters)"
-    said = {w.replace(" ", "_") for w in VERDICT_WORDS.findall(text)}
+    said = verdict_codes(text)
     if said - {card["verdict"]}:
         return f"names a verdict ({', '.join(sorted(said))}) that is not the card's ({card['verdict']})"
     unknown = sorted(_values(text) - numbers(card))

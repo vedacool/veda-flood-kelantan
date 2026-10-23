@@ -167,3 +167,4 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | SAMPLE_MODE (B-18) marked done: recorded Zetaris fixtures + code fallbacks, no SampleGenerator | Husaini 23 Oct |
 | 2026-10-23 | Code licence MIT, (c) 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) | Husaini 23 Oct |
 | 2026-10-23 | Backup gauges for Rantau Panjang / Kota Bharu / Pasir Mas: candidates proposed (review pack H), tentative, NOT wired in until Dr Ariff answers | Husaini 23 Oct |
+| 2026-10-23 | BM verdict words on the card: NORMAL / BERJAGA-JAGA / BERSEDIA / BERTINDAK / DATA TIDAK MENCUKUPI (EN: INSUFFICIENT DATA without underscore); BM month names; tentative, review pack G3 | Husaini 23 Oct |

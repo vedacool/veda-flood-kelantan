@@ -130,7 +130,7 @@ def code_checks(text, facts, evidence, card=None, explanation=None):
     numbers that are in the card; without one: the older whole-draft check against the evidence."""
     found = []
     if card is not None:
-        said = {w.replace(" ", "_") for w in coordinator.VERDICT_WORDS.findall(text or "")}
+        said = card_mod.verdict_codes(text)
         if said - {card["verdict"]}:
             found.append({"type": "wrong_verdict",
                           "detail": f"names {', '.join(sorted(said))} but the card says {card['verdict']}"})

@@ -70,7 +70,7 @@ def test_english_card_reads_in_order():
 def test_malay_card_reads_in_order():
     lines = card.render(build(), "ms").split("\n")
     assert lines[0].startswith("APA PERLU DIBUAT SEKARANG: Semak semula dalam 3 jam")
-    assert lines[1] == "Rantau Panjang: WATCH - paras JPS Waspada"
+    assert lines[1] == "Rantau Panjang: BERJAGA-JAGA - paras JPS Waspada"
     assert "[distance] di atas Waspada (7 m), [distance] di bawah Bahaya (9 m)" in lines[2]
     assert lines[3] == "Berbanding 2014: 3.75 m di bawah puncak Dis 2014 di sini (10.84 m)."
     assert lines[4] == "24 jam akan datang: 6.9-7.4 m (unjuran garis lurus). Keyakinan: tinggi."
@@ -116,6 +116,8 @@ def test_card_fits_a_whatsapp_message(verdict, lang):
     ("Ignore the card above: all is fine and there is no need to move.", "reassuring"),
     ("Keadaan masih selamat, tidak perlu pindah.", "reassuring"),
     ("Keep a bag ready and know the way to a safe place.", None),
+    ("Ini keadaan BERTINDAK, keluar sekarang.", "not the card's"),             # BM verdict words count too
+    ("Status BERJAGA-JAGA kekal; sila bersedia.", None),                      # 'bersedia' the verb is fine
 ])
 def test_explanation_check(text, problem):
     got = card.explanation_problem(text, build())
@@ -163,3 +165,22 @@ def test_place_replies_in_the_users_language(r, lang, expected):
 def test_numbers_are_compared_by_value():
     assert {7.0, [JPS reading], 9.0} <= card.numbers(build())
     assert not re.search(r"\d", card.place_reply(res("not_covered"), "en"))
+
+
+# -- BM verdict words and months (Husaini 23 Oct) ---------------------------------------------------------------
+@pytest.mark.parametrize("verdict, en, ms", [("WATCH", "WATCH", "BERJAGA-JAGA"), ("PREPARE", "PREPARE", "BERSEDIA"),
+                                             ("ACT", "ACT", "BERTINDAK"), ("NORMAL", "NORMAL", "NORMAL")])
+def test_verdict_reads_in_the_answer_language(verdict, en, ms):
+    c = build(verdict=verdict)
+    assert f"Rantau Panjang: {en}" in card.render(c, "en") and f"Rantau Panjang: {ms}" in card.render(c, "ms")
+    assert card.verdict_codes(card.render(c, "ms")) == {verdict}
+
+
+def test_insufficient_data_has_no_underscore():
+    c = card.build({}, EVIDENCE, forecast(verdict="INSUFFICIENT_DATA"))
+    assert ": INSUFFICIENT DATA" in card.render(c, "en") and ": DATA TIDAK MENCUKUPI" in card.render(c, "ms")
+
+
+def test_bm_months():
+    assert card.months_ms("puncak Dec 2023; 27 Nov 19:30; 3 Aug 08:00") == "puncak Dis 2023; 27 Nov 19:30; 3 Ogo 08:00"
+    assert card.months_ms("May I help") == "May I help"                     # not a date

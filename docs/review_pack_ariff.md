@@ -163,13 +163,17 @@ Every answer starts with one fixed advice line for its verdict, written by code 
 **G2.** "Check again in 3 hours" for WATCH — the right interval?
 > Answer: ______
 
+**G3.** (added 23 Oct) The verdict in BM cards: NORMAL / **BERJAGA-JAGA** (WATCH) / **BERSEDIA** (PREPARE) / **BERTINDAK** (ACT) / **DATA TIDAK MENCUKUPI**. We avoided Waspada / Amaran / Bahaya because those are JPS's own level names, shown next to the verdict ("BERSEDIA - paras JPS Amaran"). Clear for residents?
+> Answer: ______
+
 ---
 
 ## H. Backup gauges for Rantau Panjang, Kota Bharu and Pasir Mas — ~10 min (added 23 Oct, B-15)
 When a town's controlling gauge goes silent, VEDA can use a **backup gauge** at medium confidence. Today only
 Guillemard (Kusial) has one (Kusial Baru, 738 m away, verified). For the three towns below VEDA has **no backup**, so a
 silent gauge means "last reading for context only" and **INSUFFICIENT DATA**. These are the candidates from our own
-gauge chain: the nearest gauge on the same river, up and down. **Tentative, and not used by VEDA until you answer.**
+gauge chain: the nearest gauge on the same river, up and down. Kok Majid (downstream of Kota Bharu) is left out: it is
+tide-influenced (Husaini 23 Oct). **Tentative, and not used by VEDA until you answer.**
 
 A backup gauge would never be compared in metres with the town's thresholds (datums differ). VEDA would use the
 backup's **own JPS band** (Normal / Alert / Warning / Danger) and its trend, and say so on the card.
@@ -179,7 +183,6 @@ backup's **own JPS band** (Normal / Alert / Warning / Danger) and its trend, and
 | Rantau Panjang (Sg. Golok di Rantau Panjang, `_DPMS0003`, Alert 7 / Danger 9 m) | **H-RP1** Sg. Golok di Kg. Jenob (`_DTMH0008`) | Golok, upstream | 23.5 km | unknown | Already its upstream sentinel. Alert 21.5 / Danger 23.5 m (different datum). Upstream: rises first, so it warns early but may over-state the town |
 | | **H-RP2** Sg. Golok di Kuala Jambu (`_DPMS0008`) | Golok, downstream | 19.1 km | unknown | Controls Tumpat (Golok side). Alert 2 / Danger 3 m. Near the mouth, may be tidal (see A6) |
 | Kota Bharu (Sg. Kelantan di Tambatan D'Raja, `_DKBR0007`, tide-influenced) | **H-KB1** Sg. Kelantan di Kg. Salor (`_DKBR0002`) | Kelantan, upstream | 10.9 km | unknown (Kuala Krai → Tambatan is 9–17 h, D) | Already its sentinel. Tide effect not known to us. Alert 9 / Danger 10.6 m |
-| | **H-KB2** Sg. Kelantan di Kg. Kok Majid (`_DTPT0002`) | Kelantan, downstream | no coordinates on file | unknown | Controls Tumpat; tide-influenced (tentative, A6) — probably a poor backup |
 | Pasir Mas (Sg. Kelantan di Jambatan Tendong, `27133`) | **H-PM1** Sg. Kelantan di Kg. Salor (`_DKBR0002`) | Kelantan, downstream | 2.1 km | unknown (probably < 1 h) | Very close; also Kota Bharu's sentinel |
 | | **H-PM2** Sg. Kelantan di Air Mulih (`6021065_DPMS0001`) | Kelantan, upstream | no coordinates on file | unknown | Already Pasir Mas's sentinel. Alert 9 / Danger 10.65 m |
 

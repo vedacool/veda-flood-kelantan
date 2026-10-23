@@ -33,7 +33,7 @@ SAFETY = {
 }
 REVISE_NOTE = ("\nThis is a REVISION: the Critic rejected previous_explanation. Fix every item in critic_problems, "
                "follow critic_fix, keep everything else that was correct.")
-VERDICT_WORDS = re.compile(r"\b(NORMAL|WATCH|PREPARE|ACT|INSUFFICIENT[ _]DATA)\b")
+VERDICT_WORDS = card_mod.VERDICT_WORDS            # EN + BM verdict words, one definition (card.py)
 
 PLAN_SYSTEM = (
     "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. Read the user's question and "
@@ -239,7 +239,7 @@ def draft_problem(text, facts):
     if not isinstance(text, str) or not text.strip():
         return "empty answer"
     allowed = (facts.get("forecast") or {}).get("verdict")
-    said = {w.replace(" ", "_") for w in VERDICT_WORDS.findall(text)}
+    said = card_mod.verdict_codes(text)
     if said - {allowed}:
         return (f"gives a verdict ({', '.join(sorted(said))}) that is not the Forecast agent's ({allowed})" if allowed
                 else f"gives a verdict ({', '.join(sorted(said))}) without a forecast")
