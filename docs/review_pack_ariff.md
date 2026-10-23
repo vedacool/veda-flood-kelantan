@@ -266,3 +266,12 @@ level and a ground height in one sentence, and a code check rejects any text tha
 **J1 (later).** Do the JPS gauges in Kelantan have published datum heights (gauge zero above sea level) that would make
 a correct comparison possible?
 > Answer: ______
+---
+
+## Sunday recording checklist (video / demo) - for Husaini, not Dr Ariff
+1. **Delete Nightshift's VEDA memory records right before recording** (Husaini 23 Oct): Nightshift keeps model
+   answers per app and re-sends them into new prompts. Close Nightshift (both `meterless*` processes), back up
+   `%LOCALAPPDATA%\ai.meterless.runtime\state\engine-kv.json` outside the repo, remove the records whose namespace
+   starts with `veda` from `rt-hmemKnowledge.v1`, start Nightshift again, check 0 VEDA records. Every answered call
+   adds records again, so do this last before pressing record.
+2. *(next steps to be added with Cowork)*
