@@ -70,6 +70,8 @@ T = {  # fixed wording, BM + EN
     "met_today": {"en": "MetMalaysia forecast for today", "ms": "ramalan MetMalaysia hari ini"},
     "excluded": {"en": "Excluded: data.gov.my flood-warning (stale, last update {when})",
                  "ms": "Diketepikan: data.gov.my flood-warning (lapuk, kemas kini terakhir {when})"},
+    "not_checked": {"en": "Not checked: data.gov.my flood-warning (could not be read)",
+                    "ms": "Tidak disemak: data.gov.my flood-warning (tidak dapat dibaca)"},
     "excluded_short": {"en": "Excluded: data.gov.my flood-warning (stale)",      # the Critic still needs to see it
                        "ms": "Diketepikan: data.gov.my flood-warning (lapuk)"},
     "conflict": {"en": "Sources disagree on {q}; VEDA did not pick one", "ms": "Sumber tidak sepakat tentang {q}; VEDA tidak memilih"},
@@ -190,6 +192,7 @@ def build(plan, evidence, forecast):
     cross = (evidence or {}).get("cross_check") or {}
     if cross.get("status") == "stale":
         card["excluded"] = (cross.get("newest") or "").split(" ")[0] or "?"
+    card["not_checked"] = cross.get("status") == "not_checked"
     card["conflicts"] = [c["quantity"] for c in (evidence or {}).get("conflicts_unresolved", [])]
     rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
     card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
@@ -370,6 +373,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
     if card.get("excluded"):                         # shortened, never dropped: the Critic checks it is mentioned
         out.append(("excluded", (T["excluded_short"][lang] if "excluded" in drop else
                                  T["excluded"][lang].format(when=card["excluded"])) + "."))
+    if card.get("not_checked"):
+        out.append(("not_checked", T["not_checked"][lang] + "."))
     for q in card.get("conflicts", []):
         out.append(("conflict", T["conflict"][lang].format(q=q) + "."))
     return out

@@ -127,7 +127,7 @@ def test_newer_raw_reading_is_noted_not_a_conflict(run, monkeypatch):
 def test_stale_source_not_excluded_by_evidence_is_caught(run, monkeypatch):
     monkeypatch.setattr(zetaris, "run_sql", fake_sql(7.12))
     r = critic.requery(dict(EVIDENCE, cross_check={"status": "ok"}), None, "r1")
-    assert "did not exclude" in r["problems"][0]["detail"]
+    assert "stale but the evidence says current" in r["problems"][0]["detail"]      # a real disagreement
 
 
 # -- the review: model + code ---------------------------------------------------------------------------------

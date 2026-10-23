@@ -200,4 +200,62 @@ def test_open_breaker_skips_the_refresh(offline, monkeypatch):
 def test_failed_prefetch_flood_warning_is_not_asked_again(monkeypatch):
     monkeypatch.setattr(data_agent.zetaris, "run_sql", lambda *a, **k: pytest.fail("no second /flood-warning query"))
     got = data_agent._cross_check({"gauges": []}, NOW, WorldModel(), "r", None, prefetched=True)
-    assert got["status"] == "failed"
+    assert got["status"] == "not_checked"                       # nothing known about it -> "not checked"
+
+
+# -- Husaini 23 Oct: unreadable sources and the 15-minute memory -------------------------------------------------
+def _known(w, status, minutes_ago):
+    at = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    w.upsert_context("source", external_key={"system": "veda", "id": "mygov_flood"},
+                     attrs={"status": status, "newest_reading": "2024-02-23 14:45 MYT", "checked_at": at},
+                     source={**MAP, "at": at})
+
+
+def test_unreadable_but_known_stale_is_excluded_on_the_card():
+    w = WorldModel()
+    _known(w, "stale", 120)
+    got = data_agent._cross_check({"gauges": []}, NOW, w, "r", None, prefetched=True)
+    assert got["status"] == "stale" and got["from_memory"]
+    c = card.build({}, {"place": {"name": "X"}, "context": {}, "cross_check": got}, {"verdict": "NORMAL"})
+    assert "Diketepikan: data.gov.my flood-warning (lapuk" in card.render(c, "ms")
+
+
+def test_unreadable_and_unknown_is_not_checked_on_the_card():
+    got = data_agent._cross_check({"gauges": []}, NOW, WorldModel(), "r", None, prefetched=True)
+    c = card.build({}, {"place": {"name": "X"}, "context": {}, "cross_check": got}, {"verdict": "NORMAL"})
+    assert got["status"] == "not_checked"
+    assert "Tidak disemak: data.gov.my flood-warning" in card.render(c, "ms")
+    assert "Not checked: data.gov.my flood-warning" in card.render(c, "en")
+
+
+def test_status_read_less_than_15_minutes_ago_is_not_queried_again():
+    w = WorldModel()
+    _known(w, "stale", 5)
+    assert data_agent.remembered(w, "mygov_flood")
+    _known(w, "stale", 20)
+    assert not data_agent.remembered(w, "mygov_flood")
+
+
+def test_critic_does_not_requery_a_remembered_or_broken_source(monkeypatch):
+    from app.agents import critic
+    calls = []
+    monkeypatch.setattr(critic.zetaris, "run_sql", lambda sql, **kw: calls.append(sql) or (_ for _ in ()).throw(
+        critic.zetaris.ZetarisError("network", "x")))
+    w = WorldModel()
+    _known(w, "stale", 5)
+    r = critic.requery({"context": {"gauges": []}, "cross_check": {"status": "not_checked"}}, w, "r")
+    assert r["flood_warning"]["status"] == "skipped" and not r["problems"] and not calls
+    w2 = WorldModel()
+    for _ in range(3):
+        data_agent.record_call(w2, "mygov_flood", False, datetime.now(timezone.utc), "r")
+    r = critic.requery({"context": {"gauges": []}, "cross_check": {"status": "not_checked"}}, w2, "r")
+    assert r["flood_warning"]["detail"] == "not re-queried (circuit open)" and not calls
+
+
+def test_critic_stale_vs_card_not_checked_is_not_a_conflict(monkeypatch):
+    from app.agents import critic
+    monkeypatch.setattr(critic.zetaris, "run_sql", lambda sql, **kw: type("R", (), {
+        "rows": [["2024-02-23 14:45:00"]], "sql": sql, "query_hash": "h", "records": []})())
+    r = critic.requery({"context": {"gauges": []}, "cross_check": {"status": "not_checked"},
+                        "clock": "2026-10-23T01:00:00Z"}, WorldModel(), "r")
+    assert r["flood_warning"]["stale"] and not r["problems"]

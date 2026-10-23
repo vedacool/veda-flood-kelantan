@@ -185,17 +185,57 @@ def _age_since(clock, dt):
     return int((clock - dt).total_seconds() // 60) if dt else None
 
 
+HEALTH_MEMO_MIN = 15      # Husaini 23 Oct: a source's status is remembered this long (data.gov.my rate limit)
+
+
+def known_health(world, key, wall=None):
+    """The source's last known status from the World Model -> {status, newest_reading, checked_at, age_min} or
+    None. age_min = minutes since it was last read (None when the time is not recorded)."""
+    attrs = (world.store.state["contexts"].get(source_id(key)) or {}).get("attrs", {})
+    if attrs.get("status") not in ("stale", "ok"):
+        return None
+    checked = attrs.get("checked_at")
+    wall = wall or datetime.now(timezone.utc)
+    age = int((wall - datetime.fromisoformat(checked.replace("Z", "+00:00"))).total_seconds() // 60) if checked else None
+    return {"status": attrs["status"], "newest_reading": attrs.get("newest_reading"), "checked_at": checked,
+            "age_min": age}
+
+
+def remembered(world, key, wall=None):
+    """True when the source was read less than HEALTH_MEMO_MIN minutes ago (then it is not queried again)."""
+    h = known_health(world, key, wall)
+    return bool(h and h["age_min"] is not None and 0 <= h["age_min"] < HEALTH_MEMO_MIN)
+
+
+def _from_memory(world, why):
+    """/flood-warning not read in this run: a known stale status -> still excluded; anything else -> not checked
+    (Husaini 23 Oct)."""
+    h = known_health(world, "mygov_flood")
+    if h and h["status"] == "stale":
+        note = (f"data.gov.my /flood-warning not read now ({why}); known stale (newest reading "
+                f"{h['newest_reading']}, checked {_myt_hhmm(h['checked_at']) if h['checked_at'] else 'earlier'}) "
+                "- excluded; JPS is used instead.")
+        trace.step(AGENT, "data.cross_check", input_summary="JPS vs data.gov.my /flood-warning",
+                   output_summary="known stale (World Model)", status="fallback", source="world_model", decision=note)
+        return {"status": "stale", "note": note, "newest": h["newest_reading"], "pairs": [], "from_memory": True}
+    note = f"data.gov.my /flood-warning could not be read ({why}) and its status is unknown - not checked."
+    trace.step(AGENT, "data.cross_check", input_summary="JPS vs data.gov.my /flood-warning",
+               output_summary="not checked", status="fallback", source="zetaris", decision=note)
+    return {"status": "not_checked", "note": note}
+
+
 def _cross_check(ctx, clock, world, run_id, r=None, prefetched=False):
     """data.gov.my /flood-warning vs JPS for this place's gauges. Returns the result and writes source status.
     r = the already-fetched /flood-warning result (prefetch), else it is queried here. prefetched with r None =
-    the prefetch's query failed or its breaker was open -> not asked again (audit 23 Oct)."""
+    the prefetch did not read it (failed, circuit open, or read < 15 min ago) -> not asked again; the World Model's
+    known status is used instead (audit + Husaini 23 Oct)."""
     if r is None and prefetched:
-        return {"status": "failed", "note": "data.gov.my /flood-warning could not be read in this run"}
+        return _from_memory(world, "failed, circuit open or read recently")
     if r is None:
         try:
             r = zetaris.run_sql(FLOOD_WARNING_SQL, agent=AGENT, purpose=PURPOSES[FLOOD_WARNING_SQL])
         except zetaris.ZetarisError as e:
-            return {"status": "failed", "note": f"data.gov.my /flood-warning could not be read ({e.kind})"}
+            return _from_memory(world, e.kind)
     myt = [datetime.fromisoformat(str(x["water_level_update_datetime"])).replace(tzinfo=config.MYT)
            for x in r.records if x.get("water_level_update_datetime")]
     newest = max(myt) if myt else None
@@ -216,7 +256,7 @@ def _cross_check(ctx, clock, world, run_id, r=None, prefetched=False):
             else f"data.gov.my /flood-warning is current (newest {newest_text}).")
     world.upsert_context("source", external_key={"system": "veda", "id": "mygov_flood"},
                          attrs={"status": "stale" if excluded else "ok", "newest_reading": newest_text,
-                                "excluded": excluded},
+                                "excluded": excluded, "checked_at": _iso(datetime.now(timezone.utc))},
                          source={"kind": "zetaris", "at": _iso(clock), "sql": r.sql, "query_hash": r.query_hash,
                                  "view": "veda_wx.mygov_flood", "agent": AGENT, "run_id": run_id,
                                  "origin": "agreement check"})
@@ -502,6 +542,12 @@ def prefetch(world, now=None, replay=None):
     sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL] if replay else
             NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL] + ([] if now else [CLOCK_SQL]))
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
+    if not replay and FLOOD_WARNING_SQL in sqls and FLOOD_WARNING_SQL not in skipped and remembered(world, "mygov_flood",
+                                                                                                    wall):
+        skipped.add(FLOOD_WARNING_SQL)              # Husaini 23 Oct: read < 15 min ago -> its status is remembered
+        trace.step(AGENT, "data.memo", input_summary="data.gov.my /flood-warning", output_summary="not queried",
+                   source="world_model", decision=f"read less than {HEALTH_MEMO_MIN} min ago -> remembered status "
+                                                  "used (data.gov.my rate limit)")
     if skipped & JPS_CORE:
         e = zetaris.ZetarisError("source_unavailable", "JPS river levels skipped: circuit open after repeated failures")
         trace.step(AGENT, "world.write", output_summary=str(e), status="failed", source="jps_levels",

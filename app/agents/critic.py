@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from app import card as card_mod
 from app import config, trace
 from app.adapters import nightshift, zetaris
-from app.agents import coordinator
+from app.agents import coordinator, data_agent
 from app.agents.data_agent import AGREE_M, FRESHNESS, source_id
 from app.engines.world_model.veda_ingest import place_id
 
@@ -206,6 +206,14 @@ def requery(evidence, world, run_id, budget_s=None):
                 status, detail = "unclear", "the raw reading time could not be matched"
             out["gauge"] = {"status": status, "detail": detail, "raw_level_m": raw["level_m"],
                             "raw_at": raw_at.isoformat() if raw_at else None, "query_hash": r.query_hash}
+    card_status = (evidence.get("cross_check") or {}).get("status")
+    wall = datetime.now(timezone.utc)
+    if world is not None and not evidence.get("replay") and (data_agent._is_open(world, "mygov_flood", wall) or
+                                                              data_agent.remembered(world, "mygov_flood", wall)):
+        why = ("circuit open" if data_agent._is_open(world, "mygov_flood", wall)
+               else f"read less than {data_agent.HEALTH_MEMO_MIN} min ago")
+        out["flood_warning"] = {"status": "skipped", "detail": f"not re-queried ({why})"}
+        return _requery_done(out, problems)
     try:
         r = zetaris.run_sql(FLOOD_NEWEST_SQL, agent=AGENT, purpose="re-check: data.gov.my /flood-warning newest date",
                             budget_s=budget_s)
@@ -216,10 +224,19 @@ def requery(evidence, world, run_id, budget_s=None):
         stale = age_min is None or age_min > FRESHNESS["jps_levels"][1]
         out["flood_warning"] = {"newest": str(newest), "age_days": age_min // 1440 if age_min else None,
                                 "stale": stale, "query_hash": r.query_hash}
-        excluded = (evidence.get("cross_check") or {}).get("status") == "stale"
-        if stale and not excluded:
+        # Husaini 23 Oct: only a real disagreement is a conflict; 'not checked' on the card is not one
+        if (stale and card_status == "ok") or (not stale and card_status == "stale"):
             problems.append({"type": "conflict", "by": "zetaris",
-                             "detail": "data.gov.my /flood-warning is stale but the evidence did not exclude it"})
+                             "detail": f"data.gov.my /flood-warning is {'stale' if stale else 'current'} but the "
+                                       f"evidence says {'current' if stale else 'stale'}"})
+        if world is not None and not evidence.get("replay"):
+            world.upsert_context("source", external_key={"system": "veda", "id": "mygov_flood"},
+                                 attrs={"status": "stale" if stale else "ok", "excluded": stale,
+                                        "newest_reading": str(newest), "checked_at": wall.isoformat(
+                                            timespec="seconds").replace("+00:00", "Z")},
+                                 source={"kind": "zetaris", "at": wall.isoformat(timespec="seconds").replace(
+                                     "+00:00", "Z"), "sql": r.sql, "query_hash": r.query_hash, "agent": AGENT,
+                                     "run_id": run_id, "origin": "Critic re-query"})
         if stale and world is not None:
             world.assert_fact(source_id("mygov_flood"), "stale_confirmed",
                               {"newest_reading": str(newest), "age_days": out["flood_warning"]["age_days"]},
@@ -228,6 +245,10 @@ def requery(evidence, world, run_id, budget_s=None):
                                                       "agent": AGENT, "run_id": run_id, "origin": "Critic re-query"})
     except zetaris.ZetarisError as e:
         out["flood_warning"] = {"status": "failed", "detail": f"re-query failed ({e.kind})"}
+    return _requery_done(out, problems)
+
+
+def _requery_done(out, problems):
     trace.step(AGENT, "critic.requery", input_summary="own Zetaris checks",
                output_summary=f"gauge: {(out.get('gauge') or {}).get('status', 'n/a')}; flood-warning stale: "
                               f"{(out.get('flood_warning') or {}).get('stale')} "
