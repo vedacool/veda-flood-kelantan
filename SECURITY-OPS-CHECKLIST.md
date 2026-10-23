@@ -46,12 +46,18 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       1. a private local **mirror backup** (`git clone --mirror`), kept on this machine and never pushed;
       2. `git filter-repo` stripping only the **old blob versions** (today's synthetic / redacted files at the same
          paths stay): `--strip-blobs-with-ids` with the list built from history (every old version of the JPS page
-         snapshot, of the fixtures from JPS / MetMalaysia / flood-warning tables, of `output_examples/` and of
-         `data/sample/live_traces/`), plus `--replace-text` turning the known real reading values quoted in old docs
-         and tests ("N m") into "[JPS reading]", and `--prune-empty never` so every commit, date and author stays.
-         Dry run 23 Oct on a private mirror clone: 125 old blobs stripped, 183 values replaced, 104 -> 104 commits
-         with authors and dates unchanged, today's tree identical, history search: 0 real values, 0 snapshot
-         commits, 0 stripped blobs left;
+         snapshot, of `data/fixtures/`, of `tests/fixtures/jps_*`, of `data/replay/synthetic_anchors.csv`, of
+         `output_examples/` and of `data/sample/live_traces/`), plus a blob callback that, in every other **old**
+         blob, turns each real reading value in **any written form** (N.NN, N.N, N, "N m", "N.NNm", JSON, table cells,
+         quotes) into "[JPS reading]" - except lines still unchanged in today's tree, cited Nov 2024 replay values,
+         official thresholds / historic peaks, and numbers that are not a level (other unit, a parameter) - and
+         `--prune-empty never` so every commit, date and author stays. Today's blobs are never touched.
+         Dry run v2, 23 Oct, on a fresh private mirror clone (108 commits): 223 old blobs stripped, 104 old blobs
+         rewritten (7 distinct lines, all readings quoted in docs and one docstring example), 108 -> 108 commits with
+         authors and dates unchanged, today's tree identical, 0 snapshot commits, 0 stripped blobs left. History
+         search for 196 real values (snapshot, JPS-table fixtures, the private unredacted traces) in any form:
+         309 hits on lines unchanged in today's tree (synthetic / cited / redacted, guarded by
+         `tests/test_no_jps_readings.py`), 160 cited Nov 2024 replay values, 1 not a level, **0 unexplained**;
       3. CI green on the rewritten history; **one** force push;
       4. a history search (`git log -p --all | grep` for the removed files and known reading values) finds nothing;
       5. record it in `docs/DECISIONS.md`.
