@@ -42,7 +42,13 @@ def critic_lane():
 PROBLEM_TYPES = ("unsupported", "wrong_verdict", "unsafe", "missing_level_name", "missing_confidence",
                  "missing_stale_note", "missing_conflict", "conflict", "unclear", "other")
 STATION_KEY = re.compile(r"^[A-Za-z0-9_]+$")
+RECHECK_CAP_S = 10          # each Zetaris re-query gets at most this (audit 23 Oct: was 3 tries x 30 s each)
 RAW_LATEST_SQL = ("SELECT station_key, level_m, observed_at FROM veda_pg.river_levels WHERE station_key = '{key}' "
+                  "ORDER BY observed_at DESC")
+# In a replay the re-check reads the replay table, reported readings only, cut at the replay time (audit 23 Oct:
+# today's live table would mix 2026 readings into a 2024 replay).
+RAW_REPLAY_SQL = ("SELECT station_key, level_m, observed_at FROM veda_pg.replay_levels WHERE scenario = '{scenario}' "
+                  "AND station_key = '{key}' AND kind = 'reported' AND observed_at <= TIMESTAMP '{utc}' "
                   "ORDER BY observed_at DESC")
 FLOOD_NEWEST_SQL = ("SELECT MAX(s.water_level_update_datetime) AS newest "
                     "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s")
@@ -154,22 +160,31 @@ def code_checks(text, facts, evidence, card=None, explanation=None):
 
 
 def _utc(text):
+    """A time string -> aware UTC. Naive text is UTC (Zetaris rows); an offset such as +08:00 is respected."""
+    text = re.sub(r"\.\d+", "", str(text).strip().replace(" ", "T").replace("Z", "+00:00"))
     try:
-        t = datetime.fromisoformat(str(text).split(".")[0].replace(" ", "T").replace("Z", ""))
+        t = datetime.fromisoformat(text)
     except ValueError:
         return None
-    return t.replace(tzinfo=timezone.utc)
+    return t.replace(tzinfo=timezone.utc) if t.tzinfo is None else t.astimezone(timezone.utc)
 
 
-def requery(evidence, world, run_id):
+def _raw_sql(key, replay):
+    if not replay:
+        return RAW_LATEST_SQL.format(key=key)
+    utc = _utc(replay["at"]).strftime("%Y-%m-%d %H:%M:%S")
+    return RAW_REPLAY_SQL.format(scenario=replay["scenario"], key=key, utc=utc)
+
+
+def requery(evidence, world, run_id, budget_s=None):
     """The Critic's own Zetaris checks -> {'gauge': ..., 'flood_warning': ..., 'problems': [...]}."""
     out, problems = {}, []
     main = next((g for g in (evidence.get("context") or {}).get("gauges", []) if g["role"] == "controlling"), None)
     key = main["station"].split(":", 2)[2] if main else None
     if key and STATION_KEY.match(key):
         try:
-            r = zetaris.run_sql(RAW_LATEST_SQL.format(key=key), agent=AGENT, purpose="re-check: newest raw reading",
-                                limit=1)
+            r = zetaris.run_sql(_raw_sql(key, evidence.get("replay")), agent=AGENT, limit=1,
+                                purpose="re-check: newest raw reading", budget_s=budget_s)
             raw = r.records[0] if r.records else None
         except zetaris.ZetarisError as e:
             raw, out["gauge"] = None, {"status": "failed", "detail": f"re-query failed ({e.kind})"}
@@ -190,7 +205,8 @@ def requery(evidence, world, run_id):
             out["gauge"] = {"status": status, "detail": detail, "raw_level_m": raw["level_m"],
                             "raw_at": raw_at.isoformat() if raw_at else None, "query_hash": r.query_hash}
     try:
-        r = zetaris.run_sql(FLOOD_NEWEST_SQL, agent=AGENT, purpose="re-check: data.gov.my /flood-warning newest date")
+        r = zetaris.run_sql(FLOOD_NEWEST_SQL, agent=AGENT, purpose="re-check: data.gov.my /flood-warning newest date",
+                            budget_s=budget_s)
         newest = r.rows[0][0] if r.rows else None
         newest_dt = datetime.fromisoformat(str(newest)).replace(tzinfo=config.MYT) if newest else None
         clock = _utc((evidence.get("clock") or "").replace("T", " ")) or datetime.now(timezone.utc)
@@ -273,7 +289,8 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     if not recheck_data:
         recheck = {"problems": [], "note": skip_reason or "re-query skipped"}
     elif round_no == 1:
-        recheck = requery(evidence, world, run_id)
+        recheck = requery(evidence, world, run_id, budget_s=RECHECK_CAP_S if budget_s is None else
+                          max(2.0, min(RECHECK_CAP_S, budget_s / 4)))
         checked_by.append("zetaris")
     else:
         recheck = {"problems": [], "note": "re-query done in round 1"}

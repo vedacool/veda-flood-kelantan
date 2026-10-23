@@ -160,3 +160,5 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Circuit breaker per source group: 3 failures -> skip 15 min -> one trial; state on the World Model source context; real time, not in replays | B-15 |
 | 2026-10-23 | The rain + MET forecast query is optional: its failure removes the rain line, not the answer | B-15 (found while planning) |
 
+| 2026-10-23 | Replay: no reconstructed row drawn toward a reading after the replay time; the newest replay reading is always a reported one. Scene 27 Nov 08:00 (14 h after the last known reading) now gives INSUFFICIENT DATA - honest, not hindsight | audit 2026-10-23 (Husaini approved the fix) |
+| 2026-10-23 | Into-water check: a negation counts only right before the phrase; 'don't worry' / 'jangan risau' is not a negation. Explanations with a flipped above/below or reassuring words under WATCH+ are dropped | audit 2026-10-23 |

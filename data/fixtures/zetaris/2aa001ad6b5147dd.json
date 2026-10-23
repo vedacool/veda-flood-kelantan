@@ -1,0 +1,17 @@
+{
+ "sql": "SELECT station_key, level_m, observed_at FROM veda_pg.replay_levels WHERE scenario = 'nov2024' AND station_key = '_DPMS0003' AND kind = 'reported' AND observed_at <= TIMESTAMP '2024-11-26 10:00:00' ORDER BY observed_at DESC",
+ "query_hash": "2aa001ad6b5147dd",
+ "recorded_at": "2026-10-23T01:05:51Z",
+ "columns": [
+  "station_key",
+  "level_m",
+  "observed_at"
+ ],
+ "rows": [
+  [
+   "_DPMS0003",
+   "8.41",
+   "2024-11-26 10:00:00.0"
+  ]
+ ]
+}

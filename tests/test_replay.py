@@ -101,3 +101,33 @@ def test_peak_times_are_read(peak, when):
                                              ("FALSE", False), ("t", True), (None, False)])
 def test_text_booleans_from_zetaris(value, expected):
     assert veda_ingest._true(value) is expected
+
+
+# -- audit 23 Oct: no hindsight from reconstructed rows ------------------------------------------------------
+def _row(hour, kind, level):
+    return {"kind": kind, "level_m": level, "t": datetime(2024, 11, 27, hour)}
+
+
+def test_reconstructed_rows_toward_a_later_reading_are_dropped():
+    rows = [_row(1, "reported", 8.0), _row(2, "reconstructed", 8.1), _row(3, "reported", 8.2),
+            _row(4, "reconstructed", 8.5), _row(5, "reconstructed", 8.8)]       # 4 and 5 lean on a later anchor
+    assert [r["t"].hour for r in veda_ingest.known_by_then(rows)] == [1, 2, 3]
+
+
+def test_the_newest_replay_reading_is_always_a_reported_one():
+    assert veda_ingest.known_by_then([_row(4, "reconstructed", 8.5)]) == []
+
+
+def test_the_scene_inside_the_gap_cannot_see_the_peak(offline):
+    res = loop.run("Rantau Panjang selamat ke?", llm=approve_llm(), log_dir=offline, quiet=True, replay="nov2024",
+                   at=datetime(2024, 11, 27, 8, 0, tzinfo=config.MYT))
+    text = res["answer"]["text"]
+    assert res["forecast"]["verdict"] == "INSUFFICIENT_DATA" and "8.41 m" in text
+    assert "10.94" not in text and "19:30" not in text and "dibina semula" not in text
+
+
+def test_critic_rechecks_the_replay_table_in_a_replay():
+    sql = critic._raw_sql("_DPMS0003", {"scenario": "nov2024", "at": "2024-11-27T19:30:00+08:00"})
+    assert "veda_pg.replay_levels" in sql and "kind = 'reported'" in sql
+    assert "TIMESTAMP '2024-11-27 11:30:00'" in sql                              # MYT 19:30 = UTC 11:30
+    assert "river_levels" in critic._raw_sql("_DPMS0003", None)

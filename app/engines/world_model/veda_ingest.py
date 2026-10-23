@@ -256,6 +256,19 @@ def _change(rows, latest, hours):
     return round(latest["level_m"] - earlier[-1]["level_m"], 2) if earlier else None
 
 
+def known_by_then(readings):
+    """Drop reconstructed rows that were drawn toward a reported reading AFTER the replay time (audit 23 Oct:
+    their level, slope and label would reveal the future). A reconstructed row is kept only when a later reported
+    reading is also in the rows (all already cut at the replay time), i.e. both of its anchors were known."""
+    kept, last_reported = [], None
+    for r in reversed(readings):                               # oldest-first input, walk newest-first
+        if r["kind"] == "reported":
+            last_reported = r
+        if r["kind"] == "reported" or last_reported is not None:
+            kept.append(r)
+    return kept[::-1]
+
+
 def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
     """The replay's facts: gauge levels (reported or reconstructed, each with its label) and past rain - all
     stamped and cut at the replay time. No MetMalaysia forecast or warnings: data.gov.my keeps no 2024 archive."""
@@ -264,6 +277,17 @@ def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
     for r in rows:
         by.setdefault(r["station_key"], []).append({**r, "t": datetime.fromisoformat(
             _utc_iso(r["observed_at"]).replace("Z", "+00:00"))})
+    for key in list(by):
+        kept = known_by_then(by[key])
+        if len(kept) < len(by[key]):
+            trace.step(agent, "replay.cut", input_summary=f"{key}: {len(by[key])} rows up to the replay time",
+                       output_summary=f"kept {len(kept)}", source="code",
+                       decision=f"dropped {len(by[key]) - len(kept)} reconstructed rows drawn toward a reading after "
+                                f"the replay time - no hindsight")
+        if kept:
+            by[key] = kept
+        else:
+            del by[key]
     n, unhealthy = 0, {}
     for key, readings in by.items():
         latest = readings[-1]
