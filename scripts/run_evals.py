@@ -81,6 +81,9 @@ def run_one(sc, log_dir):
         problems.append(f"first line {text.split(chr(10))[0]!r}")
     problems += [f"missing {m!r}" for m in ex.get("must", []) if m not in text]
     problems += [f"must not contain {m!r}" for m in ex.get("must_not", []) if m in text]
+    if ex.get("must_trace"):                       # B-71: a line the trace must hold (the agents' collaboration)
+        steps = open(r["trace"], encoding="utf-8").read()
+        problems += [f"trace lacks {m!r}" for m in ex["must_trace"] if m not in steps]
     return not problems, problems, r
 
 

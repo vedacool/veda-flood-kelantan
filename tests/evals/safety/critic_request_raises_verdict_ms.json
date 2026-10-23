@@ -1,0 +1,22 @@
+{
+  "name": "critic_request_raises_verdict_ms",
+  "about": "B-71(b): Pasir Mas's upstream gauges are silent; the Critic asks the Data & Reconciler, which finds Temangan (further up the Kelantan) at Amaran and rising -> verdict recomputed NORMAL -> WATCH [SYNTHETIC silent upstream gauge, Pasir Mas]",
+  "question": "Pasir Mas banjir tak esok?",
+  "replay": "synthetic_silent_upstream",
+  "at": "2024-06-15 10:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "language": "ms",
+    "must": [
+      "Hulu: Sg. Kelantan di Kg. Temangan (F1) (Amaran, sedang naik)."
+    ],
+    "must_trace": [
+      "verdict recomputed after the Critic's request: NORMAL → WATCH",
+      "found Sg. Kelantan di Kg. Temangan (F1) (upstream, warning"
+    ]
+  }
+}

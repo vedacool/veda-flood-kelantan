@@ -1,0 +1,21 @@
+{
+  "name": "critic_request_nothing_found_en",
+  "about": "B-71(b): Rantau Panjang's only upstream gauge (Jenob) has no fresh reading and nothing is further up the Golok -> the card says what is missing [REPLAY Nov 2024, 27 Nov 19:30]",
+  "question": "Is Rantau Panjang safe tonight?",
+  "replay": "nov2024",
+  "at": "2024-11-27 19:30",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "ACT",
+    "language": "en",
+    "must": [
+      "Missing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none."
+    ],
+    "must_trace": [
+      "nothing fresh for Sg. Golok di Kg. Jenob (F1)"
+    ]
+  }
+}

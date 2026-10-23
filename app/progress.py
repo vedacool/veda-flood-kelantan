@@ -37,6 +37,12 @@ def describe(rec):
         return (f"  sources: {len(chosen)} used ({', '.join(c.split(' (')[0] for c in chosen[:4])}"
                 f"{', ...' if len(chosen) > 4 else ''}); {len(skipped)} skipped"
                 + (f" ({'; '.join(skipped[:2])}{'; ...' if len(skipped) > 2 else ''})" if skipped else ""))
+    if a == "critic.request":          # B-71(b): the Critic asks the Data & Reconciler for a missing source
+        return f"  Critic -> Data & Reconciler: {out}"
+    if a == "data.request":
+        return f"  Data & Reconciler -> Critic: {out}"
+    if a == "verdict.recomputed":
+        return f"  {out}"
     if a == "ai.fallback":             # B-86: AI fallback marked plainly, next to the served-model lines
         return f"  ! {rec.get('agent_name')}: {out}"
     if a == "safety" and rec.get("status") != "success":

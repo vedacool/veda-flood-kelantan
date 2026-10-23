@@ -41,7 +41,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 23 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 25 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -62,6 +62,11 @@ Every data source is cut at the replay time, so nothing from later is ever used:
   (Rantau Panjang, Pasir Mas and Tumpat ACT, Kota Bharu WATCH).
 - *SYNTHETIC · calm day*: synthetic river levels below Waspada, real archived rain (Open-Meteo, 15 Jun 2024); every
   town NORMAL.
+- *SYNTHETIC · silent upstream gauge* (`--replay synthetic_silent_upstream`, a made-up test scene): the calm day, but
+  three upstream gauges went silent after 04:00 and Temangan is at Amaran and rising. Ask about Pasir Mas: the Critic
+  asks the Data & Reconciler for the missing upstream reading, it finds Temangan, and the verdict is recomputed
+  NORMAL → WATCH - all in the trace. Ask about Rantau Panjang: nothing further up the Golok, so the card says what is
+  missing.
 - Both are made by `scripts/make_synthetic_scenes.py` from cited facts only (each gauge's JPS thresholds, river chain,
   Dec 2014 peaks, travel times) and are labelled SYNTHETIC on the card and in the trace.
 
@@ -176,8 +181,8 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 23 scenarios, 23 of 23 pass; pass^3
-  (all 3 repeat runs) 23 of 23 (23 Oct, after B-85 removed the Lightning-fallback scenario).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 25 scenarios, 25 of 25 pass; pass^3
+  (all 3 repeat runs) 25 of 25 (24 Oct, after B-71 added the two Critic-request scenarios).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;

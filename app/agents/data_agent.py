@@ -642,6 +642,112 @@ def osm_features(result, place, world, clock):
     return out
 
 
+# B-71(b): the Critic's missing-source request. Live: one query for every mapped gauge's latest reading.
+LATEST_ALL_SQL = "SELECT station_key, level_m, observed_at_utc, age_minutes, band FROM veda.river_status_latest"
+PURPOSES[LATEST_ALL_SQL] = "Critic's request: the latest reading of every mapped gauge"
+
+
+def _gap_reason(g):
+    if g["level_m"] is None:
+        return "no reading"
+    if not (g.get("health") or {"ok": True})["ok"]:
+        return "failed the plausibility check"
+    if g.get("freshness") in ("stale", "unknown"):
+        return f"reading too old ({g['age_minutes']} min)" if g.get("age_minutes") is not None else "reading too old"
+    return None
+
+
+def find_gaps(evidence):
+    """B-71(b), used by the Critic: the controlling gauge or an upstream gauge without a fresh, healthy reading."""
+    ctx = (evidence or {}).get("context") or {}
+    gaps = []
+    for g in ctx.get("gauges", []) + ctx.get("sentinels", []):
+        why = _gap_reason(g) if g["role"] in ("controlling", "sentinel") and not g.get("requested_for") else None
+        if why:
+            gaps.append({"kind": "controlling" if g["role"] == "controlling" else "upstream", "station": g["station"],
+                         "gauge": g["name"], "why": why})
+    return gaps
+
+
+def _load_latest_all(world, run_id):
+    """Live: read every mapped gauge's latest reading through Zetaris into the World Model (one query)."""
+    r = zetaris.run_sql(LATEST_ALL_SQL, agent=AGENT, purpose=PURPOSES[LATEST_ALL_SQL])
+    for row in r.records:
+        if row.get("level_m") is None or not row.get("observed_at_utc"):
+            continue
+        at = _iso(_utc(str(row["observed_at_utc"])))
+        health = check("jps_levels", row)
+        src = {"kind": "zetaris", "at": at, "sql": r.sql, "query_hash": r.query_hash, "view": "veda.river_status_latest",
+               "agent": AGENT, "run_id": run_id, "origin": "jps_levels", "health": health}
+        sid = station_id(row["station_key"])
+        world.assert_fact(sid, "water_level_m", row["level_m"], confidence=0.9 if health["ok"] else 0.2, source=src)
+        world.assert_fact(sid, "band", row["band"], confidence=0.9 if health["ok"] else 0.2, source=src)
+
+
+def answer_request(gaps, evidence, world):
+    """B-71(b): the Data & Reconciler answers the Critic's request. A stale controlling gauge is only re-read (which
+    gauge controls a town is flood logic - never swapped here); a silent upstream gauge may be replaced by the nearest
+    fresh, healthy gauge further UP the same river chain that the place does not use yet. Changes evidence in place
+    (the new gauge joins the upstream list, marked `requested_for`). -> {'found': [...], 'missing': [...]}."""
+    run = trace.current_run()
+    run_id = run.run_id if run else None
+    ctx = evidence["context"]
+    clock = datetime.fromisoformat(str(evidence["clock"]).replace("Z", "+00:00"))     # keeps the offset (replay MYT)
+    note = None
+    if not evidence.get("replay"):
+        try:
+            _load_latest_all(world, run_id)
+        except zetaris.ZetarisError as e:
+            note = f"latest readings could not be read ({e.kind})"
+    builder = ContextBuilder(world)
+    stations = {eid: e["attrs"] for eid, e in world.store.state["entities"].items() if e.get("type") == "station"}
+    used = {g["station"] for g in ctx.get("gauges", []) + ctx.get("sentinels", [])}
+    main = next((g for g in ctx.get("gauges", []) if g["role"] == "controlling"), None)
+    main_attrs = stations.get(main["station"], {}) if main else {}
+    found, missing = [], []
+
+    def fresh(item):
+        item["freshness"] = freshness("jps_levels", item["age_minutes"])
+        return item if _gap_reason(item) is None else None
+
+    for gap in gaps:
+        if gap["kind"] == "controlling":
+            item = fresh(builder.gauge(gap["station"], "controlling", "re-read on the Critic's request", clock))
+            if item:
+                ctx["gauges"] = [item if g["station"] == gap["station"] else g for g in ctx["gauges"]]
+                found.append({"gauge": item["name"], "role": "controlling", "for": gap["gauge"],
+                              "band": item["band"], "age_minutes": item["age_minutes"]})
+            else:
+                missing.append({"gauge": gap["gauge"], "role": "controlling", "why": gap["why"]})
+            continue
+        silent = stations.get(gap["station"], {})
+        top = main_attrs.get("chain_order") if main_attrs.get("chain") == silent.get("chain") else None
+        cands = sorted((sid for sid, a in stations.items() if sid not in used and a.get("chain")
+                        and a.get("chain") == silent.get("chain") and a.get("chain_order") is not None
+                        and (top is None or a["chain_order"] < top)),
+                       key=lambda sid: abs(stations[sid]["chain_order"] - (silent.get("chain_order") or 0)))
+        item = next((i for i in (fresh(builder.gauge(sid, "sentinel", f"upstream gauge found on the Critic's request "
+                                                                       f"(instead of {gap['gauge']})", clock))
+                                 for sid in cands) if i), None)
+        if item:
+            item.update(requested_for=gap["gauge"], travel_time_h=None)
+            ctx["sentinels"].append(item)
+            used.add(item["station"])
+            found.append({"gauge": item["name"], "role": "upstream", "for": gap["gauge"], "band": item["band"],
+                          "age_minutes": item["age_minutes"]})
+        else:
+            missing.append({"gauge": gap["gauge"], "role": "upstream", "why": gap["why"]})
+    text = "; ".join([f"found {f['gauge']} ({f['role']}, {f['band']}, {f['age_minutes']} min old) for {f['for']}"
+                      for f in found] + [f"nothing fresh for {m['gauge']} ({m['why']})" for m in missing])
+    trace.step(AGENT, "data.request", input_summary="; ".join(f"{g['gauge']}: {g['why']}" for g in gaps),
+               output_summary=text + (f" - {note}" if note else ""), target_agent="Critic", source="world_model",
+               status="success" if found else "fallback",
+               decision=("new evidence -> the verdict is recomputed" if found else
+                         "no alternative source -> the answer says what is missing"),
+               details={"found": found, "missing": missing, "note": note})
+    return {"found": found, "missing": missing}
+
+
 def sources_selected(plan, ctx, sources, cross, osm):
     """B-71(a): which sources the Data & Reconciler chose for this place, and which it skipped and why ->
     {'chosen': [...], 'skipped': [...]} (short phrases; the trace line and the live view show them)."""

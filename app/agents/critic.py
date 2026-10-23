@@ -373,6 +373,28 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     else:
         recheck = {"problems": [], "note": "re-query done in round 1"}
     code_problems = findings + recheck["problems"]
+    if (world is not None and round_no == 1 and plan.get("effort") == "full" and not evidence.get("requested")
+            and evidence.get("context")):
+        gaps = data_agent.find_gaps(evidence)          # B-71(b): a gap -> ask the Data & Reconciler, then re-check
+        if gaps:
+            evidence["requested"] = True
+            trace.step(AGENT, "critic.request", input_summary=f"draft round {round_no}",
+                       output_summary="need: " + "; ".join(f"fresh {g['kind']} reading - {g['gauge']} ({g['why']})"
+                                                           for g in gaps),
+                       target_agent="Data & Reconciler", source="code",
+                       decision="a gap in the evidence -> ask the Data & Reconciler for a fresh or alternative source")
+            got = data_agent.answer_request(gaps, evidence, world)
+            if got["found"]:
+                result = {"decision": "recheck", "problems": [], "fix": "", "round": round_no,
+                          "checked_by": checked_by, "critic_lane": None, "data_request": got,
+                          "recheck": {k: v for k, v in recheck.items() if k != "problems"}}
+                trace.step(AGENT, "critic.review", input_summary=f"draft round {round_no} ({answer.get('drafted_by')})",
+                           output_summary="recheck: new source from the Data & Reconciler",
+                           status="needs_revision", target_agent="Coordinator",
+                           decision="the verdict is recomputed with the new source, then the answer is checked again",
+                           details={"problems": [], "checked_by": checked_by, "round": round_no, "data_request": got})
+                return result
+            evidence["missing_sources"] = got["missing"]
     if use_model and answer.get("card") is not None and not answer.get("explanation"):
         use_model, skip_reason = False, "no AI-written text to check (card written by code)"
     if not use_model:

@@ -155,7 +155,15 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 evidence = data_agent.gather(p, world, now=now, pre=pre.result())
                 state = "forecast"
             elif state == "forecast":
+                old = fc["verdict"] if fc else None
                 fc = forecast_agent.forecast(p, evidence, world)
+                if old is not None:                       # B-71(b): back here after the Critic's request
+                    trace.step("System", "verdict.recomputed", input_summary="new source from the Data & Reconciler",
+                               output_summary=f"verdict recomputed after the Critic's request: {old} → {fc['verdict']}",
+                               target_agent="Coordinator", decision=("verdict changed -> a new answer is drafted"
+                                                                     if fc["verdict"] != old else
+                                                                     "verdict unchanged -> the answer is redrafted with "
+                                                                     "the new source and checked again"))
                 card = card_mod.build(p, evidence, fc)
                 if router.emergency(question):            # also when the verdict is already ACT: the label stays
                     card["action"] = card_mod.ADVICE["ACT"]  # trapped / stranded: ACT advice whatever the river says
@@ -172,11 +180,20 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
             elif state == "critique":
                 quick = p["effort"] == "quick"
                 why = "quick plan: review by code checks only" if quick else short("the review")
-                reviews.append(critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
-                                             llm=llm, budget_s=max(1.0, left() - FINAL_RESERVE_S),
-                                             use_model=why is None,
-                                             recheck_data=not quick and (why is None or left() >= RECHECK_S),
-                                             skip_reason=why))
+                rv = critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
+                                   llm=llm, budget_s=max(1.0, left() - FINAL_RESERVE_S), use_model=why is None,
+                                   recheck_data=not quick and (why is None or left() >= RECHECK_S), skip_reason=why)
+                if (rv.get("data_request") or {}).get("found"):
+                    state = "forecast"                    # B-71(b): new source -> recompute, redraft, re-check
+                    timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
+                    continue
+                reviews.append(rv)
+                upstream_missing = [m for m in evidence.get("missing_sources") or [] if m["role"] == "upstream"]
+                if upstream_missing and not card.get("missing"):
+                    card["missing"] = upstream_missing     # the card says what is missing (B-71(b))
+                    answer = {**answer, "card": card, "text": card_mod.render(
+                        card, answer.get("language", "en"), answer.get("explanation"),
+                        low_confidence=bool(answer.get("low_confidence")))}
                 if answer.get("explanation") and "model" not in reviews[-1]["checked_by"]:
                     # Husaini 22 Oct night: nothing goes out that the AI Critic has not checked
                     answer = coordinator.template_answer(card, p["question_language"],

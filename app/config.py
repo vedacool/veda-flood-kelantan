@@ -53,7 +53,12 @@ REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "kind": "replay", "rain_ta
                                 "window": ("2024-11-25 12:00", "2024-11-25 18:00"), "scenes": ["2024-11-25 18:00"]},
            "synthetic_calm": {"title": "SYNTHETIC · calm day", "kind": "synthetic",
                               "rain_table": "om_rain_jun2024", "default_at": "2024-06-15 10:00",
-                              "window": ("2024-06-15 04:00", "2024-06-15 10:00"), "scenes": ["2024-06-15 10:00"]}}
+                              "window": ("2024-06-15 04:00", "2024-06-15 10:00"), "scenes": ["2024-06-15 10:00"]},
+           # B-71(b): made-up test scene - three upstream gauges silent after 04:00, Temangan at Amaran and rising
+           "synthetic_silent_upstream": {"title": "SYNTHETIC · silent upstream gauge", "kind": "synthetic",
+                                         "rain_table": "om_rain_jun2024", "default_at": "2024-06-15 10:00",
+                                         "window": ("2024-06-15 04:00", "2024-06-15 10:00"),
+                                         "scenes": ["2024-06-15 10:00"]}}
 SAMPLE_SCENE = "synthetic_calm"          # a bare question in SAMPLE_MODE runs on this scene (Husaini 23 Oct)
 
 

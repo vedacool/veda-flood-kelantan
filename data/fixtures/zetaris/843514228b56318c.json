@@ -1,0 +1,767 @@
+{
+ "sql": "SELECT station_key, observed_at, level_m, kind, time_exact, label FROM veda_pg.replay_levels WHERE scenario = 'synthetic_silent_upstream' AND observed_at <= TIMESTAMP '2024-06-15 02:00:00' ORDER BY station_key, observed_at",
+ "query_hash": "843514228b56318c",
+ "recorded_at": "2026-10-23T15:39:22Z",
+ "columns": [
+  "station_key",
+  "observed_at",
+  "level_m",
+  "kind",
+  "time_exact",
+  "label"
+ ],
+ "rows": [
+  [
+   "27133",
+   "2024-06-14 20:00:00.0",
+   "2.97",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-14 21:00:00.0",
+   "2.97",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-14 22:00:00.0",
+   "2.96",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-14 23:00:00.0",
+   "2.96",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-15 00:00:00.0",
+   "2.96",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-15 01:00:00.0",
+   "2.97",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "27133",
+   "2024-06-15 02:00:00.0",
+   "2.97",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-14 20:00:00.0",
+   "53.66",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-14 21:00:00.0",
+   "53.67",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-14 22:00:00.0",
+   "53.68",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-14 23:00:00.0",
+   "53.69",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-15 00:00:00.0",
+   "53.69",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-15 01:00:00.0",
+   "53.68",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5020030_DGMG0016",
+   "2024-06-15 02:00:00.0",
+   "53.68",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-14 20:00:00.0",
+   "24.75",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-14 21:00:00.0",
+   "24.76",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-14 22:00:00.0",
+   "24.76",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-14 23:00:00.0",
+   "24.77",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-15 00:00:00.0",
+   "24.76",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-15 01:00:00.0",
+   "24.75",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5222052_DKKI0005",
+   "2024-06-15 02:00:00.0",
+   "24.74",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-14 20:00:00.0",
+   "28.1",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-14 21:00:00.0",
+   "28.1",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-14 22:00:00.0",
+   "28.1",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-14 23:00:00.0",
+   "28.1",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-15 00:00:00.0",
+   "28.11",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-15 01:00:00.0",
+   "28.11",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5320038_DKKI0003",
+   "2024-06-15 02:00:00.0",
+   "28.12",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "5521044_DKKI0014",
+   "2024-06-14 20:00:00.0",
+   "16.66",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "6021065_DPMS0001",
+   "2024-06-14 20:00:00.0",
+   "4.59",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-14 20:00:00.0",
+   "2.11",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-14 21:00:00.0",
+   "2.1",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-14 22:00:00.0",
+   "2.1",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-14 23:00:00.0",
+   "2.09",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-15 00:00:00.0",
+   "2.09",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-15 01:00:00.0",
+   "2.09",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0002",
+   "2024-06-15 02:00:00.0",
+   "2.09",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-14 20:00:00.0",
+   "0.72",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-14 21:00:00.0",
+   "0.74",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-14 22:00:00.0",
+   "0.75",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-14 23:00:00.0",
+   "0.77",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-15 00:00:00.0",
+   "0.76",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-15 01:00:00.0",
+   "0.75",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKBR0007",
+   "2024-06-15 02:00:00.0",
+   "0.74",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-14 20:00:00.0",
+   "20.45",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-14 21:00:00.0",
+   "20.45",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-14 22:00:00.0",
+   "20.46",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-14 23:00:00.0",
+   "20.46",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-15 00:00:00.0",
+   "20.47",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-15 01:00:00.0",
+   "20.47",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DKKI0011",
+   "2024-06-15 02:00:00.0",
+   "20.48",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-14 20:00:00.0",
+   "15.1",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-14 21:00:00.0",
+   "15.27",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-14 22:00:00.0",
+   "15.43",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-14 23:00:00.0",
+   "15.6",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-15 00:00:00.0",
+   "15.77",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-15 01:00:00.0",
+   "15.93",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0001",
+   "2024-06-15 02:00:00.0",
+   "16.1",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-14 20:00:00.0",
+   "7.39",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-14 21:00:00.0",
+   "7.38",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-14 22:00:00.0",
+   "7.36",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-14 23:00:00.0",
+   "7.35",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-15 00:00:00.0",
+   "7.35",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-15 01:00:00.0",
+   "7.36",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DMCG0215",
+   "2024-06-15 02:00:00.0",
+   "7.36",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-14 20:00:00.0",
+   "4.87",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-14 21:00:00.0",
+   "4.87",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-14 22:00:00.0",
+   "4.87",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-14 23:00:00.0",
+   "4.87",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-15 00:00:00.0",
+   "4.87",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-15 01:00:00.0",
+   "4.86",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0003",
+   "2024-06-15 02:00:00.0",
+   "4.86",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-14 20:00:00.0",
+   "0.63",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-14 21:00:00.0",
+   "0.62",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-14 22:00:00.0",
+   "0.6",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-14 23:00:00.0",
+   "0.59",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-15 00:00:00.0",
+   "0.6",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-15 01:00:00.0",
+   "0.6",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DPMS0008",
+   "2024-06-15 02:00:00.0",
+   "0.61",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-14 20:00:00.0",
+   "7.86",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-14 21:00:00.0",
+   "7.87",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-14 22:00:00.0",
+   "7.87",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-14 23:00:00.0",
+   "7.88",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-15 00:00:00.0",
+   "7.88",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-15 01:00:00.0",
+   "7.88",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0003",
+   "2024-06-15 02:00:00.0",
+   "7.88",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTMH0008",
+   "2024-06-14 20:00:00.0",
+   "19.46",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-14 20:00:00.0",
+   "0.48",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-14 21:00:00.0",
+   "0.49",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-14 22:00:00.0",
+   "0.5",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-14 23:00:00.0",
+   "0.51",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-15 00:00:00.0",
+   "0.49",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-15 01:00:00.0",
+   "0.47",
+   "reconstructed",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ],
+  [
+   "_DTPT0002",
+   "2024-06-15 02:00:00.0",
+   "0.45",
+   "reported",
+   "true",
+   "SYNTHETIC reading - made up for the offline demo, not a real JPS reading"
+  ]
+ ]
+}

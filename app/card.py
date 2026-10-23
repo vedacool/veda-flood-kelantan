@@ -109,6 +109,11 @@ T = {  # fixed wording, BM + EN
                        "ms": "Bacaan SYNTHETIC terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     "replay_last": {"en": "Last verified reading: {m} m at {t} ({age}) - too far from this time to use",
                     "ms": "Bacaan disahkan terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
+    # B-71(b): the Critic asked for another upstream source and the Data & Reconciler found none
+    "missing": {"en": "Missing: no fresh reading from {gauges}; VEDA looked for another upstream gauge on the same "
+                      "river and found none",
+                "ms": "Tiada bacaan terkini dari {gauges}; VEDA mencari stesen hulu lain di sungai yang sama, tiada "
+                      "ditemui"},
     # B-73 (Husaini 23 Oct): OpenStreetMap lines - possible PPS are never official or open; bridges are facts only
     "pps": {"en": "Possible PPS — not an official list, confirm with APM / the village head: {items}",
             "ms": "Kemungkinan PPS — bukan senarai rasmi, sahkan dengan APM / ketua kampung: {items}"},
@@ -559,6 +564,8 @@ def _lines(card, lang, explanation, low_confidence, drop):
                                  T["excluded"][lang].format(when=card["excluded"])) + "."))
     if card.get("not_checked"):
         out.append(("not_checked", T["not_checked"][lang] + "."))
+    if card.get("missing"):                          # B-71(b): never dropped - a gap is said plainly
+        out.append(("missing", T["missing"][lang].format(gauges=", ".join(m["gauge"] for m in card["missing"])) + "."))
     if card.get("met_not_checked"):                  # never dropped: an unread source is never hidden
         out.append(("met_not_checked", T["met_not_checked"][lang].format(
             what=T["met_what"][tuple(card["met_not_checked"])][lang]) + "."))

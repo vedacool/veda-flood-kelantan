@@ -17,7 +17,7 @@ Method (seeded, SEED below):
 - reading times: the scene's own times, or (live-path test fixtures) the fixture clock minus 10-40 seeded minutes.
 
 Outputs (all labelled SYNTHETIC):
-1. data/replay/synthetic_anchors.csv            - the SYNTHETIC calm / rising scenes (seed into veda_pg with
+1. data/replay/synthetic_anchors.csv            - the SYNTHETIC calm / rising / silent-upstream scenes (seed into veda_pg with
                                                    scripts/build_replay.py --anchors ..., then record fixtures)
 2. data/fixtures/zetaris/<jps-table queries>.json - the offline live-path test fixtures (flag "synthetic": true)
 3. data/fixtures/zetaris/<flood-warning>.json   - data.gov.my /flood-warning rows for the mapped gauges; the feed's
@@ -112,6 +112,34 @@ def scene_rows(gauges, rnd):
             for t, lv in zip(times, levels):
                 out.append([name, g["key"], f"{day} {t}", "true", lv, "SYNTHETIC", "", "",
                             "made up for the offline demo - not a real JPS reading"])
+    return out
+
+
+# B-71(b): a made-up "silent upstream gauge" scene for the Critic -> Data request. Own seed, so adding it changes no
+# other SYNTHETIC value. Calm day everywhere, except: three upstream gauges go silent after 04:00 (their 04:00
+# reading is the last one) and Temangan - further up the Kelantan than Pasir Mas's own upstream gauges - is at Amaran
+# (Warning) and rising. Rantau Panjang's only upstream gauge (Jenob) is silent too, with nothing further up.
+SILENT_SCENE = ("synthetic_silent_upstream", "2024-06-15", ("04:00", "07:00", "10:00"))
+SILENT_GAUGES = {"6021065_DPMS0001", "5521044_DKKI0014", "_DTMH0008"}      # Air Mulih, Tangga Krai, Jenob
+RISING_GAUGE = "_DMCG0001"                                                 # Temangan
+
+
+def silent_scene_rows(gauges):
+    rnd = random.Random(SEED + 71)
+    name, day, times = SILENT_SCENE
+    out = []
+    for g in gauges.values():
+        if g["key"] == RISING_GAUGE:
+            end = round(g["w"] + 0.3 * (g["d"] - g["w"]), 2)
+            rate = round(rnd.uniform(0.1, 0.2), 3)
+            levels = [round(end - rate * h, 2) for h in (6, 3, 0)]
+        else:
+            base = calm_level(g, rnd)
+            swing = 0.1 if g["tidal"] else 0.03
+            levels = [round(base + rnd.uniform(-swing, swing), 2) for _ in times[:-1]] + [base]
+        for t, lv in list(zip(times, levels))[:1 if g["key"] in SILENT_GAUGES else 3]:
+            out.append([name, g["key"], f"{day} {t}", "true", lv, "SYNTHETIC", "", "",
+                        "made up for the offline demo - not a real JPS reading"])
     return out
 
 
@@ -237,7 +265,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     gauges = load_gauges()
     rnd = random.Random(SEED)
-    rows = scene_rows(gauges, rnd)
+    rows = scene_rows(gauges, rnd) + silent_scene_rows(gauges)      # the silent scene has its own seed
     lines = ["scenario,station_key,observed_at_myt,time_exact,level_m,source_name,source_url,quote,note"]
     lines += [",".join(str(x) for x in r) for r in rows]
     text = "\n".join(lines) + "\n"
