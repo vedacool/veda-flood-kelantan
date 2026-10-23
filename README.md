@@ -105,6 +105,9 @@ Models are reached only through Meterless **Nightshift** (`meterless/fast`, `met
 | Rain forecast and the Nov 2024 rain archive | [Open-Meteo](https://open-meteo.com/) forecast and archive APIs | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); credited on the page, named on every card |
 | Historic peaks, Nov 2024 replay readings | JPS figures as reported by Bernama, Kosmo and JPS reports | Each row stores its source URL and quote (`data/historic_peaks.csv`, `data/replay/nov2024_anchors.csv`) |
 
+**VEDA's code** is released under the [MIT License](LICENSE), © 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad
+Ariff Baharudin). The data above keeps its own source's terms.
+
 **Python dependencies** are pinned in `requirements.txt` / `requirements-lock.txt`: FastAPI, uvicorn, httpx,
 requests, beautifulsoup4, psycopg, python-dotenv, pytest. All are MIT, BSD, Apache-2.0 or PSF, except psycopg (LGPL-3.0, used
 unmodified) and certifi (MPL-2.0).
