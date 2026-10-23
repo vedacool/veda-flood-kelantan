@@ -13,6 +13,7 @@ Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is 
 World Model on disk). Nothing secret is ever returned: every text goes through the trace's redaction.
 """
 import json
+import logging
 import os
 import queue
 import threading
@@ -34,6 +35,21 @@ MAX_QUESTION = 500
 WEB_PAGE = config.ROOT / "app" / "web" / "index.html"
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
+
+
+class _NoQueryString(logging.Filter):
+    """The access log keeps method, path and status but drops the query string: GET /run/stream carries the user's
+    question there (audit 23 Oct - it reached stdout / Docker logs unmasked)."""
+
+    def filter(self, record):
+        if isinstance(record.args, tuple) and len(record.args) >= 3:
+            args = list(record.args)
+            args[2] = str(args[2]).split("?", 1)[0]
+            record.args = tuple(args)
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_NoQueryString())
 
 
 class BadInput(Exception):

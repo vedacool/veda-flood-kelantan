@@ -6,10 +6,10 @@
 <title>VEDA - Kelantan flood check</title>
 <style>
   :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5f5f5a; --card: #ffffff; --line: #d9d9d4; --accent: #1f5f8b;
-          --warn: #9a5b00; --bad: #a3271f; }
+          --on-accent: #ffffff; --warn: #9a5b00; --bad: #a3271f; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #161615; --fg: #ececea; --muted: #a7a7a1; --card: #20201e; --line: #3a3a37; --accent: #7fb6dd;
-            --warn: #e0a54a; --bad: #ef7d73; }
+            --on-accent: #161615; --warn: #e0a54a; --bad: #ef7d73; }      /* [JPS reading]:1 - white was 2.2:1 */
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -20,7 +20,7 @@
   label { font-weight: 600; }
   input, select, button { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
                           background: var(--card); color: var(--fg); width: 100%; }
-  button { background: var(--accent); color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+  button { background: var(--accent); color: var(--on-accent); border: 0; font-weight: 600; cursor: pointer; }
   button:disabled { opacity: .6; cursor: wait; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
@@ -36,10 +36,13 @@
   .meta { color: var(--muted); font-size: 14px; margin-top: 8px; }
   .tabs { display: flex; gap: 8px; margin-bottom: 8px; }
   .tabs button { width: auto; padding: 6px 12px; background: var(--card); color: var(--fg); border: 1px solid var(--line); }
-  .tabs button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .error { color: var(--bad); font-weight: 600; }
   [hidden] { display: none !important; }
   footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+  footer p { margin: 0 0 6px; }
+  a { color: var(--accent); }
+  .privacy { color: var(--muted); font-size: 14px; margin: 0; }
 </style>
 </head>
 <body>
@@ -50,7 +53,13 @@
 
   <form id="ask">
     <label for="q">Your question</label>
-    <input id="q" name="q" maxlength="500" required placeholder="e.g. Mak ayah saya di Tumpat, kena pindah malam ni?">
+    <input id="q" name="q" maxlength="500" required aria-describedby="privacy"
+           placeholder="e.g. Mak ayah saya di Tumpat, kena pindah malam ni?">
+    <p id="privacy" class="privacy">Please do not type names, IC, phone numbers or addresses. Your question is read by
+      an AI model (NVIDIA Nemotron, via Nightshift) and kept in log files on the computer running VEDA; phone and IC
+      numbers are masked first. <span lang="ms">Jangan taip nama, IC, nombor telefon atau alamat. Soalan anda dibaca
+      oleh model AI (NVIDIA Nemotron, melalui Nightshift) dan disimpan dalam fail log di komputer yang menjalankan
+      VEDA; nombor telefon dan IC disembunyikan dahulu.</span></p>
     <div class="row">
       <div>
         <label for="mode">Data</label>
@@ -82,8 +91,15 @@
     <p id="meta" class="meta"></p>
   </section>
 
-  <footer>Decision support only - not an official warning. Follow JPS / APM / police instructions.
-    Emergency 999 · APM 991.</footer>
+  <footer>
+    <p>Decision support only - not an official warning. Follow JPS / APM / police instructions.
+      Emergency 999 · APM 991.</p>
+    <p>Data: river levels from <a href="https://publicinfobanjir.water.gov.my/">JPS Public Infobanjir</a>;
+      MetMalaysia forecasts and warnings and the flood-warning feed from <a href="https://data.gov.my/">data.gov.my</a>;
+      rain forecast and archive from <a href="https://open-meteo.com/">Open-Meteo</a>
+      (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Nov 2024 replay readings as reported by
+      Bernama and Kosmo, citing JPS.</p>
+  </footer>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -102,6 +118,7 @@ function addStep(text, cls) {
 function showAnswer(lang) {
   if (!result) return;
   shown = lang;
+  $("answer").lang = lang;                 // screen readers read BM with BM pronunciation
   // the user's own language: the full answer (with the AI explanation if the Critic approved it);
   // the other language: the code-written card + that language's disclaimer
   $("answer").textContent = (lang === result.language || !result.card) ? result.output

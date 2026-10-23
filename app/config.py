@@ -51,8 +51,9 @@ REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "default_at": "2024-11-26 
 # (no letter/digit/_/. on either side) keep gauge ids (5521044_DKKI0014), run ids, timestamps and coordinates intact.
 _EDGE_L, _EDGE_R = r"(?<![\w.])", r"(?!\w|\.\d)"         # a full stop ending a sentence is fine
 PERSONAL_PATTERNS = {
-    "[phone]": re.compile(_EDGE_L + r"(?:\+?60[\s-]?|0)(?:1\d|[3-9])[\s-]?\d{3,4}[\s-]?\d{4}" + _EDGE_R),
-    "[IC]": re.compile(_EDGE_L + r"(?:\d{6}-\d{2}-\d{4}|\d{12})" + _EDGE_R),
+    "[phone]": re.compile(_EDGE_L + r"(?:\+?60[\s.-]?|0)(?:1\d|[3-9])[\s.-]?\d{3,4}[\s.-]?\d{4}" + _EDGE_R),
+    "[IC]": re.compile(_EDGE_L + r"(?:\d{6}[\s-]\d{2}[\s-]\d{4}|\d{12})" + _EDGE_R),
+    "[email]": re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"),      # audit 23 Oct: spaces / dots / emails
 }
 
 

@@ -212,3 +212,16 @@ def test_no_zetaris_gives_a_cannot_check_now_answer_not_a_crash(monkeypatch, tmp
     assert "999" in r["answer"]["text"]
     steps = [json.loads(x) for x in open(r["trace"], encoding="utf-8")]
     assert any(s.get("action") == "data.unavailable" and "SAMPLE_MODE" in s["decision"] for s in steps)
+
+
+def test_models_never_see_the_users_phone_number(offline, force):
+    force("full")
+    seen = []
+    base = stub()
+
+    def llm(lane, messages, agent, **kw):
+        seen.extend(m["content"] for m in messages)
+        return base(lane, messages, agent, **kw)
+    loop.run("Is Rantau Panjang ok? My mother is there, call 012-345 6789", llm=llm, log_dir=offline, quiet=True)
+    assert len(seen) >= 4                                        # draft + Critic both called the model
+    assert not any("345 6789" in s for s in seen) and any("[phone]" in s for s in seen)

@@ -1,6 +1,7 @@
 """B-19 tests: the FastAPI entry points offline (SAMPLE_MODE, recorded fixtures) - /health, POST /run fields, the live
 step stream, the web page, 400 on bad input, 429 while busy."""
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -106,4 +107,14 @@ def test_stream_bad_input_is_a_400(client):
 def test_web_page_is_served(client):
     r = client.get("/")
     assert r.status_code == 200 and "VEDA - Kelantan flood check" in r.text and "/run/stream" in r.text
-    assert "http://" not in r.text and "https://" not in r.text          # no external scripts or fonts
+    assert not re.search(r"<(script|link|img|iframe)[^>]+(src|href)=\"https?://", r.text)   # nothing loaded from outside
+    assert "CC BY 4.0" in r.text and "open-meteo.com" in r.text           # audit 23 Oct: data credits
+    assert "Jangan taip nama, IC" in r.text and "NVIDIA Nemotron" in r.text  # privacy notice, BM + EN
+
+
+def test_access_log_drops_the_question():
+    import logging
+    rec = logging.LogRecord("uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d',
+                            ("127.0.0.1:1", "GET", "/run/stream?question=call+0123456789", "1.1", 200), None)
+    main._NoQueryString().filter(rec)
+    assert rec.getMessage() == '127.0.0.1:1 - "GET /run/stream HTTP/1.1" 200'

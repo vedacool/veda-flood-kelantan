@@ -146,6 +146,9 @@ def test_write_failure_does_not_crash(run, capsys):
     ("rumah 09-748 1234", "rumah [phone]"),
     ("IC 880101-03-5678", "IC [IC]"),
     ("ic 880101035678", "ic [IC]"),
+    ("IC 880101 03 5678", "IC [IC]"),                     # audit 23 Oct: spaces, dots, emails
+    ("tel 012.345.6789", "tel [phone]"),
+    ("email name@example.com", "email [email]"),
 ])
 def test_phone_and_ic_numbers_are_masked(text, masked):
     assert trace.redact(text) == masked
