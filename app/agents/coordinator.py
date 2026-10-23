@@ -300,8 +300,9 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
           use_model=True, skip_reason=None):
     """The answer -> {'text', 'language', 'drafted_by', 'explanation', 'safety_line'}. Never raises.
     The card lines (action, verdict + JPS level, comparison, range, sources) are inserted by code; Nemotron writes
-    only the explanation (B-21), which must pass card.explanation_problem. use_model=False (quick path, or no time
-    left) -> the card alone. feedback = the Critic's review of `previous` (revise round)."""
+    only the explanation (B-21). The Coordinator does not check it: the Critic does (card.explanation_problem in its
+    code checks + its AI review; B-14, 23 Oct). use_model=False (quick path, or no time left) -> the card alone.
+    feedback = the Critic's review of `previous` (revise round)."""
     llm = llm or nightshift.chat
     card = card or card_mod.build(p, evidence, forecast)
     language = p.get("question_language", "en")
