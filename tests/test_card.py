@@ -254,6 +254,8 @@ def test_key_facts_are_words_without_minus_signs():
     ("No rule was triggered for this verdict.", "en", "internal term"),
     ("The river is near the alarm level.", "en", None),                                      # Indonesian list: BM only
     ("Dari jauh, telepon keluarga anda.", "ms", "Indonesian word"),
+    ("Tingkat air turun, tiada tanda banjir.", "ms", "Indonesian word"),                     # "tingkat air"
+    ("Rumah di tingkat atas lebih selamat.", "ms", None),                                   # "tingkat" alone is fine
     ("Air naik sehingga petang ini.", "ms", None),                                          # 'sehingga' is normal BM
     ("Paras air di Tanah Merah 5.20 m, masih di bawah paras Waspada.", "ms", "style example"),
 ])
@@ -262,26 +264,15 @@ def test_wording_check(text, lang, problem):
     assert (got is None) if problem is None else (problem in got)
 
 
-def test_wording_failure_gets_one_rewrite_then_the_explanation_is_dropped(tmp_path):
-    from types import SimpleNamespace
-    from app import trace
-    from app.agents import coordinator
-    replies = iter(["Tahap air di bawah alarm.", "Masih di bawah alarm."])
-    sent = []
-
-    def llm(lane, messages, agent, **kw):
-        sent.append(json.loads(messages[1]["content"]))
-        return SimpleNamespace(data={"explanation": next(replies)}, text="")
-    trace.start_run("t", log_dir=tmp_path, quiet=True)
-    try:
-        c = build(verdict="NORMAL", band="normal")
-        a = coordinator.draft("q", {"question_language": "ms", "intent": "risk_check", "user_type": "resident",
-                                    "effort": "full"}, EVIDENCE, forecast(verdict="NORMAL", band="normal"), c, llm=llm,
-                              budget_s=120)
-    finally:
-        trace.end_run()
-    assert len(sent) == 2 and "Indonesian word" in sent[1]["critic_problems"][0]       # one rewrite, with the reason
-    assert a["explanation"] is None and a["drafted_by"] == "fallback"                 # still bad -> dropped
+def test_wording_failure_is_a_critic_rejection():
+    """B-14 (Husaini 23 Oct): wording is checked by the Critic's code checks, so it shows as a Critic rejection."""
+    from app.agents import coordinator, critic
+    c = build(verdict="NORMAL", band="normal")
+    expl = "Tahap air di bawah alarm."
+    text = card.render(c, "ms", expl)
+    found = critic.code_checks(text, coordinator.facts_for_model(EVIDENCE, forecast(verdict="NORMAL", band="normal")),
+                               EVIDENCE, c, expl, "ms")
+    assert any("Indonesian word 'alarm'" in f["detail"] for f in found)
 
 
 # -- no trend known -> no trend words (Husaini 23 Oct) ----------------------------------------------------------

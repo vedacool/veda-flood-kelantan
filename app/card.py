@@ -470,7 +470,7 @@ def _comparisons(text):
 # Husaini 23 Oct (tentative, review pack G4): Indonesian words that should not appear in a Malaysian BM
 # explanation. Not "aman" (normal BM) and never "Waspada" (a JPS level name).
 INDONESIAN = ("alarm", "aturan", "kondisi", "terpicu", "bisa", "mengungsi", "pengungsian", "siaga", "rumah sakit",
-              "ponsel", "kabupaten", "banget", "telepon")
+              "ponsel", "kabupaten", "banget", "telepon", "tingkat air")
 STYLE_PLACE = "tanah merah"     # the place in the draft prompt's style examples - never in a real explanation
 _INDONESIAN = re.compile(r"\b(" + "|".join(re.escape(w) for w in INDONESIAN) + r")\b", re.IGNORECASE)
 _INTERNAL = re.compile(r"\b(rules?|trigger(?:s|ed)?|verdicts?|sentinels?)\b", re.IGNORECASE)
@@ -523,6 +523,12 @@ def explanation_problem(text, card, lang=None):
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
     return trend_problem(text, card) or wording_problem(text, lang, card.get("place"))
+
+
+def emergency_reply(lang, rest):
+    """Someone trapped / stranded and no place found: the ACT advice first (it ends with 'if trapped: stay on high
+    ground, save phone battery, call 999 / 991'), then the usual place reply."""
+    return f"{T['action'][lang]}: {ADVICE['ACT'][lang]}\n{rest}"
 
 
 def unavailable_reply(lang):

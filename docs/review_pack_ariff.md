@@ -177,7 +177,7 @@ Every answer starts with one fixed advice line for its verdict, written by code 
 
 **G4.** (added 23 Oct) VEDA's code rejects an AI explanation in BM that contains these **Indonesian words** (then the
 AI rewrites it once; if it still fails, the card goes out without the explanation): *alarm, aturan, kondisi, terpicu,
-bisa, mengungsi, pengungsian, siaga, rumah sakit, ponsel, kabupaten, banget, telepon*. Deliberately **not** on the list: *aman*
+bisa, mengungsi, pengungsian, siaga, rumah sakit, ponsel, kabupaten, banget, telepon, tingkat air* (the phrase - BM says *paras air*; *tingkat* alone is fine). Deliberately **not** on the list: *aman*
 (normal BM), *sehingga* (normal BM for "until") and *Waspada* (a JPS level name). Anything to add or remove?
 > Answer: ______
 

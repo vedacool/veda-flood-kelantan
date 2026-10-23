@@ -72,6 +72,19 @@ def language(question):
     return "ms" if set(_words(question)) & BM_WORDS else "en"
 
 
+# Someone already in trouble (23 Oct eval): the ACT advice (with "if trapped: ... 999 / 991") comes first,
+# whatever the river data says and even when the place is unknown.
+EMERGENCY = ["terkandas", "terperangkap", "tak boleh keluar", "tak leh keluar", "tidak boleh keluar",
+             "air keliling rumah", "air masuk rumah", "air dalam rumah", "trapped", "stranded", "can't get out",
+             "cannot get out", "water around my house", "water in my house"]
+
+
+def emergency(question):
+    """The emergency phrase in the question, or None (whole words / phrases only)."""
+    text = " " + " ".join(_words(question)) + " "
+    return next((ph for ph in EMERGENCY if f" {' '.join(_words(ph))} " in text), None)
+
+
 def question_triggers(question):
     """[(kind, phrase)] for each trigger phrase in the question (whole words / whole phrases only)."""
     text = " " + " ".join(_words(question)) + " "

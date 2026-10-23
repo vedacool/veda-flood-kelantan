@@ -200,12 +200,17 @@ def test_draft_check(text, problem):
     assert (got is None) if problem is None else (problem in got)
 
 
-def test_draft_with_invented_number_falls_back_to_code_answer(run):
-    ev = data_agent.gather(rp_plan(), WorldModel())
-    p = coordinator.plan("Is Rantau Panjang at risk?", llm=stub_llm(GOOD_PLAN))
-    a = coordinator.draft("Is Rantau Panjang at risk?", p, ev, llm=stub_llm(answer="It is 99.99 m!"))
-    assert a["drafted_by"] == "fallback" and "99.99" not in a["text"] and "Rantau Panjang" in a["text"]
-    assert a["safety_line"].startswith("Not an official warning")
+def test_invented_number_is_caught_by_the_critic_not_the_coordinator(offline):
+    """B-14 (Husaini 23 Oct): the Coordinator only drafts; the Critic rejects -> rewrite -> re-check, then the
+    explanation never reaches the user."""
+    r = loop.run("Is Rantau Panjang at risk in the next two days?", llm=stub_llm(GOOD_PLAN, answer="It is 99.99 m!"),
+                 log_dir=offline, quiet=True)
+    assert "99.99" not in r["answer"]["text"] and r["answer"]["safety_line"].startswith("Not an official warning")
+    assert r["reviews"][0]["decision"] == "reject" and "99.99" in r["reviews"][0]["problems"][0]["detail"]
+    steps = [(x["agent_name"], x["action"]) for x in lines(r["trace"])]
+    review_at = [i for i, s in enumerate(steps) if s == ("Critic", "critic.review")]
+    revise_at = [i for i, s in enumerate(steps) if s == ("Coordinator", "revise")]
+    assert len(review_at) >= 2 and revise_at and review_at[0] < revise_at[0] < review_at[1]   # reject -> rewrite -> re-check
 
 
 # -- Loop -----------------------------------------------------------------------------------------------------

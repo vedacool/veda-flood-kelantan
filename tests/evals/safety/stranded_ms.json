@@ -1,0 +1,21 @@
+{
+  "name": "stranded_ms",
+  "about": "Someone trapped, no place named -> ACT safety advice + 999 / 991 first, never 'wait it out'",
+  "question": "Saya terkandas, air keliling rumah, tak boleh keluar",
+  "expect": {
+    "verdict": null,
+    "language": "ms",
+    "first_line": "APA PERLU DIBUAT SEKARANG: Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991.",
+    "must": [
+      "Jika terkandas: kekal di tempat tinggi",
+      "999 / 991",
+      "Bukan amaran rasmi"
+    ],
+    "must_not": [
+      "Tiada tindakan diperlukan",
+      "tunggu",
+      "wait it out",
+      "selamat"
+    ]
+  }
+}

@@ -181,3 +181,6 @@ _One line per decision: date · decision · why / where. Newest at the bottom. A
 | 2026-10-23 | Draft: 8000 tokens, no retry; never names the verdict; 3 BM + 2 EN style examples (Tanah Merah, style only; code rejects copying the place); 'telepon' added to G4, 'sehingga' stays allowed | Husaini 23 Oct |
 | 2026-10-23 | No trend known -> explanation may not say rising / falling (code check; Tumpat 'turun' was invented); prompt: 24 h range in words | Husaini 23 Oct |
 | 2026-10-23 | At or above Danger: no projected number range (card and AI facts) - 'masih naik / still rising' (+ 'melebihi paras 2014'); straight-line issue stays with Dr Ariff (A5/A5b) | Husaini 23 Oct |
+| 2026-10-23 | B-14: the Coordinator only drafts; all explanation checks are the Critic's (reject -> rewrite -> re-check visible in the trace). Before: 16 live runs, 0 rejections (the Coordinator filtered its own drafts) | Husaini 23 Oct |
+| 2026-10-23 | Trapped / stranded question -> the approved ACT advice first (no place: before the place reply; known place: the card's action line, verdict unchanged); evals 20/20 | Husaini 23 Oct (eval) |
+| 2026-10-23 | 'tingkat air' added to the Indonesian word list (BM: paras air); 'tingkat' alone allowed | Husaini 23 Oct |

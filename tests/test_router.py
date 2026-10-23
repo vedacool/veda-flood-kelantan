@@ -164,3 +164,13 @@ def test_unreadable_feed_is_reported(run):
 ])
 def test_user_type_from_words(question, kind):
     assert router.user_type(question) == kind
+
+
+# -- someone already in trouble (23 Oct) ------------------------------------------------------------------------
+@pytest.mark.parametrize("q, hit", [("Saya terkandas, air keliling rumah, tak boleh keluar", "terkandas"),
+                                    ("We are trapped on the roof", "trapped"),
+                                    ("Air masuk rumah dah", "air masuk rumah"),
+                                    ("Rantau Panjang banjir tak esok?", None),
+                                    ("Boleh keluar tak esok?", None)])
+def test_emergency_phrases(q, hit):
+    assert router.emergency(q) == hit

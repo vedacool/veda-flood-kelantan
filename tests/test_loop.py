@@ -241,3 +241,11 @@ def test_draft_gets_key_facts_intent_and_user_type(offline, force):
     req = seen[0]
     assert {"language", "intent", "user_type", "FACTS"} <= set(req) and "question" not in req and "WHY" not in req
     assert req["user_type"] == "family_far_away" and req["FACTS"]["place"] == "Rantau Panjang"
+
+
+def test_trapped_with_a_known_place_gets_act_advice_whatever_the_river(offline):
+    r = loop.run("Saya terkandas di Tumpat, air keliling rumah", llm=stub(), log_dir=offline, quiet=True)
+    first = r["answer"]["text"].split("\n")[0]
+    assert "Jika terkandas: kekal di tempat tinggi" in first and "999 / 991" in first
+    assert r["forecast"]["verdict"] in ("NORMAL", "WATCH", "PREPARE", "ACT", "INSUFFICIENT_DATA")   # data unchanged
+    assert any(x["action"] == "emergency" for x in lines(r))

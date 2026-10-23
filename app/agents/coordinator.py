@@ -319,24 +319,14 @@ def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=No
             request["critic_problems"] = [f"{x['type']}: {x['detail']}" for x in feedback.get("problems", [])]
             request["critic_fix"] = feedback.get("fix")
         try:
-            started = time.monotonic()
+            # Husaini 23 Oct (B-14): the Coordinator only drafts - every check on the explanation (numbers, verdict,
+            # wording, trend, safety) is the Critic's, so a bad draft shows as reject -> rewrite -> re-check
             r = _draft_call(llm, request, feedback, budget_s)
             explanation = (r.data or {}).get("explanation") if isinstance(r.data, dict) else None
-            problem = card_mod.explanation_problem(explanation, card, language)
-            left = None if budget_s is None else budget_s - (time.monotonic() - started)
-            if problem and problem.startswith("wording:") and (left is None or left >= DRAFT_RETRY_MIN_LEFT_S):
-                # Husaini 23 Oct: a wording problem gets one rewrite, then the explanation is dropped
-                trace.step(AGENT, "draft.rewrite", input_summary=explanation, output_summary=problem,
-                           status="retrying", decision="wording check failed -> one rewrite")
-                again = dict(request, previous_explanation=explanation, critic_problems=[problem],
-                             critic_fix="Rewrite in standard Malaysian BM / plain English, no minus signs, no "
-                                        "internal terms.")
-                r = _draft_call(llm, again, {"problems": []}, left)
-                explanation = (r.data or {}).get("explanation") if isinstance(r.data, dict) else None
-                problem = card_mod.explanation_problem(explanation, card, language)
-            if problem:
-                drafted_by, why = "fallback", f"Explanation rejected by code check: {problem} -> card without it"
-                explanation = None
+            if not isinstance(explanation, str) or not explanation.strip():
+                drafted_by, why, explanation = "fallback", "the model's reply had no explanation -> card without it", None
+            else:
+                explanation = explanation.strip()
         except nightshift.NightshiftError as e:
             drafted_by, why = "fallback", f"Nightshift unavailable ({e}) -> card without an explanation"
     answer = {"text": card_mod.render(card, language, explanation), "language": language, "drafted_by": drafted_by,

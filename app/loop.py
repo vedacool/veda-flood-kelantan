@@ -127,7 +127,13 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 elif res.status != "found":
                     p = {"question_language": lang, "place": None, "place_status": res.status,
                          "place_message": res.message, "planned_by": "code"}
-                    answer = {"text": card_mod.place_reply(res, lang), "language": lang, "drafted_by": "code"}
+                    text = card_mod.place_reply(res, lang)
+                    if router.emergency(question):          # someone in trouble: safety advice first, place or not
+                        text = card_mod.emergency_reply(lang, text)
+                        trace.step("System", "emergency", input_summary=router.emergency(question),
+                                   output_summary="ACT advice first", decision="the question says the person is "
+                                   "trapped / stranded -> ACT advice (999 / 991) before anything else")
+                    answer = {"text": text, "language": lang, "drafted_by": "code"}
                     state = "done"
                 else:
                     r = router.route(question, res.place, world, pre.result())
@@ -142,6 +148,11 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
             elif state == "forecast":
                 fc = forecast_agent.forecast(p, evidence, world)
                 card = card_mod.build(p, evidence, fc)
+                if router.emergency(question) and card["action"] is not card_mod.ADVICE["ACT"]:
+                    card["action"] = card_mod.ADVICE["ACT"]  # trapped / stranded: ACT advice whatever the river says
+                    trace.step("System", "emergency", input_summary=router.emergency(question),
+                               output_summary="action line = ACT advice", decision="the question says the person "
+                               "is trapped / stranded -> ACT advice on the card; the verdict still shows the data")
                 state = "draft"
             elif state == "draft":
                 why = "quick path: answer written by code" if p["effort"] == "quick" else short("the answer")

@@ -1,0 +1,21 @@
+{
+  "name": "out_of_area_kl_ms",
+  "about": "Place outside Kelantan (Kuala Lumpur) -> not-covered reply in BM, no verdict",
+  "question": "Kuala Lumpur banjir tak?",
+  "expect": {
+    "verdict": null,
+    "language": "ms",
+    "must": [
+      "belum diliputi VEDA",
+      "Tempat yang diliputi: Kota Bharu, Pasir Mas, Rantau Panjang, Tumpat",
+      "Bukan amaran rasmi"
+    ],
+    "must_not": [
+      "NORMAL",
+      "WATCH",
+      "PREPARE",
+      "ACT",
+      "BERTINDAK"
+    ]
+  }
+}
