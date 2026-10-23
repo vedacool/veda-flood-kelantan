@@ -8,6 +8,11 @@ stale or contradictory. VEDA cross-checks it and answers one question for anyone
 Bahasa Melayu: **"Is my place at risk in the next 24–48 hours, and what should we do now?"** Every claim in the answer
 is traced to its source and its age.
 
+**Approach:** code agents read every source through Zetaris, check and reconcile it, and decide the verdict with
+plain, reviewable rules; NVIDIA Nemotron (through Meterless Nightshift) only writes a 1-2 sentence explanation, which
+a Critic checks against the facts - and the answer card goes out, checked by code, even when the model is slow or
+down.
+
 > ⚠️ **Not an official flood warning.** Decision support only. Always follow JPS, APM and police instructions.
 > Emergency: 999 · APM (Civil Defence): 991.
 
@@ -15,6 +20,9 @@ is traced to its source and its age.
 SAMPLE_MODE runs the real agent logic offline, with no network, no `.env` and no API keys, on **scenes**: the Nov 2024
 replay (readings reported in the news, each cited) or a **SYNTHETIC** scene (made-up readings, labelled everywhere).
 A question without a scene runs on the SYNTHETIC calm day.
+
+**Covered places:** Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat (in BM or English, common spellings such as
+"Kota Baru", "Psr Mas"). Any other Kelantan place gets "not covered yet" and the nearest covered place.
 
 **Docker:**
 ```
@@ -77,13 +85,13 @@ flowchart LR
     Q[Question<br/>BM / EN] --> C[Coordinator<br/>code router + plan]
     C -->|quick or full path| D[Data &amp; Reconciler]
     D <-->|run_sql only| Z[(Zetaris<br/>one SQL layer)]
-    Z --- PG[(veda-pg<br/>JPS levels every 15 min)]
+    Z --- PG[(veda-pg<br/>JPS levels every 15 min,<br/>gauges, places, OSM)]
     Z --- OM[Open-Meteo<br/>rain]
     Z --- MY[data.gov.my<br/>MET forecast, warnings,<br/>flood-warning feed]
     D --> W[(World Model<br/>facts with provenance)]
     D --> F[Forecast agent<br/>verdict rules, range,<br/>confidence]
     F --> K[Answer card<br/>written by code]
-    K --> N[Coordinator: Nemotron writes<br/>a short explanation]
+    K --> N[Coordinator: Nemotron via<br/>Nightshift writes a short<br/>explanation]
     N --> CR[Critic<br/>code checks + own Zetaris re-check<br/>on every answer; AI review<br/>when the model replies in time]
     CR -->|reject: one revision| N
     CR --> S[Safety gate<br/>last check on every answer]
@@ -94,8 +102,9 @@ flowchart LR
 - **Code decides the path.** The quick path (about 6 s, written by code) is used when nothing is wrong. The full path
   (≤150 s, with Nemotron) is used when a gauge is at Alert or above, the river is rising, a MET warning is active, a
   source is stale or missing, or the question is about evacuation, being cut off, or the next days.
-- **Every agent step, Zetaris call and model call** writes one JSON line to `logs/trace-<run_id>.jsonl`. The web
-  page and CLI show these steps live.
+- **Every agent step, Zetaris call and model call** writes one JSON line to `logs/trace-<run_id>.jsonl`, and a
+  short line per step to stdout (CLI and web server / `docker logs`; the question text is never printed). The web
+  page shows the same steps live. See [`logs/README.md`](logs/README.md) and the committed sample traces.
 - Module contracts (inputs → outputs → failure behaviour) are in [`docs/how-it-works.md`](docs/how-it-works.md).
   Decisions with dates are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
@@ -111,6 +120,22 @@ flowchart LR
 Models are reached only through Meterless **Nightshift** (`meterless/fast`, answered by NVIDIA Nemotron 3.5 Lightning),
 never `meterless/auto` and never NVIDIA directly. Agents get data only through `run_sql()` on **Zetaris**.
 
+### When something fails (every case is a trace line; the answer still goes out)
+| What fails | What VEDA does | What the user sees |
+|---|---|---|
+| Zetaris unreachable / no keys | No guessing: stops after the place lookup | "VEDA cannot reach its river data right now…" + check JPS Infobanjir, 999 |
+| The controlling gauge is silent or stale | Backup gauge on the same river if one is fresh; else the last reading for context only | The backup is named, or **INSUFFICIENT DATA** (never NORMAL) |
+| data.gov.my rate limit / outage (HTTP 429) | Its circuit opens for 15 min; the Open-Meteo rain is read on its own; place lookup still works | "Tidak disemak / Not checked: MetMalaysia …" line; river answer as usual |
+| Open-Meteo unreadable | Its own circuit (never shared with data.gov.my) | Card without the rain line |
+| data.gov.my /flood-warning stale (frozen since Feb 2024) | Excluded from the verdict; status remembered 15 min | "Diketepikan (lapuk) / Excluded (stale)" |
+| Two sources disagree and cannot be reconciled | Kept as `conflicts_unresolved`, no source picked | "Sources disagree on …; VEDA did not pick one" |
+| Nemotron slow, empty or down | The draft gets one try inside the time budget (the Critic's review retries only a failure in under 10 s) | The code-written card without the AI explanation |
+| The Critic's AI review does not complete | Code checks + Zetaris re-check still run; the unreviewed explanation is dropped | The code-checked card only |
+| An explanation breaks a rule (wrong number, verdict, reassurance, "PPS is open", …) | Reject → one rewrite → re-check; then the card alone | The card, never the bad sentence |
+| Place not covered / misspelt | Gazetteer: "Did you mean …?" or "not covered yet" + nearest covered place | A clear reply, no guessed location |
+| OpenStreetMap table unreadable | — | "Tidak disemak: OpenStreetMap" on an evacuation / cut-off answer |
+| A replay time with no verified reading | No reconstruction beyond the reported readings | INSUFFICIENT DATA ("no verified reading near this time") |
+
 ## Data sources and licences
 Every third-party source VEDA uses, its licence or terms, and how VEDA uses it. **No JPS readings are stored in this
 repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 replay or on SYNTHETIC scenes.
@@ -122,7 +147,7 @@ repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 repl
 | **Historic peaks** incl. **Dec 2014** (`data/historic_peaks.csv`) | Cited facts; each row names its source and URL (JPS "Laporan Catatan Aras Air Tertinggi 2014-2015" via USM CGSS, news reports) | The "compared with 2014" line and the record peaks on the card |
 | **Nov 2024 replay readings** (`data/replay/nov2024_anchors.csv`) | Facts as reported by Bernama and Kosmo (citing JPS); each row stores its source URL and the quoted sentence | The REPLAY · Nov 2024 scenes; hours between two reported readings are reconstructed on a straight line and labelled |
 | **SYNTHETIC scenes and offline fixtures** (`data/replay/synthetic_anchors.csv`, fixtures flagged `synthetic`) | Made up by `scripts/make_synthetic_scenes.py` from cited facts only (MIT, like the code); the rising scene is a made-up stress scenario: synthetic river levels, real archived rain | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
-| **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures keep the recorded open-data rows |
+| **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures: the MetMalaysia warnings / forecast rows and the `/flood-warning` readings are SYNTHETIC (seeded script); only place names, station positions and the feed's last-update time are recorded as served |
 | **Open-Meteo** forecast and historical archive ([open-meteo.com](https://open-meteo.com/)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Rain forecast (live) and real archive rain for every scene, shown with its date; credited on the page and named on every card |
 | **OpenStreetMap**: named schools, masjid / surau, community halls, and road bridges over rivers near each covered place ([openstreetmap.org](https://www.openstreetmap.org/), via the Overpass API) | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); credited on every card that uses it | Loaded once by `scripts/load_osm.py` into veda-pg, read through Zetaris. An evacuation question lists up to 3 **possible** PPS ("not an official list, confirm with APM / the village head"); a cut-off question lists bridges as facts (what river they cross, how far, the JPS level at the nearest gauge on that river) and says "low ground not assessed". VEDA never says a PPS is open and never predicts a road being cut off. The SAMPLE_MODE fixture of this table is OSM data and stays under the ODbL |
 
@@ -269,8 +294,8 @@ Pre-existing data components (researched before 22 Oct 2026, from the planning n
    - **Meterless Nightshift** - the only AI provider; OpenAI-format HTTP from `app/adapters/nightshift.py`, model route
      `meterless/fast`, app id `veda-fast`, streaming.
    - **NVIDIA** - Nemotron 3.5 Lightning, served by NVIDIA's endpoint through Nightshift.
-4. **AI coding tool:** Claude Code (Anthropic) inside Cursor, with the Cursor agent for a few small delegated jobs
-   (logged in `docs/cursor-log.md`); planning and reviews with Claude Cowork. The team designed, reviewed, tested and
+4. **AI coding tool:** Claude Code (Anthropic) inside Cursor, with the Cursor agent for 6 small delegated jobs (tests;
+   logged in `docs/cursor-log.md`: 3 accepted, 1 reworked, 1 rejected, 1 not run - usage limit); planning and reviews with Claude Cowork. The team designed, reviewed, tested and
    can explain every module.
 5. **External tools and libraries:** Python 3.13; FastAPI, uvicorn, httpx, requests, beautifulsoup4, psycopg,
    python-dotenv, pytest (pinned in `requirements.txt` / `requirements-lock.txt`); Docker; Postgres 16 (alpine);

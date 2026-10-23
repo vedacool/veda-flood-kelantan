@@ -212,6 +212,7 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 
 ## Entry points (B-19) — `app/main.py`, `app/web/index.html`, `app/progress.py`, `run.py`
 - **Start:** `python -m app.main` → http://127.0.0.1:8000 (`VEDA_HOST` / `VEDA_PORT`; 127.0.0.1 by default so it is not open to the LAN). CLI: `python run.py "<question>"` (`--verbose`, `--replay nov2024 --at "2024-11-26 18:00"`).
+- **Logs (FAQ: stdout and `logs/`):** every run writes `logs/trace-<run_id>.jsonl`; the web server also prints one `progress.describe` line per important step to stdout as `[<run_id>] <line>` (`docker logs`), never the question text. See `logs/README.md`.
 - **`GET /health`:** `{status, sample_mode, zetaris, nightshift}` — Zetaris and Nightshift are pinged (not in SAMPLE_MODE); `degraded` if either does not answer.
 - **`POST /run`** `{"question", "replay"?, "at"?}` → `{run_id, trace_id, status, output (answer + disclaimer), language, verdict, confidence, drafted_by, approved_by_critic, safety_fixes, agents, log_file, execution_time, timing, card {en, ms}, disclaimer {en, ms}}`.
 - **`GET /run/stream?question=…&replay=…&at=…`:** Server-Sent Events — one `step` event per important trace step as it happens (`progress.describe`, the same short lines as the CLI), then one `result` event (the JSON above) or an `error` event.

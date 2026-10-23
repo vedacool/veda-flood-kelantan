@@ -7,23 +7,23 @@ Status lives here and in the backlog, never in Claude's memory. A finished item 
 Last updated: 23 Oct 2026 (evening: B-75 - W-8 closed with the organiser ruling; W-7 after the hackathon).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
-IDs are never reused. Severity: P2 = schedule, P3 = polish.
+IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all are **after the hackathon** except A-P2-1 and A-P2-3.
 
 | ID | Sev | Finding | Where | Backlog | When |
 |---|---|---|---|---|---|
 | A-P2-1 | P2 | Two processes writing `world.sqlite` at once (API + CLI live) both fail | `app/engines/world_model/store.py:45` | B-65 | after Gate 1 |
-| A-P2-2 | P2 | The whole World Model reloads on every run; facts scan is O(n) (fine today: 0.02 s) | `app/loop.py`, `world.py` | B-65 | later |
+| A-P2-2 | P2 | The whole World Model reloads on every run; facts scan is O(n) (fine today: 0.02 s) | `app/loop.py`, `world.py` | B-65 | after hackathon |
 | A-P2-3 | P2 | A stalled Nightshift stream is only cut when the next line arrives (can pass its limit) | `app/adapters/nightshift.py:128` | B-03 | after Gate 1 |
-| A-P2-4 | P2 | No backup of `veda-pg` / `world.sqlite`, no restore drill | `scripts/` | B-65 (software-start item 4) | after Gate 1 |
-| A-P2-5 | P2 | `/health` does not check Postgres, the newest reading's age or open circuit breakers | `app/main.py:110` | B-19 | after Gate 1 |
-| A-P2-7 | P2 | Unused model-planning code (`coordinator.plan` and helpers, `nightshift.get_llm`, `loop.STATES`) | `app/agents/coordinator.py` | B-65 | after Gate 1 |
-| A-P2-9 | P2 | `load_dotenv` at import in `app/main.py` leaks the developer's `.env` into the test session | `app/main.py:32` | B-65 | after Gate 1 |
-| A-P3-1 | P3 | Lockfile has no hashes (`--require-hashes`) | `requirements-lock.txt` | B-65 (software-start item 6) | after Gate 1 |
-| A-P3-2 | P3 | No security headers (CSP, nosniff, frame-ancestors) | `app/main.py` | B-19 (software-start item 7) | after Gate 1 |
-| A-P3-3 | P3 | `POST /run` accepts `text/plain`; `GET /run/stream` starts a run (CSRF) | `app/main.py` | B-19 | after Gate 1 |
-| A-P3-4 | P3 | `logs/` and `data/cache/jps/` are never pruned (~3 MB/day) | `logs/` | B-65 | before public deployment |
-| A-P3-5 | P3 | Small logic edges: aging reading still labelled "high"; date-only peaks parse to midnight; CLI `--at` not limited to the replay window; "None mm in 24 h" in a trigger reason | `app/agents/forecast_agent.py`, `run.py` | B-16 | later |
-| A-P3-6 | P3 | Router: "Kampung" / "air" / "di" in an English question switch the answer to BM | `app/router.py` | B-21 | later |
+| A-P2-4 | P2 | No backup of `veda-pg` / `world.sqlite`, no restore drill | `scripts/` | B-65 (software-start item 4) | after hackathon |
+| A-P2-5 | P2 | `/health` does not check Postgres, the newest reading's age or open circuit breakers | `app/main.py:110` | B-19 | after hackathon |
+| A-P2-7 | P2 | Unused model-planning code (`coordinator.plan` and helpers, `nightshift.get_llm`, `loop.STATES`) | `app/agents/coordinator.py` | B-65 | after hackathon |
+| A-P2-9 | P2 | `load_dotenv` at import in `app/main.py` leaks the developer's `.env` into the test session | `app/main.py:32` | B-65 | after hackathon |
+| A-P3-1 | P3 | Lockfile has no hashes (`--require-hashes`) | `requirements-lock.txt` | B-65 (software-start item 6) | after hackathon |
+| A-P3-2 | P3 | No security headers (CSP, nosniff, frame-ancestors) | `app/main.py` | B-19 (software-start item 7) | after hackathon |
+| A-P3-3 | P3 | `POST /run` accepts `text/plain`; `GET /run/stream` starts a run (CSRF) | `app/main.py` | B-19 | after hackathon |
+| A-P3-4 | P3 | `logs/` and `data/cache/jps/` are never pruned (~3 MB/day) | `logs/` | B-65 | after hackathon |
+| A-P3-5 | P3 | Small logic edges: aging reading still labelled "high"; date-only peaks parse to midnight; CLI `--at` not limited to the replay window; "None mm in 24 h" in a trigger reason | `app/agents/forecast_agent.py`, `run.py` | B-16 | after hackathon |
+| A-P3-6 | P3 | Router: "Kampung" / "air" / "di" in an English question switch the answer to BM | `app/router.py` | B-21 | after hackathon |
 
 Closed with a decision: **W-8** - organiser ruling on JPS data (23 Oct, human admin): no disqualification; build accurately - credit does not replace consent, recorded copies only if the terms allow redistribution (they don't), so JPS is fetched live at runtime only; SAMPLE_MODE / demo use synthetic or openly licensed data; all third-party data declared in the README. Done in B-75.
 

@@ -136,3 +136,19 @@ def test_scene_picker_lists_replay_first_then_synthetic_scenes():
     page = (main.WEB_PAGE).read_text(encoding="utf-8")
     order = [page.index(x) for x in ("nov2024|2024-11-26 18:00", "synthetic_rising|", "synthetic_calm|")]
     assert order == sorted(order) and 'id="live-option"' in page and "h.sample_mode" in page
+
+
+def test_web_runs_write_progress_to_stdout_without_the_question(monkeypatch, tmp_path, capsys):
+    """FAQ: 'Writes logs to stdout and logs/' - the web path prints one short line per step (docker logs), never
+    the question text; the full trace still goes to the trace file."""
+    from app import loop
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    gazetteer.clear_cache()
+    real = loop.run
+    monkeypatch.setattr(loop, "run", lambda *a, **k: real(*a, **k, log_dir=tmp_path))
+    r = main._run("Mak saya di Tumpat, 0123456789, selamat ke?", "", None)
+    out = capsys.readouterr().out
+    assert f"[{r['run_id']}] > Understanding the question" in out and "verdict" in out
+    assert "0123456789" not in out and "Mak saya" not in out
+    assert (tmp_path / f"trace-{r['run_id']}.jsonl").exists()
+    gazetteer.clear_cache()

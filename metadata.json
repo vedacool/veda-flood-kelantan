@@ -44,7 +44,7 @@
       "role": "Nemotron 3.5 Lightning writes the explanation and does the Critic's AI review, served through Nightshift; no other model answers in VEDA."
     },
     "cursor": {
-      "role": "AI coding tool: Claude Code (Anthropic) inside Cursor, with the Cursor agent for a few small delegated jobs (logged in docs/cursor-log.md)."
+      "role": "AI coding tool: Claude Code (Anthropic) inside Cursor, with the Cursor agent for 6 small delegated jobs (tests; docs/cursor-log.md: 3 accepted, 1 reworked, 1 rejected, 1 not run)."
     }
   },
   "data_sources": [

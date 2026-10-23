@@ -119,8 +119,17 @@ def result_json(r):
 
 
 def _run(question, replay, at, on_step=None):
-    from app import loop
-    return loop.run(question, quiet=True, replay=replay, at=at, on_step=on_step, default_scene=True)
+    """One run. The full trace goes to logs/trace-<run_id>.jsonl; stdout (docker logs) gets the same short progress
+    lines as the page, one per important step, prefixed with the run id - never the question text (privacy)."""
+    from app import loop, progress
+
+    def step(rec):
+        line = progress.describe(rec)
+        if line:
+            print(f"[{rec.get('run_id')}] {line}", flush=True)
+        if on_step:
+            on_step(rec)
+    return loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True)
 
 
 @app.get("/health")
