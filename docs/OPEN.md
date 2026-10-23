@@ -7,13 +7,12 @@ Status lives here and in the backlog, never in Claude's memory. A finished item 
 Last updated: 23 Oct 2026 (evening: B-75 - W-8 closed with the organiser ruling; W-7 after the hackathon).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
-IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all are **after the hackathon** except A-P2-1 and A-P2-3.
+IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all are **after the hackathon** except A-P2-1 (A-P2-3 fixed in B-85: stalled streams are cut on time).
 
 | ID | Sev | Finding | Where | Backlog | When |
 |---|---|---|---|---|---|
 | A-P2-1 | P2 | Two processes writing `world.sqlite` at once (API + CLI live) both fail | `app/engines/world_model/store.py:45` | B-65 | after Gate 1 |
 | A-P2-2 | P2 | The whole World Model reloads on every run; facts scan is O(n) (fine today: 0.02 s) | `app/loop.py`, `world.py` | B-65 | after hackathon |
-| A-P2-3 | P2 | A stalled Nightshift stream is only cut when the next line arrives (can pass its limit) | `app/adapters/nightshift.py:128` | B-03 | after Gate 1 |
 | A-P2-4 | P2 | No backup of `veda-pg` / `world.sqlite`, no restore drill | `scripts/` | B-65 (software-start item 4) | after hackathon |
 | A-P2-5 | P2 | `/health` does not check Postgres, the newest reading's age or open circuit breakers | `app/main.py:110` | B-19 | after hackathon |
 | A-P2-7 | P2 | Unused model-planning code (`coordinator.plan` and helpers, `nightshift.get_llm`, `loop.STATES`) | `app/agents/coordinator.py` | B-65 | after hackathon |

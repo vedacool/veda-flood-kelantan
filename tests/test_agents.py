@@ -224,7 +224,7 @@ def test_loop_runs_every_state_offline(offline):
     assert r["answer"]["approved"] and r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"]
     agents = {x["agent_name"] for x in lines(r["trace"]) if x["action"] in ("world.read", "world.write")}
     assert agents == {"Coordinator", "Data & Reconciler", "Forecast", "Critic"}          # B-57: all four agents
-    assert [c["lane"] for c in llm.calls] == ["fast", "fast"]    # explanation + Critic (fast lane first, 23 Oct)
+    assert [c["lane"] for c in llm.calls] == ["deep", "deep"]    # B-85: explanation + Critic, Super VL by name
 
 
 def test_loop_without_any_model_still_answers_in_sample_mode(offline):
@@ -302,49 +302,89 @@ def test_reconcile_ignores_a_source_without_a_value():
     assert r["rule"] == "single" and r["chosen"] is None
 
 
-# -- draft retry (Husaini 23 Oct): once, only on a fast failure with enough budget left ------------------------
-def _flaky(fails):
+# -- draft retries (B-85, Husaini 23 Oct): Super VL on the deep lane, <= 90 s in all ----------------------------
+class _Clock:
+    def __init__(self):
+        self.t = 1000.0
+
+    def monotonic(self):
+        return self.t
+
+
+def _scripted(clock, steps):
+    """A stand-in model: each step = (seconds it takes, error text or None for an answer)."""
     calls = []
 
     def llm(lane, messages, agent, **kw):
-        calls.append(kw.get("budget_s"))
-        if len(calls) <= fails:
-            raise nightshift.NightshiftError("empty response")
+        took, err = steps[len(calls)]
+        calls.append({"lane": lane, "budget_s": kw.get("budget_s"), "max_tokens": kw.get("max_tokens")})
+        clock.t += took
+        if err:
+            raise nightshift.NightshiftError(err)
         return SimpleNamespace(data={"explanation": "ok"}, text="")
     llm.calls = calls
     return llm
 
 
-def test_draft_is_not_retried_by_default():
-    llm = _flaky(1)                                    # Husaini 23 Oct (later): 8000 tokens, ~50 s - no retry
+@pytest.fixture
+def clock(monkeypatch, tmp_path):
+    from app import trace
+    c = _Clock()
+    monkeypatch.setattr(coordinator.time, "monotonic", c.monotonic)
+    trace.start_run("t", log_dir=tmp_path, quiet=True)
+    yield c
+    trace.end_run()
+
+
+CUT = "Nightshift failed after 1 attempts: HTTP 200: ttfb_timeout:nvidia/nemotron-3.5-super-vl-120b-a12b"
+E500 = "Nightshift failed after 1 attempts: HTTP 200: nvidia_500: Failed to generate completions"
+
+
+def test_draft_uses_super_vl_lane_tokens_and_a_90_s_cap(clock, monkeypatch):
+    monkeypatch.delenv("METERLESS_MODEL_DEEP", raising=False)            # the code default, not a developer .env
+    llm = _scripted(clock, [(20, None)])
+    assert coordinator._draft_call(llm, {}, None, 150).data == {"explanation": "ok"}
+    assert llm.calls == [{"lane": "deep", "budget_s": 90, "max_tokens": 4096}]
+    assert nightshift.lane_model("deep") == "nvidia/nemotron-3.5-super-vl-120b-a12b"
+
+
+def test_fast_nvidia_500_is_retried_once(clock):
+    llm = _scripted(clock, [(2.5, E500), (20, None)])
+    assert coordinator._draft_call(llm, {}, None, 150).data == {"explanation": "ok"}
+    assert len(llm.calls) == 2 and llm.calls[1]["budget_s"] == 87.5            # still inside the 90 s cap
+    llm = _scripted(clock, [(2.5, E500), (2.5, E500), (20, None)])
     with pytest.raises(nightshift.NightshiftError):
         coordinator._draft_call(llm, {}, None, 150)
-    assert len(llm.calls) == 1 and coordinator.MAX_TOKENS == 8000
+    assert len(llm.calls) == 2                                                # once only
 
 
-def test_draft_retry_when_switched_on(tmp_path, monkeypatch):
-    from app import trace
-    monkeypatch.setattr(coordinator, "DRAFT_TRIES", 2)
-    trace.start_run("t", log_dir=tmp_path, quiet=True)
-    try:
-        llm = _flaky(1)
-        assert coordinator._draft_call(llm, {}, None, 120).data == {"explanation": "ok"} and len(llm.calls) == 2
-        llm = _flaky(2)
-        with pytest.raises(nightshift.NightshiftError):
-            coordinator._draft_call(llm, {}, None, 120)
-        assert len(llm.calls) == 2                                     # one retry only
-        llm = _flaky(1)
-        with pytest.raises(nightshift.NightshiftError):
-            coordinator._draft_call(llm, {}, None, 30)                 # too little budget left: no retry
-        assert len(llm.calls) == 1
-    finally:
-        trace.end_run()
-
-
-def test_slow_draft_failure_is_not_retried(monkeypatch):
-    monkeypatch.setattr(coordinator, "DRAFT_TRIES", 2)
-    monkeypatch.setattr(coordinator, "DRAFT_FAST_FAIL_S", -1)
-    llm = _flaky(1)
+def test_45_s_cut_is_retried_only_with_45_s_of_the_90_s_left(clock):
+    llm = _scripted(clock, [(45, CUT), (30, None)])                           # 45 s used, 45 s left -> retry
+    assert coordinator._draft_call(llm, {}, None, 150).data == {"explanation": "ok"}
+    assert len(llm.calls) == 2 and llm.calls[1]["budget_s"] == 45             # the retry cannot pass 90 s
+    llm = _scripted(clock, [(46, CUT), (30, None)])                           # 44 s left -> no retry
     with pytest.raises(nightshift.NightshiftError):
-        coordinator._draft_call(llm, {}, None, 120)
+        coordinator._draft_call(llm, {}, None, 150)
+    assert len(llm.calls) == 1
+    llm = _scripted(clock, [(45, CUT), (30, None)])                           # the run gave only 60 s
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 60)
+    assert len(llm.calls) == 1 and llm.calls[0]["budget_s"] == 60
+    llm = _scripted(clock, [(45, CUT), (45, CUT), (30, None)])                # a second cut: never a third try
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 150)
+    assert len(llm.calls) == 2
+
+
+def test_fast_500_then_cut_stays_inside_90_s(clock):
+    llm = _scripted(clock, [(2.5, E500), (45, CUT), (30, None)])              # 47.5 s used, 42.5 left < 45
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 150)
+    assert len(llm.calls) == 2
+
+
+def test_slow_other_failure_is_not_retried(clock):
+    llm = _scripted(clock, [(30, "Nightshift failed after 1 attempts: network error: ConnectionError"), (20, None)])
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, 150)
     assert len(llm.calls) == 1

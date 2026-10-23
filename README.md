@@ -41,7 +41,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 24 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 23 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -74,9 +74,9 @@ One short answer card, written by code from checked data, in the user's language
 - rain, upstream gauges, MetMalaysia warnings, and every source with its age;
 - any source that was excluded, and any disagreement it could not resolve.
 
-On the full path, Nemotron adds a short explanation: **explanation shown when the model replies in time** - measured
-on 23 Oct 2026, 10 live full runs (12:29-13:29 MYT): shown in 8 of 10. It is shown only if the code checks pass and the
-Critic's AI review approved it; otherwise the card goes out without it.
+On the full path, Nemotron adds a short explanation **when the model replies in time** - not on every answer:
+explanation shown in about 7 of 10 (measured 23 Oct 2026, 21:5x-22:25 MYT, test harness on replay and SYNTHETIC cards; 10 live full runs will replace this number). It is shown only if the code checks pass and the Critic's AI review approved it; otherwise
+the card goes out without it.
 See `input_examples/` and `output_examples/` (6 real runs, each with its full trace).
 
 ## How it works
@@ -111,14 +111,15 @@ flowchart LR
 ### The agents
 | Agent | Job | Uses AI? |
 |---|---|---|
-| **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Lightning, lane `fast`) |
+| **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Super VL by name, lane `deep`) |
 | **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT DATA. Per-source circuit breaker. | No |
 | **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain. Builds the 24 h range, the confidence, and the comparison with past floods. | No |
-| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Lightning via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Measured on **23 Oct 2026, 10 live full runs (12:29-13:29 MYT): the AI review completed in 8 of 10**. Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
+| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Test harness, 23 Oct 21:5x-22:25 MYT: **the AI review answered 9 of 10, all 9 right, and both planted errors (EN, BM) were rejected**. Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never "a PPS is open" or "the road will be cut off". | No |
 
-Models are reached only through Meterless **Nightshift** (`meterless/fast`, answered by NVIDIA Nemotron 3.5 Lightning),
-never `meterless/auto` and never NVIDIA directly. Agents get data only through `run_sql()` on **Zetaris**.
+Models are reached only through Meterless **Nightshift**: both AI steps ask for NVIDIA Nemotron 3.5 Super VL **by
+name** (`nvidia/nemotron-3.5-super-vl-120b-a12b`) on the deep lane (app `veda-deep`) - never `meterless/auto`, never NVIDIA directly, and Lightning is not
+used (since 23 Oct, B-85). Agents get data only through `run_sql()` on **Zetaris**.
 
 ### When something fails (every case is a trace line; the answer still goes out)
 | What fails | What VEDA does | What the user sees |
@@ -175,8 +176,8 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 24 scenarios, 24 of 24 pass; pass^3
-  (all 3 repeat runs) 24 of 24 (23 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 23 scenarios, 23 of 23 pass; pass^3
+  (all 3 repeat runs) 23 of 23 (23 Oct, after B-85 removed the Lightning-fallback scenario).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -198,9 +199,10 @@ These are controlled tests, kept apart from the live rates above.
   provisional. They are under review by a hydrology adviser (`docs/review_pack_ariff.md`) and labelled tentative.
 - **Straight-line trend:** the 24 h range is a straight-line projection and overshoots on a steep rise (shown with
   medium confidence).
-- **AI steps are best effort:** Nemotron calls through Nightshift are cut at about 60 s and Lightning sometimes
-  returns an empty reply. Measured on 23 Oct 2026, 10 live full runs (12:29-13:29 MYT): explanation shown in 8 of 10,
-  the Critic's AI review completed in 8 of 10 (earlier the same day, before the smaller AI calls: 1 of 10). Every
+- **AI steps are best effort:** Nightshift cuts a call that sends no first byte in about 45 s, and NVIDIA sometimes
+  answers HTTP 500. With Super VL (since 23 Oct evening) the explanation is shown in about 7 of 10 (measured 23 Oct 2026, 21:5x-22:25 MYT, test harness on replay and SYNTHETIC cards; 10 live full runs will replace this number). History: on Lightning,
+  23 Oct 12:29-13:29 MYT, 10 live full runs showed the explanation in 8 of 10; the same evening Lightning stopped
+  answering in time (5-8k hidden reasoning tokens per answer) - which is why both steps moved to Super VL. Every
   answer still gets the code checks and the Zetaris re-check; without the AI review VEDA sends the code-written card
   only and says why in the trace. Recorded traces of these runs: `data/sample/live_traces/` (JPS readings not redistributed, per organiser ruling 23 Oct 2026; each trace's first line says what was redacted).
 - **Replay data:** the Nov 2024 replay uses a few real reported readings. Hours between two known readings are
@@ -240,9 +242,9 @@ a dependency vulnerability scan and a secret scan of the whole history on every 
 Live mode needs Zetaris and Meterless Nightshift running on your machine (SAMPLE_MODE needs neither).
 1. **Zetaris:** run it locally in Docker (Zetaris Participant Setup Guide). In the Zetaris UI, *Management → API
    Tokens*, create a token - the one manual step on the Zetaris side.
-2. **Nightshift:** install it, add your NVIDIA key **only in Nightshift's Providers tab** (never in `.env`), and pin
-   lane `fast` to `nvidia/nemotron-3.5-lightning-30b-a3b` with an app id `veda-fast` allowed only that lane (Nightshift
-   UI; VEDA checks every answer's served model against it).
+2. **Nightshift:** install it, add your NVIDIA key **only in Nightshift's Providers tab** (never in `.env`), and give
+   the app id `veda-deep` the deep lane only (Nightshift UI). VEDA asks for `nvidia/nemotron-3.5-super-vl-120b-a12b` by name
+   (`METERLESS_MODEL_DEEP` in `.env.example`) and checks every answer's served model against it.
 3. **`.env`** (copy `.env.example`): `ZETARIS_API_URL`, `ZETARIS_API_KEY`, `ZETARIS_ORG_ID`, `METERLESS_BASE_URL`,
    `METERLESS_RUNTIME_TOKEN`, and three `VEDA_PG_*` passwords (16+ letters / digits).
 4. **Everything else is scripted** (idempotent, safe to re-run):
@@ -281,9 +283,9 @@ Pre-existing data components (researched before 22 Oct 2026, from the planning n
 - Third-party data and its terms: see **Data sources and licences** above.
 
 ## AI and Model Usage
-1. **Models (through Meterless Nightshift):** NVIDIA **Nemotron 3.5 Lightning** (`nvidia/nemotron-3.5-lightning-30b-a3b`)
-   on lane `fast`, for two jobs - the Coordinator's short explanation, and the Critic's AI review. No other model
-   answers in VEDA (Super VL is not used). Every call's trace line names the model that **actually answered**, taken
+1. **Models (through Meterless Nightshift):** NVIDIA **Nemotron 3.5 Super VL**, requested by name (`nvidia/nemotron-3.5-super-vl-120b-a12b`) on the
+   deep lane, for two jobs - the Coordinator's short explanation, and the Critic's AI review. No other model answers in
+   VEDA; Lightning was used until 23 Oct evening and is not used now (B-85). Every call's trace line names the model that **actually answered**, taken
    from Nightshift's response (`served_model`), with its receipt id; the web page and CLI show it live.
 2. **Agent framework:** none - four agents in plain Python (`app/agents/`) driven by a small state machine
    (`app/loop.py`); FastAPI + uvicorn serve the API and the web page.
@@ -291,9 +293,9 @@ Pre-existing data components (researched before 22 Oct 2026, from the planning n
    - **Zetaris** - the data layer: every agent reads data only through `run_sql()` - Postgres `veda_pg` (gauges,
      thresholds, places, peaks, live JPS levels, replay rows), REST tables (Open-Meteo, data.gov.my) and views.
    - **Meterless Engine: World Model** (see below) - VEDA's shared world state.
-   - **Meterless Nightshift** - the only AI provider; OpenAI-format HTTP from `app/adapters/nightshift.py`, model route
-     `meterless/fast`, app id `veda-fast`, streaming.
-   - **NVIDIA** - Nemotron 3.5 Lightning, served by NVIDIA's endpoint through Nightshift.
+   - **Meterless Nightshift** - the only AI provider; OpenAI-format HTTP from `app/adapters/nightshift.py`, model
+     `nvidia/nemotron-3.5-super-vl-120b-a12b` by name, app id `veda-deep`, streaming.
+   - **NVIDIA** - Nemotron 3.5 Super VL, served by NVIDIA's endpoint through Nightshift.
 4. **AI coding tool:** Claude Code (Anthropic) inside Cursor, with the Cursor agent for 6 small delegated jobs (tests;
    logged in `docs/cursor-log.md`: 3 accepted, 1 reworked, 1 rejected, 1 not run - usage limit); planning and reviews with Claude Cowork. The team designed, reviewed, tested and
    can explain every module.
@@ -325,23 +327,32 @@ Pre-existing data components (researched before 22 Oct 2026, from the planning n
   ```
 
 ### How VEDA uses Nemotron through Meterless Nightshift
-- **Two AI roles, both Nemotron 3.5 Lightning on lane `fast`:**
+- **Two AI roles, both Nemotron 3.5 Super VL, requested by name (`nvidia/nemotron-3.5-super-vl-120b-a12b`) on the deep lane:**
   - **Explanation:** the Coordinator sends the card's key facts, as words in the user's language, and gets back 1-2
     sentences.
   - **Critic AI review:** the Critic sends the same key facts plus that explanation and asks one question: does it
     contradict, exaggerate or downplay any fact? It replies `{ok, reason}`; `ok=false` means one rewrite, then a
     re-check.
-- **Every call:** streamed, one try, a hard time limit inside the 150 s answer budget, a trace line with the model
-  that actually answered and the Nightshift receipt id.
+- **Every call:** streamed, a hard time limit inside the 150 s answer budget (draft at most 90 s, AI review at most
+  45 s), a trace line with the model that actually answered and the Nightshift receipt id. Retries: the draft is
+  retried once after a fast failure (an NVIDIA 500 in under 10 s) and once after Nightshift's 45 s no-first-byte cut,
+  but only while 45 s of its 90 s are left; the AI review retries only a fast failure.
 - **Measured (real numbers, dated):**
-  - Nightshift cut Nemotron calls at about **45 s** (HTTP 502, measured 22 Oct 2026). VEDA caps each call at **60 s**.
-  - Lightning spends hidden tokens even with reasoning off. Critic-call tests (test harness, 10 calls each,
+  - **Now (Super VL by name, test harness, 23 Oct 2026, 21:5x-22:25 MYT, 10 spaced calls each, replay and SYNTHETIC
+    cards):** draft **7 of 10** answered (9-61 s, median 27 s; 1,025-2,735 tokens), all 7 passed the code checks; 3
+    failed (2 Nightshift no-first-byte cuts at 45 s, 1 NVIDIA HTTP 500). AI review **9 of 10** answered (4-18 s), all 9
+    right; planted errors rejected: EN 1/1, BM 2/2 answered calls.
+  - Nightshift cuts a call with no first byte in about **45 s** (measured 22 Oct 2026).
+  - *History - Lightning:* Lightning spends hidden tokens even with reasoning off. Critic-call tests (test harness, 10 calls each,
     23 Oct): **200 tokens 0/10, 1000 tokens 5/10, 2000 tokens 10/10** completed.
   - The small facts-only Critic call (test harness, 23 Oct): **10/10 completed twice, 2/2 planted errors rejected
     each time** (one EN, one BM). Before it, the full-evidence Critic call completed in **1 of 10** live full runs
     (22-23 Oct).
-  - Live, 10 full runs on **23 Oct 2026, 12:29-13:29 MYT**: explanation shown in **8 of 10**, Critic AI review
-    completed in **8 of 10**.
+  - Live, 10 full runs on **23 Oct 2026, 12:29-13:29 MYT** (Lightning): explanation shown in **8 of 10**, Critic AI
+    review completed in **8 of 10**.
+  - *History - Lightning, 23 Oct 2026 evening:* it stopped answering in time - 18:58-21:50 MYT, drafts used 5,267-8,000
+    hidden tokens for 30-146 characters and took 65-137 s (past VEDA's cap), many empty; `enable_thinking=false`,
+    `/no_think`, a 2000-token budget and deleting Nightshift's memory records did not change that. Hence B-85.
 - **When the model is slow or fails:** the code-written card always goes out (it never waits on the model). An
   explanation the AI Critic has not approved is dropped. The Critic's code checks and its own Zetaris re-check run on
   every answer anyway. The trace says which step fell back and why.

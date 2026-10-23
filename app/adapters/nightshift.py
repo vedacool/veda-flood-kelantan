@@ -4,7 +4,7 @@ Every call goes to METERLESS_BASE_URL (OpenAI-compatible) and writes one trace l
 actually answered and whether Nightshift honoured the requested lane.
 
     from app.adapters import nightshift
-    r = nightshift.chat("fast", [{"role": "user", "content": "..."}], agent="Coordinator", json_mode=True)
+    r = nightshift.chat("deep", [{"role": "user", "content": "..."}], agent="Coordinator", json_mode=True)
     r.data, r.served_model, r.pinned
 
 Check from the command line:  python -m app.adapters.nightshift "Is Pasir Mas at risk?"
@@ -12,6 +12,7 @@ Check from the command line:  python -m app.adapters.nightshift "Is Pasir Mas at
 import json
 import os
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -29,7 +30,11 @@ BACKOFF_S = (2, 4, 8)          # waits before retry 1, 2, 3
 MIN_MAX_TOKENS = 200           # B-64: tiny budgets + reasoning -> empty response
 DEFAULT_MAX_TOKENS = 2000      # B-03 probe: Lightning spends ~1.1-1.4k hidden tokens even with thinking off
 TIMEOUT_S = 60                  # B-17 (Husaini 22 Oct): one call may take at most 60 s ...
-LANE_TIMEOUT_S = {"fast": 60, "deep": 100}   # ... except the deep lane (Critic), 100 s (Husaini 22 Oct night)
+LANE_TIMEOUT_S = {"fast": 60, "deep": 90}    # ... the deep lane 90 s (B-85, Husaini 23 Oct: both AI steps on deep)
+# B-85 (Husaini 23 Oct): both AI steps use Super VL BY NAME on the deep lane - `meterless/deep` can be served by
+# Lightning (B-66), and Lightning spent 5-8k hidden tokens per answer on 23 Oct evening. Lightning is not used.
+AI_LANE = "deep"
+TTFB_CUT = "ttfb_timeout"       # Nightshift's reason when no first byte came in ~45 s (meterless_detail)
 STREAM = True    # 22 Oct night, measured: Nightshift's ~45 s cut-off is a time-to-FIRST-byte limit; streamed answers
                  # start early and finish (draft 3/3, small Critic 3/3) where non-streamed ones were cut (2/3, 0/3)
 _sleep = time.sleep            # patched in tests
@@ -60,7 +65,8 @@ def lane_model(lane):
     """Model name sent to Nightshift for a lane (from env). Refuses unknown lanes and anything `auto`."""
     if lane not in LANES:
         raise ValueError(f"unknown lane {lane!r}; use one of {LANES}")
-    model = os.getenv(f"METERLESS_MODEL_{lane.upper()}", f"meterless/{lane}").strip()  # Setup Guide 4.6: pin a meterless/* route
+    default = EXPECTED_MODEL["deep"] if lane == "deep" else f"meterless/{lane}"     # B-85: deep = Super VL by name
+    model = os.getenv(f"METERLESS_MODEL_{lane.upper()}", default).strip()
     if "auto" in model.lower():
         raise ValueError(f"METERLESS_MODEL_{lane.upper()}={model!r} is not allowed - never route through auto")
     return model
@@ -120,14 +126,38 @@ def _post(base, token, body, app, timeout=TIMEOUT_S):
     return requests.post(f"{base}/chat/completions", headers=headers, json=body, timeout=timeout, **extra)
 
 
+def is_ttfb_cut(error):
+    """True when Nightshift cut the call because no first byte came in time (~45 s)."""
+    return TTFB_CUT in str(error)
+
+
+def _lines_until(r, stop_at):
+    """The stream's lines up to [DONE] or an error chunk; past stop_at -> requests.Timeout."""
+    for line in r.iter_lines(decode_unicode=True):
+        if time.monotonic() > stop_at:
+            raise requests.Timeout("streamed answer took longer than the time allowed")
+        yield line
+        if line and line.startswith("data:") and (line[5:].strip() == "[DONE]" or '"error"' in line):
+            return
+
+
 def _read_stream(r, stop_at):
     """A streamed answer assembled into the usual payload shape (content, served model, meterless receipt, usage).
-    Raises requests.Timeout when the whole stream runs past stop_at - the hard total limit for one call."""
+    Raises requests.Timeout when the whole stream runs past stop_at - the hard total limit for one call. A watchdog
+    closes the connection at stop_at, so a stream that goes silent is cut on time too (audit A-P2-3: it used to be
+    cut only when the next line arrived)."""
     parts, model, meta, usage, err = [], None, {}, {}, None
+    watchdog = threading.Timer(max(0.0, stop_at - time.monotonic()), r.close)
+    watchdog.daemon = True
+    watchdog.start()
     try:
-        for line in r.iter_lines(decode_unicode=True):
-            if time.monotonic() > stop_at:
-                raise requests.Timeout("streamed answer took longer than the time allowed")
+        try:
+            lines = list(_lines_until(r, stop_at))
+        except Exception:                                   # noqa: BLE001 - the watchdog closed the connection
+            if time.monotonic() >= stop_at:
+                raise requests.Timeout("streamed answer took longer than the time allowed") from None
+            raise
+        for line in lines:
             if not line or not line.startswith("data:"):
                 continue
             data = line[5:].strip()
@@ -149,6 +179,7 @@ def _read_stream(r, stop_at):
             for c in chunk.get("choices") or []:
                 parts.append(((c or {}).get("delta") or {}).get("content") or "")
     finally:
+        watchdog.cancel()
         r.close()
     if err is not None:
         return {"error": err if isinstance(err, dict) else {"message": str(err)}}
@@ -331,13 +362,13 @@ PLAN_SYSTEM = ("You are the Coordinator of VEDA, a flood-risk assistant for Kela
 
 
 def main(argv):
-    """CLI check: send a Coordinator-style planning prompt to the fast lane and print the plan."""
+    """CLI check: send a Coordinator-style planning prompt to the AI lane (deep, Super VL) and print the plan."""
     from dotenv import load_dotenv
     load_dotenv(trace.ROOT / ".env")
     question = " ".join(argv[1:]) or "Is Pasir Mas at risk of flooding tomorrow?"
     trace.start_run(question)
     try:
-        r = chat("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
+        r = chat(AI_LANE, [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
                  agent="Coordinator", json_mode=True, target_agent="Data & Reconciler")
     except NightshiftError as e:
         trace.end_run("failed", str(e))

@@ -25,9 +25,10 @@ def test_agents_and_models_match_the_readme():
     for a in META["agents"]:
         assert f"**{a['name']}** (`{a['files'][0]}`" in README, a["name"]
         if a["model"]:
-            assert a["model"] in README and "meterless/fast" in a["via"]
+            assert a["model"] in README and "deep lane" in a["via"] and "by name" in a["via"]
     assert {a["name"] for a in META["agents"] if a["model"]} == {"Coordinator", "Critic"}
-    assert META["sponsors"]["nvidia"]["models"] == ["nvidia/nemotron-3.5-lightning-30b-a3b"]
+    assert META["sponsors"]["nvidia"]["models"] == ["nvidia/nemotron-3.5-super-vl-120b-a12b"]      # B-85
+    assert "lightning-30b" not in json.dumps(META)
     assert "meterless/deep" not in json.dumps(META) and "meterless/auto" not in json.dumps(META)
 
 

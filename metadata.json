@@ -16,10 +16,10 @@
     "members": ["Mohd Husaini Mohd Fauzi", "Muhammad Ariff Baharudin"]
   },
   "agents": [
-    {"name": "Coordinator", "files": ["app/agents/coordinator.py", "app/router.py"], "role": "Finds the place, picks the answer language, decides quick or full and writes the plan; writes the short explanation on the full path.", "uses": "AI for the explanation only; plan and routing in code", "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "via": "Meterless Nightshift, meterless/fast"},
+    {"name": "Coordinator", "files": ["app/agents/coordinator.py", "app/router.py"], "role": "Finds the place, picks the answer language, decides quick or full and writes the plan; writes the short explanation on the full path.", "uses": "AI for the explanation only; plan and routing in code", "model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "via": "Meterless Nightshift, deep lane, model requested by name (app veda-deep)"},
     {"name": "Data & Reconciler", "files": ["app/agents/data_agent.py"], "role": "Fetches every source through Zetaris in parallel, checks freshness and plausibility, reconciles disagreeing sources, heals (backup gauge, last reading, INSUFFICIENT DATA), circuit breaker per source.", "uses": "code", "model": null, "via": null},
     {"name": "Forecast", "files": ["app/agents/forecast_agent.py"], "role": "Applies the verdict rules to the controlling gauges, upstream gauges and rain; builds the 24 h outlook, the confidence and the comparison with past floods.", "uses": "code", "model": null, "via": null},
-    {"name": "Critic", "files": ["app/agents/critic.py"], "role": "Code checks and a Zetaris re-check on every answer; a small AI review of the explanation against the card's key facts when the model replies in time.", "uses": "code + AI review", "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "via": "Meterless Nightshift, meterless/fast"},
+    {"name": "Critic", "files": ["app/agents/critic.py"], "role": "Code checks and a Zetaris re-check on every answer; a small AI review of the explanation against the card's key facts when the model replies in time.", "uses": "code + AI review", "model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "via": "Meterless Nightshift, deep lane, model requested by name (app veda-deep)"},
     {"name": "Safety gate", "files": ["app/safety.py"], "role": "Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never 'a PPS is open' or 'the road will be cut off'.", "uses": "code", "model": null, "via": null}
   ],
   "agent_framework": "none - plain Python agents driven by a small state machine (app/loop.py)",
@@ -35,13 +35,13 @@
       "tests": ["python -m pytest tests/conformance -v", "python -m pytest tests/test_world_model_engine.py -v"]
     },
     "meterless_nightshift": {
-      "role": "The only AI provider: OpenAI-format HTTP, model route meterless/fast, app id veda-fast, streaming; every call's trace line names the model that actually answered and the Nightshift receipt id.",
+      "role": "The only AI provider: OpenAI-format HTTP, model nvidia/nemotron-3.5-super-vl-120b-a12b requested by name on the deep lane, app id veda-deep, streaming; every call's trace line names the model that actually answered and the Nightshift receipt id.",
       "code": ["app/adapters/nightshift.py"],
-      "route": "meterless/fast"
+      "route": "deep lane, model by name: nvidia/nemotron-3.5-super-vl-120b-a12b"
     },
     "nvidia": {
-      "models": ["nvidia/nemotron-3.5-lightning-30b-a3b"],
-      "role": "Nemotron 3.5 Lightning writes the explanation and does the Critic's AI review, served through Nightshift; no other model answers in VEDA."
+      "models": ["nvidia/nemotron-3.5-super-vl-120b-a12b"],
+      "role": "Nemotron 3.5 Super VL writes the explanation and does the Critic's AI review, served through Nightshift; no other model answers in VEDA (Lightning was used until 23 Oct evening, B-85)."
     },
     "cursor": {
       "role": "AI coding tool: Claude Code (Anthropic) inside Cursor, with the Cursor agent for 6 small delegated jobs (tests; docs/cursor-log.md: 3 accepted, 1 reworked, 1 rejected, 1 not run)."

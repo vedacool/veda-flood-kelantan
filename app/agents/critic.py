@@ -17,7 +17,6 @@ review is code + Zetaris only, traced as 'fallback'. The loop allows at most MAX
 Reads the forecast and source status from the World Model; writes its review (and a confirmed stale source) back.
 """
 import json
-import os
 import re
 import time
 from datetime import datetime, timezone
@@ -31,14 +30,15 @@ from app.engines.world_model.veda_ingest import place_id
 
 AGENT = "Critic"
 MAX_REJECTIONS = 2
-FAST_FALLBACK_MIN_S = 20         # the fast-lane fallback review needs at least this much time left
+
+
+REVIEW_CAP_S = 45               # B-85 (Husaini 23 Oct): the AI review takes at most 45 s, retries included
 
 
 def critic_lane():
-    """Which lane the Critic reviews on first: VEDA_CRITIC_LANE = fast (default since 23 Oct: the deep lane failed all
-    12 live attempts - Nightshift's 45 s cut-off / NVIDIA 500s) or deep (Super VL; falls back to fast if it fails)."""
-    lane = os.getenv("VEDA_CRITIC_LANE", "fast").strip().lower()
-    return lane if lane in ("fast", "deep") else "fast"
+    """The lane of the Critic's AI review: the AI lane (deep, Super VL by name - B-85, Husaini 23 Oct). Lightning is
+    not used, so there is no fast-lane fallback: a failed review leaves the code + Zetaris checks."""
+    return nightshift.AI_LANE
 PROBLEM_TYPES = ("unsupported", "wrong_verdict", "unsafe", "missing_level_name", "missing_confidence",
                  "missing_stale_note", "missing_conflict", "conflict", "unclear", "other")
 STATION_KEY = re.compile(r"^[A-Za-z0-9_]+$")
@@ -278,7 +278,7 @@ SMALL_SYSTEM = ("You check one short explanation that a flood assistant for Kela
                 "were written by code from verified data. Does the explanation contradict, exaggerate or downplay any "
                 "fact? The explanation may be in English or Malay. Reply JSON only: {\"ok\": true or false, "
                 "\"reason\": \"at most 20 words\"}")
-SMALL_MAX_TOKENS = 2000
+SMALL_MAX_TOKENS = 4096          # B-85: measured at 4096 on Super VL (reviews used 205-727 tokens, 23 Oct)
 FAST_FAIL_S, MAX_RETRIES = 10, 2      # retry only a failure that came back fast; a ~45 s cut-off is never retried
 
 
@@ -381,7 +381,8 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     else:
         first = critic_lane()
         try:
-            remaining = None if budget_s is None else max(1.0, budget_s - (time.monotonic() - t_start))
+            remaining = REVIEW_CAP_S if budget_s is None else max(1.0, min(REVIEW_CAP_S,
+                                                                          budget_s - (time.monotonic() - t_start)))
             decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm,
                                                           remaining, lane=first,   # re-query time already used
                                                           forecast=forecast)
@@ -390,19 +391,6 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         except nightshift.NightshiftError as e:
             decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
             status_note = f"Nightshift unavailable ({e}) -> review by code + Zetaris only"
-            left = None if budget_s is None else budget_s - (time.monotonic() - t_start)
-            if first == "deep" and (left is None or left >= FAST_FALLBACK_MIN_S):
-                # Husaini 22 Oct night: the deep lane is unreliable on NVIDIA's side -> one review on the fast lane
-                trace.step(AGENT, "critic.fallback", input_summary=f"deep lane failed: {str(e)[:120]}",
-                           output_summary="one review on the fast lane (Nemotron Lightning)", status="fallback",
-                           decision=f"{'unlimited' if left is None else f'{left:.0f} s'} left -> fast-lane review")
-                try:
-                    decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck,
-                                                                  llm, left, lane="fast", forecast=forecast)
-                    checked_by.append("model")
-                    critic_lane_used, status_note = "fast", "deep lane failed -> reviewed on the fast lane"
-                except nightshift.NightshiftError as e2:
-                    status_note = f"deep and fast lanes unavailable ({e2}) -> review by code + Zetaris only"
     if code_problems and decision == "approve":
         decision = "reject"
         status_note = (status_note + "; " if status_note else "") + "model approved, but code checks found problems"

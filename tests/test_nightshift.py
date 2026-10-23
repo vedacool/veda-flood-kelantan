@@ -7,6 +7,7 @@ import time
 import os
 
 import pytest
+import requests
 
 from app import trace
 from app.adapters import nightshift
@@ -346,3 +347,29 @@ def test_non_stream_reply_still_works_when_stream_was_asked(fake):
     fake["queue"].append(FakeResponse(200, ok_payload()))
     r = nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator")
     assert r.text == "hello"
+
+
+# -- B-85 / audit A-P2-3: a stream that goes silent is cut at its limit, not when (if ever) the next line arrives --
+def test_silent_stream_is_cut_on_time():
+    import threading
+    closed = threading.Event()
+
+    class Silent:
+        def iter_lines(self, decode_unicode=True):
+            yield 'data: {"choices": [{"delta": {"content": "Sung"}}]}'
+            closed.wait(5)                                  # silent until the watchdog closes the connection
+            raise requests.ConnectionError("connection closed")
+
+        def close(self):
+            closed.set()
+    t0 = time.monotonic()
+    with pytest.raises(requests.Timeout):
+        nightshift._read_stream(Silent(), time.monotonic() + 0.3)
+    assert time.monotonic() - t0 < 1.5
+
+
+def test_deep_lane_asks_for_super_vl_by_name(monkeypatch):
+    monkeypatch.delenv("METERLESS_MODEL_DEEP", raising=False)
+    assert nightshift.lane_model("deep") == "nvidia/nemotron-3.5-super-vl-120b-a12b" == nightshift.expected_model("deep")
+    assert nightshift.AI_LANE == "deep" and nightshift.LANE_TIMEOUT_S["deep"] == 90
+    assert nightshift.is_ttfb_cut("HTTP 200: ttfb_timeout:nvidia/x") and not nightshift.is_ttfb_cut("nvidia_500")

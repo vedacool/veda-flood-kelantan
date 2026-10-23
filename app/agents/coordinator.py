@@ -27,7 +27,7 @@ USER_TYPES = ("resident", "family_far_away", "school", "unknown")
 EFFORTS = ("quick", "full")
 LANGUAGES = ("en", "ms")
 QUICK_SOURCES = ["jps_levels", "mygov_forecast"]
-MAX_TOKENS = 8000          # Husaini 23 Oct: 4000 -> 0/6 live (empty), 8000 -> 4/5 in ~40-54 s; no retry
+MAX_TOKENS = 4096          # B-85: Super VL drafts used 1,025-2,735 tokens (23 Oct; Lightning needed 8000 and still ran dry)
 SAFETY = {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
     "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
@@ -137,7 +137,7 @@ def plan(question, world=None, llm=None, budget_s=None, resolved=None, effort=No
     llm = llm or nightshift.chat
     fixes, planned_by, why = [], "llm", None
     try:
-        r = llm("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
+        r = llm(nightshift.AI_LANE, [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
                 agent=AGENT, json_mode=True, target_agent="Data & Reconciler", max_tokens=MAX_TOKENS, budget_s=budget_s)
         raw = r.data
     except nightshift.NightshiftError as e:
@@ -269,31 +269,38 @@ def draft_problem(text, facts):
     return None
 
 
-DRAFT_TRIES = 1                 # Husaini 23 Oct (later): at 8000 tokens a draft takes ~50 s - no retry
-DRAFT_FAST_FAIL_S = 15          # (kept for DRAFT_TRIES > 1: retry only a failure this fast ...)
-DRAFT_RETRY_MIN_LEFT_S = 70     # ... and the wording rewrite only with this much budget left (draft ~50 s + Critic)
+DRAFT_CAP_S = 90               # B-85 (Husaini 23 Oct): the draft never takes more than 90 s, retries included
+DRAFT_FAST_FAIL_S = 10          # an NVIDIA HTTP 500 comes back in ~2.5 s -> one retry for a failure this fast ...
+DRAFT_TTFB_RETRY_MIN_S = 45     # ... and one retry after Nightshift's ~45 s no-first-byte cut, only with >= 45 s left
+DRAFT_MIN_TRY_S = 10            # never start a try with less than this left
 
 
 def _draft_call(llm, request, feedback, budget_s):
-    """One Nemotron draft call, retried once on a fast failure (an empty reply or error within DRAFT_FAST_FAIL_S)
-    when enough budget is left; otherwise the NightshiftError goes to the caller (card without an explanation)."""
+    """The Nemotron draft call (Super VL on the deep lane), at most DRAFT_CAP_S in all. Retries (B-85, Husaini 23 Oct):
+    once after a fast failure (< DRAFT_FAST_FAIL_S, e.g. NVIDIA HTTP 500), and once after Nightshift's ~45 s
+    no-first-byte cut - but only while >= DRAFT_TTFB_RETRY_MIN_S of the draft's time is left, so a retry never
+    pushes the draft past its cap. Otherwise the NightshiftError goes to the caller (card without an explanation)."""
     msgs = [{"role": "system", "content": DRAFT_SYSTEM + (REVISE_NOTE if feedback else "")},
             {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
-    start = time.monotonic()
-    for attempt in range(1, DRAFT_TRIES + 1):
+    cap = DRAFT_CAP_S if budget_s is None else min(DRAFT_CAP_S, budget_s)
+    start, used = time.monotonic(), set()
+    while True:
         t = time.monotonic()
-        left = None if budget_s is None else budget_s - (t - start)
         try:
-            return llm("fast", msgs, agent=AGENT, json_mode=True, target_agent="Critic", max_tokens=MAX_TOKENS,
-                       budget_s=left, max_attempts=1)
+            return llm(nightshift.AI_LANE, msgs, agent=AGENT, json_mode=True, target_agent="Critic",
+                       max_tokens=MAX_TOKENS, budget_s=cap - (t - start), max_attempts=1)
         except nightshift.NightshiftError as e:
-            took = time.monotonic() - t
-            room = budget_s is None or budget_s - (time.monotonic() - start) >= DRAFT_RETRY_MIN_LEFT_S
-            if attempt == DRAFT_TRIES or took >= DRAFT_FAST_FAIL_S or not room:
+            took, left = time.monotonic() - t, cap - (time.monotonic() - start)
+            kind = ("fast" if took < DRAFT_FAST_FAIL_S else
+                    "ttfb" if nightshift.is_ttfb_cut(e) else None)
+            need = DRAFT_TTFB_RETRY_MIN_S if kind == "ttfb" else DRAFT_MIN_TRY_S
+            if kind is None or kind in used or left < need:
                 raise
+            used.add(kind)
+            why = (f"failed fast (< {DRAFT_FAST_FAIL_S} s)" if kind == "fast" else
+                   f"cut by Nightshift (no first byte) and {left:.0f} s of {cap:.0f} s left")
             trace.step(AGENT, "draft.retry", input_summary=f"draft failed after {took:.0f} s",
-                       output_summary=str(e)[:150], status="retrying",
-                       decision=f"failed fast (< {DRAFT_FAST_FAIL_S} s) and enough time left -> one more try")
+                       output_summary=str(e)[:150], status="retrying", decision=f"{why} -> one more try")
 
 
 def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=None, feedback=None, previous=None,

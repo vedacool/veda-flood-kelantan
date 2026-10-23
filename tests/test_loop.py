@@ -73,8 +73,8 @@ def test_full_path_runs_everything(offline, force):
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     actions = [x["action"] for x in lines(r)]
     assert {"data.cross_check", "data.reconcile", "critic.requery"} <= set(actions)
-    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["fast", "fast"]
-    assert r["reviews"][0]["critic_lane"] == "fast"
+    assert r["reviews"][0]["checked_by"] == ["code", "zetaris", "model"] and llm.calls == ["deep", "deep"]
+    assert r["reviews"][0]["critic_lane"] == "deep"
     assert [x for x in lines(r) if x["action"] == "route"][0]["decision"] == "full: test: forced full"
 
 
@@ -85,7 +85,7 @@ def test_full_path_plan_is_written_by_code(offline, force):
     plan = [x for x in lines(r) if x["action"] == "plan"][0]
     assert r["plan"]["planned_by"] == "code" and r["plan"]["effort"] == "full" and plan["source"] == "code"
     assert r["plan"]["user_type"] == "family_far_away" and len(r["plan"]["sources"]) == 4
-    assert llm.calls == ["fast", "fast"]
+    assert llm.calls == ["deep", "deep"]                  # B-85: explanation + Critic on Super VL
 
 
 def test_question_words_alone_send_it_down_the_full_path(offline, force):
@@ -161,7 +161,8 @@ def test_gather_without_prefetch_still_works(offline):
 
 def test_timeouts_follow_the_plan_change_log():
     assert nightshift.TIMEOUT_S == 60 and zetaris.TIMEOUT_S == 30
-    assert nightshift.LANE_TIMEOUT_S == {"fast": 60, "deep": 100} and loop.FINAL_RESERVE_S == 10
+    assert nightshift.LANE_TIMEOUT_S == {"fast": 60, "deep": 90} and loop.FINAL_RESERVE_S == 10
+    assert coordinator.DRAFT_CAP_S == 90 and critic.REVIEW_CAP_S == 45                     # B-85, Husaini 23 Oct
     assert loop.BUDGET_S == {"quick": 30, "full": 150}
 
 

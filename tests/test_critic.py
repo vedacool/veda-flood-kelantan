@@ -237,7 +237,7 @@ def test_two_rejections_give_the_low_confidence_code_answer(offline):
     assert "approved" not in r["answer"]
 
 
-# -- fast-lane fallback (decided 22 Oct night, added 23 Oct after the deep lane failed 0/3 twice) ---------------
+# -- B-85: the AI review on Super VL only; no Lightning fallback -------------------------------------------
 def lanes_llm(deep_fails=True, fast_fails=False):
     calls = []
 
@@ -250,41 +250,28 @@ def lanes_llm(deep_fails=True, fast_fails=False):
     return llm
 
 
-@pytest.fixture
-def deep_first(monkeypatch):
-    monkeypatch.setenv("VEDA_CRITIC_LANE", "deep")
+def test_critic_reviews_on_super_vl_only(run, quiet_zetaris, monkeypatch):
+    """B-85: the AI review runs on the deep lane (Super VL by name); VEDA_CRITIC_LANE no longer picks Lightning."""
+    monkeypatch.setenv("VEDA_CRITIC_LANE", "fast")
+    llm = lanes_llm(deep_fails=False)
+    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
+    assert llm.calls == ["deep"] and r["critic_lane"] == "deep" and "model" in r["checked_by"]
 
 
-def test_fast_lane_is_the_default_critic_lane(run, quiet_zetaris, monkeypatch):
-    monkeypatch.delenv("VEDA_CRITIC_LANE", raising=False)
+def test_failed_review_means_code_and_zetaris_only_never_lightning(run, quiet_zetaris):
     llm = lanes_llm(deep_fails=True)
     r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
-    assert llm.calls == ["fast"] and r["critic_lane"] == "fast" and "model" in r["checked_by"]
+    assert llm.calls == ["deep"] and r["checked_by"] == ["code", "zetaris"] and r["critic_lane"] is None
 
 
-@pytest.mark.parametrize("value, lane", [("deep", "deep"), ("FAST", "fast"), ("nonsense", "fast"), ("", "fast")])
-def test_critic_lane_setting(monkeypatch, value, lane):
-    monkeypatch.setenv("VEDA_CRITIC_LANE", value)
-    assert critic.critic_lane() == lane
+def test_review_is_capped_at_45_s(run, quiet_zetaris):
+    seen = []
 
-
-def test_deep_failure_falls_back_to_one_fast_lane_review(run, quiet_zetaris, deep_first):
-    llm = lanes_llm()
-    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
-    assert llm.calls == ["deep", "fast"] and r["critic_lane"] == "fast" and "model" in r["checked_by"]
-    assert r["decision"] == "approve"
-
-
-def test_no_fast_fallback_without_enough_time(run, quiet_zetaris, deep_first):
-    llm = lanes_llm()
-    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=5)
-    assert llm.calls == ["deep"] and r["critic_lane"] is None and "model" not in r["checked_by"]
-
-
-def test_both_lanes_down_means_code_and_zetaris_only(run, quiet_zetaris, deep_first):
-    llm = lanes_llm(fast_fails=True)
-    r = critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
-    assert llm.calls == ["deep", "fast"] and r["checked_by"] == ["code", "zetaris"]
+    def llm(lane, messages, agent, **kw):
+        seen.append(kw.get("budget_s"))
+        return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": ""}, text="")
+    critic.review("q", PLAN, EVIDENCE, FORECAST, {"text": GOOD, "language": "en"}, llm=llm, budget_s=120)
+    assert seen and seen[0] <= critic.REVIEW_CAP_S == 45
 
 
 # -- the small facts-only AI review (Husaini 23 Oct) -----------------------------------------------------------
@@ -324,7 +311,7 @@ def test_small_review_sends_only_key_facts_and_the_explanation():
     llm = small_llm(["ok"])
     assert critic._small_review(small_answer(), FORECAST, llm, 60, "fast") == ("approve", [], "")
     req = llm.seen[0]
-    assert req["system"] == critic.SMALL_SYSTEM and req["kw"]["max_tokens"] == 2000 and not req["kw"]["thinking"]
+    assert req["system"] == critic.SMALL_SYSTEM and req["kw"]["max_tokens"] == 4096 and not req["kw"]["thinking"]
     body = json.loads(req["user"])
     assert set(body) == {"FACTS", "EXPLANATION"} and body["EXPLANATION"] == EXPL
     assert body["FACTS"]["verdict"] == "WATCH" and "question" not in req["user"]

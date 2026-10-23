@@ -19,10 +19,10 @@ Track: **Solving Fragmented Intelligence** (GenAI Works Open Agent Hackathon 202
 ## 3. Agents (4) — a loop, not a pipeline
 | Agent | Kind | Model | Job |
 |---|---|---|---|
-| Coordinator | LLM | Nightshift lane `fast` (Nemotron 3.5 Lightning) | Tag intent + user type + area → write a **plan** (sources, methods, effort) → delegate → draft answer → revise after Critic |
+| Coordinator | LLM | Nightshift lane `deep`, Nemotron 3.5 Super VL by name (B-85) | Tag intent + user type + area → write a **plan** (sources, methods, effort) → delegate → draft answer → revise after Critic |
 | Data & Reconciler agent | code | — | Fetch **only via Zetaris SQL**; health-check each source (fresh / schema / plausible / agreement); self-healing ladder; write facts to World Model |
 | Forecast agent | code | — | Trend, upstream→downstream lag, "bigger than the 2014 flood?", verdict rules → range + confidence |
-| Critic | code + LLM | code checks + own Zetaris re-check on every answer; AI review = a small facts-only call on Nightshift lane `fast` (Nemotron 3.5 Lightning) when the model replies in time (23 Oct) | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
+| Critic | code + LLM | code checks + own Zetaris re-check on every answer; AI review = a small facts-only call on Nightshift lane `deep` (Nemotron 3.5 Super VL by name, B-85) when the model replies in time | Does evidence support the draft? stale/conflicting data flagged? advice safe? Re-query Zetaris to verify. May **reject** (max 2), then answer becomes low-confidence / INSUFFICIENT_DATA |
 
 Caps: Critic ≤ 2 rejections · bounded retries with backoff (Nightshift 3, Zetaris 2) · per-call timeouts Zetaris 30 s / Nightshift 60 s · answer budget **quick ≤ 30 s / full ≤ 150 s** (replay 240 s) · 10-minute hard deadline · temperature 0.2 · agents exchange structured JSON, not chat history.
 
@@ -31,7 +31,7 @@ Loop: plain Python state machine `plan → gather → forecast → draft → cri
 ## 4. Sponsor technology (all load-bearing)
 - **Zetaris** — the only data path. Lightning REST tables (`om_rain`, `mygov_forecast`, `mygov_warning`, `mygov_flood`) + Postgres registered as a datasource (`stations`, `station_links`, `river_levels`, `places`, `historic_peaks`) + views (`place_risk_inputs` and friends). One tool: `run_sql()`. Sources are World Model contexts with per-run health records (no `source_registry` table). **Agents never create or replace views** (setup-only; guard test) — growth = new REST tables + World Model candidates.
 - **Meterless World Model engine** — shared state: entities (stations, rivers, places, districts, sources), hand-checked relations (`controlled_by`, `also_controlled_by`, `sentinel_for`, `upstream_of`, `travel_time` with min–max lag, `on_river`, `in_district` — not nearest-distance), timeline facts, `stale`/`conflict` records. Conflicts: **reliability first, then recency**; unresolved ones go to `conflicts_unresolved`. Every agent reads/writes it. Conformance tests + a feature test.
-- **Meterless Nightshift** — the only AI provider: `http://127.0.0.1:8088/v1`; model routes `meterless/fast` and `meterless/deep` (Setup Guide 4.6: pin a `meterless/*` route), each lane with its own app name (`veda-fast`, `veda-deep`) pinned to its own lane; never `meterless/auto`. **No direct NVIDIA calls, not even as a fallback.**
+- **Meterless Nightshift** — the only AI provider: `http://127.0.0.1:8088/v1`; both AI steps ask for `nvidia/nemotron-3.5-super-vl-120b-a12b` **by name** on the deep lane with app `veda-deep` (B-85, 23 Oct: `meterless/deep` alone can be served by Lightning, and Lightning is not used); the served model is checked on every call; never `meterless/auto`. **No direct NVIDIA calls, not even as a fallback.**
 - **NVIDIA Nemotron** — powers both LLM agents through Nightshift.
 - **Cursor** — the IDE. Claude Code (inside Cursor) leads; the Cursor CLI agent takes small delegated jobs, logged in `docs/cursor-log.md`.
 
