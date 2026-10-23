@@ -38,8 +38,17 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
 - [x] JPS credit on the page and in the README: "Data: Jabatan Pengairan dan Saliran (JPS) Malaysia,
       publicinfobanjir.water.gov.my, used for non-commercial public-safety research". The collector stays at most once
       per 15 min.
-- [ ] JPS written consent requested. The JPS website's copyright notice asks for it before reproducing content
-      (`docs/OPEN.md` W-7).
+- [x] No JPS readings in the repo (B-75): fixtures from JPS tables hold SYNTHETIC values, the JPS page snapshot is
+      gone, recorded live traces are redacted; `tests/test_no_jps_readings.py` guards it.
+- [ ] **History clean** (B-75, Husaini's option b) - just before going public, in this order:
+      1. a private local **mirror backup** (`git clone --mirror`), kept on this machine and never pushed;
+      2. `git filter-repo` removing the JPS files from every commit (the JPS page snapshot, the original fixtures,
+         examples and traces), **keeping original commit dates and authors**;
+      3. CI green on the rewritten history; **one** force push;
+      4. a history search (`git log -p --all | grep` for the removed files and known reading values) finds nothing;
+      5. record it in `docs/DECISIONS.md`.
+- [ ] The repo stays private until B-75 steps 3-4 and the history clean are done.
+- [ ] JPS written consent - only if VEDA continues after the hackathon (`docs/OPEN.md` W-7).
 
 ## Running it
 - [x] Tests run on every push (CI); nothing deploys automatically, so there is no deploy gate to bypass.

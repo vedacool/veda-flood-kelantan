@@ -11,7 +11,9 @@ is traced to its source and its age.
 > Emergency: 999 · APM (Civil Defence): 991.
 
 ## Quick start for judges (offline, no keys, about 2 minutes)
-SAMPLE_MODE runs the real agent logic on recorded data, with no network, no `.env` and no API keys.
+SAMPLE_MODE runs the real agent logic offline, with no network, no `.env` and no API keys, on **scenes**: the Nov 2024
+replay (readings reported in the news, each cited) or a **SYNTHETIC** scene (made-up readings, labelled everywhere).
+A question without a scene runs on the SYNTHETIC calm day.
 
 **Docker:**
 ```
@@ -36,7 +38,8 @@ python -m pytest -q                          # offline test suite
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
 
 **Flood replay:** choose *REPLAY · Nov 2024* on the page, or use `--replay nov2024`. It replays the November 2024
-Rantau Panjang flood with real JPS readings reported at the time. Every data source is cut at the replay time, so
+Rantau Panjang flood with the JPS readings that news reports quoted at the time (each cited).
+**SYNTHETIC scenes:** `--replay synthetic_rising` or `--replay synthetic_calm` (made-up readings, labelled SYNTHETIC). Every data source is cut at the replay time, so
 nothing from later is ever used. There are three scenes:
 
 | Scene | What VEDA says |
@@ -100,12 +103,18 @@ Models are reached only through Meterless **Nightshift** (`meterless/fast`, `met
 `meterless/auto` and never NVIDIA directly. Agents get data only through `run_sql()` on **Zetaris**.
 
 ## Data sources and licences
-| Data | Source | Licence / terms |
+Every third-party source VEDA uses, its licence or terms, and how VEDA uses it. **No JPS readings are stored in this
+repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 replay or on SYNTHETIC scenes.
+
+| Source | Licence / terms | How VEDA uses it |
 |---|---|---|
-| River levels and JPS thresholds, Kelantan | [JPS Public Infobanjir](https://publicinfobanjir.water.gov.my/) — collected at most once every 15 min into a local Postgres, identified by our User-Agent | **Data: Jabatan Pengairan dan Saliran (JPS) Malaysia, publicinfobanjir.water.gov.my, used for non-commercial public-safety research.** Credited on the page and here. Infobanjir publishes no terms of its own and its `robots.txt` does not disallow these pages; the JPS website's copyright notice (water.gov.my, 2017) asks for written consent to reproduce its content. VEDA is a non-commercial hackathon prototype; asking JPS for that consent is an open item (`docs/OPEN.md`, W-7) |
-| District forecast, MET warnings, flood-warning feed | [data.gov.my](https://data.gov.my/) open API (MetMalaysia, JPS) | Malaysian government open data; credited. The `/flood-warning` feed has been frozen since 23 Feb 2024; VEDA detects this and excludes it |
-| Rain forecast and the Nov 2024 rain archive | [Open-Meteo](https://open-meteo.com/) forecast and archive APIs | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); credited on the page, named on every card |
-| Historic peaks, Nov 2024 replay readings | JPS figures as reported by Bernama, Kosmo and JPS reports | Each row stores its source URL and quote (`data/historic_peaks.csv`, `data/replay/nov2024_anchors.csv`) |
+| **JPS Public Infobanjir** river levels, Kelantan ([publicinfobanjir.water.gov.my](https://publicinfobanjir.water.gov.my/)) — Jabatan Pengairan dan Saliran (JPS) Malaysia | © JPS Malaysia; fetched live at runtime only, not redistributed; written consent to be requested if VEDA continues after the hackathon. (Infobanjir publishes no terms of its own; the JPS website's copyright notice asks for written consent to reproduce its content.) | Live mode only: the collector reads the public page at most once every 15 min, on the user's own machine, into a local Postgres that is never committed. Credited on the page: "Data: Jabatan Pengairan dan Saliran (JPS) Malaysia, publicinfobanjir.water.gov.my, used for non-commercial public-safety research." |
+| **JPS thresholds** (Normal / Alert / Warning / Danger per gauge) | Cited facts, © JPS Malaysia; source: the Infobanjir page, read 22 Oct 2026 (one row per gauge in `data/stations_mapping.csv`) | Decide the JPS level shown on the card and the verdict rules |
+| **Historic peaks** incl. **Dec 2014** (`data/historic_peaks.csv`) | Cited facts; each row names its source and URL (JPS "Laporan Catatan Aras Air Tertinggi 2014-2015" via USM CGSS, news reports) | The "compared with 2014" line and the record peaks on the card |
+| **Nov 2024 replay readings** (`data/replay/nov2024_anchors.csv`) | Facts as reported by Bernama and Kosmo (citing JPS); each row stores its source URL and the quoted sentence | The REPLAY · Nov 2024 scenes; hours between two reported readings are reconstructed on a straight line and labelled |
+| **SYNTHETIC scenes** (`data/replay/synthetic_anchors.csv`) | Made up by the team for the offline demo (MIT, like the code) | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
+| **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures keep the recorded open-data rows |
+| **Open-Meteo** forecast and historical archive ([open-meteo.com](https://open-meteo.com/)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Rain forecast (live) and real archive rain for every scene, shown with its date; credited on the page and named on every card |
 
 **VEDA's code** is released under the [MIT License](LICENSE), © 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad
 Ariff Baharudin). The data above keeps its own source's terms.
@@ -132,7 +141,7 @@ These are controlled tests, kept apart from the live rates above.
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 20 scenarios, 20 of 20 pass; pass^3
-  (all 3 repeat runs) 20 of 20.** They run offline on recorded data with stand-in models, so they test VEDA's own
+  (all 3 repeat runs) 20 of 20.** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -213,6 +222,12 @@ Zetaris.
 ## Pre-existing materials
 Design notes summarised in `docs/BUILD_BRIEF.md` were written 20–22 Oct 2026, before the build window. All code in
 this repository was written inside the window.
+
+Pre-existing data components (researched before 22 Oct 2026, from the planning notes):
+- **The 2014 peaks table** (`data/historic_peaks.csv`, Dec 2014 rows): peak levels per gauge from JPS "Laporan Catatan
+  Aras Air Tertinggi 01-12-2014 to 10-02-2015" (as published in USM CGSS slides) and news reports (Kosmo, Malay Mail,
+  NST); every row keeps its source and URL.
+- Third-party data and its terms: see **Data sources and licences** above.
 
 ## AI usage
 Built in Cursor with Claude Code (Anthropic) and the Cursor agent as coding assistants. Delegated agent work is

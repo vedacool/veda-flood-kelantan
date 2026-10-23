@@ -4,7 +4,7 @@ Only two kinds of item live here (Husaini 23 Oct): **open audit findings** and *
 (what to build, in what order) is the backlog in the private planning folder; IDs `B-xx` / `S-xx` point there.
 Status lives here and in the backlog, never in Claude's memory. A finished item is deleted (git keeps the history).
 
-Last updated: 23 Oct 2026 (afternoon: W-3, W-4, W-6, A-P2-6, A-P2-8 closed; W-7 added).
+Last updated: 23 Oct 2026 (evening: B-75 - W-8 closed with the organiser ruling; W-7 after the hackathon).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
 IDs are never reused. Severity: P2 = schedule, P3 = polish.
@@ -25,6 +25,8 @@ IDs are never reused. Severity: P2 = schedule, P3 = polish.
 | A-P3-5 | P3 | Small logic edges: aging reading still labelled "high"; date-only peaks parse to midnight; CLI `--at` not limited to the replay window; "None mm in 24 h" in a trigger reason | `app/agents/forecast_agent.py`, `run.py` | B-16 | later |
 | A-P3-6 | P3 | Router: "Kampung" / "air" / "di" in an English question switch the answer to BM | `app/router.py` | B-21 | later |
 
+Closed with a decision: **W-8** - organiser ruling on JPS data (23 Oct, human admin): no disqualification; build accurately - credit does not replace consent, recorded copies only if the terms allow redistribution (they don't), so JPS is fetched live at runtime only; SAMPLE_MODE / demo use synthetic or openly licensed data; all third-party data declared in the README. Done in B-75.
+
 Fixed since the audit (deleted from this list): the 10 P1s, BM verdict words + months, card length, masking gaps,
 answer language, flipped-comparison check, Critic replay re-check, CI builds the Docker image, `VEDA_FAULTS` removed (A-P2-6), BUILD_BRIEF / CLAUDE.md brought up to date (A-P2-8).
 
@@ -34,4 +36,4 @@ answer language, flipped-comparison check, Critic replay re-check, CI builds the
 | W-1 | Dr Ariff's review pack (`docs/review_pack_ariff.md`, sections A-H incl. A5b projection, G3-G5 words + stranded advice, H backup gauges) - Husaini sends it | 22 Oct | send as is; nothing in VEDA waits on it for Gate 1 | B-67 |
 | W-2 | Backup gauges for Rantau Panjang / Kota Bharu / Pasir Mas: candidates proposed, not wired until Dr Ariff answers H1-H3 | 23 Oct | wire the first candidate per town after his answer | B-15 |
 | W-5 | Meterless: can the ~45-60 s cut-off on Nemotron calls be raised? (affects how often the AI explanation arrives) | 22 Oct | keep asking; VEDA works without it | D-09 |
-| W-7 | JPS consent: Infobanjir has no terms of its own and its robots.txt does not disallow the water-level pages, but the JPS website's copyright notice (water.gov.my, 2017) requires "express prior written consent of JPS" to copy, display or reproduce its content. VEDA credits JPS on the page and in the README, collects at most once per 15 min, and is non-commercial | 23 Oct | email JPS (Bahagian Pengurusan Banjir / Infobanjir contact) asking consent for non-commercial public-safety research use, before the repo goes public; keep the credit meanwhile | - |
+| W-7 | JPS written consent, **only if VEDA continues after the hackathon** (organiser ruling 23 Oct: credit does not replace consent; until then JPS readings are fetched live at runtime only and never redistributed - B-75) | 23 Oct | email JPS (Bahagian Pengurusan Banjir / Infobanjir) after the hackathon if VEDA continues | - |
