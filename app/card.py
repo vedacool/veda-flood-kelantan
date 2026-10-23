@@ -84,6 +84,12 @@ T = {  # fixed wording, BM + EN
                  "ms": "Diketepikan: data.gov.my flood-warning (lapuk, kemas kini terakhir {when})"},
     "not_checked": {"en": "Not checked: data.gov.my flood-warning (could not be read)",
                     "ms": "Tidak disemak: data.gov.my flood-warning (tidak dapat dibaca)"},
+    # Husaini 23 Oct: a MetMalaysia source that data.gov.my would not serve (e.g. HTTP 429) is named, never hidden
+    "met_not_checked": {"en": "Not checked: MetMalaysia {what} (data.gov.my could not be read)",
+                        "ms": "Tidak disemak: {what} MetMalaysia (data.gov.my tidak dapat dibaca)"},
+    "met_what": {("mygov_warning",): {"en": "warnings", "ms": "amaran"},
+                 ("mygov_forecast",): {"en": "forecast", "ms": "ramalan"},
+                 ("mygov_forecast", "mygov_warning"): {"en": "warnings and forecast", "ms": "amaran dan ramalan"}},
     "excluded_short": {"en": "Excluded: data.gov.my flood-warning (stale)",      # the Critic still needs to see it
                        "ms": "Diketepikan: data.gov.my flood-warning (lapuk)"},
     "conflict": {"en": "Sources disagree on {q}; VEDA did not pick one", "ms": "Sumber tidak sepakat tentang {q}; VEDA tidak memilih"},
@@ -240,6 +246,8 @@ def build(plan, evidence, forecast):
     if cross.get("status") == "stale":
         card["excluded"] = (cross.get("newest") or "").split(" ")[0] or "?"
     card["not_checked"] = cross.get("status") == "not_checked"
+    card["met_not_checked"] = tuple(sorted(k for k, s in ((evidence or {}).get("sources") or {}).items()
+                                           if k in ("mygov_forecast", "mygov_warning") and s.get("status") == "not_checked"))
     card["conflicts"] = [c["quantity"] for c in (evidence or {}).get("conflicts_unresolved", [])]
     osm, intent = (evidence or {}).get("osm"), plan.get("intent")
     card["osm"] = None
@@ -538,6 +546,9 @@ def _lines(card, lang, explanation, low_confidence, drop):
                                  T["excluded"][lang].format(when=card["excluded"])) + "."))
     if card.get("not_checked"):
         out.append(("not_checked", T["not_checked"][lang] + "."))
+    if card.get("met_not_checked"):                  # never dropped: an unread source is never hidden
+        out.append(("met_not_checked", T["met_not_checked"][lang].format(
+            what=T["met_what"][tuple(card["met_not_checked"])][lang]) + "."))
     for q in card.get("conflicts", []):
         out.append(("conflict", T["conflict"][lang].format(q=q) + "."))
     return out

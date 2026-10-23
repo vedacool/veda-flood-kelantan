@@ -58,12 +58,24 @@ _cache = {}
 
 
 def _load(agent):
-    """Aliases and known Kelantan place names, read once per process through Zetaris."""
+    """Aliases (veda-pg) and known Kelantan place names, read once per process through Zetaris.
+    The known names come from the MetMalaysia forecast list - a data.gov.my REST table that Zetaris may call live.
+    They only shape the reply for an UNCOVERED name, so a failure there (e.g. data.gov.my HTTP 429, found live 23 Oct)
+    never blocks finding a covered place: it is traced as "not checked" and tried again on the next call."""
     if "aliases" not in _cache:
         rows = zetaris.run_sql(PLACES_SQL, agent=agent, purpose="gazetteer: covered places and aliases").records
         _cache["aliases"] = {r["alias_norm"]: r for r in rows}
-        known = zetaris.run_sql(KNOWN_KELANTAN_SQL, agent=agent, purpose="gazetteer: known Kelantan place names").rows
-        _cache["known"] = {normalize(r[0]): r[0] for r in known if r[0]}
+    if "known" not in _cache:
+        try:
+            known = zetaris.run_sql(KNOWN_KELANTAN_SQL, agent=agent,
+                                    purpose="gazetteer: known Kelantan place names").rows
+            _cache["known"] = {normalize(r[0]): r[0] for r in known if r[0]}
+        except zetaris.ZetarisError as e:
+            trace.step(agent, "gazetteer.known", output_summary=f"not checked: {e.kind}", status="fallback",
+                       source="data.gov.my", decision="Known Kelantan names (MetMalaysia list, data.gov.my) could not "
+                       "be read -> covered places are still found; an uncovered name gets the plain 'not covered' "
+                       "reply; tried again next time")
+            return _cache["aliases"], {}
     return _cache["aliases"], _cache["known"]
 
 

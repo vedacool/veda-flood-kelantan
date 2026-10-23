@@ -32,6 +32,10 @@ READING_TIMES_SQL = ("SELECT station_key, observed_at_utc FROM veda.river_status
 PLACE_INPUTS_SQL = ("SELECT place_id, rain_point, rain_past_24h_mm, rain_past_7d_mm, rain_next_24h_mm, rain_next_72h_mm, "
                     "max_prob_next_24h_pct, forecast_today, forecast_today_when FROM veda.place_risk_inputs")
 RAIN_WINDOW_SQL = "SELECT point_key, forecast_until_myt FROM veda.rain_24h_by_point"
+# The rain part of PLACE_INPUTS_SQL alone (no MetMalaysia join) - read only when that query fails (Husaini 23 Oct)
+PLACE_RAIN_SQL = ("SELECT p.place_id, rp.point_key AS rain_point, rp.rain_past_24h_mm, rp.rain_past_7d_mm, "
+                  "rp.rain_next_24h_mm, rp.rain_next_72h_mm, rp.max_prob_next_24h_pct FROM veda_pg.places p "
+                  "JOIN veda.rain_24h_by_point rp ON rp.location_id = p.rain_location_id")
 # Husaini 23 Oct: a projected range never goes below the gauge's lowest level in the past 7 days
 MIN_7D_SQL = ("SELECT station_key, MIN(level_m) AS min_7d_m FROM veda_pg.river_levels "
               "WHERE observed_at > current_timestamp() - INTERVAL 7 DAYS GROUP BY station_key")
@@ -208,15 +212,24 @@ def ingest_readings(world, agent, run_id, check=None, results=None):
     windows, _ = optional(RAIN_WINDOW_SQL, "world: rain forecast windows")
     window = {w["point_key"]: str(w["forecast_until_myt"]) for w in windows}
     inputs, qh = optional(PLACE_INPUTS_SQL, "world: place risk inputs")
+    view = "veda.place_risk_inputs"
+    if results is not None and results.get(PLACE_INPUTS_SQL, True) is None:
+        # Husaini 23 Oct: one source failing never takes another down. place_risk_inputs also joins the MetMalaysia
+        # forecast (data.gov.my, may answer HTTP 429) - read the Open-Meteo rain on its own instead.
+        try:
+            inputs, qh = _sql(PLACE_RAIN_SQL, agent, PURPOSES[PLACE_RAIN_SQL])
+            view = "veda.rain_24h_by_point"
+        except zetaris.ZetarisError:
+            inputs = []
     today_myt = datetime.now(config.MYT).date().isoformat()   # the forecast row is "today" in Malaysia time
     for p in inputs:
         pid = place_id(p["place_id"])
-        rsrc = _src(window.get(p["rain_point"], "unknown"), qh, "veda.place_risk_inputs", agent, run_id, "open_meteo",
+        rsrc = _src(window.get(p["rain_point"], "unknown"), qh, view, agent, run_id, "open_meteo",
                     check("open_meteo", p) if check else None)
         world.assert_fact(pid, "rain_mm", {k: p[k] for k in ("rain_past_24h_mm", "rain_past_7d_mm", "rain_next_24h_mm",
                                                           "rain_next_72h_mm", "max_prob_next_24h_pct")} | {
             "rain_point": p["rain_point"]}, confidence=0.7, source=rsrc)
-        if p["forecast_today"]:
+        if p.get("forecast_today"):
             fsrc = _src(today_myt + "T00:00:00+08:00", qh, "veda.place_risk_inputs", agent, run_id, "mygov_forecast",
                         check("mygov_forecast", p) if check else None)
             world.assert_fact(pid, "met_forecast_today", {"summary": p["forecast_today"],
@@ -356,4 +369,5 @@ PURPOSES.update({
     GAUGE_STATUS_SQL: "world: gauge status for covered places",
     RAIN_WINDOW_SQL: "world: rain forecast windows",
     PLACE_INPUTS_SQL: "world: place risk inputs",
+    PLACE_RAIN_SQL: "world: place rain only (forecast table unreadable)",
 })

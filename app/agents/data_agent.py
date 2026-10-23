@@ -46,6 +46,7 @@ MAX_JUMP_1H_M = 3.0               # tentative: a bigger rise or fall in one hour
 MAX_RAIN_24H_MM = 1000.0
 AGREE_M = 0.05                    # two sources within 5 cm of each other agree
 NOT_IN_REPLAY = "not available in replay: data.gov.my keeps no 2024 archive"
+NOT_READ = "not checked: data.gov.my could not be read"     # Husaini 23 Oct: say so, still answer
 
 CLOCK_SQL = "SELECT current_timestamp() AS now_utc"
 FLOOD_WARNING_SQL = ("SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime "
@@ -662,7 +663,9 @@ def gather(plan, world, now=None, pre=None):
             sources[key] = {"status": "skipped", "note": NOT_IN_REPLAY}
             continue
         if item is None:
-            sources[key] = {"status": "failed", "note": "no data for this place"}
+            unread = key == "mygov_forecast" and pre.get("results", {}).get(READINGS_SQL[3], True) is None
+            sources[key] = ({"status": "not_checked", "note": NOT_READ} if unread else
+                            {"status": "failed", "note": "no data for this place"})
             continue
         age = _forecast_age(world, key, clock)
         item["age_minutes"], item["freshness"] = age, freshness(key, age)
@@ -676,8 +679,8 @@ def gather(plan, world, now=None, pre=None):
         sources["mygov_warning"] = {"status": "skipped", "note": NOT_IN_REPLAY}
     elif "mygov_warning" in wanted:
         warnings = met_warnings(pre.get("results", {}).get(WARNING_SQL), plan["place"], clock, world, run_id)
-        sources["mygov_warning"] = {"status": {"ok": "ok", "stale": "stale"}.get(warnings["status"], "failed"),
-                                    "note": warnings["note"]}
+        sources["mygov_warning"] = {"status": {"ok": "ok", "stale": "stale"}.get(warnings["status"], "not_checked"),
+                                    "note": warnings["note"] if warnings["status"] in ("ok", "stale") else NOT_READ}
 
     cross = None
     if quick:
