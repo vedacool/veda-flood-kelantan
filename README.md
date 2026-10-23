@@ -37,16 +37,24 @@ python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
 
-**Flood replay:** choose *REPLAY · Nov 2024* on the page, or use `--replay nov2024`. It replays the November 2024
-Rantau Panjang flood with the JPS readings that news reports quoted at the time (each cited).
-**SYNTHETIC scenes:** `--replay synthetic_rising` or `--replay synthetic_calm` (made-up readings, labelled SYNTHETIC). Every data source is cut at the replay time, so
-nothing from later is ever used. There are three scenes:
+**Flood replay (the real progression):** choose *REPLAY · Nov 2024* on the page, or use `--replay nov2024`. It
+replays the November 2024 Rantau Panjang flood with the JPS readings that news reports quoted at the time (each cited).
+Every data source is cut at the replay time, so nothing from later is ever used:
 
 | Scene | What VEDA says |
 |---|---|
 | 26 Nov 18:00 | PREPARE |
-| 27 Nov 08:00 | INSUFFICIENT DATA (the last real reading is 14 h old, and VEDA will not guess) |
+| 27 Nov 08:00 | INSUFFICIENT DATA (no verified reading near this time, and VEDA will not guess) |
 | 27 Nov 19:30 | ACT, 0.1 m above the Dec 2014 peak |
+
+**SYNTHETIC scenes** (`--replay synthetic_rising`, `--replay synthetic_calm`):
+- *SYNTHETIC · rising river* is **a made-up stress scenario: synthetic river levels, real archived rain** (Open-Meteo,
+  25 Nov 2024). It is not a forecast and not what happened; it shows how VEDA reacts when every gauge climbs at once
+  (Rantau Panjang, Pasir Mas and Tumpat ACT, Kota Bharu WATCH).
+- *SYNTHETIC · calm day*: synthetic river levels below Waspada, real archived rain (Open-Meteo, 15 Jun 2024); every
+  town NORMAL.
+- Both are made by `scripts/make_synthetic_scenes.py` from cited facts only (each gauge's JPS thresholds, river chain,
+  Dec 2014 peaks, travel times) and are labelled SYNTHETIC on the card and in the trace.
 
 ## What you get
 One short answer card, written by code from checked data, in the user's language. It contains:
@@ -112,7 +120,7 @@ repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 repl
 | **JPS thresholds** (Normal / Alert / Warning / Danger per gauge) | Cited facts, © JPS Malaysia; source: the Infobanjir page, read 22 Oct 2026 (one row per gauge in `data/stations_mapping.csv`) | Decide the JPS level shown on the card and the verdict rules |
 | **Historic peaks** incl. **Dec 2014** (`data/historic_peaks.csv`) | Cited facts; each row names its source and URL (JPS "Laporan Catatan Aras Air Tertinggi 2014-2015" via USM CGSS, news reports) | The "compared with 2014" line and the record peaks on the card |
 | **Nov 2024 replay readings** (`data/replay/nov2024_anchors.csv`) | Facts as reported by Bernama and Kosmo (citing JPS); each row stores its source URL and the quoted sentence | The REPLAY · Nov 2024 scenes; hours between two reported readings are reconstructed on a straight line and labelled |
-| **SYNTHETIC scenes** (`data/replay/synthetic_anchors.csv`) | Made up by the team for the offline demo (MIT, like the code) | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
+| **SYNTHETIC scenes and offline fixtures** (`data/replay/synthetic_anchors.csv`, fixtures flagged `synthetic`) | Made up by `scripts/make_synthetic_scenes.py` from cited facts only (MIT, like the code); the rising scene is a made-up stress scenario: synthetic river levels, real archived rain | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
 | **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures keep the recorded open-data rows |
 | **Open-Meteo** forecast and historical archive ([open-meteo.com](https://open-meteo.com/)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Rain forecast (live) and real archive rain for every scene, shown with its date; credited on the page and named on every card |
 

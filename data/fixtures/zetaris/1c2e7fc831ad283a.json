@@ -1,0 +1,41 @@
+{
+ "sql": "SELECT w.heading_en, w.text_en, w.text_bm, w.valid_from, w.valid_to, w.warning_issue.issued AS issued FROM veda_wx.mygov_warning LATERAL VIEW explode(data) AS w",
+ "query_hash": "1c2e7fc831ad283a",
+ "recorded_at": "2026-10-22T13:33:07Z",
+ "columns": [
+  "heading_en",
+  "text_en",
+  "text_bm",
+  "valid_from",
+  "valid_to",
+  "issued"
+ ],
+ "rows": [
+  [
+   "SYNTHETIC - SECOND CATEGORY WARNING ON STRONG WINDS AND ROUGH SEAS",
+   "SYNTHETIC warning for the offline tests (sea areas only) - not issued by MetMalaysia.",
+   "Amaran SYNTHETIC untuk ujian luar talian (kawasan laut sahaja) - bukan dikeluarkan oleh MetMalaysia.",
+   "2026-10-22T15:00:00",
+   "2026-10-24T21:00:00",
+   "2026-10-22T15:00:00"
+  ],
+  [
+   "SYNTHETIC - THUNDERSTORMS WARNING",
+   "SYNTHETIC: thunderstorms and heavy rain over parts of Pahang - made up for the offline tests.",
+   "SYNTHETIC: ribut petir dan hujan lebat di beberapa kawasan di Pahang - direka untuk ujian luar talian.",
+   "2026-10-22T19:00:00",
+   "2026-10-22T23:00:00",
+   "2026-10-22T15:00:00"
+  ],
+  [
+   "No Advisory",
+   "SYNTHETIC: no tropical cyclone advisory.",
+   "SYNTHETIC: tiada nasihat siklon tropika.",
+   null,
+   null,
+   "2026-10-22T15:00:00"
+  ]
+ ],
+ "synthetic": true,
+ "note": "SYNTHETIC values (B-75): made by scripts/make_synthetic_scenes.py from cited thresholds, 2014 peaks and travel times - not JPS readings."
+}

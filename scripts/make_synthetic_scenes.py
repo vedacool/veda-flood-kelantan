@@ -22,6 +22,8 @@ Outputs (all labelled SYNTHETIC):
 2. data/fixtures/zetaris/<jps-table queries>.json - the offline live-path test fixtures (flag "synthetic": true)
 3. data/fixtures/zetaris/<flood-warning>.json   - data.gov.my /flood-warning rows for the mapped gauges; the feed's
                                                    documented frozen date (23 Feb 2024) is kept, the levels are made up
+   data/fixtures/zetaris/<MET warnings / forecast> - MetMalaysia warnings and today's forecast text, made up (live mode
+                                                   still reads the real MetMalaysia data at runtime)
 4. tests/fixtures/jps_synthetic_page.html        - a page in the JPS Infobanjir table structure for the parser tests
 """
 import argparse
@@ -166,6 +168,30 @@ def write_fixtures(gauges, rnd, check):
         elif "veda_pg.river_levels" in sql and "level_m" in cols:
             new = [[r[0], str(vals[r[0]][0]) if r[0] in vals else r[1],
                     (clock - timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:00.0")] for r in doc["rows"]]
+        elif "mygov_warning" in sql and "heading_en" in cols:
+            myt = clock.astimezone(MYT)
+            iso = lambda dt: dt.strftime("%Y-%m-%dT%H:00:00")                                # noqa: E731
+            issued = iso(myt - timedelta(hours=rnd.randint(2, 6)))
+            new = [["SYNTHETIC - SECOND CATEGORY WARNING ON STRONG WINDS AND ROUGH SEAS",
+                    "SYNTHETIC warning for the offline tests (sea areas only) - not issued by MetMalaysia.",
+                    "Amaran SYNTHETIC untuk ujian luar talian (kawasan laut sahaja) - bukan dikeluarkan oleh "
+                    "MetMalaysia.", iso(myt - timedelta(hours=6)), iso(myt + timedelta(hours=48)), issued],
+                   ["SYNTHETIC - THUNDERSTORMS WARNING",
+                    "SYNTHETIC: thunderstorms and heavy rain over parts of Pahang - made up for the offline tests.",
+                    "SYNTHETIC: ribut petir dan hujan lebat di beberapa kawasan di Pahang - direka untuk ujian luar "
+                    "talian.", iso(myt - timedelta(hours=2)), iso(myt + timedelta(hours=2)), issued],
+                   ["No Advisory", "SYNTHETIC: no tropical cyclone advisory.",
+                    "SYNTHETIC: tiada nasihat siklon tropika.", None, None, issued]]
+        elif "place_risk_inputs" in sql and "forecast_today" in cols:
+            i_f, i_w = cols.index("forecast_today"), cols.index("forecast_today_when")
+            phrases = ("Tiada hujan", "Hujan di beberapa tempat", "Ribut petir di beberapa tempat")
+            times = ("Pagi", "Petang", "Petang dan Malam", "Malam")
+            new = []
+            for r in doc["rows"]:                     # Open-Meteo rain values (CC BY 4.0) stay as recorded
+                r = list(r)
+                if r[i_f] is not None:
+                    r[i_f], r[i_w] = f"SYNTHETIC: {rnd.choice(phrases)}", rnd.choice(times)
+                new.append(r)
         elif "mygov_flood" in sql and "water_level_current" in cols:
             new = [[g["key"].split("_", 1)[0] if g["key"][0].isdigit() else g["key"],
                     re.sub(r"\s*\(F\d\)$", "", g["name"]), str(calm_level(g, rnd)), FROZEN_FEED]

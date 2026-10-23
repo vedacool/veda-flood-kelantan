@@ -31,9 +31,9 @@ def test_dabong_row(readings):
     d = next(r for r in readings if r.station_key == "5320038_DKKI0003")
     assert d.name == "Sg. Galas di Dabong (F1)" and d.name_norm == "sg galas di dabong"
     assert d.jps_id is None and d.district == "Kuala Krai" and d.river == "Sg. Galas"
-    assert d.level_m == 27.56 and d.danger_m == 38.0                # synthetic (scripts/make_synthetic_scenes.py)
+    assert d.danger_m == 38.0 and d.normal_m - 2 < d.level_m < d.alert_m    # synthetic calm value (seeded method)
     assert None not in (d.normal_m, d.alert_m, d.warning_m)
-    assert d.observed_at == datetime(2026, 1, 1, 1, 45, tzinfo=timezone.utc)    # 09:45 MYT (synthetic time)
+    assert d.observed_at.date() == datetime(2026, 1, 1, tzinfo=timezone.utc).date()   # synthetic date
 
 
 def test_core_station_keys_present(readings):

@@ -1,0 +1,111 @@
+{
+ "sql": "SELECT s.station_id, s.station_name, s.water_level_current, s.water_level_update_datetime FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s",
+ "query_hash": "bb08fcaf4ad4e856",
+ "recorded_at": "2026-10-23T07:31:11Z",
+ "columns": [
+  "station_id",
+  "station_name",
+  "water_level_current",
+  "water_level_update_datetime"
+ ],
+ "rows": [
+  [
+   "5020030",
+   "Sg. Galas di Limau Kasturi",
+   "53.15",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "5320038",
+   "Sg. Galas di Dabong",
+   "29.65",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "5222052",
+   "Sg. Lebir di Kg. Tualang",
+   "23.35",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DKKI0011",
+   "Sg. Lebir di Kg. Manik Urai",
+   "21.1",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "5521044",
+   "Sg. Kelantan di Kuala Krai",
+   "17.63",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DMCG0001",
+   "Sg. Kelantan di Kg. Temangan",
+   "11.97",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DTMH0003",
+   "Sg. Kelantan di Kusial Baru",
+   "6.94",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DMCG0215",
+   "Sg. Kelantan di Kusial",
+   "7.65",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "6021065",
+   "Sg. Kelantan di Air Mulih",
+   "3.91",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "27133",
+   "Sg. Kelantan di Jambatan Tendong",
+   "2.96",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DKBR0002",
+   "Sg. Kelantan di Kg. Salor",
+   "0.27",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DKBR0007",
+   "Sg. Kelantan di Tambatan D'Raja",
+   "1.03",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DTPT0002",
+   "Sg. Kelantan di Kg. Kok Majid",
+   "0.35",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DTMH0008",
+   "Sg. Golok di Kg. Jenob",
+   "19.3",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DPMS0003",
+   "Sg. Golok di Rantau Panjang",
+   "5.48",
+   "2024-02-23 14:45:00"
+  ],
+  [
+   "_DPMS0008",
+   "Sg. Golok di Kuala Jambu",
+   "0.85",
+   "2024-02-23 14:45:00"
+  ]
+ ],
+ "synthetic": true,
+ "note": "SYNTHETIC values (B-75): made by scripts/make_synthetic_scenes.py from cited thresholds, 2014 peaks and travel times - not JPS readings."
+}

@@ -7,7 +7,8 @@ import subprocess
 from app import trace
 
 ROOT = trace.ROOT
-JPS_TABLES = ("veda_pg.river_levels", "veda.place_gauge_status", "veda.river_status_latest")
+JPS_TABLES = ("veda_pg.river_levels", "veda.place_gauge_status", "veda.river_status_latest",
+              "veda_wx.mygov_warning", "veda.place_risk_inputs", "water_level_current")   # + MetMalaysia, flood feed
 
 
 def tracked(*paths):
