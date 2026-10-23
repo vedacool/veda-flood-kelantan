@@ -40,6 +40,10 @@ VEDA gives one verdict per place for the next 24–48 h. Current rule set (from 
 - *Rising:* a steep rise overshoots (replay 27 Nov 19:30: 13.75-14.54 m projected, the real peak was ~11.4 m; see A5).
   Should a rising projection be capped (e.g. at the record peak + a margin), shortened (12 h), or shown only as
   "rising - may reach Danger in about X h"?
+- *Since 23 Oct (Husaini, built):* the card shows a number range **only while the projected range stays below
+  Danger**. A range that reaches Danger is shown as words only: **"dijangka melepasi paras Bahaya" / "expected to pass
+  Danger"** (e.g. SYNTHETIC rising scene, Rantau Panjang: 8.1 m now, a straight line gave 14.03-14.1 m - now words).
+  The straight-line method itself (A5) still needs your view.
 > Answer: ______
 
 **A6.** (added 22 Oct, B-16) **Tidal gauges** are judged on their level only (a rise of a few hours may just be the tide). Marked tidal: Tambatan Diraja, and **Kg Kok Majid (tentative)**. Is Kok Majid tide-influenced? Is **Kuala Jambu** (Sg Golok near its mouth) tide-influenced too?

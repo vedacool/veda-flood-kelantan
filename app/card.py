@@ -59,6 +59,7 @@ T = {  # fixed wording, BM + EN
     "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
     "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
     "falling": {"en": "falling - no level projected", "ms": "turun - tiada unjuran paras"},
+    "pass_danger": {"en": "expected to pass Danger", "ms": "dijangka melepasi paras Bahaya"},
     # trapped / stranded (Husaini 23 Oct; tentative, review pack G5)
     "stranded": {"en": "You said you're stranded: safety first", "ms": "Anda terkandas: utamakan keselamatan"},
     "stranded_normal": {"en": "River level is normal, but local flooding can still trap you",
@@ -208,6 +209,12 @@ def build(plan, evidence, forecast):
         rng = (trend.get("projection_m") or {}).get("24h")
         card["above_danger"] = th.get("danger_m") is not None and main["level_m"] >= th["danger_m"]
         card["range_24h"] = None if card["above_danger"] else rng      # Husaini 23 Oct: no number above Danger
+        # Husaini 23 Oct: a number range only while the projection stays below Danger; reaching it -> words only
+        # (a straight line projected past Danger is not a level anyone can stand behind - review pack A5)
+        card["pass_danger"] = bool(rng and not card["above_danger"] and th.get("danger_m") is not None
+                                   and rng["max"] >= th["danger_m"])
+        if card["pass_danger"]:
+            card["range_24h"] = None
         hist = fc.get("history") or []
         if hist:
             top = max(hist, key=lambda h: h["peak_m"])
@@ -303,6 +310,8 @@ def key_facts(card, forecast=None, lang="en"):
     if card.get("range_24h"):
         r = card["range_24h"]
         f["next_24h"] = f"{_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]})"
+    elif card.get("pass_danger"):
+        f["next_24h"] = T["pass_danger"][lang]
     if card.get("vs_2014"):
         v = card["vs_2014"]
         f["vs_2014"] = WORDS["vs2014"][lang].format(d=_num(abs(v["diff_m"])), side=side(v["diff_m"]),
@@ -504,6 +513,9 @@ def _lines(card, lang, explanation, low_confidence, drop):
         out.append(("range", f"{T['next24'][lang]}{T['synthetic_tag'][lang] if card.get('synthetic') else ''}: "
                              f"{_num(r['min'])}-{_num(r['max'])} m ({T['trend'][lang]}). "
                              f"{T['confidence'][lang]}: {conf}."))
+    elif card.get("pass_danger") and g:
+        out.append(("range", f"{T['next24'][lang]}{T['synthetic_tag'][lang] if card.get('synthetic') else ''}: "
+                             f"{T['pass_danger'][lang]}. {T['confidence'][lang]}: {conf}."))
     elif card.get("above_danger") and g:
         words = [T["above_trend"][card["trend"]][lang]] if card.get("trend") else []
         peak = card.get("peak") or {}

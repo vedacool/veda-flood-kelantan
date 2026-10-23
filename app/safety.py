@@ -37,7 +37,7 @@ def gate(answer, card=None, evidence=None, forecast=None):
         card = dict(card)
         if card["verdict"] == "NORMAL" and not (evidence or {}).get("usable"):                         # rule 1
             card.update(verdict="INSUFFICIENT_DATA", action=card_mod.ADVICE["INSUFFICIENT_DATA"], level_name=None,
-                        gauge=None, range_24h=None, confidence="low")
+                        gauge=None, range_24h=None, pass_danger=False, confidence="low")
             answer.update(explanation=None, drafted_by="code")
             fixes.append("NORMAL without fresh controlling data -> INSUFFICIENT DATA card")
         r = card.get("range_24h")

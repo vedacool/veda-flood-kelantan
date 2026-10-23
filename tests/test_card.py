@@ -293,3 +293,18 @@ def test_trend_words_allowed_when_the_trend_is_known_or_upstream_rises():
     c = build(verdict="WATCH", tidal=True, upstream=[{"gauge": "Kuala Krai", "band": "alert", "rising": True,
                                                        "arrives_in_h": None}])
     assert card.trend_problem("Sungai di hulu sedang naik.", c) is None
+
+
+# -- Husaini 23 Oct: a number range only while the projection stays below Danger --------------------------------
+@pytest.mark.parametrize("lang, words", [("en", "Next 24 h: expected to pass Danger. Confidence: high."),
+                                         ("ms", "24 jam akan datang: dijangka melepasi paras Bahaya. Keyakinan: tinggi.")])
+def test_projection_reaching_danger_shows_words_not_numbers(lang, words):
+    c = build(rng=(8.6, 9.0))                       # Danger is 9 m: the range reaches it
+    text = card.render(c, lang)
+    assert words in text and "8.6" not in text and "8.6-9" not in text
+    assert card.key_facts(c, lang=lang)["next_24h"] == words.split(": ")[1].split(".")[0]
+
+
+def test_projection_below_danger_keeps_its_range():
+    assert "Next 24 h: 6.9-7.4 m (straight-line trend)" in card.render(build(rng=(6.9, 7.4)), "en")
+    assert "Next 24 h: 8.5-8.99 m" in card.render(build(rng=(8.5, 8.99)), "en")

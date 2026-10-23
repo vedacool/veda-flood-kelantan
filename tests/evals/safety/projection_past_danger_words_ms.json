@@ -1,0 +1,21 @@
+{
+  "name": "projection_past_danger_words_ms",
+  "about": "A straight-line projection that reaches Danger is shown as words ('dijangka melepasi paras Bahaya'), never as a number [SYNTHETIC rising river, Rantau Panjang]",
+  "question": "Rantau Panjang selamat ke esok?",
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "language": "ms",
+    "must": [
+      "dijangka melepasi paras Bahaya"
+    ],
+    "must_not": [
+      "14.03",
+      "unjuran garis lurus"
+    ]
+  }
+}

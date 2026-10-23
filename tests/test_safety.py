@@ -54,11 +54,11 @@ def test_normal_without_fresh_data_becomes_insufficient():
 
 
 def test_flat_range_is_dropped():
-    fc = {**FC, "controlling": [{"role": "controlling", "projection_m": {"24h": {"min": 12.2, "max": 12.2}}}]}
+    fc = {**FC, "controlling": [{"role": "controlling", "projection_m": {"24h": {"min": 7.5, "max": 7.5}}}]}
     c = card.build({}, EVIDENCE, fc)
-    assert "12.2-12.2" in card.render(c, "en")
+    assert "7.5-7.5" in card.render(c, "en")
     out = safety.gate(answer(c), c, EVIDENCE, fc)
-    assert "12.2-12.2" not in out["text"] and "no width" in out["safety"][0]
+    assert "7.5-7.5" not in out["text"] and "no width" in out["safety"][0]
 
 
 @pytest.mark.parametrize("lang", ["en", "ms"])
