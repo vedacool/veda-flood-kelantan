@@ -642,6 +642,43 @@ def osm_features(result, place, world, clock):
     return out
 
 
+def sources_selected(plan, ctx, sources, cross, osm):
+    """B-71(a): which sources the Data & Reconciler chose for this place, and which it skipped and why ->
+    {'chosen': [...], 'skipped': [...]} (short phrases; the trace line and the live view show them)."""
+    chosen, skipped = [], []
+    for g in ctx.get("gauges", []) + ctx.get("sentinels", []):
+        role = {"controlling": "controlling", "controlling_secondary": "second river", "sentinel": "upstream"}.get(
+            g["role"], g["role"])
+        if g["level_m"] is None:
+            skipped.append(f"{g['name']} ({role}): no reading")
+        elif not (g.get("health") or {"ok": True})["ok"]:
+            skipped.append(f"{g['name']} ({role}): failed the plausibility check")
+        elif g.get("freshness") in ("stale", "unknown"):
+            skipped.append(f"{g['name']} ({role}): reading too old ({g['age_minutes']} min)")
+        else:
+            chosen.append(f"{g['name']} ({role}" + (f", backup for {g['backup_for']}" if g.get("backup_for") else "")
+                          + ")")
+    rain = ctx.get("rain")
+    for key, label in (("open_meteo", "Open-Meteo rain" + (f" (point {rain.get('rain_point')})" if rain else "")),
+                       ("mygov_forecast", "MetMalaysia forecast"), ("mygov_warning", "MetMalaysia warnings")):
+        s = sources.get(key) or {}
+        if s.get("status") in ("ok", "stale", "degraded"):
+            chosen.append(label + (" (stale)" if s.get("status") == "stale" else ""))
+        else:
+            skipped.append(f"{label}: {s.get('note') or s.get('status') or 'not read'}")
+    if cross:
+        (skipped if cross.get("status") != "ok" else chosen).append(
+            "data.gov.my flood-warning" + {"stale": ": stale - excluded", "not_checked": ": could not be read"}.get(
+                cross.get("status"), ""))
+    elif plan.get("effort") == "quick":
+        skipped.append("data.gov.my flood-warning cross-check: quick path")
+    if osm:
+        (chosen if osm["status"] == "ok" else skipped).append(
+            "OpenStreetMap " + ("possible PPS" if plan.get("intent") == "evacuation" else "bridges")
+            + ("" if osm["status"] == "ok" else ": could not be read"))
+    return {"chosen": chosen, "skipped": skipped}
+
+
 def gather(plan, world, now=None, pre=None):
     """Evidence for plan['place'] from the sources the plan asks for. pre = prefetch() result (run during
     planning); without it the prefetch runs here. A quick plan skips the cross-check and reconciliation.
@@ -750,7 +787,16 @@ def gather(plan, world, now=None, pre=None):
                 "kind": "agent_check", "at": _iso(clock), "agent": AGENT, "run_id": run_id, "origin": "Data & Reconciler agent"})
         trace.step(AGENT, "data.health", input_summary=key, output_summary=f"{s['status']}: {s['note']}",
                    status="success" if s["status"] in ("ok", "skipped") else "fallback", source=key)
+    selected = sources_selected(plan, ctx, sources, cross, osm) if ctx.get("found") else None
+    if selected:                                   # B-71(a): what was chosen for this place, what was skipped and why
+        trace.step(AGENT, "data.sources", input_summary=(ctx.get("place") or {}).get("name"),
+                   output_summary=f"chosen: {'; '.join(selected['chosen']) or '-'} | skipped: "
+                                  f"{'; '.join(selected['skipped']) or '-'}",
+                   target_agent="Forecast", source="world_model",
+                   decision=f"{len(selected['chosen'])} source(s) used, {len(selected['skipped'])} skipped",
+                   details=selected)
     return {"place": ctx.get("place"), "clock": _iso(clock), "usable": usable, "context": ctx, "sources": sources,
+            "selected": selected,
             "cross_check": cross, "reconciliation": reconciliation, "conflicts_unresolved": unresolved,
             "met_warnings": warnings, "replay": replay, "healing": healing, "osm": osm,
             "notes": notes, "events_added": pre["events_added"] + len(world.store.events) - events_before}

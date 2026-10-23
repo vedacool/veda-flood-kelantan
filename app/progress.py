@@ -31,6 +31,12 @@ def describe(rec):
             took = f", {rec['duration_ms'] / 1000:.1f} s" if rec.get("duration_ms") else ""
             return f"  {who}: answered by {d['served_model']} via Nightshift{receipt}{took}"
         return f"  ! {who}: no model answered ({out})"
+    if a == "data.sources":            # B-71(a): which sources were chosen / skipped for this place
+        d = rec.get("details") or {}
+        chosen, skipped = d.get("chosen") or [], d.get("skipped") or []
+        return (f"  sources: {len(chosen)} used ({', '.join(c.split(' (')[0] for c in chosen[:4])}"
+                f"{', ...' if len(chosen) > 4 else ''}); {len(skipped)} skipped"
+                + (f" ({'; '.join(skipped[:2])}{'; ...' if len(skipped) > 2 else ''})" if skipped else ""))
     if a == "ai.fallback":             # B-86: AI fallback marked plainly, next to the served-model lines
         return f"  ! {rec.get('agent_name')}: {out}"
     if a == "safety" and rec.get("status") != "success":
