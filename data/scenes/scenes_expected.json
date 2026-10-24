@@ -19,8 +19,8 @@
     "ms": "Selasa, 26 November 2024, 6 petang. Hujan lebat turun sejak semalam, di sini dan di seberang sempadan di Thailand. Sebuah keluarga berhampiran Sg. Golok di Rantau Panjang mahu tahu sama ada mereka perlu bersedia malam ini."
    },
    "hook": {
-    "en": "Heavy rain on both sides of the border. Get ready tonight?",
-    "ms": "Hujan lebat di kedua-dua belah sempadan. Perlu bersedia malam ini?"
+    "en": "Heavy rain on both sides of the border. Is tonight safe?",
+    "ms": "Hujan lebat di kedua-dua belah sempadan. Selamatkah malam ini?"
    },
    "expect": [
     {
@@ -241,8 +241,8 @@
     "ms": "Rabu, 27 November 2024, 7:30 malam. Kosmo melaporkan paras sungai telah melepasi paras banjir 2014 (10.52 m). Bacaan sungai baharu baru sahaja dilaporkan. Saudara-mara keluarga itu di Kota Bharu bertanya sama ada mereka patut meninggalkan Rantau Panjang sekarang."
    },
    "hook": {
-    "en": "The river has passed its 2014 flood level. Leave now?",
-    "ms": "Sungai melepasi paras banjir 2014. Perlu keluar sekarang?"
+    "en": "The river has passed its 2014 flood level. What should the family do?",
+    "ms": "Sungai melepasi paras banjir 2014. Apa yang patut keluarga itu lakukan?"
    },
    "expect": [
     {

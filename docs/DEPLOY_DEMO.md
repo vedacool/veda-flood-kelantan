@@ -10,9 +10,9 @@ visitor --HTTPS--> Tailscale Funnel --> 127.0.0.1:8765 --> proxy (nginx) --+--> 
 ```
 - **proxy** (`demo/nginx.conf`): per-visitor rate limits - 20 answers (and feedback requests) a minute, burst 10,
   and 120 page requests a minute, burst 60; then HTTP 429 - at most 3 open streams (answer steps, live log) per
-  visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing) - a *Was this clear? 1-minute
-  feedback* link under each answer (`demo/demo-banner.js`). The demo strip, top bar and footer (with *Feedback*) come
-  from the app's shared frame (B-96, `app/frame.py`); the feedback form wears the same frame - the public API (`/api/v1/`) and its docs page (`/api/docs`)
+  visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing). The demo strip, top bar and footer
+  (with *Feedback*) come from the app's shared frame (B-96, `app/frame.py`), and the answer has its own feedback line;
+  the proxy adds nothing to the pages; the feedback form wears the same frame - the public API (`/api/v1/`) and its docs page (`/api/docs`)
   with the same limits as an answer stream - `/admin`, run logs and FastAPI's own `/docs`, `/redoc`, `/openapi.json`
   closed (404), no access log (it would store IP addresses), visitors' addresses not passed on.
 - **veda** (the normal VEDA image): `SAMPLE_MODE=true`, read-only filesystem, 1 GB memory limit, on an internal

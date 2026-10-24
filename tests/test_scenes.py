@@ -171,7 +171,8 @@ def test_page_words_and_links():
                  'step1: "The situation"', 'step2: "The data at that moment"', 'step3: "What VEDA should do → what it did"',
                  'match: "✓ match"', 'different: "✗ different"', 'score: "{n} of {m} matched"',
                  'how_title: "How VEDA got there"', 'full_answer: "See the full answer VEDA gave ›"',
-                 'live_link: "See a real live run with Nemotron ›"', 'show_log: "Show technical log"',
+                 'live_link: "See a real live run with Nemotron ›"', 'show_log: "Show technical log ▾"',
+                 'hide_log: "Hide technical log ▴"', 'show_log: "Tunjuk log teknikal ▾"', 'hide_log: "Sembunyi log teknikal ▴"',
                  'feedback_q: "Did VEDA match what you expected?"', 'tell_us: "Tell us"', 'next: "Next test ›"',
                  '"A river level post (gauge) measures how high the river is.', 'href="/how-it-works#live"', "/feedback?lang="):
         assert text in PAGE, text
@@ -200,6 +201,14 @@ def test_the_v3_ui_rules():
         assert gone not in PAGE, gone
     assert PAGE.count("<details") == 2 and PAGE.count("details class=\"more\"") == 2   # the log + per-value details
     assert 'pending: "–"' in PAGE and "function renderExpect()" in PAGE
+    # Cowork critique: after a run the filled button goes ("Run again" is in the last line); the JPS bands sit in
+    # step 2 under the gauge note
+    assert '$("start").hidden = !!checked;' in PAGE and '$("start").hidden = true;' in PAGE
+    # one feedback link per screen (Husaini 25 Oct): after the run "Tell us" shows, so the footer's Feedback hides
+    render_check = PAGE.split("function renderCheck() {", 1)[1].split("\n}\n", 1)[0]
+    assert """document.querySelectorAll('.vf-foot a[href="/feedback"]').forEach((a) => { a.hidden = true; });""" in render_check
+    step2 = PAGE.split('<span data-t="step2"></span>', 1)[1].split('<section class="step" id="test">', 1)[0]
+    assert '<p class="sub" data-t="gauge_note"></p>\n          <p class="sub" id="s-bands"></p>' in step2
 
 
 def test_every_scene_has_a_hook_and_the_list_has_two_groups():

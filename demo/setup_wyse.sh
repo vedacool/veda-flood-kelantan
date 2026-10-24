@@ -148,7 +148,6 @@ check "/admin closed (404 from the proxy)"     sh -c "[ \"\$(curl -s -o /dev/nul
 check "/admin closed in the app too (404)" \
   sh -c "${COMPOSE[*]} exec -T proxy wget -S -O /dev/null http://veda:8000/admin 2>&1 | grep -q ' 404 '"
 check "demo strip on the page (shared frame)" sh -c "curl -fsS '$B/' | grep -q 'class=\"vf-strip\"'"
-check "feedback link script (EN/BM)"           sh -c "curl -fsS '$B/demo-banner.js' | grep -q 'Jelas tak'"
 check "feedback form answers"                  sh -c "curl -fsS '$B/feedback' | grep -q 'name=\"place\"'"
 check "a scene answers (Rantau Panjang, 27 Nov 2024 19:30 -> ACT)" \
   sh -c "curl -fsS -X POST '$B/run' -H 'Content-Type: application/json' -d '{\"question\":\"Is Rantau Panjang safe?\",\"replay\":\"nov2024\",\"at\":\"2024-11-27 19:30\"}' | grep -q '\"verdict\":\"ACT\"'"

@@ -163,6 +163,9 @@ def test_how_it_works_has_the_five_parts_and_the_frame(client, monkeypatch):
                  'b_zetaris: "Zetaris:', 'b_meterless: "Meterless:', 'b_nvidia: "NVIDIA:'):
         assert text in PAGE, text
     assert 'class="primary"' not in PAGE and "border-radius: 999px" not in PAGE        # no filled buttons, no pills
+    assert "Over 1,000 tests and 41 of 41 safety evals pass" in PAGE and "Lebih 1,000 ujian" in PAGE
+    assert not re.search(r"\b1\d{3} (tests|ujian)", PAGE)                    # no exact test count (Cowork)
+    assert '<details id="all-box">' in PAGE                                    # "All 19 …" is a plain link
     assert "<header>" not in PAGE and PAGE.index("<!--VEDA:TOP-->") < PAGE.index("<main")
     assert PAGE.index("window.vedaSetLang = setLang;") < PAGE.index("<!--VEDA:FOOT-->")
     monkeypatch.setenv("SAMPLE_MODE", "true")

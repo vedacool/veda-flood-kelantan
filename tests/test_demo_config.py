@@ -51,17 +51,13 @@ def test_open_streams_are_capped_per_visitor_and_in_all():
 
 
 def test_the_demo_strip_comes_from_the_app_not_the_proxy():
-    """B-96: the shared frame (app/frame.py) carries the demo strip, top bar and footer; the proxy no longer adds a
-    banner (it would show twice). It still adds demo-banner.js: "Was this clear?" under each answer, EN | BM."""
-    assert "sub_filter '<body>'" not in NGINX and "veda-demo-banner" not in NGINX
-    assert "sub_filter '</body>' '<script src=\"/demo-banner.js\"></script></body>';" in NGINX
-    assert "location ~ ^/(live|judges|how-it-works|scenes(/[a-z0-9-]+)?)?$ {" in NGINX
-    js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
-    assert '"Was this clear? 1-minute feedback ›"' in js and '"Jelas tak? Maklum balas 1 minit ›"' in js
-    assert 'ask.href = "/feedback?lang=" + l;' in js and "veda-demo-banner" not in js
-    assert "COPY demo-banner.js /etc/nginx/demo/demo-banner.js" in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
+    """B-96: the shared frame (app/frame.py) carries the demo strip, top bar and footer, and the answer has its own
+    feedback line; the proxy adds nothing to VEDA's pages (it would show twice)."""
+    assert "sub_filter" not in NGINX and "demo-banner" not in NGINX and "veda-demo-banner" not in NGINX
+    assert not (DEMO / "demo-banner.js").exists()
+    assert "demo-banner" not in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
     sh = (DEMO / "setup_wyse.sh").read_text(encoding="utf-8")
-    assert "vf-strip" in sh and "veda-demo-banner" not in sh
+    assert "vf-strip" in sh and "demo-banner" not in sh
 
 
 def test_the_feedback_page_wears_the_shared_frame():
