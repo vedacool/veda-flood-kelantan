@@ -35,13 +35,13 @@ def test_banner_is_one_line_in_the_page_language_with_a_feedback_link():
     """Cowork 24 Oct: one small line (not bold), EN|BM following the page; Feedback / Maklum balas at the right;
     "Was this clear?" under each answer. Added by the proxy (demo/demo-banner.js) - the app is not changed."""
     banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
-    assert "Demo · past flood replay · not live · not an official warning" in banner and "font:400 16px" in banner
+    assert "Demo · past flood replay · not an official warning" in banner and "font:400 16px" in banner
     assert 'id="veda-demo-banner"' in banner and 'href="/feedback"' in banner and "<br>" not in banner
     assert "sub_filter '</body>' '<script src=\"/demo-banner.js\"></script></body>';" in NGINX
     js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
-    for words in ('"Demo · past flood replay · not live · not an official warning"', 'feedback: "Feedback"',
-                  '"Was this clear? 1-minute feedback ›"', '"Demo · ulang tayang banjir lalu · bukan data semasa · '
-                  'bukan amaran rasmi"', 'feedback: "Maklum balas"', '"Jelas tak? Maklum balas 1 minit ›"'):
+    for words in ('"Demo · past flood replay · not an official warning"', 'feedback: "Feedback"',
+                  '"Was this clear? 1-minute feedback ›"', '"Demo · banjir lalu · bukan amaran rasmi"',
+                  'feedback: "Maklum balas"', '"Jelas tak? Maklum balas 1 minit ›"'):
         assert words in js
     assert "COPY demo-banner.js /etc/nginx/demo/demo-banner.js" in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
 

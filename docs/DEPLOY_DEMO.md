@@ -129,8 +129,8 @@ tailnet-only: Funnel exposes only what is listed there. **Never run `tailscale s
 
 ## 6. Test it from outside (5 min)
 On a phone **on mobile data, not on the tailnet** (or any computer logged out of Tailscale):
-1. Open the public address: the dark one-line banner "Demo · past flood replay · not live · not an official
-   warning" is at the top (in BM after tapping BM). Link to share with judges and testers (opens the flood replay):
+1. Open the public address: the dark one-line banner "Demo · past flood replay · not an official warning"
+   is at the top (in BM after tapping BM). Link to share with judges and testers (opens the flood replay):
    `https://wyse5070.<your-tailnet>.ts.net/?replay=nov2024&at=2024-11-27%2019:30` -> tap **Rantau Panjang** -> Act now.
 2. `…/admin` -> 404. `…/feedback` -> the form, in BM if the phone is in Malay; send one test answer -> *Thank you*.
 3. The rate limit cannot be dodged with a fake header (from any computer outside the tailnet):

@@ -4,9 +4,9 @@
 (function () {
   "use strict";
   var WORDS = {
-    en: { note: "Demo · past flood replay · not live · not an official warning", feedback: "Feedback",
+    en: { note: "Demo · past flood replay · not an official warning", feedback: "Feedback",
           ask: "Was this clear? 1-minute feedback ›" },
-    ms: { note: "Demo · ulang tayang banjir lalu · bukan data semasa · bukan amaran rasmi", feedback: "Maklum balas",
+    ms: { note: "Demo · banjir lalu · bukan amaran rasmi", feedback: "Maklum balas",
           ask: "Jelas tak? Maklum balas 1 minit ›" }
   };
   var answer = document.getElementById("s-answer");          // only the main page has answers
