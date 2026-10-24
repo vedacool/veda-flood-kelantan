@@ -260,9 +260,6 @@ def test_scene_tide_line_on_kota_bharu_and_no_verdict_change(scene):
     assert r["forecast"]["verdict"] == "PREPARE"                # same as without the line
 
 
-@pytest.mark.xfail(strict=True, reason="Rule A (review pack): MET Waspada -> at least WATCH, Buruk/Bahaya -> at least "
-                                       "PREPARE. Not applied in the verdict yet (warnings only pick the full path) - "
-                                       "reported to Cowork 24 Oct; not changed without Cowork.")
 @pytest.mark.parametrize("heading,expected", [("Amaran Hujan Berterusan (Tahap Waspada)", "WATCH"),
                                               ("Amaran Hujan Berterusan (Tahap Bahaya)", "PREPARE")])
 def test_met_warning_raises_the_verdict_as_rule_a_says(run_ctx, heading, expected):
@@ -279,4 +276,36 @@ def test_trace_lines_for_tide_advice_and_met_warning(scene, run_ctx):
     from app import trace
     rec = [json.loads(x) for x in trace.current_run().path.read_text(encoding="utf-8").splitlines()]
     met = next(x for x in rec if x["action"] == "forecast.met_warning")
-    assert "not in the verdict yet" in met["decision"] and met["status"] == "fallback"
+    assert met["output_summary"] == "rain warning (Waspada) → minimum WATCH" and met["status"] == "success"
+
+
+@pytest.mark.parametrize("heading,expected", [
+    ("CONTINUOUS RAIN WARNING (ALERT LEVEL)", ("waspada", "WATCH")),
+    ("CONTINUOUS RAIN WARNING (SEVERE LEVEL)", ("buruk", "PREPARE")),
+    ("Amaran Hujan Berterusan (Tahap Buruk)", ("buruk", "PREPARE")),
+    ("CONTINUOUS RAIN WARNING (DANGER LEVEL)", ("bahaya", "PREPARE")),
+    ("THUNDERSTORMS WARNING", (None, None)),                     # no level -> sets nothing
+])
+def test_warning_level_from_the_heading(heading, expected):
+    assert forecast_agent.warning_level(heading) == expected
+
+
+def test_met_warning_only_raises_never_lowers(run_ctx):
+    ev = ctx_with(None, level=5.5)                               # river above Danger: ACT
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "Amaran Hujan Berterusan (Tahap Waspada)"}]}
+    assert verdict(ev)["verdict"] == "ACT"
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "THUNDERSTORMS WARNING"}]}
+    assert verdict(ev)["verdict"] == "NORMAL"
+
+
+def test_line_under_the_verdict_names_the_warning(run_ctx):
+    from app import view
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "CONTINUOUS RAIN WARNING (DANGER LEVEL)"}]}
+    fc = verdict(ev)
+    assert fc["verdict"] == "PREPARE" and view.set_by(fc) == "met_warning"
+    card = {"verdict": "PREPARE", "gauge": {"level_m": 1.0, "read_at": "24 Oct 10:00"}, "comparison": {}, "replay": None}
+    assert view._line(card, fc, "en") == "MetMalaysia has an official danger-level rain warning for this district."
+    assert view._line(card, fc, "ms") == "MetMalaysia mengeluarkan amaran hujan rasmi tahap Bahaya untuk daerah ini."
+    assert view.why(fc, "en").endswith("that sets at least “Get ready”.")

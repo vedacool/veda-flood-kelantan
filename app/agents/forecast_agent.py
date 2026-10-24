@@ -20,6 +20,7 @@ level only: a few hours of rise there may just be the tide, so no straight-line 
 Mode "now" (quick path): current levels only, no projection.
 Reads historic peaks from the World Model; writes its forecast there as a fact about the place.
 """
+import re
 from datetime import datetime, timezone
 
 from app import trace
@@ -157,6 +158,43 @@ def _rain(rain):
                    past7 is not None and past7 >= WET_GROUND_7D_MM, "freshness": rain.get("freshness")}
 
 
+# Rule A (review pack, approved by Cowork 24 Oct, tentative until Dr Ariff answers L11): an active MetMalaysia rain
+# warning for the town's district sets a MINIMUM verdict - it can only raise. The level is read from the heading
+# (MetMalaysia: Waspada = alert, Buruk = severe / bad weather, Bahaya = danger); a warning without a level (e.g. a
+# thunderstorm warning) sets nothing.
+MET_LEVELS = (("bahaya", "PREPARE", re.compile(r"\b(DANGER\s+LEVEL|TAHAP\s+BAHAYA)\b", re.I)),
+              ("buruk", "PREPARE", re.compile(r"\b(SEVERE\s+LEVEL|BAD\s+WEATHER\s+LEVEL|TAHAP\s+BURUK)\b", re.I)),
+              ("waspada", "WATCH", re.compile(r"\b(ALERT\s+LEVEL|TAHAP\s+WASPADA)\b", re.I)))
+
+
+def warning_level(heading):
+    """('waspada' | 'buruk' | 'bahaya', minimum verdict) from a MetMalaysia warning heading, or (None, None)."""
+    for level, minimum, rx in MET_LEVELS:
+        if rx.search(heading or ""):
+            return level, minimum
+    return None, None
+
+
+def _met_warning(evidence):
+    """Rule A: [(minimum verdict, 'met-warning', reason)] for the highest-level active warning; traced either way."""
+    active = ((evidence or {}).get("met_warnings") or {}).get("active") or []
+    if not active:
+        return []
+    levels = [(w, *warning_level(w.get("heading"))) for w in active]
+    leveled = [x for x in levels if x[1]]
+    if not leveled:
+        trace.step(AGENT, "forecast.met_warning", output_summary="active MetMalaysia warning without a level: "
+                   + "; ".join(str(w.get("heading")) for w in active[:2]),
+                   decision="no Waspada / Buruk / Bahaya level -> no minimum set (rule A)")
+        return []
+    w, level, minimum = max(leveled, key=lambda x: LEVELS.index(x[2]))
+    trace.step(AGENT, "forecast.met_warning", output_summary=f"rain warning ({level.capitalize()}) → minimum {minimum}",
+               input_summary=w.get("heading"), target_agent="Coordinator",
+               decision="rule A (tentative, L11): an official MetMalaysia rain warning for this district sets a "
+                        "minimum verdict - it can only raise")
+    return [(minimum, "met-warning", f"MetMalaysia {level.capitalize()} rain warning: {w.get('heading')}")]
+
+
 def _rain_upstream(ru):
     """B-88: heavy rain at an upstream rain point -> at least WATCH (also when its arrival time is not known)."""
     if not ru or not ru.get("heavy_upstream"):
@@ -274,7 +312,7 @@ def forecast(plan, evidence, world=None, now=None):
     up_fired, upstream = _upstream(ctx.get("sentinels", []))
     rain_fired, rain = ([], None) if now_only else _rain(ctx.get("rain"))
     ru = None if now_only else ctx.get("rain_upstream")
-    fired += up_fired + rain_fired + _rain_upstream(ru)
+    fired += up_fired + rain_fired + _rain_upstream(ru) + _met_warning(evidence)
     base = max((LEVELS.index(f[0]) for f in fired), default=0)
     triggers = [{"level": f[0], "rule": f[1], "reason": f[2]} for f in fired]
     if fast and base < len(LEVELS) - 1:
@@ -308,11 +346,11 @@ def _clock(evidence):
 
 def _finish(out, plan, world, evidence, run_id):
     active = ((evidence or {}).get("met_warnings") or {}).get("active") or []
-    if active:            # Cowork 24 Oct: rule A says a MET warning raises the verdict; it is not applied yet - say so
+    if active and out["verdict"] == "INSUFFICIENT_DATA":     # no river reading: the verdict stays "Can't confirm"
         trace.step(AGENT, "forecast.met_warning", input_summary=out["place"],
                    output_summary="active MetMalaysia warning: " + "; ".join(str(w.get("heading")) for w in active[:2]),
-                   decision="noted, not in the verdict yet (rule A: Waspada -> at least WATCH, Buruk/Bahaya -> at least "
-                            "PREPARE - waiting for Cowork / Dr Ariff)", status="fallback")
+                   decision="shown on the card; no river reading -> the verdict stays INSUFFICIENT_DATA (rule A sets a "
+                            "minimum on a verdict, it does not replace a missing reading)", status="fallback")
     trace.step(AGENT, "forecast.verdict", input_summary=out["place"],
                output_summary=f"{out['verdict']} (confidence {out['confidence']['label']}, "
                               f"{out['confidence']['score']})",

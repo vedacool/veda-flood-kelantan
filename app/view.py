@@ -80,6 +80,7 @@ W = {
     "who_upstream": {"en": "the river upstream", "ms": "sungai di hulu"},
     "who_rain": {"en": "the rain forecast", "ms": "ramalan hujan"},
     "who_rain_up": {"en": "the heavy rain upstream", "ms": "hujan lebat di hulu"},
+    "who_met": {"en": "the official MetMalaysia rain warning", "ms": "amaran hujan rasmi MetMalaysia"},
     "who_rain_both": {"en": "the heavy rain upstream arriving while it rains heavily here",
                       "ms": "hujan lebat di hulu yang sampai ketika hujan lebat di sini"},
     "and_word": {"en": " and ", "ms": " dan "},
@@ -115,6 +116,10 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
                                   "heavily here ({mm} mm in 12 hours), so VEDA moved up one step.",
                             "ms": "Hujan lebat di hulu ({where}) mungkin sampai ke sini dalam {a}-{b} jam ketika hujan "
                                   "lebat juga di sini ({mm} mm dalam 12 jam), jadi VEDA naikkan satu tahap."},
+    "met-warning": {"en": "MetMalaysia has an official {level} rain warning for this district; that sets at least "
+                          "“{min}”.",
+                    "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini; ini menetapkan "
+                          "sekurang-kurangnya “{min}”."},
     "rain-heavy": {"en": "Heavy rain is forecast: {n24} mm in 24 hours, {n72} mm in 3 days.",
                    "ms": "Hujan lebat dijangka: {n24} mm dalam 24 jam, {n72} mm dalam 3 hari."},
     "rain-wet-ground": {"en": "{n72} mm of rain is forecast in 3 days, on ground already wet from the past week.",
@@ -148,7 +153,7 @@ LEFT_OUT = {
     "no_reading": {"en": "no reading", "ms": "tiada bacaan"},
     "looked_wrong": {"en": "the reading looked wrong", "ms": "bacaan kelihatan salah"},
     "too_old": {"en": "reading too old ({age})", "ms": "bacaan terlalu lama ({age})"},
-    "past": {"en": "not kept for past dates", "ms": "tidak disimpan untuk tarikh lepas"},
+    "past": {"en": "not available for this date", "ms": "tiada untuk tarikh ini"},       # Cowork 24 Oct
     "unreadable": {"en": "could not be read", "ms": "tidak dapat dibaca"},
     "stale": {"en": "out of date", "ms": "sudah lapuk"},
     "quick": {"en": "not needed for a quick check", "ms": "tidak perlu untuk semakan pantas"},
@@ -222,6 +227,8 @@ SET_BY = {  # Cowork 24 Oct: the line under the badge says what SET the verdict 
     "upstream_gauge": {"en": "The river upstream is high, and the water may be on its way.",
                        "ms": "Sungai di hulu tinggi, dan airnya mungkin sedang menuju ke sini."},
     "rain_forecast": {"en": "Heavy rain is forecast.", "ms": "Hujan lebat dijangka."},
+    "met_warning": {"en": "MetMalaysia has an official {level} rain warning for this district.",
+                    "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini."},
 }
 
 
@@ -234,7 +241,19 @@ def set_by(forecast):
         return "river"
     r = top[0]
     return ("rain_both" if r == "upstream+local-rain" else "rain_up" if r == "upstream-rain" else
-            "upstream_gauge" if r.startswith("sentinel") else "rain_forecast" if r.startswith("rain") else "river")
+            "upstream_gauge" if r.startswith("sentinel") else "rain_forecast" if r.startswith("rain") else
+            "met_warning" if r == "met-warning" else "river")
+
+
+MET_LEVEL_WORD = {"waspada": {"en": "alert-level", "ms": "Waspada"}, "buruk": {"en": "severe-level", "ms": "Buruk"},
+                  "bahaya": {"en": "danger-level", "ms": "Bahaya"}}
+
+
+def _met_level(forecast):
+    """The MetMalaysia warning level behind a 'met-warning' trigger ('waspada' | 'buruk' | 'bahaya'), or None."""
+    t = next((t for t in (forecast or {}).get("triggers") or [] if t["rule"] == "met-warning"), None)
+    m = re.search(r"MetMalaysia (\w+) rain warning", (t or {}).get("reason", ""))
+    return m.group(1).lower() if m and m.group(1).lower() in MET_LEVEL_WORD else None
 
 
 def _line(card, forecast, lang):
@@ -242,6 +261,8 @@ def _line(card, forecast, lang):
     if card["verdict"] == "INSUFFICIENT_DATA" or not card.get("gauge"):
         return W["no_reading_past"][lang] if card.get("replay") else W["cant_confirm"][lang]
     by = set_by(forecast)
+    if by == "met_warning":
+        return SET_BY[by][lang].format(level=MET_LEVEL_WORD[_met_level(forecast) or "waspada"][lang])
     if by != "river":
         return SET_BY[by][lang]
     comp, th = card.get("comparison") or {}, card.get("thresholds") or {}
@@ -403,6 +424,9 @@ def why(forecast, lang):
             out.append(tmpl[lang].format(n24=_num(r.get("next_24h_mm")), n72=_num(r.get("next_72h_mm"))))
         elif rule in ("upstream-rain", "upstream+local-rain"):
             out.append(_why_rain(fc.get("rain_upstream") or {}, rule, lang))
+        elif rule == "met-warning":
+            out.append(tmpl[lang].format(level=MET_LEVEL_WORD[_met_level(fc) or "waspada"][lang],
+                                         min=HEADLINE[t["level"]][lang]))
         else:
             out.append(tmpl[lang])
     if any(t["rule"] == "rising-fast" for t in triggers):
@@ -430,6 +454,8 @@ def combined(forecast, lang):
         return None
     raisers = [t["rule"] for t in triggers if t["level"] == verdict]
     who = [W[k][lang] for k, pre in (("who_upstream", "sentinel"), ("who_rain", "rain")) if any(r.startswith(pre) for r in raisers)]
+    if "met-warning" in raisers:                               # rule A
+        who.append(W["who_met"][lang])
     if "upstream+local-rain" in raisers:                       # B-88
         who.append(W["who_rain_both"][lang])
     elif "upstream-rain" in raisers:

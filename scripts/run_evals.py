@@ -64,8 +64,19 @@ def run_one(sc, log_dir):
             now = _clock_plus(sc["stale_hours"])
         finally:
             trace.end_run()
-    r = loop.run(sc["question"], llm=stand_in(sc.get("llm")), log_dir=log_dir, quiet=True, replay=sc.get("replay"),
-                 at=at, now=now, default_scene=True)
+    from app.agents import data_agent
+    real_gather = data_agent.gather
+    if sc.get("met_warning"):          # test-only stub (rule A evals): a SYNTHETIC MetMalaysia warning for this run only
+        def gather(*a, **k):
+            ev = real_gather(*a, **k)
+            ev["met_warnings"] = {"status": "ok", "active": [sc["met_warning"]], "note": "SYNTHETIC warning (eval stub)"}
+            return ev
+        data_agent.gather = gather
+    try:
+        r = loop.run(sc["question"], llm=stand_in(sc.get("llm")), log_dir=log_dir, quiet=True,
+                     replay=sc.get("replay"), at=at, now=now, default_scene=True)
+    finally:
+        data_agent.gather = real_gather
     text = r["answer"]["text"] + "\n" + r["answer"]["safety_line"]
     ex, problems = sc.get("expect", {}), []
     verdict = (r.get("forecast") or {}).get("verdict")

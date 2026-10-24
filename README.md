@@ -187,9 +187,9 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 838 tests pass (24 Oct 2026), 13 skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 30 scenarios, 30 of 30 pass; pass^3
-  (all 3 repeat runs, 24 Oct) 30 of 30, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Offline test suite (`python -m pytest -q`): 847 tests pass (24 Oct 2026), 13 skipped (they need live services).**
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 32 scenarios, 32 of 32 pass; pass^3
+  (all 3 repeat runs, 24 Oct) 32 of 32, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -209,7 +209,7 @@ These are controlled tests, kept apart from the live rates above.
   be incomplete or out of date (loaded once at setup).
 - **Tentative values:** the verdict rules, freshness limits, upstream travel times, the rain-upstream numbers (B-88:
   checked on real archive rain - Nov 2024 flood and 14 ordinary days, `docs/validation/b88_rain_rule.md`, not tuned to
-  the result) and the tidal-gauge handling are provisional. Sg. Golok's upstream rain (Thailand) is not checked. They are under review by a hydrology adviser (`docs/review_pack_ariff.md`) and labelled tentative.
+  the result) and the tidal-gauge handling are provisional. Sg. Golok's upstream rain is read at two Thai-side Open-Meteo points (tentative, arrival time not known). In the Nov 2024 replay the rain rule raised Rantau Panjang to Keep watching on 21 Nov, five days before the first cited river report (26 Nov), which already found the river above Warning - no lead time is claimed. MetMalaysia rain warnings set a minimum verdict (rule A, tentative). They are under review by a hydrology adviser (`docs/review_pack_ariff.md`) and labelled tentative.
 - **Straight-line trend:** the 24 h range is a straight-line projection and overshoots on a steep rise (shown with
   medium confidence).
 - **AI steps are best effort:** Nightshift cuts a call that sends no first byte in about 45 s, and NVIDIA sometimes

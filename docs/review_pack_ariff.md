@@ -390,10 +390,12 @@ watching or higher, the card adds: "High tide can keep water in town longer." / 
 bertakung lebih lama di bandar." Advice only - the verdict does not change. Right words?
 > Answer: ______
 
-**L11.** (added 24 Oct - a gap we found, not yet changed) Section A says a MetMalaysia warning raises the verdict
-(Waspada → at least Keep watching; Buruk / Bahaya → at least Get ready). **VEDA does not do this yet:** an active
-warning makes VEDA do the full check and is shown on the card, but it does not change the verdict (the live log says
-"noted, not in the verdict yet"). Should it, exactly as section A says?
+**L11.** (added 24 Oct, **applied the same day** with Cowork's OK) Section A says a MetMalaysia warning raises the
+verdict. VEDA now does: an active rain warning for the town's district sets a minimum - Waspada → at least Keep
+watching; Buruk / Bahaya → at least Get ready - and can never lower a verdict. A warning without a level (e.g. a
+thunderstorm warning) sets nothing; with no river reading VEDA still says "Can't confirm". The screen says
+"MetMalaysia has an official <level> rain warning for this district." Is this right, and should a thunderstorm
+warning count too?
 > Answer: ______
 
 ---

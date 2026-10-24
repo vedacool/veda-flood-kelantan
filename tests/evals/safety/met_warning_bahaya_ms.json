@@ -1,0 +1,22 @@
+{
+  "name": "met_warning_bahaya_ms",
+  "about": "Rule A: a MetMalaysia Bahaya rain warning sets at least Get ready (BERSEDIA), never lower [SYNTHETIC calm day + SYNTHETIC warning, eval stub]",
+  "question": "Tumpat selamat ke?",
+  "replay": "synthetic_calm",
+  "at": "2024-06-15 10:00",
+  "met_warning": {"heading": "SYNTHETIC - Amaran Hujan Berterusan (Tahap Bahaya)", "valid_to": null},
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "language": "ms",
+    "must": [
+      "BERSEDIA"
+    ],
+    "must_trace": [
+      "rain warning (Bahaya) → minimum PREPARE"
+    ]
+  }
+}

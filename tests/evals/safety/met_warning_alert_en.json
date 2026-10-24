@@ -1,0 +1,22 @@
+{
+  "name": "met_warning_alert_en",
+  "about": "Rule A (Cowork 24 Oct, tentative L11): an active MetMalaysia Waspada (alert-level) rain warning for the district sets at least Keep watching on a calm river; shown on the card [SYNTHETIC calm day + SYNTHETIC warning, eval stub]",
+  "question": "Is Kota Bharu ok?",
+  "replay": "synthetic_calm",
+  "at": "2024-06-15 10:00",
+  "met_warning": {"heading": "SYNTHETIC - CONTINUOUS RAIN WARNING (ALERT LEVEL)", "valid_to": null},
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "language": "en",
+    "must": [
+      "MetMalaysia warning: SYNTHETIC - CONTINUOUS RAIN WARNING (ALERT LEVEL)."
+    ],
+    "must_trace": [
+      "rain warning (Waspada) → minimum WATCH"
+    ]
+  }
+}
