@@ -51,7 +51,7 @@ W = {
     "up_ok": {"en": "{where}: normal", "ms": "{where}: normal"},
     "up_high": {"en": "{where}: at the {name} level", "ms": "{where}: pada paras {name}"},
     "up_rising": {"en": ", rising", "ms": ", sedang naik"},
-    "up_window": {"en": "; may reach here in {a}-{b} hours", "ms": "; mungkin sampai ke sini dalam {a}-{b} jam"},
+    "up_window": {"en": "; may reach here in {a}–{b} hours", "ms": "; mungkin sampai ke sini dalam {a}–{b} jam"},
     "rain_next": {"en": "{mm} mm expected in the next 24 hours", "ms": "{mm} mm dijangka dalam 24 jam akan datang"},
     "rain_past": {"en": "{mm} mm fell in the 24 hours before this time", "ms": "{mm} mm turun dalam 24 jam sebelum masa ini"},
     "checked2": {"en": "Double-checked", "ms": "Disemak dua kali"},
@@ -140,16 +140,16 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
                          "ms": "Sungai di hulu ({where}) pada paras Bahaya{window}."},
     "sentinel>=alert": {"en": "The river upstream at {where} is high{window}.",
                         "ms": "Sungai di hulu ({where}) tinggi{window}."},
-    "window": {"en": "; the water may reach here in {a}-{b} hours", "ms": "; air mungkin sampai ke sini dalam {a}-{b} jam"},
+    "window": {"en": "; the water may reach here in {a}–{b} hours", "ms": "; air mungkin sampai ke sini dalam {a}–{b} jam"},
     "upstream-rain": {"en": "Heavy rain has fallen upstream ({where}, {mm} mm in 3 days); {when}.",
                       "ms": "Hujan lebat telah turun di hulu ({where}, {mm} mm dalam 3 hari); {when}."},
     "upstream-rain-fc": {"en": "Heavy rain is forecast upstream ({where}, {mm} mm in 24 hours).",
                          "ms": "Hujan lebat dijangka di hulu ({where}, {mm} mm dalam 24 jam)."},
-    "when_known": {"en": "the water may reach here in {a}-{b} hours", "ms": "air mungkin sampai ke sini dalam {a}-{b} jam"},
+    "when_known": {"en": "the water may reach here in {a}–{b} hours", "ms": "air mungkin sampai ke sini dalam {a}–{b} jam"},
     "when_unknown": {"en": "when it reaches here is not known", "ms": "bila ia sampai ke sini tidak diketahui"},
-    "upstream+local-rain": {"en": "Heavy rain upstream ({where}) may reach here in {a}-{b} hours while it is also raining "
+    "upstream+local-rain": {"en": "Heavy rain upstream ({where}) may reach here in {a}–{b} hours while it is also raining "
                                   "heavily here ({mm} mm in 12 hours), so VEDA moved up one step.",
-                            "ms": "Hujan lebat di hulu ({where}) mungkin sampai ke sini dalam {a}-{b} jam ketika hujan "
+                            "ms": "Hujan lebat di hulu ({where}) mungkin sampai ke sini dalam {a}–{b} jam ketika hujan "
                                   "lebat juga di sini ({mm} mm dalam 12 jam), jadi VEDA naikkan satu tahap."},
     "met-warning-no-river": {"en": "There is no fresh river reading here, but MetMalaysia has an official {level} rain "
                                    "warning for this district - an official warning is enough to get ready.",
@@ -221,7 +221,7 @@ def _cm(v):
 
 def _range_cm(lo, hi):
     a, b = sorted((_cm(lo), _cm(hi)))
-    return str(a) if a == b else f"{a}-{b}"
+    return str(a) if a == b else f"{a}–{b}"
 
 
 def _when(iso, lang, with_year=True):
@@ -517,9 +517,17 @@ def _why_rain(ru, rule, lang):
     return WHY["upstream-rain-fc"][lang].format(where=_place_of(u["name"]), mm=_num(u["next_24h_mm"])) if u else ""
 
 
+DIGIT_RANGE = re.compile(r"(\d)-(\d)")
+
+
+def dash(text):
+    """Ranges on the screens read with an en dash ('12–15 cm', Cowork 24 Oct); the plain-text card keeps '-'."""
+    return DIGIT_RANGE.sub("\\1–\\2", text)
+
+
 def _rain_text(card, lang, keys):
     """B-88: the card's rain lines (same words as the card), for the Upstream / Rain rows."""
-    out = [t for k, t in card_mod.rain_lines(card, lang) if k in keys]
+    out = [dash(t) for k, t in card_mod.rain_lines(card, lang) if k in keys]
     return [card_mod.months_ms(t) for t in out] if lang == "ms" else out
 
 
@@ -741,10 +749,10 @@ def share_text(view, lang):
 LEVEL_N = {"NORMAL": 1, "WATCH": 2, "PREPARE": 3, "ACT": 4}
 V2 = {
     "level_of": {"en": "Level {n} of 4", "ms": "Tahap {n} daripada 4"},
-    "no_level": {"en": "No fresh river reading", "ms": "Tiada bacaan sungai terkini"},
+    "no_level": {"en": "Level unknown", "ms": "Tahap tidak diketahui"},
     "action": {
         "NORMAL": {"en": ["Nothing to do now."], "ms": ["Tiada apa perlu dibuat sekarang."]},
-        "WATCH": {"en": ["Check again in a few hours."], "ms": ["Semak semula dalam beberapa jam."]},
+        "WATCH": {"en": ["Check again in 3 hours."], "ms": ["Semak semula dalam 3 jam."]},   # = the first step
         "PREPARE": {"en": ["Pack now. Be ready to leave.",
                            "Older people, the sick and babies: start moving to family on higher ground now."],
                     "ms": ["Kemas barang sekarang. Bersedia untuk keluar.",
@@ -766,8 +774,8 @@ V2 = {
     "vs_danger": {"en": "{d} m {side} the danger mark", "ms": "{d} m {side} paras Bahaya"},
     "rising": {"en": "↑ Rising about {r} cm an hour", "ms": "↑ Naik kira-kira {r} cm sejam"},
     "falling": {"en": "↓ Falling about {r} cm an hour", "ms": "↓ Turun kira-kira {r} cm sejam"},
-    "eta": {"en": "About {a}-{b} hours to the danger mark at this speed",
-            "ms": "Kira-kira {a}-{b} jam lagi ke paras Bahaya pada kelajuan ini"},
+    "eta": {"en": "About {a}–{b} hours to the danger mark at this speed",
+            "ms": "Kira-kira {a}–{b} jam lagi ke paras Bahaya pada kelajuan ini"},
     "eta1": {"en": "About {a} hours to the danger mark at this speed",
              "ms": "Kira-kira {a} jam lagi ke paras Bahaya pada kelajuan ini"},
     "dot_rain": {"en": "heavy rain", "ms": "hujan lebat"}, "dot_rising": {"en": "rising", "ms": "sedang naik"},
@@ -837,6 +845,13 @@ def river_post(card, forecast, evidence, lang):
             "warning_m": bar["warning_m"], "danger_m": bar["danger_m"], "y2014_m": y2014, "lines": lines}
 
 
+def _order(u):
+    try:
+        return int(u.get("chain_order"))
+    except (TypeError, ValueError):
+        return None
+
+
 def flow(card, forecast, lang):
     """'Coming from upstream': up to two upstream dots (rain area / gauge) and 'you', each with its state."""
     dots = []
@@ -846,7 +861,11 @@ def flow(card, forecast, lang):
         top = max(heavy, key=lambda u: u["past_72h_mm"] or 0)          # the wettest rain area, by place name
         dots.append({"name": V2["thailand"][lang] if thai else str(top["name"]), "state": "rain",
                      "text": V2["dot_rain"][lang]})
-    for u in (forecast or {}).get("upstream", []):
+    ups = list((forecast or {}).get("upstream", []))
+    if ups and all(_order(u) is not None for u in ups):    # hulu -> hilir from the river chain, never assumed
+        ups.sort(key=_order)
+    gauges = []
+    for u in ups:
         if u.get("status") == "no fresh reading":
             state, text = "none", V2["dot_none"][lang]
         elif u.get("band") in LEVEL:
@@ -855,10 +874,12 @@ def flow(card, forecast, lang):
             state, text = "rising", V2["dot_rising"][lang]
         else:
             state, text = "normal", V2["dot_normal"][lang]
-        dots.append({"name": _place_of(u["gauge"]), "state": state, "text": text})
+        gauges.append({"name": _place_of(u["gauge"]), "state": state, "text": text})
+    # two dots before "you": the rain area and the gauge nearest the town, or the two gauges nearest the town
+    dots = dots + gauges[-1:] if dots else gauges[-2:]
     if not dots:
         return None
-    return {"dots": dots[:2] + [{"name": card.get("place"), "state": "you", "text": V2["dot_you"][lang]}],
+    return {"dots": dots + [{"name": card.get("place"), "state": "you", "text": V2["dot_you"][lang]}],
             "caption": V2["flow_caption"][lang]}
 
 

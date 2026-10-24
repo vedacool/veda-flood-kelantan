@@ -27,7 +27,7 @@
   header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; background: none;
                   border: 0; color: var(--fg); padding: 0; min-height: 44px; cursor: pointer; }
   main { max-width: 640px; margin: 0 auto; padding: 16px 16px 40px; }
-  h1 { font-size: 1.45rem; line-height: 1.25; margin: 8px 0 16px; }
+  h1 { font-size: 1.45rem; line-height: 1.25; margin: 4px 0 8px; }
   h2 { font-size: 1.1rem; margin: 0 0 8px; }
   button, .btn { font: inherit; min-height: 48px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
                  background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; display: inline-flex;
@@ -57,12 +57,14 @@
   .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700;
           color: var(--muted); }
   /* the replay moment (demo) */
-  .intro { font-size: 1.05rem; margin: 0 0 12px; }
-  .moment-label { font-weight: 700; margin: 0 0 6px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
-  .chips button { min-height: 44px; padding: 6px 12px; border-radius: 999px; font-size: 1rem; flex-direction: column;
-                  line-height: 1.2; }
-  .chips button small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+  .intro { font-size: 1rem; margin: 0 0 6px; }
+  .moment-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .moment-label { font-weight: 700; margin: 0; }
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 12px; }
+  .chips button { min-height: 52px; padding: 4px 4px; border-radius: 14px; font-size: 1rem; flex-direction: column;
+                  line-height: 1.15; gap: 2px; }
+  .chips button small { font-size: 16px; color: var(--muted); font-weight: 400; }
+  .small-note { font-size: 16px; color: var(--muted); margin: 8px 0 0; }
   .chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent);
                                        font-weight: 700; }
   .chips button[aria-pressed="true"] small { color: var(--on-accent); }
@@ -183,12 +185,13 @@
   <!-- Cowork 24 Oct (demo UI round): in the demo, the moment of the replay is visible and easy to change -->
   <div id="moment" hidden>
     <p class="intro" id="intro"></p>
-    <p class="intro sub" id="start-rp" data-t="start_rp"></p>
-    <p class="moment-label" id="moment-label" data-t="change_moment"></p>
+    <div class="moment-head"><p class="moment-label" id="moment-label" data-t="change_moment"></p>
+      <button type="button" class="linkish" id="scenes-link" aria-expanded="false" aria-controls="scenes"></button></div>
     <div class="chips" id="chips" role="group" aria-labelledby="moment-label"></div>
     <div class="sheet" id="scenes" hidden></div>
   </div>
   <div class="town-list" id="towns"></div>
+  <p class="small-note" id="few-readings" data-t="few_readings" hidden></p>
   <form id="ask">
     <label for="q" data-t="or_type"></label>
     <div class="ask">
@@ -237,7 +240,6 @@
     <p id="a-todo" class="sub" style="margin:0"></p>
     <a class="btn wide" id="a-jps" href="https://publicinfobanjir.water.gov.my/" target="_blank" rel="noopener"
        data-t="open_jps" hidden></a></div>
-  <button type="button" class="sos" id="a-sos" data-t="sos" hidden></button>
   <div id="a-rows">
     <div class="card" id="a-river-box"><h2 data-t="river_here"></h2><div class="river"><div id="a-post"></div>
       <ul class="river-lines" id="a-river-lines"></ul></div></div>
@@ -266,6 +268,7 @@
   <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p>
     <div class="towns" id="a-choices" style="margin-top:12px"></div></div>
   <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:12px"></button>
+  <button type="button" class="sos outline" id="a-sos" data-t="sos"></button>
   <p class="note" data-t="disclaimer"></p>
 </section>
 
@@ -284,7 +287,7 @@
 <section id="s-share" hidden>
   <h1 data-t="share_title"></h1>
   <div class="card"><p class="share-text" id="sh-text" style="margin:0"></p></div>
-  <a class="btn primary wide" id="sh-wa" target="_blank" rel="noopener" data-t="send_wa"></a>
+  <a class="btn wa wide" id="sh-wa" target="_blank" rel="noopener" data-t="send_wa"></a>
   <p></p>
   <button type="button" class="wide" id="sh-copy" data-t="copy"></button>
   <p class="note" id="sh-copied" role="status" aria-live="polite"></p>
@@ -348,14 +351,14 @@ const UI = {
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
     level_now: "Now", alert: "Alert", warning: "Warning", danger: "Danger", m: "m",
     // Cowork 24 Oct (demo UI round)
-    intro: "Replay of the November 2024 Kelantan flood. Tap a town to see what VEDA would have told a family that evening.",
+    intro: "Replay of the November 2024 Kelantan flood. Start with Rantau Panjang.",
     change_moment: "Change moment", change: "Change", test_scenes: "Test scenes ›", hide_scenes: "Hide test scenes",
     before: "Before", morning: "Morning", peak: "Peak", replay_short: "Replay", madeup_scene: "Made-up test scene",
     rain_detail: "Rain and upstream in detail", tap_skip: "Tap to skip",
     c_gather: "Reading river and rain…", c_upstream: "Checking rain upstream…", c_forecast: "Working out the risk…",
     c_draft: "Writing the answer…", c_critique: "Double-checking…",
     // v2 (Cowork blueprint 24 Oct)
-    start_rp: "Start with Rantau Panjang: the news reported its river level all evening. For other towns the replay has fewer river readings, so VEDA may say it can't confirm — it never guesses.",
+    few_readings: "For other towns the replay has fewer river readings, so VEDA may say it can't confirm — it never guesses.",
     river_here: "The river here", from_upstream: "Coming from upstream", send_family: "Send to family on WhatsApp",
     check_again: "Check again", see_text: "See or copy the text ›", open_jps: "Open JPS Infobanjir",
     check_yourself: "Check it yourself:", normal: "Normal", y2014: "Dec 2014 flood", check_row: "Check ›",
@@ -397,13 +400,13 @@ const UI = {
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
     level_now: "Kini", alert: "Waspada", warning: "Amaran", danger: "Bahaya", m: "m",
-    intro: "Ulang tayang banjir Kelantan November 2024. Tekan nama bandar untuk lihat apa yang VEDA akan beritahu keluarga pada petang itu.",
+    intro: "Ulang tayang banjir Kelantan November 2024. Mula dengan Rantau Panjang.",
     change_moment: "Tukar masa", change: "Tukar", test_scenes: "Senario ujian ›", hide_scenes: "Sembunyikan senario ujian",
     before: "Sebelum", morning: "Pagi", peak: "Puncak", replay_short: "Ulang tayang", madeup_scene: "Senario ujian rekaan",
     rain_detail: "Butiran hujan dan hulu", tap_skip: "Tekan untuk langkau",
     c_gather: "Membaca paras sungai dan hujan…", c_upstream: "Menyemak hujan di hulu…", c_forecast: "Menilai risiko…",
     c_draft: "Menulis jawapan…", c_critique: "Menyemak semula…",
-    start_rp: "Mula dengan Rantau Panjang: berita melaporkan paras sungainya sepanjang petang. Untuk bandar lain, ulang tayang ini kurang bacaan sungai, jadi VEDA mungkin kata tidak dapat disahkan — VEDA tidak meneka.",
+    few_readings: "Untuk bandar lain, ulang tayang ini kurang bacaan sungai, jadi VEDA mungkin kata tidak dapat disahkan — VEDA tidak meneka.",
     river_here: "Sungai di sini", from_upstream: "Dari hulu", send_family: "Hantar kepada keluarga melalui WhatsApp",
     check_again: "Semak semula", see_text: "Lihat atau salin teks ›", open_jps: "Buka JPS Infobanjir",
     check_yourself: "Semak sendiri:", normal: "Normal", y2014: "Banjir Dis 2014", check_row: "Semak ›",
@@ -492,6 +495,7 @@ function renderMoment() {
   const d = DATA.find((x) => x.v === cur) || {};
   $("intro").textContent = t("intro");
   $("intro").hidden = d.k !== "past";
+  $("few-readings").hidden = d.k !== "past" || $("moment").hidden;
   const chip = (label, sub, pressed, onClick, extra) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -503,10 +507,10 @@ function renderMoment() {
   };
   const scenesOpen = !$("scenes").hidden;
   const inScenes = d.k === "madeup" || d.k === "live";
-  $("chips").replaceChildren(...DATA.filter((x) => x.chip).map((x) => chip(t(x.chip), x.at[lang], x.v === cur, () => pick(x.v))),
-    chip(scenesOpen ? t("hide_scenes") : t("test_scenes"), "", inScenes, () => { $("scenes").hidden = !$("scenes").hidden; renderMoment(); },
-         String(scenesOpen)));
-  $("chips").lastChild.setAttribute("aria-controls", "scenes");
+  $("chips").replaceChildren(...DATA.filter((x) => x.chip).map((x) => chip(t(x.chip), x.at[lang], x.v === cur, () => pick(x.v))));
+  $("scenes-link").textContent = scenesOpen ? t("hide_scenes") : t("test_scenes");
+  $("scenes-link").setAttribute("aria-expanded", String(scenesOpen));
+  $("scenes-link").style.textDecoration = inScenes ? "underline" : "none";   // a test scene is the chosen data
   $("scenes").replaceChildren(...DATA.filter((x) => (x.k === "madeup" || (x.k === "live" && !sampleMode))).map((x) =>
     chip(x.k === "live" ? t("live") : `${t("madeup")} · ${x.what[lang]}`, "", x.v === cur, () => pick(x.v))));
 }
@@ -573,7 +577,7 @@ function checking(keys) {
 }
 
 async function ask(question, town) {
-  await ready;                                  // the demo's moment is set before the first run
+  await ready; await wordsReady;                // the demo's moment and the share link's base URL are known first
   lastQuestion = question; askedMode = $("mode").value;
   result = null; stageIdx = -1; warned = false; tipIdx = Math.floor(Math.random() * 4);
   show("s-wait");
@@ -712,7 +716,8 @@ function placeLink() {      // "Check it yourself": this place at this moment - 
   const q = new URLSearchParams({ place: (v && v.place) || "", lang });
   const [replay, at] = (askedMode || "|").split("|");
   if (replay) { q.set("replay", replay); q.set("at", at); }
-  return `${location.origin}/?${q}`;
+  // VEDA_PUBLIC_URL from the server when set (never 127.0.0.1 / localhost in a shared message), else this page's own
+  return `${(words && words.public_url) || location.origin}/?${q}`;
 }
 function shareFull() {
   const v = result && result.view;
@@ -726,7 +731,7 @@ function renderAnswer() {
   document.querySelector("#s-answer .todo").hidden = !v;
   document.querySelector("#s-answer .actions").hidden = !v;
   $("a-line").hidden = !v;
-  $("a-sos").hidden = !(v && v.verdict === "INSUFFICIENT_DATA");
+  $("a-sos").hidden = false;                    // Cowork 24 Oct: on every answer screen, outlined at the bottom
   if (!v) {  // no place card: not covered (nearest place), did you mean, or VEDA's data cannot be reached
     const o = result && result.other;
     $("a-label").hidden = true; $("a-place").textContent = ""; $("a-details").hidden = true;
@@ -739,7 +744,6 @@ function renderAnswer() {
       b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
       return b;
     }));
-    $("a-sos").hidden = !(o && o.kind === "down");
     return;
   }
   $("a-combined").hidden = !v.combined;
@@ -871,6 +875,7 @@ $("a-change").addEventListener("click", () => {
   if (pressed) pressed.focus();
 });
 $("w-check").addEventListener("click", () => { if (skipCheck) skipCheck(); });
+$("scenes-link").addEventListener("click", () => { $("scenes").hidden = !$("scenes").hidden; renderMoment(); });
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
   $("log").hidden = !$("log").hidden;
@@ -911,7 +916,7 @@ if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").valu
 // Cowork 24 Oct: the moment chips are for demos only - ?demo=1, a ?replay= link, or offline (SAMPLE_MODE)
 const demo = () => { $("moment").hidden = !(params.get("demo") === "1" || want || sampleMode); renderMoment(); };
 demo();
-fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
+const wordsReady = fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
 // a tap waits for /health (offline it answers at once): the demo's first answer is then on the chosen moment
 const ready = fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;

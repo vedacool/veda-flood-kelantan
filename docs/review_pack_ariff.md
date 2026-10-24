@@ -219,6 +219,31 @@ The emergency screen ("I'm stranded / in danger") shows Call 999, Call APM 991 a
 numbered steps. Right words for a resident under stress?
 > Answer: ______
 
+**G7.** (added 24 Oct night, **tentative**) **The new answer screen (v2): one action line under the verdict, and
+numbered steps.** Under the verdict and "Level n of 4" the screen shows ONE action line; WHAT TO DO NOW shows the G1
+advice as numbered steps, with three new sentences. "PPS" reads "evacuation centre (PPS)" / "pusat pemindahan (PPS)" on
+the screens (the plain-text card keeps "PPS"). The WhatsApp text says "What to do: <action line>".
+
+| Verdict | Action line (EN) | Action line (BM) |
+|---|---|---|
+| NORMAL | Nothing to do now. | Tiada apa perlu dibuat sekarang. |
+| WATCH | Check again in 3 hours. | Semak semula dalam 3 jam. |
+| PREPARE | Pack now. Be ready to leave. **Older people, the sick and babies: start moving to family on higher ground now.** | Kemas barang sekarang. Bersedia untuk keluar. **Warga emas, orang sakit dan bayi: mula berpindah ke rumah keluarga di tempat tinggi sekarang.** |
+| ACT | Move to higher ground. Follow APM / police. | Pindah ke tempat tinggi. Ikut arahan APM / polis. |
+| INSUFFICIENT_DATA | We have no fresh river reading for <place>. (level: "Level unknown") | Kami tiada bacaan sungai terkini untuk <place>. ("Tahap tidak diketahui") |
+
+New steps: PREPARE step 2 "Move the car, animals and valuables to higher ground now, while it's easy." / "Alihkan
+kereta, haiwan dan barang berharga ke tempat tinggi sekarang, selagi mudah."; ACT step 3 ends "Don't go back for
+animals or things." / "**Jangan patah balik untuk haiwan atau barang.**" (kept a direct "Jangan": a danger
+instruction); Can't confirm: "If water is rising around you, don't wait for us: move to higher ground." / "Check the
+official river levels yourself." (+ an "Open JPS Infobanjir" button) / "In danger, call 999." (BM: "Jika air naik di
+sekeliling anda, jangan tunggu kami: pindah ke tempat tinggi." / "Semak sendiri paras sungai rasmi." / "Jika dalam
+bahaya, hubungi 999.").
+Questions: (1) Is "start moving now" for older people, the sick and babies right at Get ready (stronger than the G1
+card advice, which only says to check on them)? (2) Are the action lines safe and clear for each level? (3) Is
+"Jangan patah balik untuk haiwan atau barang" right, given people do go back for livestock?
+> Answer: ______
+
 ---
 
 ## H. Backup gauges for Rantau Panjang, Kota Bharu and Pasir Mas — ~10 min (added 23 Oct, B-15)

@@ -110,11 +110,11 @@ def test_rising_line_agrees_with_the_water_row(views):
 def test_act_replay_rows(views):
     v = views["nov2024"][1]
     assert v["verdict"] == "ACT" and v["line"]["en"] == "The river is 1.94 m above the danger level and still rising."
-    assert v["water"]["en"]["main"] == "Rising about 12-15 cm an hour. Already 1.94 m over the danger mark."
+    assert v["water"]["en"]["main"] == "Rising about 12–15 cm an hour. Already 1.94 m over the danger mark."
     assert v["water"]["en"]["detail"] == [
-        "10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour · up 35 cm in 3 hours",
+        "10.94 m at 19:30 (reading reported in the news) · rising 12–15 cm an hour · up 35 cm in 3 hours",
         "3.94 m above the alert level (7 m)", "1.94 m above the danger level (9 m)"]
-    assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras Bahaya."
+    assert v["water"]["ms"]["main"] == "Naik kira-kira 12–15 cm sejam. Sudah 1.94 m melebihi paras Bahaya."
     assert v["combined"] is None                      # the river here alone already says Act now
     assert v["upstream"]["en"] == [                      # Cowork 24 Oct: plain words, no gauge names or mm
         "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here.",
@@ -138,7 +138,7 @@ def test_every_verdict_rule_has_a_why_sentence():
                                                                           "reason": "could reach alert in about 3.5 h"}],
           "upstream": [{"gauge": "Sg. Galas di Dabong (F1)", "band": "danger", "arrives_in_h": {"min": 6, "max": 10}}]}
     assert view.why(fc, "en") == ("The river upstream at Dabong is at the danger level; the water may reach here in "
-                                  "6-10 hours.")
+                                  "6–10 hours.")
     assert "Dabong" in view.why(fc, "ms")
 
 
@@ -306,11 +306,13 @@ def test_demo_page_has_the_moment_chips_intro_and_peak_default():
     from app import trace
     page = (trace.ROOT / "app" / "web" / "index.html").read_text(encoding="utf-8")
     assert 'const PEAK = "nov2024|2024-11-27 19:30"' in page and "if (sampleMode && !want) $(\"mode\").value = PEAK;" in page
-    assert "Replay of the November 2024 Kelantan flood. Tap a town to see what VEDA would have told a family that evening." in page
-    assert "Ulang tayang banjir Kelantan November 2024. Tekan nama bandar untuk lihat apa yang VEDA akan beritahu keluarga pada petang itu." in page
-    for key in ("before", "morning", "peak", "test_scenes", "tap_skip", "c_gather", "c_critique"):
+    assert '"Replay of the November 2024 Kelantan flood. Start with Rantau Panjang."' in page      # one line (24 Oct)
+    assert '"Ulang tayang banjir Kelantan November 2024. Mula dengan Rantau Panjang."' in page
+    assert page.index('id="towns"') < page.index('id="few-readings"')        # the readings note under the town list
+    for key in ("before", "morning", "peak", "test_scenes", "tap_skip", "c_gather", "c_critique", "few_readings"):
         assert page.count(f"{key}: ") == 2, key                                      # EN and BM
-    assert page.index('id="a-todo"') < page.index('id="a-sos"')                   # what to do, then the stranded button
+    assert page.index('id="a-again"') < page.index('class="sos outline" id="a-sos"')    # outlined, at the bottom
+    assert 'class="btn wa wide" id="sh-wa"' in page                                  # share screen: the same green
 
 
 # -- v2 answer screen (Cowork blueprint 24 Oct) -------------------------------------------------------------------
@@ -338,3 +340,31 @@ def test_v2_cant_confirm_and_get_ready():
     assert prep[1] == "Move the car, animals and valuables to higher ground now, while it's easy." and len(prep) == 3
     assert view.action_lines("PREPARE", "X", "en")[1].startswith("Older people, the sick and babies")
     assert "go to the PPS if told" in card.ADVICE["ACT"]["en"]                    # the plain-text card keeps PPS
+
+
+def test_upstream_dots_follow_the_river_chain_hulu_to_hilir():
+    """Cowork 24 Oct: order from the river chain (chain_order grows downstream), never from the list order."""
+    up = [{"gauge": "Sg. Kelantan di Kg. Salor (F1)", "band": "normal", "rising": False, "chain_order": 7},
+          {"gauge": "Sg. Kelantan di Kuala Krai (F1)", "band": "alert", "rising": True, "chain_order": 4},
+          {"gauge": "Sg. Kelantan di Jambatan Tendong (F2)", "band": "warning", "rising": True, "chain_order": 6}]
+    f = view.flow({"place": "Kota Bharu"}, {"upstream": up}, "en")
+    assert [d["name"] for d in f["dots"]] == ["Jambatan Tendong", "Kg. Salor", "Kota Bharu"]   # the two nearest, in order
+    assert [d["state"] for d in f["dots"]] == ["high", "normal", "you"]
+    rain = {"place": "Kota Bharu", "rain_up": {"heavy": [{"name": "Kuala Krai", "past_72h_mm": 120, "fallen": True}]}}
+    assert [d["name"] for d in view.flow(rain, {"upstream": up}, "en")["dots"]] == ["Kuala Krai", "Kg. Salor", "Kota Bharu"]
+    unknown = [dict(u, chain_order=None) for u in up]                      # no chain data: the list order is kept
+    assert [d["name"] for d in view.flow({"place": "X"}, {"upstream": unknown}, "en")["dots"]][:2] == \
+        ["Kuala Krai", "Jambatan Tendong"]
+
+
+def test_real_scene_upstream_gauges_carry_their_chain_order(views):
+    for key in ("nov2024", "synthetic_silent_upstream", "synthetic_rising"):
+        ups = views[key][0]["forecast"]["upstream"]
+        assert ups and all(isinstance(u["chain_order"], int) for u in ups), key
+
+
+def test_level_unknown_and_keep_watching_line_match_the_steps():
+    assert view.V2["no_level"] == {"en": "Level unknown", "ms": "Tahap tidak diketahui"}
+    assert view.action_lines("WATCH", "X", "en") == ["Check again in 3 hours."] == view.steps("WATCH", "en")[:1]
+    assert view.action_lines("WATCH", "X", "ms")[0] == view.steps("WATCH", "ms")[0]
+    assert view._range_cm(0.12, 0.15) == "12–15" and view.dash("in 9-17 h") == "in 9–17 h"

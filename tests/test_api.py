@@ -266,3 +266,16 @@ def test_postgres_host_can_be_overridden_for_docker(monkeypatch):
         monkeypatch.delenv("VEDA_PG_PORT")
         importlib.reload(config)
     assert (config.PG_HOST, config.PG_PORT) == ("127.0.0.1", 5433)
+
+
+def test_share_link_base_is_veda_public_url_when_set(monkeypatch):
+    """Cowork 24 Oct: the share text's "Check it yourself" link never carries 127.0.0.1 / localhost when
+    VEDA_PUBLIC_URL is set; without it, the request's own base URL."""
+    c = TestClient(main.app, base_url="http://127.0.0.1:8002")
+    monkeypatch.delenv("VEDA_PUBLIC_URL", raising=False)
+    assert c.get("/ui/words").json()["public_url"] == "http://127.0.0.1:8002"
+    monkeypatch.setenv("VEDA_PUBLIC_URL", "https://veda-demo.example.net/")
+    url = c.get("/ui/words").json()["public_url"]
+    assert url == "https://veda-demo.example.net" and "127.0.0.1" not in url and "localhost" not in url
+    page = c.get("/").text
+    assert "(words && words.public_url) || location.origin" in page and "await wordsReady" in page

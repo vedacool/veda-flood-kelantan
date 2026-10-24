@@ -129,7 +129,7 @@ def _upstream(sentinels):
     fired, notes = [], []
     for s in sentinels:
         if not _usable(s):
-            notes.append({"gauge": s["name"], "status": "no fresh reading"})
+            notes.append({"gauge": s["name"], "status": "no fresh reading", "chain_order": s.get("chain_order")})
             continue
         lag = s.get("travel_time_h")
         arrives = {"min": lag["min"], "max": lag["max"], "status": lag["status"]} if lag and lag.get("min") is not None \
@@ -141,7 +141,8 @@ def _upstream(sentinels):
         elif s["band"] in ("alert", "warning"):
             fired.append(("WATCH", "sentinel>=alert", f"upstream {s['name']} is at {s['band']} ({s['level_m']} m){when}"))
         notes.append({"gauge": s["name"], "level_m": s["level_m"], "band": s["band"],
-                      "band_name": BAND_NAMES.get(s["band"]), "rising": rising, "arrives_in_h": arrives})
+                      "band_name": BAND_NAMES.get(s["band"]), "rising": rising, "arrives_in_h": arrives,
+                      "chain_order": s.get("chain_order")})
     return fired, notes
 
 

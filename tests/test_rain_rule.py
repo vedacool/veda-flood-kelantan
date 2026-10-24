@@ -213,7 +213,7 @@ def test_public_screen_says_why_in_plain_words(scene):
     from app import view
     v = view.answer_view(scene["Kota"])
     assert v["headline"]["en"] == "Get ready" and v["why"]["en"].startswith(
-        "Heavy rain upstream (Kuala Krai) may reach here in 9-17 hours while it is also raining heavily here")
+        "Heavy rain upstream (Kuala Krai) may reach here in 9–17 hours while it is also raining heavily here")
     assert "hujan lebat di hulu yang sampai ketika hujan lebat di sini" in v["combined"]["ms"]
     # Cowork 24 Oct (demo UI round): plain rows on the screen, the numbers in Details
     assert v["upstream"]["en"][0] == ("Very heavy rain upstream over the last 3 days. That water flows down towards "

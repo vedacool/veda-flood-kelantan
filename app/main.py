@@ -527,9 +527,15 @@ async def admin_approve(request: Request):
 
 
 @app.get("/ui/words")
-def ui_words():
-    """Fixed wording only - no engine call (the emergency screen must work whatever else is down)."""
-    return view.words()
+def ui_words(request: Request):
+    """Fixed wording only - no engine call (the emergency screen must work whatever else is down). Also the base URL
+    for the share text's "Check it yourself" link: VEDA_PUBLIC_URL when set (the public demo sets it, so a shared
+    message never carries 127.0.0.1 or localhost), else this request's own base URL."""
+    return {**view.words(), "public_url": public_url(request)}
+
+
+def public_url(request):
+    return (os.getenv("VEDA_PUBLIC_URL") or "").strip().rstrip("/") or str(request.base_url).rstrip("/")
 
 
 @app.get("/", response_class=HTMLResponse)
