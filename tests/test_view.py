@@ -381,3 +381,11 @@ def test_explanation_lang_is_the_question_language_or_none(views):
     assert main.result_json(r2)["explanation_lang"] == "ms"
     r2["answer"]["approved"] = False                                            # not approved -> not shown
     assert main.result_json(r2)["explanation_lang"] is None
+
+
+def test_how_it_worked_lines_have_no_station_codes(views):
+    """A5: the 'How VEDA worked this out' rows show plain step text; the trace keeps '(F1)'."""
+    r, _ = views["nov2024"]
+    lines = [l["text"] for row in view.how_it_worked(r["trace"])["rows"] for l in row["lines"]]
+    assert lines and not any(re.search(r"\(F\d+\)", t) or re.search(r"(^|[:-]\s)(full|quick):\s", t) for t in lines)
+    assert "(F1)" in open(r["trace"], encoding="utf-8").read()

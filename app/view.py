@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 
 from app import card as card_mod
-from app import trace
+from app import progress, trace
 from app.agents.coordinator import SAFETY
 from app.config import MYT, REPLAYS
 
@@ -1029,7 +1029,7 @@ def how_it_worked(trace_path):
             show = STEP_SHOWN[a]
             parts = ([r.get("output_summary")] if show in ("output", "both") else []) + (
                 [r.get("decision")] if show in ("decision", "both") else [])
-            text = " - ".join(p for p in parts if p)
+            text = progress.plain(" - ".join(p for p in parts if p))        # A5: no "(F1)", no "full:" tag
             if text:
                 cur["lines"].append({"agent": r.get("agent_name"), "action": a, "status": r.get("status"), "text": text})
     out = {"rows": rows, "total_s": timing.get("total"),

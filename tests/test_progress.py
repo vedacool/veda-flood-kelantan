@@ -17,3 +17,14 @@ def test_answered_call_names_the_served_model_and_receipt():
 
 def test_failed_call_says_no_model_answered():
     assert progress.describe(rec("failed")) == "  ! Critic: no model answered (empty response)"
+
+
+def test_step_lines_are_plain_words():
+    """A5 (24 Oct evening): no "full path, answer in BM: full:" and no "(F1)" in the step lines people see."""
+    line = progress.describe({"action": "route", "output_summary": "full path, answer in BM",
+                              "decision": "full: Sg. Golok di Kg. Jenob (F1) is rising (0.47 m in 1 h, 1.08 m in 3 h)"})
+    assert line == "  full path, answer in BM: Sg. Golok di Kg. Jenob is rising (0.47 m in 1 h, 1.08 m in 3 h)"
+    assert progress.describe({"action": "route", "output_summary": "quick path, answer in English",
+                              "decision": "quick: linked gauges below Alert"}) == \
+        "  quick path, answer in English: linked gauges below Alert"
+    assert progress.plain("Sg. Kelantan di Jambatan Tendong (F2) at warning") == "Sg. Kelantan di Jambatan Tendong at warning"

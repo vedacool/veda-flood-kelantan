@@ -2,14 +2,29 @@
 
     line = progress.describe(record)      # None for steps the user does not need to see
 """
+import re
 
 STEP_LABELS = {"plan": "Understanding the question", "gather": "Checking river gauges, rain and warnings",
                "forecast": "Working out the risk", "draft": "Writing the answer", "critique": "Checking the answer",
                "revise": "Fixing the answer"}
 
 
+_GAUGE_CODE = re.compile(r"\s*\(F\d+\)")               # JPS's "(F1)" / "(F2)" station suffix
+_PATH_TAG = re.compile(r"(^|[:-]\s)(full|quick):\s")      # the route decision's "full: " / "quick: " prefix
+
+
+def plain(text):
+    """A5 (24 Oct evening): step text for people - no "(F1)" station suffixes, no repeated "full:" / "quick:" tag.
+    The trace keeps the full text."""
+    return _PATH_TAG.sub(r"\1", _GAUGE_CODE.sub("", text)) if text else text
+
+
 def describe(rec):
-    """A short line for one trace record, or None."""
+    """A short line for one trace record, or None (plain words: see plain())."""
+    return plain(_describe(rec))
+
+
+def _describe(rec):
     a, out = rec.get("action"), rec.get("output_summary") or ""
     if a == "state":
         return f"> {STEP_LABELS.get(rec.get('input_summary'), rec.get('input_summary'))}"
