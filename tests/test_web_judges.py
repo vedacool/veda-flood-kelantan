@@ -134,3 +134,17 @@ def test_repo_link_is_the_one_the_publishing_sweep_rewrites():
     spec.loader.exec_module(pl)
     assert f'const REPO = "{pl.PRIVATE}";' in PAGE and pl.LINK.search(PAGE)
     assert "README.md#how-it-works" in PAGE and "docs/EVIDENCE.md" in PAGE
+
+
+def test_try_the_api_box_uses_this_pages_own_address():
+    """Cowork 24 Oct night: the curl line is built from window.location.origin - no host, env var or tailnet name
+    in the page; the docs link and the no-keys CLI line; EN + BM."""
+    assert "const CURL = `curl -X POST ${location.origin}/api/v1/ask -H \"Content-Type: application/json\" `" in PAGE
+    assert "`-d '{\"question\": \"Is Tumpat safe tonight?\", \"lang\": \"en\"}'`" in PAGE
+    assert 'href="/api/docs"' in PAGE and 'python -m veda ask "Is Tumpat safe tonight?"' in PAGE
+    for host in ("ts.net", "127.0.0.1", "localhost", "VEDA_PUBLIC_URL"):
+        assert host not in PAGE, host
+    for text in ('api_title: "Try the API"', 'api_title: "Cuba API"', 'api_docs: "Full API docs:"',
+                 'api_docs: "Dokumentasi API penuh:"', 'api_cli: "From a clone, no keys:"',
+                 'api_cli: "Daripada klon, tanpa kunci:"'):
+        assert text in PAGE, text

@@ -82,6 +82,9 @@
   pre { font: 1rem/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0;
         padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--line); }
   .links li { margin: 0 0 10px; }
+  .api pre { margin: 8px 0; }
+  .api code { font: 1rem/1.4 ui-monospace, Consolas, monospace; word-break: break-word; }
+  .api .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   @media (min-width: 1024px) {
     main { max-width: 1100px; padding: 24px 32px 48px; }
     .one-minute { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
@@ -162,6 +165,18 @@
     <p class="note" id="p-redaction" lang="en"></p>
   </div>
 
+  <!-- try the API: the address is this page's own origin (the demo serves this page), never hard-coded -->
+  <h2 data-t="api_title"></h2>
+  <div class="card api">
+    <p data-t="api_intro"></p>
+    <pre lang="en"><code id="api-curl"></code></pre>
+    <div class="row"><button type="button" id="api-copy" data-t="copy"></button>
+      <span class="note" id="api-copied" role="status" aria-live="polite"></span></div>
+    <p><span data-t="api_docs"></span> <a id="api-docs" href="/api/docs" target="_blank" rel="noopener">/api/docs</a></p>
+    <p><span data-t="api_cli"></span></p>
+    <pre lang="en"><code>python -m veda ask "Is Tumpat safe tonight?"</code></pre>
+  </div>
+
   <!-- d. links -->
   <h2 data-t="more"></h2>
   <ul class="links">
@@ -205,6 +220,8 @@ const UI = {
     asked: "Question asked:", step_names: { plan: "Understanding the question", gather: "Checking river gauges, rain and warnings",
       forecast: "Working out the risk", draft: "Writing the answer", critique: "Checking the answer", revise: "Fixing the answer" },
     nemo_ok: "Nemotron answered · {model} · receipt {receipt} · {s} s", nemo_fail: "No answer from the model ({why}) - VEDA carries on",
+    api_title: "Try the API", api_intro: "Ask VEDA from your own code - the same agents as this page. Copy and run:",
+    copy: "Copy", copied: "Copied", api_docs: "Full API docs:", api_cli: "From a clone, no keys:",
     more: "More", l_repo: "The code on GitHub", l_evidence: "Every test and measurement (docs/EVIDENCE.md)",
     l_how: "How VEDA decides (README: How it works)", l_try: "Try VEDA yourself",
     footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
@@ -236,6 +253,8 @@ const UI = {
     asked: "Soalan yang ditanya:", step_names: { plan: "Memahami soalan", gather: "Menyemak tolok sungai, hujan dan amaran",
       forecast: "Menilai risiko", draft: "Menulis jawapan", critique: "Menyemak jawapan", revise: "Membetulkan jawapan" },
     nemo_ok: "Nemotron menjawab · {model} · resit {receipt} · {s} s", nemo_fail: "Tiada jawapan daripada model ({why}) - VEDA meneruskan",
+    api_title: "Cuba API", api_intro: "Tanya VEDA daripada kod anda sendiri - ejen yang sama seperti halaman ini. Salin dan jalankan:",
+    copy: "Salin", copied: "Disalin", api_docs: "Dokumentasi API penuh:", api_cli: "Daripada klon, tanpa kunci:",
     more: "Lagi", l_repo: "Kod di GitHub", l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
     l_how: "Cara VEDA membuat keputusan (README: How it works)", l_try: "Cuba VEDA sendiri",
     footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
@@ -404,6 +423,14 @@ document.querySelectorAll(".seg [data-lang]").forEach((b) => b.addEventListener(
 
 fetch("/trace/recorded").then((r) => r.ok ? r.json() : Promise.reject()).then((list) => { runs = list; renderRuns(); })
   .catch(() => { $("featured").textContent = t("load_fail"); });
+// the curl command for this demo's own address (Cowork 24 Oct night: no env var, nothing hard-coded)
+const CURL = `curl -X POST ${location.origin}/api/v1/ask -H "Content-Type: application/json" ` +
+             `-d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'`;
+$("api-curl").textContent = CURL;
+$("api-copy").addEventListener("click", () => {
+  const done = () => { $("api-copied").textContent = t("copied"); };
+  if (navigator.clipboard) navigator.clipboard.writeText(CURL).then(done, () => {}); else done();
+});
 applyLang();
 </script>
 </body>
