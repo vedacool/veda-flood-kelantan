@@ -107,25 +107,22 @@ def test_offline_api_says_live_only(tmp_path, monkeypatch):
     assert how and "never 'go into the water'" in how[0]["checks"]
 
 
-def test_upstream_numbers_are_facts_with_their_own_ids():
+def test_upstream_facts_only_rising_or_alert_one_fact_each():
     notes = [{"gauge": "Kg. Jenob", "level_m": [JPS reading], "band": "normal", "rising": True,
               "thresholds": {"alert_m": 21.5, "warning_m": 22.5, "danger_m": 23.5},
               "change_1h_m": 0.47, "change_3h_m": 1.08, "arrives_in_h": None},
-             {"gauge": "Kuala Krai", "level_m": 20.0, "band": "normal", "rising": False,
-              "thresholds": {"alert_m": 21.0}, "change_1h_m": -0.05, "change_3h_m": 0.2,
+             {"gauge": "Kuala Krai", "level_m": 22.0, "band": "alert", "rising": False,
+              "thresholds": {"alert_m": 21.0, "warning_m": 23.0}, "change_3h_m": -0.12,
               "arrives_in_h": {"min": 9, "max": 17}},
-             {"gauge": "Dabong", "status": "no fresh reading"}]
+             {"gauge": "Dabong", "level_m": 30.0, "band": "normal", "thresholds": {"alert_m": 33.0},
+              "change_3h_m": 0.2},                                              # not rising, below Alert: left out
+             {"gauge": "Tualang", "status": "no fresh reading"}]
     f = {fid: (text, r) for fid, text, r in critic._upstream_facts(notes, "Rantau Panjang")}
-    assert f["upstream.1"][0]["en"] == "Kg. Jenob (Normal, rising)" and f["upstream.1"][1]
-    assert f["upstream.1.band"] == ({"en": "[JPS reading] m below its Alert level (21.5 m)",
-                                     "ms": "[JPS reading] m di bawah paras Waspada (21.5 m)"}, False)
-    assert f["upstream.1.change_3h"] == ({"en": "rose 1.08 m in 3 hours", "ms": "naik 1.08 m dalam 3 jam"}, True)
-    assert f["upstream.1.change_1h"][1] and f["upstream.1.travel"] == (
-        {"en": "travel time to Rantau Panjang not known", "ms": "masa perjalanan ke Rantau Panjang tidak diketahui"}, False)
-    assert f["upstream.2.change_1h"] == ({"en": "fell [JPS reading] m in 1 hour", "ms": "turun [JPS reading] m dalam 1 jam"}, False)
-    assert not f["upstream.2.change_3h"][1]                                     # 0.2 m in 3 h is not "rising"
-    assert f["upstream.2.travel"][0]["en"] == "water may reach Rantau Panjang in 9-17 hours"
-    assert f["upstream.3"] == ({"en": "Dabong (no fresh reading)", "ms": "Dabong (tiada bacaan terkini)"}, False)
+    assert set(f) == {"upstream.1", "upstream.2"} and all(r for _, r in f.values())
+    assert f["upstream.1"][0] == {"en": "Upstream Kg. Jenob: below Alert (21.5 m), rose 1.08 m in 3 h",
+                                  "ms": "Hulu Kg. Jenob: [JPS reading] m di bawah paras Waspada (21.5 m), naik 1.08 m dalam 3 jam"}
+    assert f["upstream.2"][0]["en"] == ("Upstream Kuala Krai: 1 m above Alert (21 m), fell 0.12 m in 3 h, "
+                                        "may reach Rantau Panjang in 9-17 h")
     from app import card
     assert not any(card._MINUS.search(t[lg]) for t, _ in f.values() for lg in ("en", "ms"))   # no minus signs
 

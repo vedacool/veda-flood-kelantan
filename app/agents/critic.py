@@ -300,55 +300,48 @@ RAISE_RAIN = ("rain_up", "rain_here", "thailand", "thunder")                   #
 LIST_IDS = {"upstream": "upstream", "rain_upstream_and_here": "rain", "met_warnings": "met_warning",
             "conflicts": "conflict", "excluded": "excluded"}
 TOWN_FACTS = ("river", "jps_level", "vs_alert", "vs_danger", "trend", "next_24h")
-# Cowork 24 Oct: each upstream gauge's own numbers as facts (upstream.1.band / change_1h / change_3h / travel), so
-# the AI can weigh a fast rise. A change supports a raise from the rate the rules call "rising" ([JPS reading] m in 3 h, so
-# [JPS reading] m in 1 h); the travel time is context only.
+# Cowork 24 Oct: upstream gauges for the AI - only those rising (>= the rules' 0.3 m in 3 h) or at Alert or above,
+# one combined fact each (one id): band vs its own thresholds, change in 3 h, travel time only when known. The code
+# rules still use every gauge. Each one can support a raise (it is rising or at Alert or above).
 UP_WORDS = {
-    "band_vs": {"en": "{d} m {side} its {name} level ({t} m)", "ms": "{d} m {side} paras {name} ({t} m)"},
+    "fact": {"en": "Upstream {gauge}: {parts}", "ms": "Hulu {gauge}: {parts}"},
+    "band_vs": {"en": "{d} m {side} {name} ({t} m)", "ms": "{d} m {side} paras {name} ({t} m)"},
     "above": {"en": "above", "ms": "di atas"}, "below": {"en": "below", "ms": "di bawah"},
-    "rose": {"en": "rose {m} m in {h}", "ms": "naik {m} m dalam {h}"},
-    "fell": {"en": "fell {m} m in {h}", "ms": "turun {m} m dalam {h}"},
-    "same": {"en": "no change in {h}", "ms": "tiada perubahan dalam {h}"},
-    "h1": {"en": "1 hour", "ms": "1 jam"}, "h3": {"en": "3 hours", "ms": "3 jam"},
-    "travel": {"en": "water may reach {place} in {a}-{b} hours", "ms": "air mungkin sampai ke {place} dalam {a}-{b} jam"},
-    "no_travel": {"en": "travel time to {place} not known", "ms": "masa perjalanan ke {place} tidak diketahui"},
-    "no_reading": {"en": "no fresh reading", "ms": "tiada bacaan terkini"},
+    "rose": {"en": "rose {m} m in 3 h", "ms": "naik {m} m dalam 3 jam"},
+    "fell": {"en": "fell {m} m in 3 h", "ms": "turun {m} m dalam 3 jam"},
+    "same": {"en": "no change in 3 h", "ms": "tiada perubahan dalam 3 jam"},
+    "travel": {"en": "may reach {place} in {a}-{b} h", "ms": "mungkin sampai ke {place} dalam {a}-{b} jam"},
 }
 BANDS_UP = (("danger", "danger_m"), ("warning", "warning_m"), ("alert", "alert_m"))
 
 
 def _upstream_facts(notes, place):
-    """[(id, {'en','ms'} text, can support a raise)] for every upstream gauge the Forecast agent read."""
-    out = []
-    num = card_mod._num
-    for i, u in enumerate(notes, 1):
-        fid = f"upstream.{i}"
-        if u.get("status") == "no fresh reading":
-            out.append((fid, {lg: f"{u['gauge']} ({UP_WORDS['no_reading'][lg]})" for lg in ("en", "ms")}, False))
-            continue
-        band = card_mod.BAND.get(u.get("band") or "", {})
-        out.append((fid, {lg: f"{u['gauge']} ({', '.join([band.get(lg, u.get('band') or '?')] + ([card_mod.T['rising'][lg]] if u.get('rising') else []))})"
-                          for lg in ("en", "ms")}, u.get("band") in ("alert", "warning", "danger") or bool(u.get("rising"))))
+    """[(id, {'en','ms'} text, can support a raise)] - one fact per upstream gauge that is rising or at Alert or
+    above (the others are left out of the AI's facts)."""
+    out, num = [], card_mod._num
+    shown = [u for u in notes if u.get("status") != "no fresh reading" and (
+        u.get("band") in ("alert", "warning", "danger") or (u.get("change_3h_m") or 0) >= SENTINEL_RISING_M_3H - 1e-9)]
+    for i, u in enumerate(shown, 1):
+        parts = {"en": [], "ms": []}
         th, lv = u.get("thresholds") or {}, u.get("level_m")
-        if lv is not None:
-            hit = next(((b, k) for b, k in BANDS_UP if th.get(k) is not None and lv >= th[k]), None)
-            b, k = hit or ("alert", "alert_m")
-            if th.get(k) is not None:
-                d = round(lv - th[k], 2)
-                out.append((f"{fid}.band", {lg: UP_WORDS["band_vs"][lg].format(
-                    d=num(abs(d)), side=UP_WORDS["above" if d >= 0 else "below"][lg], name=card_mod.BAND[b][lg],
-                    t=num(th[k])) for lg in ("en", "ms")}, hit is not None))
-        for key, h, need in (("change_1h_m", "h1", SENTINEL_RISING_M_3H / 3), ("change_3h_m", "h3", SENTINEL_RISING_M_3H)):
-            c = u.get(key)
-            if c is None:
-                continue
+        hit = next(((bd, k) for bd, k in BANDS_UP if lv is not None and th.get(k) is not None and lv >= th[k]), None)
+        bd, k = hit or ("alert", "alert_m")
+        if lv is not None and th.get(k) is not None:
+            d = round(lv - th[k], 2)
+            for lg in parts:
+                parts[lg].append(UP_WORDS["band_vs"][lg].format(d=num(abs(d)), side=UP_WORDS["above" if d >= 0 else "below"][lg],
+                                                               name=card_mod.BAND[bd][lg], t=num(th[k])))
+        c = u.get("change_3h_m")
+        if c is not None:
             word = "rose" if c > 0 else "fell" if c < 0 else "same"
-            out.append((f"{fid}.change_{h[1]}h", {lg: UP_WORDS[word][lg].format(m=num(abs(round(c, 2))), h=UP_WORDS[h][lg])
-                                                 for lg in ("en", "ms")}, c >= need - 1e-9))
+            for lg in parts:
+                parts[lg].append(UP_WORDS[word][lg].format(m=num(abs(round(c, 2)))))
         a = u.get("arrives_in_h")
-        out.append((f"{fid}.travel", {lg: (UP_WORDS["travel"][lg].format(place=place, a=num(a["min"]), b=num(a["max"]))
-                                          if a else UP_WORDS["no_travel"][lg].format(place=place))
-                                      for lg in ("en", "ms")}, False))
+        if a and a.get("min") is not None:
+            for lg in parts:
+                parts[lg].append(UP_WORDS["travel"][lg].format(place=place, a=num(a["min"]), b=num(a["max"])))
+        out.append((f"upstream.{i}", {lg: UP_WORDS["fact"][lg].format(gauge=u["gauge"], parts=", ".join(parts[lg]))
+                                      for lg in parts}, True))
     return out
 
 

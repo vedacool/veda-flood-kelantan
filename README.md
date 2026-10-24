@@ -431,9 +431,9 @@ Zetaris.
     contradict, exaggerate or downplay any fact? It replies `{ok, reason}`; `ok=false` means one rewrite, then a
     re-check. In the same reply Nemotron gives its own level and up to 2 cited fact ids (Part 7; code decides what
     that level may do). When the explanation call failed, the Critic still makes one facts-only call for that level.
-  - **Facts the AI sees:** the card's key facts with ids, plus each upstream gauge's own numbers - its level against
-    its Alert / Warning / Danger, the change in 1 h and 3 h, and the travel time when known (`upstream.1.change_3h`
-    ...), all written by code.
+  - **Facts the AI sees:** the card's key facts with ids, plus one fact per upstream gauge that is rising or at Alert
+    or above - its level against its Alert / Warning / Danger, the change in 3 h, and the travel time when known
+    (e.g. `upstream.1` "Upstream Kg. Jenob: below Alert (21.5 m), rose 1.08 m in 3 h"), all written by code.
 - **Nightshift's memory is restarted before recorded runs so each run is independent.**
 - **Every call:** streamed, a hard time limit inside the 150 s answer budget (draft at most 90 s, AI review at most
   45 s), a trace line with the model that actually answered and the Nightshift receipt id. Retries: the draft is

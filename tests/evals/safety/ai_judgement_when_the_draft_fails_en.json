@@ -8,8 +8,8 @@
     "judge": {
       "ai_level": "PREPARE",
       "reasons": [
-        "upstream.2.band",
-        "upstream.3.change_3h"
+        "upstream.2",
+        "upstream.3"
       ],
       "confidence": "medium"
     }
