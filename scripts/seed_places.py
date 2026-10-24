@@ -104,7 +104,12 @@ def seed(rows):
             raise pg.PgError("rain_points is empty - run scripts/setup_wx.py first")
         conn.execute("DELETE FROM place_gauges")
         conn.execute("DELETE FROM place_aliases")
-        conn.execute("DELETE FROM places")
+        # Upsert, not delete-and-insert (24 Oct, fresh-clone check): osm_place_features points at places (B-73), so
+        # deleting every place made a second run of setup_all.py fail. Places that left the CSV go, their OSM rows
+        # first; every other place is updated in place.
+        ids = [r["place_id"] for r in rows]
+        conn.execute("DELETE FROM osm_place_features WHERE NOT (place_id = ANY(%s))", (ids,))
+        conn.execute("DELETE FROM places WHERE NOT (place_id = ANY(%s))", (ids,))
         chosen = {}
         for r in rows:
             lat, lon = float(r["lat"]), float(r["lon"])
@@ -113,7 +118,13 @@ def seed(rows):
             conn.execute(
                 """INSERT INTO places (place_id, name, name_norm, kind, district, lat, lon, nearest_station_key,
                        coords_source, rain_location_id, forecast_location_id, mapping_status, notes)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (place_id) DO UPDATE SET name = EXCLUDED.name, name_norm = EXCLUDED.name_norm,
+                       kind = EXCLUDED.kind, district = EXCLUDED.district, lat = EXCLUDED.lat, lon = EXCLUDED.lon,
+                       nearest_station_key = EXCLUDED.nearest_station_key, coords_source = EXCLUDED.coords_source,
+                       rain_location_id = EXCLUDED.rain_location_id,
+                       forecast_location_id = EXCLUDED.forecast_location_id,
+                       mapping_status = EXCLUDED.mapping_status, notes = EXCLUDED.notes""",
                 (r["place_id"], r["name"], gazetteer.normalize(r["name"]), r["kind"], r["district"] or None, lat, lon,
                  r["controlling"], r["coords_source"], rain_id, r["forecast_location_id"], r["status"],
                  r["notes"] or None))
