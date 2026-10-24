@@ -166,6 +166,11 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                                                      "verdict unchanged -> the answer is redrafted with "
                                                                      "the new source and checked again"))
                 card = card_mod.build(p, evidence, fc)
+                if card.get("tide_advice"):                # Cowork 24 Oct: advice only - the verdict is unchanged
+                    trace.step(coordinator.AGENT, "card.advice", input_summary=card.get("place"),
+                               output_summary="High tide can keep water in town longer.",
+                               decision=f"tide-influenced gauge and verdict {card['verdict']} -> tide advice line; "
+                                        "no verdict change")
                 if router.emergency(question):            # also when the verdict is already ACT: the label stays
                     card["action"] = card_mod.ADVICE["ACT"]  # trapped / stranded: ACT advice whatever the river says
                     card["emergency"] = True                  # labelled "safety first" + a note under a NORMAL verdict

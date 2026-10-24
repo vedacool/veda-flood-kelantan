@@ -83,6 +83,10 @@ T = {  # fixed wording, BM + EN
     "small_rivers": {"en": "Small rivers and drains can rise fast in heavy rain - keep away from them",
                      "ms": "Sungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - jauhi kawasan itu"},
     "thailand": {"en": "Rain upstream in Thailand is not checked yet", "ms": "Hujan di hulu di Thailand belum disemak"},
+    "thai_rain": {"en": "Rain upstream in Thailand: {items} (arrival time not known)",
+                  "ms": "Hujan di hulu di Thailand: {items} (masa sampai tidak diketahui)"},
+    "thai_item": {"en": "{name} {mm} mm in 3 days", "ms": "{name} {mm} mm dalam 3 hari"},
+    "tide": {"en": "High tide can keep water in town longer", "ms": "Air pasang boleh membuat air bertakung lebih lama di bandar"},
     "until": {"en": "Rain likely until about {t}, then easing", "ms": "Hujan dijangka hingga kira-kira {t}, kemudian reda"},
     "until_heavy": {"en": "Heavy rain likely until about {t}, then easing",
                     "ms": "Hujan lebat dijangka hingga kira-kira {t}, kemudian reda"},
@@ -288,6 +292,8 @@ def build(plan, evidence, forecast):
         if osm["status"] == "ok":
             card["sources"].append(("osm", None))
     card["rain_up"] = rain_up(fc.get("rain_upstream"))
+    # Cowork 24 Oct: a tide-influenced town (Kota Bharu, Tumpat) at Keep watching or higher - advice only, no verdict change
+    card["tide_advice"] = card["tidal"] and verdict in ("WATCH", "PREPARE", "ACT")
     rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
     card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
                           | {"rain" for r in rules if r.startswith("rain")})
@@ -326,7 +332,10 @@ def rain_up(ru):
                       for u in sorted(heavy, key=lambda u: -(u["past_72h_mm"] or 0))[:2]],
             "local_12h_mm": local.get("max_12h_mm"), "local_heavy": bool(local.get("heavy")),
             "until": local.get("until"), "until_heavy": bool(local.get("until_heavy")),
-            "golok": bool(ru.get("golok")), "combined": bool(ru.get("combined"))}
+            "golok": bool(ru.get("golok")), "combined": bool(ru.get("combined")),
+            # Cowork 24 Oct: the Thai-side Golok points' rain when it is not heavy (heavy rain is in "heavy" above)
+            "thai": [{"name": gauge_place(u["name"]), "past_72h_mm": u["past_72h_mm"]} for u in ru.get("upstream", [])
+                     if u["point"] in ru.get("thai_points", []) and u["point"] not in ru.get("heavy_upstream", [])]}
 
 
 def when_text(iso, lang):
@@ -341,10 +350,10 @@ def when_text(iso, lang):
 
 def rain_lines(card, lang):
     """B-88 lines (outside the length cap, like the OSM lines: the line behind a raised verdict is never cut)."""
+    out = [("tide", T["tide"][lang] + ".")] if card.get("tide_advice") else []
     r = card.get("rain_up")
     if not r:
-        return []
-    out = []
+        return out
     if r["heavy"]:
         items = []
         for u in r["heavy"]:
@@ -362,6 +371,9 @@ def rain_lines(card, lang):
                     + "."))
     if r["golok"]:
         out.append(("thailand", T["thailand"][lang] + "."))
+    elif r.get("thai"):
+        out.append(("thailand", T["thai_rain"][lang].format(items="; ".join(
+            T["thai_item"][lang].format(name=u["name"], mm=_num(u["past_72h_mm"])) for u in r["thai"])) + "."))
     return out
 
 
@@ -466,7 +478,7 @@ FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "exclude
 # B-73 (Husaini 23 Oct): the OSM lines answer what the user asked (evacuation / cut-off questions only - the card has
 # them for no other intent), so they sit outside the cap like the explanation: up to 3 possible PPS and 2 bridges.
 OSM_LINES = ("pps", "bridge", "low_ground", "osm",
-             "rain_up", "rain_here", "small_rivers", "until", "thailand")        # + B-88 rain lines, outside the cap
+             "rain_up", "rain_here", "small_rivers", "until", "thailand", "tide")   # + B-88 lines, outside the cap
 
 
 def bridge_name(name, lang):

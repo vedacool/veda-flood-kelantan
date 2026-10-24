@@ -1,0 +1,18 @@
+{
+  "name": "tide_advice_kb_en",
+  "about": "Cowork 24 Oct: Kota Bharu is tide-influenced; at Keep watching or higher the card adds 'High tide can keep water in town longer.' - advice only, the verdict is unchanged [SYNTHETIC river levels, real archive rain]",
+  "question": "Is Kota Bharu safe today?",
+  "replay": "synthetic_upstream_rain",
+  "at": "2024-11-27 12:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "language": "en",
+    "must": [
+      "High tide can keep water in town longer."
+    ]
+  }
+}

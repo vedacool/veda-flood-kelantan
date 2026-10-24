@@ -889,7 +889,9 @@ def trace_rain_upstream(ru, place):
                                  + (" (heavy)" if local.get("heavy") else "") if local else ""),
                decision=("upstream + local rain: heavy rain arriving within 24 h while it rains heavily here"
                          if ru["combined"] else "heavy rain upstream" if heavy else "no upstream rain trigger")
-                        + ("; Sg. Golok upstream is in Thailand - not checked" if ru.get("golok") else ""),
+                        + ("; Sg. Golok upstream is in Thailand - not checked" if ru.get("golok") else
+                           f"; Thai-side Golok rain points read: {', '.join(ru['thai_points'])} (arrival time not known)"
+                           if ru.get("thai_points") else ""),
                details={"heavy_upstream": ru["heavy_upstream"], "arriving_24h": ru["arriving_24h"],
                         "combined": ru["combined"], "local": local, "rules": ru.get("rules")})
 

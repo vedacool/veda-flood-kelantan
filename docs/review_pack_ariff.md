@@ -369,6 +369,31 @@ would have given. (What we have so far is above: news REPORT times for Kota Bhar
 the times the river crossed.)
 > Answer: ______
 
+**L9.** (added 24 Oct) **Rain upstream in Thailand (Sg. Golok).** VEDA now reads Open-Meteo rain at two Thai-side points
+(no new source or licence - Open-Meteo covers Thailand; places from OpenStreetMap) and uses them as upstream rain for
+Rantau Panjang (and Tumpat's Golok side), always with "arrival time not known" - so they can lift the town to Keep
+watching at most:
+
+| Point | Coordinates | From |
+|---|---|---|
+| Sg. Golok at Buke Ta (Waeng district, Narathiwat) | 5.8006, 101.8612 | OpenStreetMap way 1318999818 (on the river, south of Kg. Jenob) |
+| Sukhirin (Narathiwat) - Golok headwaters district | 5.9409, 101.7702 | OpenStreetMap node 6726142669 (town) |
+
+Are these good places to measure rain that reaches Rantau Panjang? Does Sukhirin drain into the Golok above Kg. Jenob?
+Do you know a rough travel time from there to Rantau Panjang?
+> Answer: ______
+
+**L10.** (added 24 Oct) **Tide advice.** For Kota Bharu and Tumpat (tide-influenced gauges), when the verdict is Keep
+watching or higher, the card adds: "High tide can keep water in town longer." / "Air pasang boleh membuat air
+bertakung lebih lama di bandar." Advice only - the verdict does not change. Right words?
+> Answer: ______
+
+**L11.** (added 24 Oct - a gap we found, not yet changed) Section A says a MetMalaysia warning raises the verdict
+(Waspada → at least Keep watching; Buruk / Bahaya → at least Get ready). **VEDA does not do this yet:** an active
+warning makes VEDA do the full check and is shown on the card, but it does not change the verdict (the live log says
+"noted, not in the verdict yet"). Should it, exactly as section A says?
+> Answer: ______
+
 ---
 
 ## J. Ground height (B-74, PARKED until after the hackathon - for later, no answer needed now)

@@ -594,6 +594,7 @@ def answer_view(result):
             "rain": _both(lambda lang: _rain(card, lang)) if _rain(card, "en") else None,
             "rain_more": _both(lambda lang: _rain_text(card, lang, ("rain_here", "until", "small_rivers", "thailand"))),
             "rain_share": _both(lambda lang: _rain_text(card, lang, ("rain_up", "rain_here", "until"))),
+            "todo_more": _both(lambda lang: _rain_text(card, lang, ("tide",))),       # Cowork 24 Oct: tide advice
             "why": _both(lambda lang: why(forecast, lang)),
             "combined": _both(lambda lang: combined(forecast, lang)) if combined(forecast, "en") else None,
             "note": dict(W["calm_note"]) if verdict == "NORMAL" else None,

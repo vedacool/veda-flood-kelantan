@@ -531,7 +531,7 @@ function renderAnswer() {
   $("a-badge").setAttribute("aria-label", v.headline[lang]);
   $("a-badge").innerHTML = `<svg viewBox="0 0 40 40" aria-hidden="true">${ICON[v.verdict]}</svg><span>${esc(v.headline[lang])}</span>`;
   $("a-line").textContent = v.line[lang];
-  $("a-todo").textContent = v.todo[lang];
+  $("a-todo").textContent = [v.todo[lang]].concat((v.todo_more && v.todo_more[lang]) || []).join(" ");
   let rows = "";
   if (v.water) rows += rowHtml(t("water"), v.water[lang].main, "");           // one plain sentence; numbers in Details
   $("a-water-box").hidden = !v.water;

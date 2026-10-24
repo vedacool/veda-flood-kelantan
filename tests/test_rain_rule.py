@@ -216,3 +216,66 @@ def test_public_screen_says_why_in_plain_words(scene):
     assert "hujan lebat di hulu yang sampai ketika hujan lebat di sini" in v["combined"]["ms"]
     assert v["upstream"]["en"][0].startswith("Heavy rain upstream: Kuala Krai") and "rain upstream" in v["strip"]["en"]
     assert "Heavy rain here: 34.7 mm in 12 h." in v["rain_more"]["en"] and "Heavy rain upstream" in v["share"]["en"]
+
+
+# -- Cowork 24 Oct: Thai-side Golok rain points, tide advice, MetMalaysia warnings (rule A) -------------------------
+GOLOK = [{"from_key": "JENOB", "to_key": "RP", "link_type": "upstream_of", "lag_min_h": None, "lag_max_h": None}]
+
+
+def thai_town(mm_per_h):
+    pts = {"golok_buketa": {**point("Sg. Golok di Buke Ta (Waeng; Thailand)", "JENOB", mm_per_h), "thai": True},
+           "rp": point("Sg. Golok di Rantau Panjang (F1)", "RP", 0.2)}
+    return rain_rule.assess(["RP"], "rp", pts, GOLOK, golok=True)
+
+
+def test_thai_points_are_upstream_of_rantau_panjang_with_unknown_arrival(run_ctx):
+    a = thai_town(2.0)                                         # 144 mm in 72 h: heavy
+    assert a["thai_points"] == ["golok_buketa"] and a["heavy_upstream"] == ["golok_buketa"]
+    assert a["upstream"][0]["window"] is None and not a["golok"]      # data exists -> no "not checked" line
+    ev = ctx_with(a)
+    assert verdict(ev)["verdict"] == "WATCH"                    # unknown arrival: never above Keep watching
+
+
+def test_thai_rain_line_replaces_not_checked(run_ctx):
+    from app import card as card_mod
+    light = card_mod.rain_up(thai_town(0.05))                  # 3.6 mm in 72 h: not heavy
+    lines = dict(card_mod.rain_lines({"rain_up": light}, "en"))
+    assert lines["thailand"] == "Rain upstream in Thailand: Buke Ta (Waeng; Thailand) 3.6 mm in 3 days (arrival time not known)."
+    none = card_mod.rain_up(rain_rule.assess(["RP"], "rp", {"rp": point("RP", "RP", 0.2)}, GOLOK, golok=True))
+    assert dict(card_mod.rain_lines({"rain_up": none}, "ms"))["thailand"] == "Hujan di hulu di Thailand belum disemak."
+
+
+@pytest.mark.parametrize("verdict_,tidal,shown", [("WATCH", True, True), ("ACT", True, True), ("NORMAL", True, False),
+                                                  ("PREPARE", False, False)])
+def test_tide_advice_for_tidal_towns_at_keep_watching_or_higher(verdict_, tidal, shown):
+    from app import card as card_mod
+    c = {"tide_advice": tidal and verdict_ in ("WATCH", "PREPARE", "ACT"), "rain_up": None}
+    assert (("tide", "High tide can keep water in town longer.") in card_mod.rain_lines(c, "en")) is shown
+
+
+def test_scene_tide_line_on_kota_bharu_and_no_verdict_change(scene):
+    r = scene["Kota"]
+    assert "Air pasang boleh membuat air bertakung lebih lama di bandar." in r["answer"]["text"]
+    assert r["forecast"]["verdict"] == "PREPARE"                # same as without the line
+
+
+@pytest.mark.xfail(strict=True, reason="Rule A (review pack): MET Waspada -> at least WATCH, Buruk/Bahaya -> at least "
+                                       "PREPARE. Not applied in the verdict yet (warnings only pick the full path) - "
+                                       "reported to Cowork 24 Oct; not changed without Cowork.")
+@pytest.mark.parametrize("heading,expected", [("Amaran Hujan Berterusan (Tahap Waspada)", "WATCH"),
+                                              ("Amaran Hujan Berterusan (Tahap Bahaya)", "PREPARE")])
+def test_met_warning_raises_the_verdict_as_rule_a_says(run_ctx, heading, expected):
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": heading}]}
+    assert verdict(ev)["verdict"] == expected
+
+
+def test_trace_lines_for_tide_advice_and_met_warning(scene, run_ctx):
+    assert any(x["action"] == "card.advice" and "High tide" in x["output_summary"] for x in lines(scene["Kota"]))
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "Amaran Hujan Berterusan (Tahap Waspada)"}]}
+    verdict(ev)
+    from app import trace
+    rec = [json.loads(x) for x in trace.current_run().path.read_text(encoding="utf-8").splitlines()]
+    met = next(x for x in rec if x["action"] == "forecast.met_warning")
+    assert "not in the verdict yet" in met["decision"] and met["status"] == "fallback"

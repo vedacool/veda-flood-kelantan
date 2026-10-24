@@ -28,8 +28,11 @@ def make_point(i, **overrides):
 def test_committed_rain_points_load_and_validate():
     points = setup_wx.load_points(ROOT / "data" / "rain_points.csv")
     assert setup_wx.validate_points(points) == []
-    assert len(points) == 7
-    assert [p["location_id"] for p in points] == [str(i) for i in range(7)]
+    assert len(points) == 9                                  # + 2 Thai-side Golok points (B-88, 24 Oct)
+    assert [p["location_id"] for p in points] == [str(i) for i in range(9)]
+    thai = [p for p in points if "Thailand" in p["name"]]
+    assert [p["point_key"] for p in thai] == ["golok_buketa", "sukhirin"]
+    assert all(p["status"].startswith("tentative") and "OpenStreetMap" in p["coords_source"] for p in thai)
     assert all(p["coords_source"] and p["status"] for p in points)
     keys = [p["point_key"] for p in points]
     assert len(keys) == len(set(keys))

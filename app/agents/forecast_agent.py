@@ -307,6 +307,12 @@ def _clock(evidence):
 
 
 def _finish(out, plan, world, evidence, run_id):
+    active = ((evidence or {}).get("met_warnings") or {}).get("active") or []
+    if active:            # Cowork 24 Oct: rule A says a MET warning raises the verdict; it is not applied yet - say so
+        trace.step(AGENT, "forecast.met_warning", input_summary=out["place"],
+                   output_summary="active MetMalaysia warning: " + "; ".join(str(w.get("heading")) for w in active[:2]),
+                   decision="noted, not in the verdict yet (rule A: Waspada -> at least WATCH, Buruk/Bahaya -> at least "
+                            "PREPARE - waiting for Cowork / Dr Ariff)", status="fallback")
     trace.step(AGENT, "forecast.verdict", input_summary=out["place"],
                output_summary=f"{out['verdict']} (confidence {out['confidence']['label']}, "
                               f"{out['confidence']['score']})",

@@ -119,11 +119,13 @@ def assess(controlling, local_point, points, links, golok=False):
                                  "until": lf["until"], "until_heavy": lf["until_heavy"]}
     arriving = [u for u in up if u["heavy_fallen"] and u["window"] and u["window"]["min"] <= ARRIVAL_WITHIN_H]
     heavy = [u for u in up if u["heavy_fallen"] or u["heavy_forecast"]]
+    thai = [u["point"] for u in up if points[u["point"]].get("thai")]          # Cowork 24 Oct: Thai-side Golok points
     return {"upstream": up, "local": local, "heavy_upstream": [u["point"] for u in heavy],
             "arriving_24h": [u["point"] for u in arriving],
             "combined": bool(arriving and local and local["heavy"]),
             "window_known": any(u["window"] for u in heavy),
-            "no_upstream_points": not up, "golok": bool(golok),
+            "no_upstream_points": not up, "thai_points": thai,
+            "golok": bool(golok) and not thai,              # "Thailand not checked" only while no Thai point has data
             "rules": {"upstream_72h_mm": UPSTREAM_72H_MM, "upstream_24h_mm": UPSTREAM_24H_MM,
                       "local_12h_mm": LOCAL_12H_MM, "arrival_within_h": ARRIVAL_WITHIN_H,
                       "until_mm_h": UNTIL_MM_H, "heavy_mm_h": HEAVY_MM_H, "status": "tentative - Dr Ariff (L)"}}

@@ -406,7 +406,8 @@ def ingest_rain_hours(world, agent, run_id, sql, now, results=None, archive=Fals
     for r in rows:
         t = datetime.strptime(str(r["hour_myt"]), "%Y-%m-%dT%H:%M").replace(tzinfo=config.MYT)
         hours.setdefault(r["point_key"], []).append((t, r["rain_mm"]))
-        meta[r["point_key"]] = {"name": r["name"], "station_key": r["station_key"]}
+        meta[r["point_key"]] = {"name": r["name"], "station_key": r["station_key"],
+                                "thai": "Thailand" in str(r["name"] or "")}           # Thai-side Golok rain points
         key_of[int(r["location_id"])] = r["point_key"]
     if archive:                                           # a scene: never an hour after the replay time
         hours = {k: [(t, mm) for t, mm in hs if t <= now] for k, hs in hours.items()}
