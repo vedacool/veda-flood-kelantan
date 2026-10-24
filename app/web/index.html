@@ -249,14 +249,7 @@
 </style>
 </head>
 <body>
-<header>
-  <button class="brand" type="button" id="home-link" aria-label="VEDA">VEDA</button>
-  <div class="seg" role="group" aria-label="Language / Bahasa">
-    <button type="button" data-lang="en" aria-pressed="true">EN</button>
-    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
-  </div>
-  <button type="button" id="aa" aria-pressed="false" data-t-label="bigger">Aa</button>
-</header>
+<!--VEDA:TOP-->
 <main>
 
 <!-- 1. Home -->
@@ -683,7 +676,9 @@ function applyLang() {
   if (!$("s-how").hidden) renderHow();
 }
 
-function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang(); }
+function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang();
+  if (window.vedaFrameLang) window.vedaFrameLang(l); }           // B-96: the shared frame's words follow
+window.vedaSetLang = setLang;                                       // the frame's EN | BM calls this page's switch
 
 // ---------- 1b. The replay moment (demo): Before · Morning · Peak · Test scenes › ----------
 const PEAK = "nov2024|2024-11-27 19:30";
@@ -1103,13 +1098,13 @@ function listen() {
 
 // ---------- wiring ----------
 document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
-$("aa").addEventListener("click", () => {
+$("aa") && $("aa").addEventListener("click", () => {
   const big = !document.documentElement.classList.contains("big");
   document.documentElement.classList.toggle("big", big);
   $("aa").setAttribute("aria-pressed", String(big));
   store.set("veda.big", big ? "1" : "0");
 });
-$("home-link").addEventListener("click", () => { stopSpeaking(); show("s-home"); });
+$("home-link") && $("home-link").addEventListener("click", (e) => { e.preventDefault(); stopSpeaking(); show("s-home"); });
 $("ask").addEventListener("submit", (ev) => { ev.preventDefault(); if ($("q").value.trim()) ask($("q").value.trim(), ""); });
 $("sos").addEventListener("click", () => show("s-sos"));
 function toggle(btn, box, open, closed) {
@@ -1171,7 +1166,7 @@ $("sh-copy").addEventListener("click", async () => {
 const params = new URLSearchParams(location.search);
 lang = params.get("lang") || store.get("veda.lang") || ((navigator.language || "").toLowerCase().startsWith("ms") ? "ms" : "en");
 if (!UI[lang]) lang = "en";
-if (store.get("veda.big") === "1") { document.documentElement.classList.add("big"); $("aa").setAttribute("aria-pressed", "true"); }
+if (store.get("veda.big") === "1") document.documentElement.classList.add("big");
 applyLang();
 // ?replay=&at= is applied at once - not after /health, which can take seconds live (24 Oct: a tap before it answered
 // ran on live data although the link asked for a past flood); applyLang keeps the choice when /health re-renders it
@@ -1204,5 +1199,6 @@ if (TOWNS.includes(params.get("place")) || ALSO.includes(params.get("place"))) {
   ready.then(() => ask(UI[lang].q_default.replace("{town}", town), town));
 }
 </script>
+<!--VEDA:FOOT-->
 </body>
 </html>

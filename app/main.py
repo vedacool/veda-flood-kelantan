@@ -36,11 +36,11 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app import card as card_mod
-from app import admin, config, progress, trace, view
+from app import admin, config, frame, progress, trace, view
 from app.adapters import nightshift, zetaris
 from app.agents.coordinator import SAFETY
 
@@ -395,10 +395,29 @@ def live_page():
     return LIVE_PAGE.read_text(encoding="utf-8")
 
 
-@app.get("/judges", response_class=HTMLResponse)
+@app.get("/how-it-works", response_class=HTMLResponse)
+def how_page():
+    """B-96 (was /judges, B-90): how VEDA works + the published recorded live runs replayed step by step."""
+    return frame.framed((config.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8"), "how")
+
+
+@app.get("/judges", include_in_schema=False)
 def judges_page():
-    """B-90 'For judges': how VEDA works + the published recorded live runs (/trace/recorded) replayed step by step."""
-    return (config.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
+    """B-96: the page moved to /how-it-works."""
+    return RedirectResponse("/how-it-works", status_code=301)
+
+
+FRAME_DIR = config.ROOT / "app" / "web" / "frame"
+
+
+@app.get("/frame.css", include_in_schema=False)
+def frame_css():
+    return FileResponse(FRAME_DIR / "frame.css", media_type="text/css")
+
+
+@app.get("/frame.js", include_in_schema=False)
+def frame_js():
+    return FileResponse(FRAME_DIR / "frame.js", media_type="text/javascript")
 
 
 @app.api_route("/scenes{tail:path}", methods=["GET", "POST"])
@@ -570,7 +589,7 @@ def public_url(request):
 
 @app.get("/", response_class=HTMLResponse)
 def page():
-    return WEB_PAGE.read_text(encoding="utf-8")
+    return frame.framed(WEB_PAGE.read_text(encoding="utf-8"), "home")
 
 
 from app import api as _api  # noqa: E402 - B-92: the public API at /api (it imports this module late)
