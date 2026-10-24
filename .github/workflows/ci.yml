@@ -3,9 +3,31 @@
 # Dependabot (.github/dependabot.yml) proposes updates weekly. All three run on Node 24 (Node 20 left the runners).
 name: ci
 
+# B-94 (24 Oct): Actions minutes are nearly used up until 1 Nov (private repo) - run once per change, on main and
+# on pull requests only, never for doc / media-only changes, and cancel a run that a newer push replaces. When CI
+# cannot run, the full suite + evals are run locally before every merge and the counts go in the PR description.
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "docs/media/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.mp4"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "docs/media/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.mp4"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
