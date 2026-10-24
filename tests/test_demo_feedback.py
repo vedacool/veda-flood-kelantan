@@ -56,7 +56,10 @@ def test_language_from_query_then_phone():
     assert fb.lang_of({}, "ms-MY,ms;q=0.9,en;q=0.8") == "ms"
     assert fb.lang_of({}, "en-GB") == "en"
     assert fb.lang_of({"lang": ["en"]}, "ms-MY") == "en"
-    assert "Tempat mana yang anda semak?" in fb.form_page("ms")
+    ms = fb.form_page("ms")
+    assert "Tempat mana yang anda semak?" in ms
+    assert "dalam <i>group</i> keluarga" in ms and "Lingkungan umur (pilihan)" in ms       # Cowork BM review 24 Oct
+    assert "Saya benarkan nama pertama dan jawapan saya dipetik dalam pembentangan VEDA" in ms
 
 
 def test_export_is_one_csv_with_every_answer(tmp_path):

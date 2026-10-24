@@ -20,7 +20,7 @@ def test_rate_limit_headers_and_banner():
         assert h in NGINX
     assert ("Public demo: past flood replay and made-up test scenes only. Not live data. Not an official warning."
             in NGINX)
-    assert 'href="/feedback"' in NGINX
+    assert 'href="/feedback"' in NGINX and "Bukan data masa nyata." in NGINX
 
 
 def test_no_visitor_address_is_logged_or_passed_on():
