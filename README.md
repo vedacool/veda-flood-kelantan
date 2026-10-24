@@ -42,7 +42,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 25 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 33 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -68,7 +68,11 @@ Every data source is cut at the replay time, so nothing from later is ever used:
   asks the Data & Reconciler for the missing upstream reading, it finds Temangan, and the verdict is recomputed
   NORMAL → WATCH - all in the trace. Ask about Rantau Panjang: nothing further up the Golok, so the card says what is
   missing.
-- Both are made by `scripts/make_synthetic_scenes.py` from cited facts only (each gauge's JPS thresholds, river chain,
+- *SYNTHETIC · upstream rain arriving during local rain* (`--replay synthetic_upstream_rain`, a made-up test scene):
+  made-up calm river levels with the **real archive rain of 27 Nov 2024** (Open-Meteo). Ask about Kota Bharu: the
+  river is Normal, but heavy rain upstream (Kuala Krai, may reach here in 9-17 h) while it rains heavily in town
+  raises the verdict to PREPARE (the B-88 rain rule, tentative).
+- All four are made by `scripts/make_synthetic_scenes.py` from cited facts only (each gauge's JPS thresholds, river chain,
   Dec 2014 peaks, travel times) and are labelled SYNTHETIC on the card and in the trace.
 
 ## What you get
@@ -289,14 +293,16 @@ Zetaris.
 (The organisers asked for this in the README and the deck, 23 Oct.)
 - **Zetaris - the one data layer.** Every agent reads data only through `run_sql()` (`app/adapters/zetaris.py`), as
   read-only SQL: VEDA's Postgres (`veda_pg`: gauges and thresholds, live JPS levels every 15 min, places,
-  historic peaks, replay readings, OpenStreetMap features), Zetaris REST tables over Open-Meteo and data.gov.my, and
+  historic peaks, replay readings, OpenStreetMap features), Zetaris REST tables over Open-Meteo (9 rain points from
+  `data/rain_points.csv`, two of them on the Thai side of Sg. Golok) and data.gov.my, and
   Zetaris views that join them (`db/views/`). Agents run single read-only SELECTs; the only other statements they
   may send are on a short allow-list (refreshing a cached forecast table; `zetaris.ddl_problem`); setup scripts create
   the tables and views. Each answer's trace lists every Zetaris query.
 - **Meterless Engine: World Model - VEDA's shared memory.** `app/engines/world_model/` (Python port of the Meterless
   reference, see Pre-existing components): every fact carries its source and time; the Data agent writes readings and
   source health, the Forecast agent stores its verdict, the Critic reads that verdict back and stores its reviews,
-  and the circuit breakers and the 15-min source memory live there. Tests, with results on 23 Oct 2026:
+  and the circuit breakers and the 15-min source memory live there, as do the JPS gauges VEDA finds but has not
+  mapped yet (`discovered_gauge`, waiting for a person to approve). Tests, with results on 24 Oct 2026:
   `python -m pytest tests/conformance -v` -> **8 passed** (the ported Meterless conformance checks);
   `python -m pytest tests/test_world_model_engine.py -v` -> **9 passed**.
 - **Meterless Nightshift - how VEDA reaches the model.** `app/adapters/nightshift.py` sends OpenAI-format requests to
