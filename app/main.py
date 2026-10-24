@@ -125,7 +125,8 @@ def result_json(r):
            "safety_fixes": a.get("safety", []), "agents": agents,
            "log_file": _log_path(r["trace"]),
            "execution_time": (r.get("timing") or {}).get("total"), "timing": r.get("timing"),
-           "card": None, "disclaimer": dict(SAFETY), "view": view.answer_view(r)}
+           "card": None, "disclaimer": dict(SAFETY), "view": view.answer_view(r),
+           "how": view.how_it_worked(r["trace"])}
     if r.get("card"):
         out["card"] = {lang: trace.redact(card_mod.render(r["card"], lang)) for lang in ("en", "ms")}
     return out
@@ -136,18 +137,7 @@ def public_record(rec, question=None):
     field holding the question (or a shortened copy of it, e.g. the place finder's input and its 'normalized' copy)."""
     if rec.get("action") == "run_start":
         question = rec.get("input_summary") or question
-    q = (question or "").strip()
-
-    def hide(v, key=None):
-        if isinstance(v, dict):
-            return {k: hide(x, k) for k, x in v.items()}
-        if isinstance(v, list):
-            return [hide(x) for x in v]
-        if isinstance(v, str) and q and (key == "normalized" or q in v
-                                         or (len(v) >= 12 and v.rstrip(".… ") in q)):
-            return QUESTION_HIDDEN
-        return v
-    out = hide({k: v for k, v in rec.items() if k != "trace_id"})
+    out = view.hide_question({k: v for k, v in rec.items() if k != "trace_id"}, question, QUESTION_HIDDEN)
     return json.loads(trace.redact(json.dumps(out, ensure_ascii=False)))
 
 

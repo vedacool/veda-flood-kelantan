@@ -152,3 +152,33 @@ def test_page_is_self_contained_and_bilingual():
     for name in ("s-home", "s-wait", "s-answer", "s-share", "s-sos"):
         assert f'id="{name}"' in html
     assert "font-size: 18px" in html and "min-height: 48px" in html
+
+
+def test_how_it_worked_from_a_recorded_live_run():
+    path = next((config.ROOT / "data" / "sample" / "live_traces").glob("*2341MYT*.jsonl"))
+    h = view.how_it_worked(path)
+    keys = [r["key"] for r in h["rows"]]
+    assert keys[:5] == ["plan", "gather", "forecast", "draft", "critique"] and keys[-1] == "safety"
+    draft = h["rows"][keys.index("draft")]
+    assert draft["ai"][0]["model"] == "nvidia/nemotron-3.5-super-vl-120b-a12b" and draft["ai"][0]["receipt"]
+    assert draft["seconds"] == 34.7 and h["total_s"] == 49.1
+    critic = h["rows"][keys.index("critique")]
+    assert critic["ai"] and any("code checks" in line["text"] for line in critic["lines"])
+    question = json.loads(path.read_text(encoding="utf-8").splitlines()[1])["input_summary"]
+    assert question not in json.dumps(h, ensure_ascii=False)
+
+
+def test_how_it_worked_offline_marks_the_fallback(views):
+    r, _ = views["nov2024"]
+    h = view.how_it_worked(r["trace"])
+    draft = next(row for row in h["rows"] if row["key"] == "draft")
+    assert not draft["ai"] and any(line["status"] == "fallback" for line in draft["lines"])
+    assert "kodQZXWV" not in json.dumps(h) and sum(row["queries"] for row in h["rows"]) > 0
+    from app import main
+    assert main.result_json(r)["how"] == h
+
+
+def test_hide_question_walks_and_catches_shortened_copies():
+    q = "Mak saya di Tumpat, kena pindah malam ni?"
+    v = view.hide_question({"a": [q[:20] + "…", "other"], "details": {"normalized": "mak saya tumpat"}}, q, "X")
+    assert v == {"a": ["X", "other"], "details": {"normalized": "X"}}

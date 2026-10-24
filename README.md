@@ -187,7 +187,7 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 785 tests pass (24 Oct 2026), 13 skipped (they need live services).**
+- **Offline test suite (`python -m pytest -q`): 788 tests pass (24 Oct 2026), 13 skipped (they need live services).**
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 25 scenarios, 25 of 25 pass; pass^3
   (all 3 repeat runs) 25 of 25, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:

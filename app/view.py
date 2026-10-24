@@ -7,6 +7,7 @@ short plain pieces in English and Bahasa Melayu, for people, not engineers - no 
 Read-only: nothing here changes a verdict, an action or the Coordinator's explanation; it only re-words what the
 engine already decided. The user's question and the trace never go into a view (the share text is built from it).
 """
+import json
 import re
 from datetime import datetime
 
@@ -415,6 +416,87 @@ def answer_view(result):
             "synthetic": bool(card.get("synthetic"))}
     view["share"] = _both(lambda lang: share_text(view, lang))
     return view
+
+
+def hide_question(value, question, mark="(question not shown)"):
+    """value with every string that holds the question - or a shortened copy of it (trace summaries are cut), or
+    the place finder's 'normalized' copy - replaced by `mark`. Dicts and lists are walked."""
+    q = (question or "").strip()
+
+    def hide(v, key=None):
+        if isinstance(v, dict):
+            return {k: hide(x, k) for k, x in v.items()}
+        if isinstance(v, list):
+            return [hide(x) for x in v]
+        if isinstance(v, str) and q and (key == "normalized" or q in v or (len(v) >= 12 and v.rstrip(".… ") in q)):
+            return mark
+        return v
+    return hide(value)
+
+
+STEP_NAME = {  # the loop's states, for the "How VEDA worked this out" screen
+    "plan": {"en": "Understand the question", "ms": "Memahami soalan"},
+    "gather": {"en": "Gather the data", "ms": "Mengumpul data"},
+    "forecast": {"en": "Work out the risk", "ms": "Menilai risiko"},
+    "draft": {"en": "Write the answer", "ms": "Menulis jawapan"},
+    "critique": {"en": "Double-check the answer", "ms": "Menyemak semula jawapan"},
+    "revise": {"en": "Fix the answer", "ms": "Membetulkan jawapan"},
+    "safety": {"en": "Safety check", "ms": "Semakan keselamatan"},
+}
+STEP_WHO = {"plan": "Coordinator", "gather": "Data & Reconciler", "forecast": "Forecast", "draft": "Coordinator",
+            "critique": "Critic", "revise": "Coordinator", "safety": "System"}
+STEP_SHOWN = {  # which trace lines each row repeats (outputs and decisions only - never an input, which can hold the question)
+    "gazetteer.resolve": "output", "route": "both", "data.sources": "decision", "data.cross_check": "output",
+    "data.reconcile": "output", "forecast.verdict": "both", "draft": "decision", "critic.code_checks": "both",
+    "critic.requery": "both", "critic.review": "both", "critic.request": "output", "data.request": "output",
+    "verdict.recomputed": "output", "ai.fallback": "output", "safety": "both",
+}
+
+
+def how_it_worked(trace_path):
+    """One row per loop step from the run's trace: who did it, how long it took, what it found, which model answered
+    (with Nightshift's receipt and seconds) and how many data queries went through Zetaris. Never the question."""
+    try:
+        recs = [json.loads(x) for x in open(trace_path, encoding="utf-8") if x.strip()]
+    except (OSError, ValueError):
+        return None
+    recs = [r for r in recs if "action" in r]
+    question = next((r.get("input_summary") for r in recs if r["action"] == "run_start"), None)
+    timing = next(((r.get("details") or {}).get("timing") for r in recs if r["action"] == "timing"), None) or {}
+    rows, cur = [], None
+    for r in recs:
+        a = r["action"]
+        if a == "state":
+            key = r.get("input_summary")
+            cur = next((x for x in rows if x["key"] == key), None)
+            if cur is None:
+                cur = {"key": key, "name": STEP_NAME.get(key, {"en": key, "ms": key}), "who": STEP_WHO.get(key, ""),
+                       "seconds": timing.get(key), "lines": [], "ai": [], "queries": 0}
+                rows.append(cur)
+            continue
+        if a == "safety":
+            cur = {"key": "safety", "name": STEP_NAME["safety"], "who": "System", "seconds": None, "lines": [], "ai": [],
+                   "queries": 0}
+            rows.append(cur)
+        if cur is None:
+            continue
+        if a == "zetaris.run_sql":
+            cur["queries"] += 1                    # a count only: the queries run in parallel
+        elif a == "nightshift.chat":
+            d = r.get("details") or {}
+            cur["ai"].append({"agent": r.get("agent_name"), "model": d.get("served_model"), "receipt": d.get("receipt_id"),
+                              "seconds": round((r.get("duration_ms") or 0) / 1000, 1), "status": r.get("status"),
+                              "note": None if r.get("status") == "success" else r.get("output_summary")})
+        elif a in STEP_SHOWN:
+            show = STEP_SHOWN[a]
+            parts = ([r.get("output_summary")] if show in ("output", "both") else []) + (
+                [r.get("decision")] if show in ("decision", "both") else [])
+            text = " - ".join(p for p in parts if p)
+            if text:
+                cur["lines"].append({"agent": r.get("agent_name"), "action": a, "status": r.get("status"), "text": text})
+    out = {"rows": rows, "total_s": timing.get("total"),
+           "fallbacks": next(((r.get("details") or {}).get("ai_fallbacks") for r in recs if r["action"] == "run_end"), [])}
+    return json.loads(trace.redact(json.dumps(hide_question(out, question), ensure_ascii=False)))
 
 
 def words():

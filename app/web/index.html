@@ -96,6 +96,14 @@
   .call { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .call a { min-height: 72px; font-size: 1.3rem; font-weight: 800; background: var(--danger); color: #fff; border-color: var(--danger); }
   @media (prefers-color-scheme: dark) { .call a { color: #151514; } }
+  .how { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .how li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .how .head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .how .head b { font-size: 1.05rem; }
+  .how .secs { margin-left: auto; font-family: ui-monospace, Consolas, monospace; }
+  .how p { margin: 6px 0 0; word-break: break-word; }
+  .how .ai { font-weight: 700; }
+  .how .warn { color: var(--v-prepare); font-weight: 700; }
   .steps { padding-left: 1.4em; }
   .steps li { margin: 0 0 10px; }
   @media (max-width: 400px) { .rows > div { grid-template-columns: 1fr; gap: 2px; } .actions { grid-template-columns: 1fr; } }
@@ -167,10 +175,22 @@
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
       <p class="note" data-t="expl_note"></p></div>
     <div class="card"><h2 data-t="sources"></h2><ul class="sources" id="a-sources"></ul></div>
+    <button class="linkish" type="button" id="a-how" data-t="how_link"></button>
   </div>
   <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p></div>
   <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:12px"></button>
   <p class="note" data-t="disclaimer"></p>
+</section>
+
+<!-- 7. How VEDA worked this out (from the run's trace; never the question) -->
+<section id="s-how" hidden>
+  <h1 data-t="how_title"></h1>
+  <p class="note" id="h-total"></p>
+  <ol class="how" id="h-rows"></ol>
+  <p class="note" data-t="how_note"></p>
+  <a class="btn wide" id="h-live" data-t="how_live"></a>
+  <p></p>
+  <button type="button" class="wide" id="h-back" data-t="back"></button>
 </section>
 
 <!-- 4. Share -->
@@ -229,6 +249,11 @@ const UI = {
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
            "Know where your nearest relief centre (PPS) is - ask the village head."],
+    how_link: "See how VEDA worked this out ›", how_title: "How VEDA worked this out",
+    how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
+    how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
+    answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
+    ai_failed: "AI step not used", fallbacks: "AI fallbacks in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     level_now: "Now", alert: "Alert", warning: "Warning", danger: "Danger", m: "m",
   },
@@ -258,6 +283,11 @@ const UI = {
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
            "Ketahui PPS (pusat pemindahan) terdekat - tanya ketua kampung."],
+    how_link: "Lihat bagaimana VEDA mendapat jawapan ini ›", how_title: "Bagaimana VEDA mendapat jawapan ini",
+    how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
+    how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
+    answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
+    ai_failed: "Langkah AI tidak digunakan", fallbacks: "Sandaran AI dalam larian ini",
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - cuba lagi sebentar lagi.",
     level_now: "Kini", alert: "Waspada", warning: "Amaran", danger: "Bahaya", m: "m",
   },
@@ -288,7 +318,7 @@ const t = (key) => UI[lang][key];
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function show(id) {
-  ["s-home", "s-wait", "s-answer", "s-share", "s-sos"].forEach((s) => { $(s).hidden = s !== id; });
+  ["s-home", "s-wait", "s-answer", "s-share", "s-sos", "s-how"].forEach((s) => { $(s).hidden = s !== id; });
   $("err").hidden = true;
   window.scrollTo(0, 0);
 }
@@ -318,6 +348,7 @@ function applyLang() {
   if (words) renderSos();
   if (result) renderAnswer();
   if (!$("s-share").hidden) renderShare();
+  if (!$("s-how").hidden) renderHow();
 }
 
 function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang(); }
@@ -458,10 +489,31 @@ function renderAnswer() {
   $("a-strip").innerHTML = `<span>${esc(v.strip[lang])}</span><span>${esc(open ? t("hide_details") : t("details"))}</span>`;
   $("a-why").textContent = v.why[lang];
   $("a-bar-box").innerHTML = levelBar(v.level_bar);
+  $("a-how").hidden = !result.how;
   $("a-expl-box").hidden = !v.explanation;
   if (v.explanation) { $("a-expl").textContent = v.explanation.text; $("a-expl").lang = v.explanation.language || ""; }
   $("a-sources").innerHTML = v.sources[lang].map((s) =>
     `<li class="${s.used ? "" : "out"}">${s.used ? "✓" : "–"} ${esc(s.name)} <span class="sub">(${esc(s.note)})</span></li>`).join("");
+}
+
+// ---------- 7. How VEDA worked this out ----------
+function renderHow() {
+  const h = result && result.how;
+  if (!h) return;
+  $("h-total").textContent = h.total_s != null ? t("total").replace("{s}", h.total_s) : "";
+  $("h-rows").innerHTML = h.rows.map((r) => {
+    const ai = r.ai.map((a) => a.status === "success"
+      ? `<p class="ai">${esc(t("answered").replace("{m}", a.model || "?"))} · ${esc(t("receipt"))} ${esc(a.receipt || "-")} · ${a.seconds} s</p>`
+      : `<p class="warn">${esc(t("ai_failed"))} (${esc(a.agent)}): ${esc(a.note || a.status)} · ${a.seconds} s</p>`).join("");
+    const aiStep = ["draft", "critique", "revise"].includes(r.key);
+    return `<li><div class="head"><b>${esc(r.name[lang])}</b><span class="sub">${esc(r.who)}</span>` +
+      `<span class="secs">${r.seconds != null ? r.seconds + " s" : ""}</span></div>` +
+      (r.queries ? `<p class="sub">${esc(t("queries").replace("{n}", r.queries))}</p>` : "") +
+      r.lines.map((l) => `<p lang="en"${l.status === "fallback" ? ' class="warn"' : ""}>${esc(l.text)}</p>`).join("") +
+      (ai || (aiStep ? "" : `<p class="sub">${esc(t("code_only"))}</p>`)) + `</li>`;
+  }).join("") + (h.fallbacks && h.fallbacks.length
+    ? `<li><p class="warn">${esc(t("fallbacks"))}: ${esc(h.fallbacks.join("; "))}</p></li>` : "");
+  $("h-live").href = "/live?run=" + encodeURIComponent(result.run_id);
 }
 
 // ---------- 4. Share ----------
@@ -517,6 +569,8 @@ $("a-strip").addEventListener("click", () => {
 });
 $("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
 $("a-listen").addEventListener("click", listen);
+$("a-how").addEventListener("click", () => { stopSpeaking(); renderHow(); show("s-how"); });
+$("h-back").addEventListener("click", () => show("s-answer"));
 $("a-again").addEventListener("click", () => { stopSpeaking(); show("s-home"); });
 $("sh-back").addEventListener("click", () => show("s-answer"));
 $("sh-copy").addEventListener("click", async () => {
