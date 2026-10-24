@@ -7,6 +7,9 @@
 Privacy: no IP address, phone, email or address is stored. The server writes no request log; free text has email
 addresses and phone / IC-like digit runs replaced by "[removed]"; the time is kept to the minute. A first name is
 optional and quoted only if its box is ticked (unticked by default). Answers append as JSON lines to FEEDBACK_FILE.
+
+Abuse: control characters are dropped, one answer is at most MAX_RECORD bytes, a form sent from another website is
+refused, and the CSV export defuses cells a spreadsheet would run as a formula.
 """
 import argparse
 import csv
@@ -25,17 +28,21 @@ FILE = os.environ.get("FEEDBACK_FILE", "/data/answers.jsonl")
 MAX_BODY = 8 * 1024                     # a filled-in form is well under 4 KB
 MAX_TEXT = 500
 MAX_NAME = 40
+MAX_PLACE = 60                          # "Which place?" - the same as the form's maxlength
+MAX_RECORD = 3 * 1024                   # one stored answer, in bytes (eight full answers fit)
 MAX_FILE = 20 * 1024 * 1024             # stop accepting once the file is this big (about 10 000 answers)
 PLACES = ("Rantau Panjang", "Pasir Mas", "Kota Bharu", "Tumpat", "other")
 SHARE = ("yes", "maybe", "no")
 AGES = ("under 30", "30-49", "50-64", "65+")
 FIELDS = ("time", "lang", "place", "place_other", "would_do", "confusing", "share", "share_why", "ease",
           "should_add", "age", "first_name", "quote_ok")
-TEXTS = ("place_other", "would_do", "confusing", "share_why", "should_add")
+TEXTS = ("would_do", "confusing", "share_why", "should_add")
 _lock = threading.Lock()
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 PHONE = re.compile(r"\+?\d[\d\s-]{5,}\d")          # 7+ digits with spaces / dashes: phone, IC
+CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+FORMULA = ("=", "+", "-", "@", "\t", "\r")           # a spreadsheet would run a cell starting with these
 
 T = {
     "en": {"title": "Tell us what you think", "intro": "Eight short questions about VEDA's demo. Everything is optional. "
@@ -50,6 +57,7 @@ T = {
            "thanks_body": "Your answer is saved. It helps us make VEDA clearer for families in Kelantan.",
            "empty": "Please answer at least one question.", "full": "Sorry, the feedback box is full.",
            "too_long": "That was too long - please shorten it.",
+           "cross_site": "Please send this form from VEDA's own feedback page.",
            "privacy": "We store only your answers and the time (to the minute) - no IP address, phone or email."},
     "ms": {"title": "Beritahu pendapat anda", "intro": "Lapan soalan ringkas tentang demo VEDA. Semuanya pilihan. "
            "Mohon jangan tulis nombor telefon, e-mel atau alamat anda.",
@@ -64,6 +72,7 @@ T = {
            "thanks_body": "Jawapan anda telah disimpan. Ia membantu kami menjadikan VEDA lebih jelas untuk keluarga "
            "di Kelantan.", "empty": "Sila jawab sekurang-kurangnya satu soalan.",
            "full": "Maaf, peti maklum balas sudah penuh.", "too_long": "Terlalu panjang - sila pendekkan.",
+           "cross_site": "Sila hantar borang ini dari halaman maklum balas VEDA sendiri.",
            "privacy": "Kami simpan jawapan anda dan masa (hingga minit) sahaja - tiada alamat IP, telefon atau e-mel."},
 }
 
@@ -121,7 +130,7 @@ def form_page(lang, error=""):
             f'<input type="hidden" name="lang" value="{lang}">'
             f'<fieldset><legend>1. {t["q1"]}</legend>{radios("place", places)}'
             f'<label for="po" class="note">{t["other_name"]}</label>'
-            f'<input type="text" id="po" name="place_other" maxlength="60"></fieldset>'
+            f'<input type="text" id="po" name="place_other" maxlength="{MAX_PLACE}"></fieldset>'
             f'<fieldset><legend><label for="q2">2. {t["q2"]}</label></legend>'
             f'<textarea id="q2" name="would_do" maxlength="{MAX_TEXT}"></textarea></fieldset>'
             f'<fieldset><legend><label for="q3">3. {t["q3"]}</label></legend>'
@@ -151,14 +160,15 @@ def thanks_page(lang):
 
 
 def clean_text(s, limit):
-    s = " ".join((s or "").split())[:limit]
+    s = " ".join(CONTROL.sub(" ", s or "").split())[:limit]
     return PHONE.sub("[removed]", EMAIL.sub("[removed]", s))
 
 
 def record(form, now=None):
     """Form fields -> one stored answer, or raise ValueError(key of the message to show)."""
     one = lambda k: (form.get(k) or [""])[0]                                         # noqa: E731
-    if any(len(one(k)) > MAX_TEXT for k in TEXTS) or len(one("first_name")) > MAX_NAME:
+    if any(len(one(k)) > MAX_TEXT for k in TEXTS) or len(one("first_name")) > MAX_NAME \
+            or len(one("place_other")) > MAX_PLACE:
         raise ValueError("too_long")
     rec = {
         "time": (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%MZ"),
@@ -168,14 +178,36 @@ def record(form, now=None):
         "ease": int(one("ease")) if one("ease") in ("1", "2", "3", "4", "5") else None,
         "age": one("age") if one("age") in AGES else "",
         "first_name": clean_text(one("first_name"), MAX_NAME),
+        "place_other": clean_text(one("place_other"), MAX_PLACE),
     }
     for k in TEXTS:
         rec[k] = clean_text(one(k), MAX_TEXT)
     rec["quote_ok"] = one("quote_ok") == "yes" and bool(rec["first_name"])
-    answered = [k for k in ("place", "share", "age", "first_name", *TEXTS) if rec[k]] + (["ease"] if rec["ease"] else [])
+    answered = [k for k in ("place", "share", "age", "first_name", "place_other", *TEXTS) if rec[k]] \
+        + (["ease"] if rec["ease"] else [])
     if not answered:
         raise ValueError("empty")
-    return {k: rec[k] for k in FIELDS}
+    rec = {k: rec[k] for k in FIELDS}
+    if len(json.dumps(rec, ensure_ascii=False).encode("utf-8")) > MAX_RECORD:
+        raise ValueError("too_long")
+    return rec
+
+
+def cross_site(headers):
+    """True when a browser says the form was sent from another website (same rule as VEDA's /run/stream).
+    curl and scripts send neither header; the proxy's rate limit covers them."""
+    site = headers.get("Sec-Fetch-Site")
+    if site and site not in ("same-origin", "none"):
+        return True
+    origin = headers.get("Origin")
+    if not origin or origin == "null":                  # "null": a same-site form under Referrer-Policy no-referrer
+        return False
+    host = (headers.get("Host") or "").rsplit(":", 1)[0].lower()
+    return (urlsplit(origin).hostname or "") != host
+
+
+def safe_cell(v):
+    return "'" + v if isinstance(v, str) and v.startswith(FORMULA) else v
 
 
 def append(rec, path=None):
@@ -195,7 +227,7 @@ def export(path, out):
         with open(path, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
-                    w.writerow(json.loads(line))
+                    w.writerow({k: safe_cell(v) for k, v in json.loads(line).items()})
                     n += 1
     return n
 
@@ -241,6 +273,8 @@ class Handler(BaseHTTPRequestHandler):
             size = MAX_BODY + 1
         if size > MAX_BODY:
             return self._send(413, form_page(lang, T[lang]["too_long"]))
+        if cross_site(self.headers):
+            return self._send(403, form_page(lang, T[lang]["cross_site"]))
         form = parse_qs(self.rfile.read(size).decode("utf-8", "replace"), keep_blank_values=True)
         lang = (form.get("lang") or [lang])[0] if (form.get("lang") or [""])[0] in T else lang
         try:

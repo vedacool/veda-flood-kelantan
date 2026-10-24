@@ -33,7 +33,10 @@ EOF
 # ---------------------------------------------------------------- --export / --stop
 if [ "${1:-}" = "--export" ]; then
   out="$CALLER/feedback-$(date +%F).csv"
-  "${COMPOSE[@]}" exec -T feedback python feedback.py export > "$out"
+  if ! "${COMPOSE[@]}" exec -T feedback python feedback.py export > "$out"; then
+    rm -f "$out"                             # never leave a half-written CSV behind
+    fail "export failed (is the demo running? bash demo/setup_wyse.sh) - nothing saved"
+  fi
   say "Saved $(($(wc -l < "$out") - 1)) answers to $out"
   exit 0
 fi
@@ -45,7 +48,21 @@ if [ "${1:-}" = "--stop" ]; then
     sudo tailscale funnel --https="$fport" off || say "  (could not turn it off - check: tailscale funnel status)"
     tailscale funnel status || true
   else
-    say "No Funnel port saved by this script - nothing to turn off on Tailscale."
+    say "No Funnel port saved by this script."
+  fi
+  # Funnel may also have been turned on by hand on 443 (DEPLOY_DEMO.md step 5). Ask: something else of yours
+  # may be served on 443, and turning it off could stop that too.
+  if [ "$fport" != 443 ] && command -v tailscale >/dev/null 2>&1; then
+    say "What Tailscale serves now:"
+    tailscale funnel status 2>&1 | sed 's/^/    /' || true
+    if [ -t 0 ]; then
+      read -r -p "  Also run 'tailscale funnel --https=443 off'? Only if the demo is what is on 443. [y/N] " ans
+      if [ "$ans" = y ] || [ "$ans" = Y ]; then
+        sudo tailscale funnel --https=443 off || say "  (could not turn it off - check: tailscale funnel status)"
+      fi
+    else
+      say "  If the demo is on 443, also run: sudo tailscale funnel --https=443 off"
+    fi
   fi
   DEMO_PORT="$(saved DEMO_PORT)" "${COMPOSE[@]}" down
   say "Stopped. The feedback answers are kept (volume veda-demo_feedback); export them with --export."
@@ -115,7 +132,8 @@ check "offline: /health says sample_mode true" sh -c "curl -fsS '$B/health' | gr
 check "/admin closed (404 from the proxy)"     sh -c "[ \"\$(curl -s -o /dev/null -w '%{http_code}' '$B/admin')\" = 404 ]"
 check "/admin closed in the app too (404)" \
   sh -c "${COMPOSE[*]} exec -T proxy wget -S -O /dev/null http://veda:8000/admin 2>&1 | grep -q ' 404 '"
-check "demo banner on the page"                sh -c "curl -fsS '$B/' | grep -q 'Public demo: past flood replay'"
+check "demo banner on the page"                sh -c "curl -fsS '$B/' | grep -q 'id=\"veda-demo-banner\"'"
+check "banner script (EN/BM, feedback link)"   sh -c "curl -fsS '$B/demo-banner.js' | grep -q 'bukan amaran rasmi'"
 check "feedback form answers"                  sh -c "curl -fsS '$B/feedback' | grep -q 'name=\"place\"'"
 check "a scene answers (Rantau Panjang, 27 Nov 2024 19:30 -> ACT)" \
   sh -c "curl -fsS -X POST '$B/run' -H 'Content-Type: application/json' -d '{\"question\":\"Is Rantau Panjang safe?\",\"replay\":\"nov2024\",\"at\":\"2024-11-27 19:30\"}' | grep -q '\"verdict\":\"ACT\"'"

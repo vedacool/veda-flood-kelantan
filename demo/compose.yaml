@@ -5,6 +5,10 @@
 # service sit on an internal network with no route out: offline by construction, whatever the code does.
 name: veda-demo
 
+x-logging: &logging                  # Docker's logs rotate: at most 3 files of 10 MB per service
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
 services:
   veda:
     profiles: [demo]
@@ -25,6 +29,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
+    logging: *logging
     networks: [inside]
 
   feedback:
@@ -39,6 +44,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
+    logging: *logging
     networks: [inside]
 
   proxy:
@@ -51,9 +57,11 @@ services:
     read_only: true
     tmpfs: ["/tmp:mode=1777,size=32m"]
     mem_limit: 64m
+    pids_limit: 32
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
+    logging: *logging
     depends_on:
       veda: { condition: service_healthy }
       feedback: { condition: service_started }

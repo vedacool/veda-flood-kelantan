@@ -9,15 +9,18 @@ visitor --HTTPS--> Tailscale Funnel --> 127.0.0.1:8765 --> proxy (nginx) --+--> 
                                                                             +--> feedback  (answers on a volume)
 ```
 - **proxy** (`demo/nginx.conf`): per-visitor rate limits - 20 answers (and feedback requests) a minute, burst 10,
-  and 120 page requests a minute, burst 60; then HTTP 429 - security headers
-  (CSP, nosniff, no framing), the demo banner on every page with a *Give feedback* button, `/admin` and run logs
-  closed (404), no access log (it would store IP addresses), visitors' addresses not passed on.
+  and 120 page requests a minute, burst 60; then HTTP 429 - at most 3 open streams (answer steps, live log) per
+  visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing) - a one-line demo banner in the page's
+  language with a small *Feedback* link, and a *Was this clear? 1-minute feedback* link under each answer
+  (`demo/demo-banner.js`; the app itself is unchanged) - `/admin` and run logs closed (404), no access log (it would
+  store IP addresses), visitors' addresses not passed on.
 - **veda** (the normal VEDA image): `SAMPLE_MODE=true`, read-only filesystem, 1 GB memory limit, on an internal
   network with **no route out** (it cannot fetch anything, whatever the code does). Questions visitors type stay in
   memory (tmpfs) and vanish on restart.
 - **feedback** (`demo/feedback/feedback.py`, Python standard library only): the form at `/feedback`, answers appended
   to `answers.jsonl` on the `veda-demo_feedback` volume. No IP, phone, email or address stored.
-- All three restart unless stopped, so the demo comes back after a reboot.
+- All three restart unless stopped, so the demo comes back after a reboot. Docker keeps at most 3 × 10 MB of logs
+  per service.
 
 Commands below are for a Debian / Ubuntu-style system with `sudo`; run them in a terminal on the Wyse (SSH over the
 tailnet is fine).
@@ -46,7 +49,8 @@ fails), shows what Tailscale already serves, then asks **"Publish on Funnel port
 offered if 443 is already in use; `skip` publishes nothing). It prints the public link, the feedback link and:
 ```
 bash demo/setup_wyse.sh --export      # all feedback answers -> feedback-<date>.csv in the current folder
-bash demo/setup_wyse.sh --stop        # Funnel off for the demo's port only + containers down (answers kept)
+bash demo/setup_wyse.sh --stop        # Funnel off for the demo's port + containers down (answers kept); also
+                                      # asks before turning off 443, in case Funnel was turned on there by hand
 ```
 Then do step 6 (test from outside) by hand. Steps 1-9 below are the same thing done by hand, for reference.
 
@@ -96,7 +100,7 @@ docker compose -f demo/compose.yaml --profile demo up -d --build
 docker compose -f demo/compose.yaml --profile demo ps          # veda "healthy", proxy and feedback "running"
 curl -s http://127.0.0.1:8765/health                           # {"status":"ok","sample_mode":true,...}
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/admin    # 404 (the proxy)
-curl -s http://127.0.0.1:8765/ | grep -c "Public demo"         # 1 (the banner)
+curl -s http://127.0.0.1:8765/ | grep -c "veda-demo-banner"    # 1 (the banner)
 docker compose -f demo/compose.yaml --profile demo exec -T proxy \
   wget -S -O /dev/null http://veda:8000/admin 2>&1 | grep HTTP/   # 404 from the app itself (behind the proxy)
 ```
@@ -125,8 +129,8 @@ tailnet-only: Funnel exposes only what is listed there. **Never run `tailscale s
 
 ## 6. Test it from outside (5 min)
 On a phone **on mobile data, not on the tailnet** (or any computer logged out of Tailscale):
-1. Open the public address: the dark banner "Public demo: past flood replay and made-up test scenes only…" is at the
-   top. Link to share with judges and testers (opens the flood replay):
+1. Open the public address: the dark one-line banner "Demo · past flood replay · not live · not an official
+   warning" is at the top (in BM after tapping BM). Link to share with judges and testers (opens the flood replay):
    `https://wyse5070.<your-tailnet>.ts.net/?replay=nov2024&at=2024-11-27%2019:30` -> tap **Rantau Panjang** -> Act now.
 2. `…/admin` -> 404. `…/feedback` -> the form, in BM if the phone is in Malay; send one test answer -> *Thank you*.
 3. The rate limit cannot be dodged with a fake header (from any computer outside the tailnet):
@@ -140,7 +144,15 @@ On a phone **on mobile data, not on the tailnet** (or any computer logged out of
    `"~." $remote_addr;` (one shared limit for all visitors together - safe, just stricter), then
    `docker compose -f demo/compose.yaml --profile demo up -d --build proxy` (the config is built into the proxy image)
    and test again.
-4. Nothing leaves VEDA's container (on the Wyse):
+4. The limit is **per visitor**, checked from two networks (audit 24 Oct). You need two devices on different
+   networks, neither on the tailnet - for example phone A on mobile data and phone B (or a laptop) on another
+   Wi-Fi. On **A**, open `…/feedback` and pull down to reload about 20 times quickly, until it shows
+   `429 Too Many Requests`. Straight away on **B**, open `…/feedback`:
+   - **B shows the form:** each visitor has their own limit - good.
+   - **B also gets 429:** everyone shares one limit (Funnel is not passing the visitor's address). The demo is still
+     safe, but one busy visitor slows everyone; tell Session B, and keep the step-3 fallback in mind.
+   Wait a minute before using the demo from A again.
+5. Nothing leaves VEDA's container (on the Wyse):
    ```
    docker compose -f demo/compose.yaml --profile demo exec -T veda python -c "import urllib.request; urllib.request.urlopen('https://api.open-meteo.com', timeout=5)"
    ```

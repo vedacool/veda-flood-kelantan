@@ -56,3 +56,8 @@ def test_setup_script_never_resets_tailscale_and_never_installs():
     assert "reset" not in code                                                 # never a Tailscale reset
     assert '--https="$fport" off' in code                                      # --stop: the demo's port only
     assert all(line.lstrip().startswith("say") for line in code.splitlines() if "down -v" in line)  # answers kept
+    stop = code.split('"--stop" ]', 1)[1].split("exit 0", 1)[0]
+    assert "read -r -p" in stop and "sudo tailscale funnel --https=443 off" in stop   # 443 too, but asks first
+    assert stop.index("read -r -p") < stop.index("--https=443 off")
+    export = code.split('"--export" ]', 1)[1].split("exit 0", 1)[0]
+    assert 'rm -f "$out"' in export                                            # no half-written CSV left behind

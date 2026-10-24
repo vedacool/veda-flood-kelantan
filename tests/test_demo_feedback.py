@@ -95,6 +95,40 @@ def test_full_file_refuses_more(tmp_path, monkeypatch):
         fb.append(fb.record(form(place="Tumpat")), path)
 
 
+def test_control_characters_are_dropped_and_one_answer_is_at_most_3_kb():
+    """Audit 24 Oct: control characters were stored as 6-byte \\uXXXX, ~15 KB per answer."""
+    r = fb.record(form(would_do="a" + "\x00\x01\x1b\x7f" * 100 + "b", place_other="Machang\x07"))
+    assert r["would_do"] == "a b" and r["place_other"] == "Machang"
+    full = {k: "x" * fb.MAX_TEXT for k in fb.TEXTS}
+    assert len(json.dumps(fb.record(form(**full))).encode()) <= fb.MAX_RECORD     # eight full answers still fit
+    with pytest.raises(ValueError, match="too_long"):
+        fb.record(form(**{k: "é" * fb.MAX_TEXT for k in fb.TEXTS}))                 # 2 bytes a character: too big
+    with pytest.raises(ValueError, match="too_long"):
+        fb.record(form(place_other="x" * (fb.MAX_PLACE + 1)))                        # 60, the same as the form
+    assert f'name="place_other" maxlength="{fb.MAX_PLACE}"' in fb.form_page("en") and fb.MAX_PLACE == 60
+
+
+def test_csv_export_defuses_spreadsheet_formulas(tmp_path):
+    path = tmp_path / "answers.jsonl"
+    for text in ('=HYPERLINK("http://example.invalid","x")', "+1", "-2", "@SUM(A1)", "peta"):
+        fb.append(fb.record(form(would_do=text)), path)
+    out = io.StringIO()
+    fb.export(path, out)
+    cells = [r["would_do"] for r in csv.DictReader(io.StringIO(out.getvalue()))]
+    assert cells == ["'=HYPERLINK(\"http://example.invalid\",\"x\")", "'+1", "'-2", "'@SUM(A1)", "peta"]
+    assert fb.safe_cell("\tx") == "'\tx" and fb.safe_cell("\rx") == "'\rx" and fb.safe_cell(4) == 4
+
+
+def test_cross_site_detection():
+    same = {"Host": "wyse5070.example.ts.net"}
+    assert not fb.cross_site(same)                                                  # curl: neither header
+    assert not fb.cross_site({**same, "Sec-Fetch-Site": "same-origin", "Origin": "https://wyse5070.example.ts.net:8443"})
+    assert not fb.cross_site({**same, "Origin": "null"})                            # no-referrer same-site form
+    assert fb.cross_site({**same, "Sec-Fetch-Site": "cross-site"})
+    assert fb.cross_site({**same, "Sec-Fetch-Site": "same-site"})
+    assert fb.cross_site({**same, "Origin": "https://evil.example"})
+
+
 @pytest.fixture()
 def server(tmp_path, monkeypatch):
     monkeypatch.setattr(fb, "FILE", str(tmp_path / "answers.jsonl"))
@@ -130,4 +164,14 @@ def test_post_too_big_or_empty_is_refused(server):
         with pytest.raises(urllib.error.HTTPError) as e:
             urllib.request.urlopen(urllib.request.Request(base + "/feedback", data=body))
         assert e.value.code == code
+    assert not path.exists()
+
+
+def test_post_from_another_website_is_refused(server):
+    base, path = server
+    data = urllib.parse.urlencode({"lang": "ms", "place": "Tumpat"}).encode()
+    for headers in ({"Sec-Fetch-Site": "cross-site"}, {"Origin": "https://evil.example"}):
+        with pytest.raises(urllib.error.HTTPError) as e:
+            urllib.request.urlopen(urllib.request.Request(base + "/feedback?lang=ms", data=data, headers=headers))
+        assert e.value.code == 403 and "halaman maklum balas VEDA sendiri" in e.value.read().decode()
     assert not path.exists()

@@ -12,15 +12,45 @@ def test_operator_screens_and_run_logs_are_closed():
     assert re.search(r"location \^~ /trace/run/ \{[^}]*return 404 ", NGINX)
 
 
-def test_rate_limit_headers_and_banner():
+def test_rate_limit_and_headers():
     assert "zone=answers:10m rate=20r/m" in NGINX and "limit_req_status 429" in NGINX
     for loc in ("location = /run {", "location = /run/stream {", "location ^~ /feedback {"):     # asking costs most
         assert "limit_req zone=answers" in NGINX.split(loc, 1)[1].split("}", 1)[0]
     for h in ("Content-Security-Policy", "frame-ancestors 'none'", "X-Content-Type-Options \"nosniff\""):
         assert h in NGINX
-    assert ("Public demo: past flood replay and made-up test scenes only. Not live data. Not an official warning."
-            in NGINX)
-    assert 'href="/feedback"' in NGINX and "Bukan data masa nyata." in NGINX
+    assert 'add_header Strict-Transport-Security "max-age=31536000" always;' in NGINX
+
+
+def test_open_streams_are_capped_per_visitor_and_in_all():
+    """Audit 24 Oct: ~40 open /live/stream connections froze the app. 3 per visitor, 10 in all."""
+    assert "events { worker_connections 1024; }" in NGINX
+    assert "limit_conn_zone $visitor zone=streams_per_visitor" in NGINX and "limit_conn_status 429;" in NGINX
+    assert 'map $host $everyone { default "all"; }' in NGINX and "limit_conn_zone $everyone zone=streams_all" in NGINX
+    for loc in ("location = /run/stream {", "location = /live/stream {"):
+        block = NGINX.split(loc, 1)[1].split("}", 1)[0]
+        assert "limit_conn streams_per_visitor 3;" in block and "limit_conn streams_all 10;" in block
+
+
+def test_banner_is_one_line_in_the_page_language_with_a_feedback_link():
+    """Cowork 24 Oct: one small line (not bold), EN|BM following the page; Feedback / Maklum balas at the right;
+    "Was this clear?" under each answer. Added by the proxy (demo/demo-banner.js) - the app is not changed."""
+    banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
+    assert "Demo · past flood replay · not live · not an official warning" in banner and "font:400 16px" in banner
+    assert 'id="veda-demo-banner"' in banner and 'href="/feedback"' in banner and "<br>" not in banner
+    assert "sub_filter '</body>' '<script src=\"/demo-banner.js\"></script></body>';" in NGINX
+    js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
+    for words in ('"Demo · past flood replay · not live · not an official warning"', 'feedback: "Feedback"',
+                  '"Was this clear? 1-minute feedback ›"', '"Demo · ulang tayang banjir lalu · bukan data semasa · '
+                  'bukan amaran rasmi"', 'feedback: "Maklum balas"', '"Jelas tak? Maklum balas 1 minit ›"'):
+        assert words in js
+    assert "COPY demo-banner.js /etc/nginx/demo/demo-banner.js" in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
+
+
+def test_docker_logs_rotate_and_the_proxy_has_a_process_cap():
+    assert 'options: { max-size: "10m", max-file: "3" }' in COMPOSE
+    assert COMPOSE.count("logging: *logging") == 3
+    proxy = COMPOSE.split("\n  proxy:\n", 1)[1].split("\nnetworks:", 1)[0]
+    assert "pids_limit: 32" in proxy
 
 
 def test_no_visitor_address_is_logged_or_passed_on():
