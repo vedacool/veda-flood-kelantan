@@ -105,3 +105,49 @@ def test_offline_api_says_live_only(tmp_path, monkeypatch):
     assert out["view"]["judgement"]["status"] == "live_only"
     how = [row for row in out["how"]["rows"] if row.get("checks")]
     assert how and "never 'go into the water'" in how[0]["checks"]
+
+
+def test_upstream_numbers_are_facts_with_their_own_ids():
+    notes = [{"gauge": "Kg. Jenob", "level_m": [JPS reading], "band": "normal", "rising": True,
+              "thresholds": {"alert_m": 21.5, "warning_m": 22.5, "danger_m": 23.5},
+              "change_1h_m": 0.47, "change_3h_m": 1.08, "arrives_in_h": None},
+             {"gauge": "Kuala Krai", "level_m": 20.0, "band": "normal", "rising": False,
+              "thresholds": {"alert_m": 21.0}, "change_1h_m": -0.05, "change_3h_m": 0.2,
+              "arrives_in_h": {"min": 9, "max": 17}},
+             {"gauge": "Dabong", "status": "no fresh reading"}]
+    f = {fid: (text, r) for fid, text, r in critic._upstream_facts(notes, "Rantau Panjang")}
+    assert f["upstream.1"][0]["en"] == "Kg. Jenob (Normal, rising)" and f["upstream.1"][1]
+    assert f["upstream.1.band"] == ({"en": "[JPS reading] m below its Alert level (21.5 m)",
+                                     "ms": "[JPS reading] m di bawah paras Waspada (21.5 m)"}, False)
+    assert f["upstream.1.change_3h"] == ({"en": "rose 1.08 m in 3 hours", "ms": "naik 1.08 m dalam 3 jam"}, True)
+    assert f["upstream.1.change_1h"][1] and f["upstream.1.travel"] == (
+        {"en": "travel time to Rantau Panjang not known", "ms": "masa perjalanan ke Rantau Panjang tidak diketahui"}, False)
+    assert f["upstream.2.change_1h"] == ({"en": "fell [JPS reading] m in 1 hour", "ms": "turun [JPS reading] m dalam 1 jam"}, False)
+    assert not f["upstream.2.change_3h"][1]                                     # 0.2 m in 3 h is not "rising"
+    assert f["upstream.2.travel"][0]["en"] == "water may reach Rantau Panjang in 9-17 hours"
+    assert f["upstream.3"] == ({"en": "Dabong (no fresh reading)", "ms": "Dabong (tiada bacaan terkini)"}, False)
+    from app import card
+    assert not any(card._MINUS.search(t[lg]) for t, _ in f.values() for lg in ("en", "ms"))   # no minus signs
+
+
+def test_a_failed_draft_still_gets_a_facts_only_judgement(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from app import loop
+    from app.adapters import nightshift
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    for key in ("ZETARIS_API_KEY", "ZETARIS_API_URL", "METERLESS_RUNTIME_TOKEN"):
+        monkeypatch.delenv(key, raising=False)
+    seen = []
+
+    def llm(lane, messages, agent, **kw):
+        seen.append(messages[0]["content"])
+        if messages[0]["content"] == critic.JUDGE_SYSTEM:
+            assert "EXPLANATION" not in messages[1]["content"]
+            return SimpleNamespace(data={"ai_level": "NORMAL", "reasons": ["vs_alert"], "confidence": "high"}, text="")
+        raise nightshift.NightshiftError("draft failed")
+    r = loop.run("Is Kota Bharu at risk in the next two days?", llm=llm, quiet=True, log_dir=tmp_path,
+                 replay="synthetic_rising", at=__import__("datetime").datetime(2024, 11, 25, 18, 0,
+                                                                              tzinfo=__import__("app.config").config.MYT))
+    assert critic.JUDGE_SYSTEM in seen and r["forecast"]["verdict"] == "WATCH"
+    assert r["ai_judgement"]["status"] == "lower" and r["ai_judgement"]["why"].startswith("facts-only judgement")

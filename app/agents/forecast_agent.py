@@ -142,7 +142,8 @@ def _upstream(sentinels):
             fired.append(("WATCH", "sentinel>=alert", f"upstream {s['name']} is at {s['band']} ({s['level_m']} m){when}"))
         notes.append({"gauge": s["name"], "level_m": s["level_m"], "band": s["band"],
                       "band_name": BAND_NAMES.get(s["band"]), "rising": rising, "arrives_in_h": arrives,
-                      "chain_order": s.get("chain_order")})
+                      "chain_order": s.get("chain_order"), "change_1h_m": s.get("change_1h_m"),
+                      "change_3h_m": s.get("change_3h_m"), "thresholds": s.get("thresholds") or {}})
     return fired, notes
 
 

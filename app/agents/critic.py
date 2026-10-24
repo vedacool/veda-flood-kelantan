@@ -26,7 +26,7 @@ from app import config, trace
 from app.adapters import nightshift, zetaris
 from app.agents import coordinator, data_agent
 from app.agents.data_agent import AGREE_M, FRESHNESS, source_id
-from app.agents.forecast_agent import LEVELS, warning_level
+from app.agents.forecast_agent import LEVELS, SENTINEL_RISING_M_3H, warning_level
 from app.engines.world_model.veda_ingest import place_id
 
 AGENT = "Critic"
@@ -300,6 +300,56 @@ RAISE_RAIN = ("rain_up", "rain_here", "thailand", "thunder")                   #
 LIST_IDS = {"upstream": "upstream", "rain_upstream_and_here": "rain", "met_warnings": "met_warning",
             "conflicts": "conflict", "excluded": "excluded"}
 TOWN_FACTS = ("river", "jps_level", "vs_alert", "vs_danger", "trend", "next_24h")
+# Cowork 24 Oct: each upstream gauge's own numbers as facts (upstream.1.band / change_1h / change_3h / travel), so
+# the AI can weigh a fast rise. A change supports a raise from the rate the rules call "rising" ([JPS reading] m in 3 h, so
+# [JPS reading] m in 1 h); the travel time is context only.
+UP_WORDS = {
+    "band_vs": {"en": "{d} m {side} its {name} level ({t} m)", "ms": "{d} m {side} paras {name} ({t} m)"},
+    "above": {"en": "above", "ms": "di atas"}, "below": {"en": "below", "ms": "di bawah"},
+    "rose": {"en": "rose {m} m in {h}", "ms": "naik {m} m dalam {h}"},
+    "fell": {"en": "fell {m} m in {h}", "ms": "turun {m} m dalam {h}"},
+    "same": {"en": "no change in {h}", "ms": "tiada perubahan dalam {h}"},
+    "h1": {"en": "1 hour", "ms": "1 jam"}, "h3": {"en": "3 hours", "ms": "3 jam"},
+    "travel": {"en": "water may reach {place} in {a}-{b} hours", "ms": "air mungkin sampai ke {place} dalam {a}-{b} jam"},
+    "no_travel": {"en": "travel time to {place} not known", "ms": "masa perjalanan ke {place} tidak diketahui"},
+    "no_reading": {"en": "no fresh reading", "ms": "tiada bacaan terkini"},
+}
+BANDS_UP = (("danger", "danger_m"), ("warning", "warning_m"), ("alert", "alert_m"))
+
+
+def _upstream_facts(notes, place):
+    """[(id, {'en','ms'} text, can support a raise)] for every upstream gauge the Forecast agent read."""
+    out = []
+    num = card_mod._num
+    for i, u in enumerate(notes, 1):
+        fid = f"upstream.{i}"
+        if u.get("status") == "no fresh reading":
+            out.append((fid, {lg: f"{u['gauge']} ({UP_WORDS['no_reading'][lg]})" for lg in ("en", "ms")}, False))
+            continue
+        band = card_mod.BAND.get(u.get("band") or "", {})
+        out.append((fid, {lg: f"{u['gauge']} ({', '.join([band.get(lg, u.get('band') or '?')] + ([card_mod.T['rising'][lg]] if u.get('rising') else []))})"
+                          for lg in ("en", "ms")}, u.get("band") in ("alert", "warning", "danger") or bool(u.get("rising"))))
+        th, lv = u.get("thresholds") or {}, u.get("level_m")
+        if lv is not None:
+            hit = next(((b, k) for b, k in BANDS_UP if th.get(k) is not None and lv >= th[k]), None)
+            b, k = hit or ("alert", "alert_m")
+            if th.get(k) is not None:
+                d = round(lv - th[k], 2)
+                out.append((f"{fid}.band", {lg: UP_WORDS["band_vs"][lg].format(
+                    d=num(abs(d)), side=UP_WORDS["above" if d >= 0 else "below"][lg], name=card_mod.BAND[b][lg],
+                    t=num(th[k])) for lg in ("en", "ms")}, hit is not None))
+        for key, h, need in (("change_1h_m", "h1", SENTINEL_RISING_M_3H / 3), ("change_3h_m", "h3", SENTINEL_RISING_M_3H)):
+            c = u.get(key)
+            if c is None:
+                continue
+            word = "rose" if c > 0 else "fell" if c < 0 else "same"
+            out.append((f"{fid}.change_{h[1]}h", {lg: UP_WORDS[word][lg].format(m=num(abs(round(c, 2))), h=UP_WORDS[h][lg])
+                                                 for lg in ("en", "ms")}, c >= need - 1e-9))
+        a = u.get("arrives_in_h")
+        out.append((f"{fid}.travel", {lg: (UP_WORDS["travel"][lg].format(place=place, a=num(a["min"]), b=num(a["max"]))
+                                          if a else UP_WORDS["no_travel"][lg].format(place=place))
+                                      for lg in ("en", "ms")}, False))
+    return out
 
 
 def judge_facts(card, forecast, lang):
@@ -339,13 +389,53 @@ def judge_facts(card, forecast, lang):
             raise_, level = True, warning_level(card["warnings"][i])[1]
         meta[fid] = {"raise": raise_, "level": level, "text": text}
 
+    notes = (forecast or {}).get("upstream")
     for key, val in both[lang].items():
+        if key == "upstream" and notes:                  # every upstream gauge with its own numbers (below)
+            continue
         if isinstance(val, list) and key in LIST_IDS:
             for i in range(len(val)):
                 add(f"{LIST_IDS[key]}.{i + 1}", key, i)
         else:
             add(key, key)
+    for fid, text, raise_ in _upstream_facts(notes or [], card.get("place") or "?"):
+        facts[fid] = text[lang]
+        meta[fid] = {"raise": raise_, "level": None, "text": text}
     return facts, meta
+
+
+# Cowork 24 Oct: when the Coordinator's explanation call failed, the Critic still asks Nemotron for its level -
+# one facts-only call (no explanation to check), same decision rules (judge).
+JUDGE_SYSTEM = ("You judge the flood level for one place in Kelantan from FACTS written by code from verified data; "
+                "each fact has an id. Levels: NORMAL, WATCH, PREPARE, ACT, or INSUFFICIENT_DATA when the facts cannot "
+                "tell. verdict is what VEDA's rules decided; you may agree, or judge higher or lower. reasons: the ids "
+                "of at most 2 facts that decide your level. Reply JSON only: {\"ai_level\": \"...\", \"reasons\": "
+                "[\"<fact id>\"], \"confidence\": \"low\" or \"medium\" or \"high\"}")
+JUDGE_MIN_S = 10                 # don't start the facts-only judgement with less time than this
+
+
+def _judge_only(answer, forecast, llm, budget_s, lane):
+    """-> judgement (judge()) from one facts-only call, or raises NightshiftError. A fast failure is retried like the
+    review's."""
+    lang = answer.get("language") if answer.get("language") in ("en", "ms") else "en"
+    facts, meta = judge_facts(answer["card"], forecast, lang)
+    msgs = [{"role": "system", "content": JUDGE_SYSTEM},
+            {"role": "user", "content": json.dumps({"FACTS": facts}, ensure_ascii=False)}]
+    start, tries = time.monotonic(), 0
+    while True:
+        tries += 1
+        t = time.monotonic()
+        left = None if budget_s is None else budget_s - (t - start)
+        try:
+            r = llm(lane, msgs, agent=AGENT, json_mode=True, thinking=False, target_agent="Forecast",
+                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1)
+            break
+        except nightshift.NightshiftError:
+            room = budget_s is None or budget_s - (time.monotonic() - start) > FAST_FAIL_S
+            if time.monotonic() - t < FAST_FAIL_S and tries <= MAX_RETRIES and room:
+                continue
+            raise
+    return judge(r.data if isinstance(r.data, dict) else {}, answer["card"]["verdict"], meta)
 
 
 def judge(data, code_level, meta):
@@ -521,6 +611,14 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
             evidence["missing_sources"] = got["missing"]
     if use_model and answer.get("card") is not None and not answer.get("explanation"):
         use_model, skip_reason = False, "no AI-written text to check (card written by code)"
+        left = REVIEW_CAP_S if budget_s is None else min(REVIEW_CAP_S, budget_s - (time.monotonic() - t_start))
+        if plan.get("effort") == "full" and answer.get("drafted_by") == "fallback" and left >= JUDGE_MIN_S:
+            try:                                  # the draft call failed: Nemotron still judges the level
+                judgement = _judge_only(answer, forecast, llm, left, critic_lane())
+                judgement["why"] = "facts-only judgement (the explanation call failed): " + judgement["why"]
+                checked_by.append("model-judgement")
+            except nightshift.NightshiftError as e:
+                skip_reason = f"no AI-written text to check; the facts-only judgement failed ({str(e)[:80]})"
     if not use_model:
         decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
         status_note = skip_reason or "model review skipped"

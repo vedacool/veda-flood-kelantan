@@ -50,7 +50,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 40 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 41 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -231,8 +231,8 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
 - **Offline test suite (`python -m pytest -q`): 944 tests pass (24 Oct 2026), 13 skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 40 scenarios (5 of them for Nemotron's judgement,
-  Part 7), 40 of 40 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `943441f`, 24 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 41 scenarios (6 of them for Nemotron's judgement,
+  Part 7), 41 of 41 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `943441f`, 24 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -429,7 +429,12 @@ Zetaris.
     sentences.
   - **Critic AI review:** the Critic sends the same key facts plus that explanation and asks one question: does it
     contradict, exaggerate or downplay any fact? It replies `{ok, reason}`; `ok=false` means one rewrite, then a
-    re-check.
+    re-check. In the same reply Nemotron gives its own level and up to 2 cited fact ids (Part 7; code decides what
+    that level may do). When the explanation call failed, the Critic still makes one facts-only call for that level.
+  - **Facts the AI sees:** the card's key facts with ids, plus each upstream gauge's own numbers - its level against
+    its Alert / Warning / Danger, the change in 1 h and 3 h, and the travel time when known (`upstream.1.change_3h`
+    ...), all written by code.
+- **Nightshift's memory is restarted before recorded runs so each run is independent.**
 - **Every call:** streamed, a hard time limit inside the 150 s answer budget (draft at most 90 s, AI review at most
   45 s), a trace line with the model that actually answered and the Nightshift receipt id. Retries: the draft is
   retried once after a fast failure (an NVIDIA 500 in under 10 s), and once after Nightshift's 45 s no-first-byte cut

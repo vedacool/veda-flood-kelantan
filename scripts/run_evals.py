@@ -31,6 +31,10 @@ def stand_in(spec):
     spec = spec or {}
 
     def llm(lane, messages, agent, **kw):
+        if messages[0]["content"] == critic.JUDGE_SYSTEM:      # Part 7: the facts-only judgement (draft failed)
+            if spec.get("critic", "approve") == "down":
+                raise nightshift.NightshiftError("eval: Critic AI unavailable")
+            return SimpleNamespace(data=dict(spec.get("judge") or {}), text="")
         if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):   # the Critic, on the deep or the fallback fast lane
             if spec.get("critic", "approve") == "down" or (spec.get("critic") == "deep_down" and lane == "deep"):
                 raise nightshift.NightshiftError("eval: Critic AI unavailable")

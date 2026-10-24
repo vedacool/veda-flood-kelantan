@@ -1,0 +1,27 @@
+{
+  "name": "ai_judgement_when_the_draft_fails_en",
+  "about": "The explanation call fails; the Critic still asks Nemotron for its level (facts only) -> raised to PREPARE on two cited upstream gauges [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
+  "llm": {
+    "explanation": null,
+    "critic": "approve",
+    "judge": {
+      "ai_level": "PREPARE",
+      "reasons": [
+        "upstream.2.band",
+        "upstream.3.change_3h"
+      ],
+      "confidence": "medium"
+    }
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "drafted_by": "code",
+    "must_trace": [
+      "facts-only judgement (the explanation call failed)",
+      "verdict raised by Nemotron's judgement: WATCH → PREPARE"
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}
