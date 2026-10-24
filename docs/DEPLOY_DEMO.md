@@ -46,7 +46,10 @@ cd ~/veda-demo && bash demo/setup_wyse.sh
 Docker - it never installs anything; without Docker it prints step 2 and stops), finds a free port (8765, or the
 next free one), builds and starts the demo, runs the checks (`PASS` / `FAIL` each; nothing is published if one
 fails), shows what Tailscale already serves, then asks **"Publish on Funnel port 443 or 8443?"** (only 8443 is
-offered if 443 is already in use; `skip` publishes nothing). It prints the public link, the feedback link and:
+offered if 443 is already in use; `skip` publishes nothing). It then sets `VEDA_PUBLIC_URL` to the public address
+(`https://<this machine's Tailscale name>`, plus `:8443` if used - read from Tailscale at run time, never stored in the
+repo) and restarts VEDA, so the links in shared answers open the public demo. It prints the public link, the feedback
+link and:
 ```
 bash demo/setup_wyse.sh --export      # all feedback answers -> feedback-<date>.csv in the current folder
 bash demo/setup_wyse.sh --stop        # Funnel off for the demo's port + containers down (answers kept); also

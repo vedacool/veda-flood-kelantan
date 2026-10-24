@@ -19,6 +19,7 @@ services:
       VEDA_DEMO: "1"                 # public demo mode in the app itself, once Session A's change lands (DEPLOY_DEMO.md)
       VEDA_HOST: "0.0.0.0"
       VEDA_PORT: "8000"
+      VEDA_PUBLIC_URL: "${VEDA_PUBLIC_URL:-}"   # share links: https://<this machine's Funnel name>, set by setup_wyse.sh
     read_only: true
     tmpfs:                           # questions typed by visitors stay in memory and vanish on restart
       - /app/logs:mode=1777,size=64m

@@ -19,6 +19,18 @@ saved() { [ -f "$STATE" ] && grep -E "^$1=" "$STATE" | cut -d= -f2 || true; }
 
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
+# This machine's tailnet name (wyse5070.<tailnet>.ts.net), read at run time - it is never written into the repo.
+ts_host() {
+  command -v tailscale >/dev/null 2>&1 || return 0
+  tailscale status --json 2>/dev/null | tr -d '\n' | sed -n 's/.*"Self": *{[^}]*"DNSName": *"\([^"]*\)\.".*/\1/p' || true
+}
+public_url() {   # Funnel port -> https://<host> or https://<host>:8443; nothing when the port or the name is unknown
+  local h; h="$(ts_host)"
+  [ -n "${1:-}" ] && [ -n "$h" ] || return 0
+  if [ "$1" = 443 ]; then echo "https://$h"; else echo "https://$h:$1"; fi
+}
+PRESET_URL="${VEDA_PUBLIC_URL:-}"            # set by hand (VEDA_PUBLIC_URL=https://... bash demo/setup_wyse.sh): kept
+
 docker_steps() {
   cat <<'EOF'
 Docker is needed. Install it yourself (DEPLOY_DEMO.md step 2), then run this script again:
@@ -108,6 +120,9 @@ done
 [ "$port" = "$start" ] && say "  port $port: free - ok" || say "  port $start is in use - using port $port instead"
 export DEMO_PORT="$port"
 printf 'DEMO_PORT=%s\nFUNNEL_PORT=%s\n' "$port" "$(saved FUNNEL_PORT)" > "$STATE"
+# Share links in answers point at the public address (the app reads VEDA_PUBLIC_URL); known once Funnel is chosen.
+export VEDA_PUBLIC_URL="${PRESET_URL:-$(public_url "$(saved FUNNEL_PORT)")}"
+say "  share links: ${VEDA_PUBLIC_URL:-not set yet (set after the Funnel step)}"
 
 # ---------------------------------------------------------------- 2. build + start
 say "== 2. Building and starting (the first time takes 5-10 min)"
@@ -174,8 +189,24 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------- share links -> the public address
+url="${PRESET_URL:-$(public_url "$fport")}"
+if [ -n "$url" ] && [ "$url" != "$VEDA_PUBLIC_URL" ]; then
+  export VEDA_PUBLIC_URL="$url"
+  say "  Restarting VEDA so share links point at $url ..."
+  "${COMPOSE[@]}" up -d --no-build veda < /dev/null          # new setting -> veda is recreated
+  "${COMPOSE[@]}" restart proxy < /dev/null                  # nginx looks up the new veda container
+  for i in $(seq 1 60); do
+    if curl -fsS "$B/health" >/dev/null 2>&1; then break; fi
+    [ "$i" -lt 60 ] || fail "VEDA did not come back after the restart - see: docker compose -f demo/compose.yaml --profile demo logs"
+    sleep 2
+  done
+fi
+if [ -n "$VEDA_PUBLIC_URL" ]; then say "  Share links point at: $VEDA_PUBLIC_URL"
+else say "  Share links: not set (no Funnel address) - shared links use whatever address the visitor opened."; fi
+
 # ---------------------------------------------------------------- 5. links
-host="$(tailscale status --json 2>/dev/null | tr -d '\n' | sed -n 's/.*"Self": *{[^}]*"DNSName": *"\([^"]*\)\.".*/\1/p' || true)"
+host="$(ts_host)"
 [ -n "$host" ] || host="wyse5070.<your-tailnet>.ts.net"
 base="https://$host"; [ "$fport" = 8443 ] && base="$base:8443"
 say ""

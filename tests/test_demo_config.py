@@ -65,3 +65,17 @@ def test_veda_runs_offline_on_an_internal_network_with_limits():
     assert "restart: unless-stopped" in veda and "ports" not in veda
     assert "inside: { internal: true }" in COMPOSE
     assert re.search(r'ports: \["127\.0\.0\.1:\$\{DEMO_PORT:-\d+\}:8080"\]', COMPOSE)   # this machine only
+
+
+def test_share_links_get_the_public_address_from_the_machine_never_from_the_repo():
+    """VEDA_PUBLIC_URL comes from setup_wyse.sh at run time (this machine's Tailscale name); compose only passes it on.
+    No real tailnet name is committed anywhere: only placeholders (<your-tailnet>, <tailnet>) and example names."""
+    import subprocess
+    veda = COMPOSE.split("\n  veda:\n", 1)[1].split("\n  feedback:\n", 1)[0]
+    assert 'VEDA_PUBLIC_URL: "${VEDA_PUBLIC_URL:-}"' in veda
+    sh = (DEMO / "setup_wyse.sh").read_text(encoding="utf-8")
+    assert 'export VEDA_PUBLIC_URL="${PRESET_URL:-$(public_url "$(saved FUNNEL_PORT)")}"' in sh
+    assert 'url="${PRESET_URL:-$(public_url "$fport")}"' in sh
+    names = subprocess.run(["git", "grep", "-h", "-o", "-I", "-E", r"[A-Za-z0-9<>_-]+(\.[A-Za-z0-9<>_-]+)*\.ts\.net"],
+                           cwd=DEMO.parent, capture_output=True, text=True).stdout.split()
+    assert names and all(re.search(r"<(your-)?tailnet>|\.example\.ts\.net$", n) for n in names), names
