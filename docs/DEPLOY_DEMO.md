@@ -52,14 +52,25 @@ cd ~/veda-demo
 ```
 (Before the public repo exists: clone the private repo with your GitHub login.)
 
+**Build from `main` at or after the app's demo mode** (private repo commit `a6a2280`, 24 Oct 2026: `VEDA_DEMO=1`
+forces SAMPLE_MODE on, reads no `.env`, blocks live Zetaris / Nightshift calls and answers 404 for `/admin` and run
+logs in the app itself). Check before building - the public repo has new commit IDs, so check the code:
+```
+git checkout main && git pull
+grep -n "def demo_mode" app/config.py          # must print a line; if not, the code is too old - do not deploy
+git merge-base --is-ancestor a6a2280 HEAD && echo "has a6a2280"     # private repo only
+```
+
 ## 4. Build and start (5-10 min the first time)
 ```
 cd ~/veda-demo
 docker compose -f demo/compose.yaml --profile demo up -d --build
 docker compose -f demo/compose.yaml --profile demo ps          # veda "healthy", proxy and feedback "running"
 curl -s http://127.0.0.1:8765/health                           # {"status":"ok","sample_mode":true,...}
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/admin    # 404
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/admin    # 404 (the proxy)
 curl -s http://127.0.0.1:8765/ | grep -c "Public demo"         # 1 (the banner)
+docker compose -f demo/compose.yaml --profile demo exec -T proxy \
+  wget -S -O /dev/null http://veda:8000/admin 2>&1 | grep HTTP/   # 404 from the app itself (behind the proxy)
 ```
 
 ## 5. Publish with Tailscale Funnel (5 min)
@@ -136,8 +147,14 @@ docker compose -f demo/compose.yaml --profile demo down          # containers go
 docker compose -f demo/compose.yaml --profile demo down -v       # only when the answers are exported and no longer needed
 ```
 
-## Before going public: the app's own demo mode (Session A)
-The proxy and the network already close `/admin` and keep VEDA offline. VEDA itself gets a `VEDA_DEMO=1` mode
-(SAMPLE_MODE forced on and no `.env` read, whatever else is set; every admin, approve and run-log route answers 404
-in the app too). `demo/compose.yaml` already sets `VEDA_DEMO=1`; it takes effect once that change is on main -
-rebuild with step 4.
+## Three layers keep the demo offline and closed
+1. **The app** (`VEDA_DEMO=1`, set in `demo/compose.yaml`; on main since `a6a2280`): SAMPLE_MODE is on even if
+   `SAMPLE_MODE=false` is set, no `.env` is read, live Zetaris and Nightshift calls raise an error, and `/admin`,
+   the approve route and run logs answer 404 "not in the public demo".
+2. **The network:** VEDA's container has no route out (internal network).
+3. **The proxy:** `/admin` and run logs answer 404 before they reach the app.
+
+Checked together on 24 Oct 2026 (local Docker, main at `a6a2280`, demo profile, `SAMPLE_MODE=false` forced in on
+purpose): `/health` reports `sample_mode: true`; 404 at both the proxy and the app; JPS, Open-Meteo and the host's
+Zetaris / Nightshift ports unreachable; 11 answers then 429; banner, the BM feedback form and the five scenes as
+expected.
