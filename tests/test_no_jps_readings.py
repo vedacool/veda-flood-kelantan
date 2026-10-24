@@ -67,3 +67,26 @@ def test_synthetic_values_are_exactly_what_the_seeded_method_makes():
     out = subprocess.run([sys.executable, "scripts/make_synthetic_scenes.py", "--check"], cwd=ROOT, capture_output=True,
                          text=True)
     assert out.returncode == 0, out.stdout + out.stderr
+
+
+def test_publish_trace_redacts_readings_in_prompts_and_keeps_cited_values(tmp_path):
+    """scripts/publish_trace.py (24 Oct): a live trace now carries the exact prompt sent to the AI - the river level
+    in it is redacted on publishing; a cited threshold stays; ids, times and durations stay."""
+    import re
+    import sys
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import publish_trace
+    rid = "20261025-101500-abcd"
+    rec = {"timestamp": "2026-10-25T02:15:00Z", "run_id": rid, "step": 9, "action": "nightshift.chat",
+           "duration_ms": 12000, "agent_name": "Coordinator",
+           "details": {"prompt": [{"role": "user", "content": '{"FACTS": {"river": "10.94 m at 19:30", '
+                                                              '"vs_danger": "1.94 m above the Danger level (9 m)"}}'}],
+                       "level_m": 10.94}}
+    src = tmp_path / f"trace-{rid}.jsonl"
+    src.write_text(json.dumps({"action": "run_start", "run_id": rid, "timestamp": rec["timestamp"]}) + "\n"
+                   + json.dumps(rec) + "\n", encoding="utf-8")
+    out = publish_trace.publish(src, "test", out_dir=tmp_path)
+    text = out.read_text(encoding="utf-8")
+    assert out.name == f"2026-10-25_1015MYT_test_{rid}.trace.jsonl"
+    assert "10.94" not in text and "1.94 m" not in text and "(9 m)" in text            # 9 m = the cited Danger level
+    assert '"duration_ms": 12000' in text and "per organiser ruling 23 Oct" in text.splitlines()[0]

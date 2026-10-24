@@ -4,7 +4,7 @@ Only two kinds of item live here (Husaini 23 Oct): **open audit findings** and *
 (what to build, in what order) is the backlog in the private planning folder; IDs `B-xx` / `S-xx` point there.
 Status lives here and in the backlog, never in Claude's memory. A finished item is deleted (git keeps the history).
 
-Last updated: 24 Oct 2026 (after B-71, B-86, A-P2-7, the new web page, the live log, how-it-worked, admin, the answer states and the accessibility pass). Tests: **800 pass** (13 skipped: live services). Evals: **25 of 25, ×3 in CI** (the Docker job runs them 3 times; 24 Oct 09:04 MYT: job 30 s, green).
+Last updated: 24 Oct 2026 (after B-71, B-86, A-P2-7, the new web page, the live log, how-it-worked, admin, the answer states, the accessibility pass and publish_trace). Tests: **801 pass** (13 skipped: live services). Evals: **25 of 25, ×3 in CI** (the Docker job runs them 3 times; 24 Oct 09:04 MYT: job 30 s, green).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
 IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all are **after the hackathon** except A-P2-1 (A-P2-3 fixed in B-85: stalled streams are cut on time).
