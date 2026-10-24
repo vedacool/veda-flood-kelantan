@@ -6,7 +6,7 @@ re-recorded by hand (docs/media/video/README.md says which).
     python scripts/record_demo.py                                # every clip -> docs/media/video/
     python scripts/record_demo.py --only a,c --base http://127.0.0.1:8001
 
-Dev only, not in requirements.txt: pip install playwright && python -m playwright install chromium.
+Dev only, not in requirements.txt: pip install -r requirements-dev.txt && python -m playwright install chromium.
 Safety: refuses to start unless /health says sample_mode, and drops a clip unless every answer shows the expected
 data label ("Past flood replay" / "Made-up test scene") - so no live JPS reading can end up in a video.
 The page is zoomed 1.5x in a 1920x1080 window (laid out as on a 1280x720 screen): large text, a full frame.
@@ -341,6 +341,19 @@ data; delete Nightshift's VEDA memory records first, as for the 24 Oct screensho
 - **b** - the live log with real "Waiting for Nemotron" bubbles and the two Nightshift calls (draft + Critic review).
 - **c**, **d** - optional: the same scenes with the AI explanation (both are made-up scenes, labelled).
 - **e**, **f** - no need: Normal (quick path) and Can't confirm use no AI, and Emergency makes no engine call.
+
+## Making the clips again
+Dev only (judges do not need this):
+```
+pip install -r requirements-dev.txt                 # VEDA's requirements + Playwright
+python -m playwright install chromium               # the headless browser, once (~120 MB download)
+SAMPLE_MODE=true VEDA_PORT=8001 python -m app.main  # in its own terminal (PowerShell: $env:SAMPLE_MODE="true" ...)
+python scripts/record_demo.py                        # all clips; --only a,b for some
+```
+ffmpeg on PATH adds the mp4 copies and the lengths in this table.
+
+**The video files are not in git** (`.gitignore`: about 167 MB together on 24 Oct, too heavy for the public repo).
+They stay in this folder on the recording machine and are uploaded with the submission.
 """
     (OUT / "README.md").write_text(text, encoding="utf-8")
 

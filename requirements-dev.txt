@@ -1,0 +1,4 @@
+# Dev-only tools (not needed to run VEDA; judges do not install this)
+-r requirements.txt
+# scripts/record_demo.py - demo clips; then: python -m playwright install chromium
+playwright==1.64.1

@@ -29,6 +29,15 @@ data; delete Nightshift's VEDA memory records first, as for the 24 Oct screensho
 - **c**, **d** - optional: the same scenes with the AI explanation (both are made-up scenes, labelled).
 - **e**, **f** - no need: Normal (quick path) and Can't confirm use no AI, and Emergency makes no engine call.
 
-**The video files are not in git** (about 167 MB together - too heavy for the public repo). They sit in this folder
-on the recording machine; where they go (an upload with the submission, a release asset, or Git LFS) is Husaini's
-call. Re-create them with `scripts/record_demo.py`.
+## Making the clips again
+Dev only (judges do not need this):
+```
+pip install -r requirements-dev.txt                 # VEDA's requirements + Playwright
+python -m playwright install chromium               # the headless browser, once (~120 MB download)
+SAMPLE_MODE=true VEDA_PORT=8001 python -m app.main  # in its own terminal (PowerShell: $env:SAMPLE_MODE="true" ...)
+python scripts/record_demo.py                        # all clips; --only a,b for some
+```
+ffmpeg on PATH adds the mp4 copies and the lengths in this table.
+
+**The video files are not in git** (`.gitignore`: about 167 MB together on 24 Oct, too heavy for the public repo).
+They stay in this folder on the recording machine and are uploaded with the submission.
