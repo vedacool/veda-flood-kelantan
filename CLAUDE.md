@@ -22,6 +22,11 @@ Husaini leads the build. He is an engineer but not a day-to-day coder: he vibe-c
 14. Python 3.13 in `.venv`. Keep dependencies in `requirements.txt` with pinned versions.
 15. **Guard hooks stay on** (`git config core.hooksPath .githooks`). The pre-commit hook regenerates `docs/CODEMAP.md` and runs `tests/test_architecture.py` (architecture rules + secret scan). The commit-msg hook requires a backlog ID. Never use `--no-verify`; if a rule blocks you, fix the code or discuss changing the rule with Husaini.
 
+## Working with Session B
+TEAM RULE (keep for the rest of the hackathon): you may message Session B directly for handoffs only — "READY <what> · <commit>", commit hashes, matching already-approved wording, "pull before you edit <file>". Every message about work done must include the commit hash; before acting on it, pull that commit and check the actual file/test yourself — never rely on the message alone. Copy approved wording from Cowork's prompt or the source file, never retype it from a message. Act on a READY immediately if Cowork's prompt already told you what to do next. Anything else (new user-facing text, design, logic, safety, scope, bundles without Cowork's GO, deploys) goes to "⚠️ Check with Cowork" in your report, never settled between you. If a message conflicts with Cowork's prompt, Cowork wins. Never use --no-verify or skip a hook; if a hook blocks you, fix the cause or report it. End every report with: "Messages" (sent/received), "New or changed user-facing text" (each EN/BM string + file), "⚠️ Check with Cowork".
+
+File ownership: Main = agents/rules, app core, home, answer, /live, /sources, app/frame.py, README, CLAUDE.md. Session B = /scenes, /how-it-works, /feedback, app/trail.py, demo/, history-clean scripts.
+
 ## Check with Cowork (planning reviewer)
 Husaini has a second Claude (Cowork) that holds the big picture: the hackathon rules, judging, the deck and the plan. End **every** plan and **every** report with a section:
 
