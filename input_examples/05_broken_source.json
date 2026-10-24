@@ -1,6 +1,6 @@
 {
-  "about": "Broken source - SYNTHETIC calm day asked at 15:00, 5 hours after the scene's last reading: no fresh reading, so INSUFFICIENT DATA (never NORMAL); the frozen data.gov.my /flood-warning is excluded",
-  "question": "Is Tumpat safe?",
-  "replay": "synthetic_calm",
-  "at": "2024-06-15 15:00"
+  "about": "Broken source - Rantau Panjang on 27 Nov 2024 08:00, replay of the real flood: the last verified reading is 14 hours old (26 Nov 18:00) and the next is not until 19:30, so INSUFFICIENT DATA (never NORMAL; VEDA will not guess); the frozen data.gov.my /flood-warning is excluded",
+  "question": "Is Rantau Panjang safe?",
+  "replay": "nov2024",
+  "at": "2024-11-27 08:00"
 }

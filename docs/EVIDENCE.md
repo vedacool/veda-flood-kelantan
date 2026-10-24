@@ -11,6 +11,7 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 
 | Date | What was tested | Result | Kind | Reproduce / source | Status |
 |---|---|---|---|---|---|
+| 24 Oct ~12:30 | The 6 input examples through `POST /run` and the CLI (offline, after example 05 moved to the Nov 2024 replay, 27 Nov 08:00) | All 6 answer on both paths with the same verdicts: PREPARE, ACT, NORMAL, NORMAL, INSUFFICIENT DATA, not covered; `output_examples/` regenerated from them | manual | `curl -X POST localhost:8000/run -H "Content-Type: application/json" -d @input_examples/0N_*.json`; `python scripts/make_examples.py` | Re-verified 24 Oct |
 | 24 Oct ~12:15 | Offline test suite | **853 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`) | Re-verified 24 Oct |
 | 24 Oct ~12:15 | Safety scenarios | **33 of 33**; CI runs them 3 times in the Docker job (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | 33/33 re-verified 24 Oct (1 run); ×3 from commit `586d05a` message |
 | 22-24 Oct | CI on GitHub | 98 runs from 22 Oct 06:44 UTC to 24 Oct 04:06 UTC: **94 green, 4 failed** (all 4 on 22 Oct: two dependency bumps, `35960ec`, `c3f526a`) | CI | `gh run list --limit 200` | Re-verified 24 Oct |
@@ -53,10 +54,14 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 24 Oct 00:00 25 · 09:05 25/25 ×3 in CI · 10:14 28/28 · 11:28 29/29 · 11:44 30/30 · 11:57 32/32 · 12:06 **33/33 ×3**.
 
 ## Known gaps in the sources (found while writing this file)
-- `data/sample/live_traces/README.md`: for the 12:29-13:29 runs, the number in brackets after "Critic AI review" is the
-  run's **total** time (e.g. 76.2 s), not the review's time (13.9 s in that run).
-- `scripts/validate_rain_rule.py` docstring says the window is "22 Nov -> 2 Dec"; the report it wrote uses 18 Nov.
+- Fixed 24 Oct: `data/sample/live_traces/README.md` gave the 12:29-13:29 runs' **total** time as the Critic review's
+  time; those rows now show draft, Critic step and total from each trace's timing line.
+- Fixed 24 Oct: the `scripts/validate_rain_rule.py` docstring said "22 Nov -> 2 Dec"; the code and report use 18 Nov.
+- Fixed 24 Oct: `input_examples/05_broken_source.json` asked at 15:00, outside its scene's window (`POST /run` refused
+  it). It now asks the Nov 2024 replay at 27 Nov 08:00. Example 01's description no longer says the upstream Danger
+  reading drove its verdict (VEDA leaves that 3.5 h old reading out).
+- Open: offline (SAMPLE_MODE), a scene has recorded data only at its listed times; a time inside the window without a
+  recording (e.g. the calm day at 08:00) gives "no fresh reading" because the recording is missing, not because the
+  river data is (the trace says `no fixture …`).
 - The planted-error and model harnesses are not published in the repo (`docs/DECISIONS.md` says so); their numbers
   can only be checked against the commit messages and the README.
-- `input_examples/05_broken_source.json` asks at 15:00, outside the scene's 04:00-10:00 window: the CLI answers it
-  (INSUFFICIENT DATA), `POST /run` rejects it with `outside_replay`.

@@ -4,7 +4,8 @@ parts of the rule cannot fire here), and report when it fires. Numbers are NOT t
 
     python scripts/validate_rain_rule.py            # live Zetaris; writes docs/validation/b88_rain_rule.md
 
-Two periods: the Nov 2024 flood (22 Nov -> 2 Dec) and 14 ordinary days (1-14 Oct 2024).
+Two periods: the Nov 2024 flood (18 Nov -> 2 Dec; 18 Nov = the first full 72 h of the archive) and 14 ordinary days
+(1-14 Oct 2024).
 """
 import os
 import sys
