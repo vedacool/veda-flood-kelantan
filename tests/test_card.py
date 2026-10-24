@@ -322,7 +322,7 @@ def test_card_trend_uses_the_screens_steady_band():
 
 
 @pytest.mark.parametrize("trend, text, bad", [
-    ("steady", "Paras air di Rantau Panjang [JPS reading], di bawah paras Waspada dan sedang turun.", "turun"),
+    ("steady", "Paras air di Rantau Panjang 6.4 m, 0.6 m di bawah paras Waspada dan sedang turun.", "turun"),
     ("rising", "The river here is falling slowly.", "falling"),
     ("falling", "Paras sungai masih naik.", "naik"),
     ("rising", "The river is steady.", "steady"),
