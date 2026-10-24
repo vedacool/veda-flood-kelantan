@@ -277,6 +277,7 @@ them as "discovered"; it never uses one unless a person approves it, and then on
 never in the risk level. Please give each a **Role**: *town gauge* (speaks for a town), *upstream warning* (an early
 sign for a town downstream - say which), or *context only*. Until you fill this in, **all stay context only**.
 "Nearest town" = a town VEDA covers in the same district (— = none).
+**Before the submission (27 Oct) no role changes VEDA's answers:** a role you confirm is recorded as "role confirmed, used after the hackathon"; until then every discovered gauge stays context only.
 
 | Key | Station name | River | District | Nearest town | Role |
 |---|---|---|---|---|---|
