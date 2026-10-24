@@ -5,7 +5,7 @@ explanation and the pre-existing components (the organisers asked for both in th
 file holds the form description and the short deck versions, and must say the same thing. Every number here is one
 the README states with its date. Re-check the counts on the day of each submission.
 
-Last checked against the product: 24 Oct 2026, main at `af05b22` (938 tests, 34 safety scenarios).
+Last checked against the product: 24 Oct 2026, main at `8f51777` (989 tests, 35 safety scenarios; CI run 40092646506).
 
 ## Form fields
 | Field | Value |
@@ -17,15 +17,15 @@ Last checked against the product: 24 Oct 2026, main at `af05b22` (938 tests, 34 
 | GitHub Solution | the new public repo (`vedacool/veda-kelantan` suggested, B-77) - never the private `vedacool/veda` |
 | Pitch Deck | link or upload |
 
-## Description (1,988 characters including line breaks; limit 2,000; paste as is)
+## Description (1,985 characters including the 6 line breaks - 1,991 if each break counts as 2; limit 2,000; paste as is)
 ```text
-VEDA helps families in Kelantan, Malaysia, decide whether to act on a flood. Ask about a place in English or Bahasa Melayu ("Rantau Panjang selamat ke malam ni?") and VEDA returns one checked answer you can forward on WhatsApp: what to do now, a verdict (Normal, Keep watching, Get ready, Act now or Can't confirm) with the official JPS level and what set it, a comparison with the 2014 flood, every source with its age, what was left out and why, and the 999/991 numbers.
+VEDA helps families in Kelantan, Malaysia, decide whether to act on a flood. Ask in English or Bahasa Melayu ("Rantau Panjang selamat ke malam ni?") and VEDA returns one checked answer you can forward on WhatsApp: what to do now, a verdict (Normal, Keep watching, Get ready, Act now or Can't confirm) with the official JPS level and what set it, a comparison with the 2014 flood, every source with its age, what was left out and why, and the 999/991 numbers. It covers 9 places: 4 on Home, 5 more by typing (live); their gauge links await expert review.
 
-The problem is fragmented flood data. JPS river gauges, MetMalaysia warnings, Open-Meteo rain and OpenStreetMap live in different places without shared station IDs, and one official flood feed has been frozen since Feb 2024 while looking live. Replayed on the Nov 2024 archive rain, VEDA's rain rule raised Rantau Panjang to Keep watching from 21 Nov, on heavy rain on the Thai side of Sg. Golok, five days before the first cited river report (26 Nov) already found the river above Warning.
+The problem is fragmented flood data. JPS river gauges, MetMalaysia warnings, Open-Meteo rain and OpenStreetMap live in different places with no shared station IDs, and one official flood feed has been frozen since Feb 2024 while looking live. On Nov 2024 archive rain, VEDA's rain rule raised Rantau Panjang to Keep watching from 21 Nov (heavy rain on the Thai side of Sg. Golok), five days before the first cited river report (26 Nov) found the river above Warning.
 
-Four agents work in one loop. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around broken gauges; a Forecast agent applies readable rules to the river, the upstream gauges, the rain upstream and in town, and MetMalaysia rain warnings; and a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and asks NVIDIA Nemotron (through Meterless Nightshift) whether the explanation contradicts the data. The Meterless World Model is their shared memory, with every fact's source. A safety gate checks every answer last. VEDA also discovers: it noticed 20 JPS gauges it had not mapped, proposes where each fits, and uses one only after a person approves, as context only.
+Four agents work in one loop. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around broken gauges; a Forecast agent applies readable rules to the river, upstream gauges, rain upstream and in town, and MetMalaysia rain warnings; and a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and asks NVIDIA Nemotron (via Meterless Nightshift) whether the explanation contradicts the data. The Meterless World Model is their shared memory, with every fact's source. A safety gate checks every answer last. VEDA also found 20 JPS gauges it had not mapped and proposes where each fits; one is used, as context only, after a person approves.
 
-A live log shows each step as it happens, and every AI call names the model that answered. Judges can run it offline with no keys (SAMPLE_MODE: the Nov 2024 replay and labelled made-up scenes); 938 tests and 34 safety scenarios run in CI.
+A live log shows each step; every AI call names the model that answered. Judges can run it offline with no keys (the Nov 2024 replay and labelled made-up scenes); 989 tests and 35 safety scenarios run in CI.
 ```
 
 ## Sponsor technology explanation (deck version; full text: README "Sponsor technology explanation")
