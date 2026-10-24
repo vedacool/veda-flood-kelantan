@@ -136,7 +136,8 @@ def test_sample_mode_question_runs_on_the_synthetic_calm_day(monkeypatch, tmp_pa
 def test_scene_picker_lists_replay_first_then_synthetic_scenes():
     page = (main.WEB_PAGE).read_text(encoding="utf-8")
     order = [page.index(x) for x in ("nov2024|2024-11-26 18:00", "synthetic_rising|", "synthetic_calm|")]
-    assert order == sorted(order) and 'id="live-option"' in page and "h.sample_mode" in page
+    assert order == sorted(order) and 'k: "live"' in page and "h.sample_mode" in page
+    assert 'sampleMode && d.k === "live"' in page               # B-75: no Live choice offline
 
 
 def test_web_runs_write_progress_to_stdout_without_the_question(monkeypatch, tmp_path, capsys):

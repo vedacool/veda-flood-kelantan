@@ -4,151 +4,372 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VEDA - Kelantan flood check</title>
+<link rel="icon" href="data:,">
 <style>
-  :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5f5f5a; --card: #ffffff; --line: #d9d9d4; --accent: #1f5f8b;
-          --on-accent: #ffffff; --warn: #9a5b00; --bad: #a3271f; }
+  /* Cowork weekend plan B (24 Oct): EN and BM equal, no jargon, text >= 18 px, touch targets >= 44 px, works at 375 px.
+     Plain HTML/CSS/JS, nothing loaded from outside. */
+  :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
+          --on-accent: #ffffff; --danger: #b3261e;
+          --v-normal: #1e6b3a; --v-watch: #f0c330; --v-prepare: #c25e00; --v-act: #b3261e; --v-unknown: #5a5c62;
+          --on-normal: #ffffff; --on-watch: #1c1c1a; --on-prepare: #ffffff; --on-act: #ffffff; --on-unknown: #ffffff; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #161615; --fg: #ececea; --muted: #a7a7a1; --card: #20201e; --line: #3a3a37; --accent: #7fb6dd;
-            --on-accent: #161615; --warn: #e0a54a; --bad: #ef7d73; }      /* [JPS reading]:1 - white was 2.2:1 */
+    :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
+            --on-accent: #151514; --danger: #f08a80; }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 1.4rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
-  form { display: grid; gap: 10px; }
-  label { font-weight: 600; }
-  input, select, button { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
-                          background: var(--card); color: var(--fg); width: 100%; }
-  button { background: var(--accent); color: var(--on-accent); border: 0; font-weight: 600; cursor: pointer; }
-  button:disabled { opacity: .6; cursor: wait; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
-  section { margin-top: 22px; }
-  h2 { font-size: 1rem; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  #steps { list-style: none; padding: 0; margin: 0; font: 14px/1.45 ui-monospace, Consolas, monospace; }
-  #steps li { padding: 3px 0; border-bottom: 1px dashed var(--line); white-space: pre-wrap; word-break: break-word; }
-  #steps li.fail { color: var(--bad); }
-  #steps li.note { color: var(--warn); }
-  #steps .t { color: var(--muted); display: inline-block; min-width: 4.5em; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
-          white-space: pre-wrap; word-break: break-word; }
-  .meta { color: var(--muted); font-size: 14px; margin-top: 8px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 8px; }
-  .tabs button { width: auto; padding: 6px 12px; background: var(--card); color: var(--fg); border: 1px solid var(--line); }
-  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-  .error { color: var(--bad); font-weight: 600; }
-  [hidden] { display: none !important; }
-  footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
-  footer p { margin: 0 0 6px; }
+  html { font-size: 18px; }
+  html.big { font-size: 22px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+           background: var(--card); position: sticky; top: 0; z-index: 2; }
+  header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; background: none;
+                  border: 0; color: var(--fg); padding: 0; min-height: 44px; cursor: pointer; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 40px; }
+  h1 { font-size: 1.45rem; line-height: 1.25; margin: 8px 0 16px; }
+  h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  button, .btn { font: inherit; min-height: 48px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
+                 background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; display: inline-flex;
+                 align-items: center; justify-content: center; gap: 8px; }
+  button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .wide { width: 100%; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; min-width: 48px; padding: 8px 12px; font-weight: 700; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  .towns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .towns button { min-height: 72px; font-weight: 700; font-size: 1.05rem; flex-direction: column; }
+  .towns small { font-weight: 400; color: var(--muted); font-size: 1rem; }
+  input, select { font: inherit; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line);
+                  border-radius: 12px; background: var(--card); color: var(--fg); }
+  label { display: block; font-weight: 700; margin: 18px 0 6px; }
+  .ask { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .note { color: var(--muted); margin: 8px 0 0; }
+  .sos { margin-top: 22px; background: var(--danger); color: #fff; border-color: var(--danger); font-weight: 800; width: 100%;
+         min-height: 56px; }
+  @media (prefers-color-scheme: dark) { .sos { color: #151514; } }
+  footer { margin-top: 28px; color: var(--muted); }
+  footer p { margin: 0 0 8px; }
   a { color: var(--accent); }
-  .privacy { color: var(--muted); font-size: 14px; margin: 0; }
+  [hidden] { display: none !important; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+  .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700;
+          color: var(--muted); }
+  /* waiting */
+  .status { font-size: 1.15rem; font-weight: 700; min-height: 3em; }
+  .bar { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
+  .bar > div { height: 100%; width: 3%; background: var(--accent); transition: width .6s ease; }
+  .tip { border-left: 6px solid var(--accent); }
+  .tip.warn { border-left-color: var(--v-prepare); }
+  .linkish { background: none; border: 0; color: var(--accent); padding: 0; min-height: 44px; font-weight: 700; }
+  #log { list-style: none; padding: 0; margin: 8px 0 0; font: 1rem/1.4 ui-monospace, Consolas, monospace; }
+  #log li { padding: 4px 0; border-bottom: 1px dashed var(--line); word-break: break-word; }
+  /* answer */
+  .place { font-size: 1.6rem; font-weight: 800; margin: 6px 0 8px; }
+  .badge { display: flex; align-items: center; gap: 12px; border-radius: 14px; padding: 14px 16px; font-size: 1.4rem; font-weight: 800; }
+  .badge svg { flex: none; width: 40px; height: 40px; }
+  .v-NORMAL { background: var(--v-normal); color: var(--on-normal); }
+  .v-WATCH { background: var(--v-watch); color: var(--on-watch); }
+  .v-PREPARE { background: var(--v-prepare); color: var(--on-prepare); }
+  .v-ACT { background: var(--v-act); color: var(--on-act); }
+  .v-INSUFFICIENT_DATA { background: var(--v-unknown); color: var(--on-unknown); }
+  .oneline { font-size: 1.1rem; margin: 10px 0 4px; }
+  .todo h2 { text-transform: uppercase; letter-spacing: .03em; }
+  .rows { display: grid; gap: 0; }
+  .rows > div { display: grid; grid-template-columns: 6.5em 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .rows > div:last-child { border-bottom: 0; }
+  .rows b { font-weight: 700; }
+  .sub { color: var(--muted); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .strip { width: 100%; justify-content: space-between; text-align: left; font-weight: 600; }
+  .levelbar { position: relative; height: 26px; border-radius: 8px; margin: 34px 0 8px;
+              background: linear-gradient(90deg, var(--v-normal) 0 var(--a), var(--v-watch) var(--a) var(--w),
+                                          var(--v-prepare) var(--w) var(--d), var(--v-act) var(--d) 100%); }
+  .levelbar .mark { position: absolute; top: -30px; transform: translateX(-50%); font-weight: 800; white-space: nowrap; }
+  .levelbar .needle { position: absolute; top: -6px; width: 4px; height: 38px; margin-left: -2px; background: var(--fg);
+                      border-radius: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; padding: 0; list-style: none; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .sources { list-style: none; padding: 0; margin: 0; }
+  .sources li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .sources li.out { color: var(--muted); }
+  .share-text { white-space: pre-wrap; word-break: break-word; }
+  .call { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .call a { min-height: 72px; font-size: 1.3rem; font-weight: 800; background: var(--danger); color: #fff; border-color: var(--danger); }
+  @media (prefers-color-scheme: dark) { .call a { color: #151514; } }
+  .steps { padding-left: 1.4em; }
+  .steps li { margin: 0 0 10px; }
+  @media (max-width: 400px) { .rows > div { grid-template-columns: 1fr; gap: 2px; } .actions { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
+<header>
+  <button class="brand" type="button" id="home-link" aria-label="VEDA">VEDA</button>
+  <div class="seg" role="group" aria-label="Language / Bahasa">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
+  </div>
+  <button type="button" id="aa" aria-pressed="false" data-t-label="bigger">Aa</button>
+</header>
 <main>
-  <h1>VEDA - Kelantan flood check</h1>
-  <p class="sub">Ask about Pasir Mas, Rantau Panjang, Kota Bharu or Tumpat - in English or Bahasa Melayu.
-    Every step is shown as it happens.</p>
 
+<!-- 1. Home -->
+<section id="s-home">
+  <h1 data-t="home_title"></h1>
+  <div class="towns" id="towns"></div>
   <form id="ask">
-    <label for="q">Your question</label>
-    <input id="q" name="q" maxlength="500" required aria-describedby="privacy"
-           placeholder="e.g. Mak ayah saya di Tumpat, kena pindah malam ni?">
-    <p id="privacy" class="privacy">Please do not type names, IC, phone numbers or addresses. VEDA's AI writes a short explanation from the checked facts only. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked.
-      <span lang="ms">Jangan taip nama, IC, nombor telefon atau alamat. AI VEDA menulis penjelasan ringkas berdasarkan fakta yang telah disemak sahaja. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.</span></p>
-    <div class="row">
-      <div>
-        <label for="mode">Data</label>
-        <select id="mode">
-          <option value="" id="live-option">Live (now) - JPS readings fetched on this machine</option>
-          <option value="nov2024|2024-11-26 18:00">REPLAY · Nov 2024 - 26 Nov 18:00</option>
-          <option value="nov2024|2024-11-27 08:00">REPLAY · Nov 2024 - 27 Nov 08:00</option>
-          <option value="nov2024|2024-11-27 19:30">REPLAY · Nov 2024 - 27 Nov 19:30</option>
-          <option value="synthetic_rising|2024-11-25 18:00">SYNTHETIC · rising river (made-up stress scenario)</option>
-          <option value="synthetic_calm|2024-06-15 10:00">SYNTHETIC · calm day (made-up readings)</option>
-        </select>
-      </div>
-      <div style="align-self: end"><button id="go" type="submit">Ask VEDA</button></div>
+    <label for="q" data-t="or_type"></label>
+    <div class="ask">
+      <input id="q" maxlength="500" required aria-describedby="privacy">
+      <button class="primary" type="submit" data-t="ask"></button>
     </div>
+    <p id="privacy" class="note" data-t="privacy"></p>
   </form>
-
-  <p id="err" class="error" role="alert" hidden></p>
-
-  <section id="steps-box" hidden aria-live="polite">
-    <h2>What VEDA is doing</h2>
-    <ol id="steps"></ol>
-  </section>
-
-  <section id="answer-box" hidden>
-    <h2>Answer</h2>
-    <div class="tabs" role="group" aria-label="Language">
-      <button type="button" data-lang="ms" aria-pressed="false">Bahasa Melayu</button>
-      <button type="button" data-lang="en" aria-pressed="false">English</button>
-    </div>
-    <div id="answer" class="card"></div>
-    <p id="meta" class="meta"></p>
-  </section>
-
+  <button class="sos" type="button" id="sos" data-t="sos"></button>
+  <label for="mode" data-t="data_label"></label>
+  <select id="mode"></select>
   <footer>
-    <p>Decision support only - not an official warning. Follow JPS / APM / police instructions.
-      Emergency 999 · APM 991.</p>
-    <p>Data: Jabatan Pengairan dan Saliran (JPS) Malaysia,
-      <a href="https://publicinfobanjir.water.gov.my/">publicinfobanjir.water.gov.my</a>, used for non-commercial
-      public-safety research.</p>
-    <p>Also:
-      MetMalaysia forecasts and warnings and the flood-warning feed from <a href="https://data.gov.my/">data.gov.my</a>;
-      rain forecast and archive from <a href="https://open-meteo.com/">Open-Meteo</a>
-      (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Nov 2024 replay readings as reported by
-      Bernama and Kosmo, citing JPS.</p>
+    <p data-t="footer"></p>
+    <p data-t="credits_lead"></p>
+    <p><a href="https://publicinfobanjir.water.gov.my/">JPS Infobanjir</a> ·
+       <a href="https://data.gov.my/">data.gov.my</a> (MetMalaysia) ·
+       <a href="https://open-meteo.com/">Open-Meteo</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) ·
+       © OpenStreetMap contributors (ODbL)</p>
+    <p data-t="credits_replay"></p>
   </footer>
+</section>
+
+<!-- 2. Waiting -->
+<section id="s-wait" hidden>
+  <p class="place" id="w-place"></p>
+  <p class="status" id="w-status" role="status" aria-live="polite"></p>
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="w-bar-box"><div id="w-bar"></div></div>
+  <div class="card tip" id="w-tip"></div>
+  <button class="linkish" type="button" id="w-more" aria-expanded="false" data-t="see_doing"></button>
+  <ol id="log" hidden></ol>
+</section>
+
+<!-- 3. Answer -->
+<section id="s-answer" hidden>
+  <p id="a-label" hidden><span class="chip" id="a-label-text"></span></p>
+  <p class="place" id="a-place"></p>
+  <div class="badge" id="a-badge" role="img"></div>
+  <p class="oneline" id="a-line"></p>
+  <div class="card todo"><h2 data-t="todo"></h2><p id="a-todo" style="margin:0"></p></div>
+  <div class="card rows" id="a-rows"></div>
+  <div class="actions">
+    <button type="button" id="a-share" class="primary" data-t="share"></button>
+    <button type="button" id="a-listen" data-t="listen"></button>
+  </div>
+  <button type="button" class="strip" id="a-strip" aria-expanded="false" aria-controls="a-details"></button>
+  <div id="a-details" hidden>
+    <div class="card"><h2 data-t="why"></h2><p id="a-why" style="margin:0"></p>
+      <div id="a-bar-box"></div></div>
+    <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
+      <p class="note" data-t="expl_note"></p></div>
+    <div class="card"><h2 data-t="sources"></h2><ul class="sources" id="a-sources"></ul></div>
+  </div>
+  <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p></div>
+  <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:12px"></button>
+  <p class="note" data-t="disclaimer"></p>
+</section>
+
+<!-- 4. Share -->
+<section id="s-share" hidden>
+  <h1 data-t="share_title"></h1>
+  <div class="card"><p class="share-text" id="sh-text" style="margin:0"></p></div>
+  <a class="btn primary wide" id="sh-wa" target="_blank" rel="noopener" data-t="send_wa"></a>
+  <p></p>
+  <button type="button" class="wide" id="sh-copy" data-t="copy"></button>
+  <p class="note" id="sh-copied" role="status" aria-live="polite"></p>
+  <p class="note" data-t="share_note"></p>
+  <button type="button" class="wide" id="sh-back" data-t="back"></button>
+</section>
+
+<!-- 5. Emergency (no engine call) -->
+<section id="s-sos" hidden>
+  <h1 id="e-title" data-t="sos_title"></h1>
+  <div class="call">
+    <a class="btn" href="tel:999" data-t="call999"></a>
+    <a class="btn" href="tel:991" data-t="call991"></a>
+  </div>
+  <div class="card"><ol class="steps" id="e-steps"></ol></div>
+  <p class="note" data-t="disclaimer"></p>
+  <button type="button" class="wide" id="e-back" data-t="back"></button>
+</section>
+
+<p id="err" class="card" role="alert" hidden></p>
 </main>
 <script>
+"use strict";
 const $ = (id) => document.getElementById(id);
+const UI = {
+  en: {
+    home_title: "Is my area at risk of flooding?", or_type: "Or type a question", ask: "Ask",
+    privacy: "Please don't type names, IC, phone numbers or addresses. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked.",
+    sos: "I'm stranded / in danger", data_label: "Data",
+    footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
+    credits_lead: "River levels: Jabatan Pengairan dan Saliran (JPS) Malaysia, read live on this machine and used for non-commercial public-safety research. Also:",
+    credits_replay: "Past flood replay (Nov 2024): readings as reported by Bernama and Kosmo, citing JPS. Made-up test scenes use invented readings.",
+    see_doing: "See what VEDA is doing ›", hide_doing: "Hide what VEDA is doing",
+    todo: "What to do now", water: "Water", upstream: "Upstream", rain: "Rain",
+    share: "Share with family", listen: "Listen", stop: "Stop", details: "Details ›", hide_details: "Hide details",
+    why: "Why", explained: "In plain words", expl_note: "Written by AI (Nemotron) from the checked facts, then checked again.",
+    sources: "Where this comes from", again: "Ask another question",
+    disclaimer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
+    share_title: "Share with family", send_wa: "Send on WhatsApp", copy: "Copy text", copied: "Copied.",
+    share_note: "Only the answer is shared - never your question.", back: "Back",
+    sos_title: "If you are stranded or in danger", call999: "Call 999", call991: "Call APM 991",
+    bigger: "Bigger text", tip_label: "Tip", warn_label: "MetMalaysia warning",
+    live: "Live now", past: "Past flood", madeup: "Made-up test",
+    q_default: "Is {town} at risk of flooding right now?", town_hint: "Check now",
+    s_start: "Starting…", s_plan: "Understanding your question…", s_gather: "Reading river levels, rain and warnings…",
+    s_forecast: "Working out the risk…", s_draft: "Writing the answer…", s_critique: "Double-checking the answer…",
+    s_revise: "Fixing the answer…", s_done: "Done.",
+    tips: ["Keep a charged phone and a power bank ready during the monsoon.",
+           "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
+           "Put important documents in a plastic bag, ready to take.",
+           "Know where your nearest relief centre (PPS) is - ask the village head."],
+    no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
+    level_now: "Now", alert: "Alert", warning: "Warning", danger: "Danger", m: "m",
+  },
+  ms: {
+    home_title: "Adakah kawasan saya berisiko banjir?", or_type: "Atau taip soalan", ask: "Tanya",
+    privacy: "Jangan taip nama, IC, nombor telefon atau alamat. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.",
+    sos: "Saya terkandas / dalam bahaya", data_label: "Data",
+    footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
+    credits_lead: "Paras sungai: Jabatan Pengairan dan Saliran (JPS) Malaysia, dibaca secara langsung di komputer ini dan digunakan untuk penyelidikan keselamatan awam bukan komersial. Juga:",
+    credits_replay: "Ulang tayang banjir lalu (Nov 2024): bacaan seperti yang dilaporkan oleh Bernama dan Kosmo, memetik JPS. Senario ujian rekaan menggunakan bacaan rekaan.",
+    see_doing: "Lihat apa yang VEDA sedang buat ›", hide_doing: "Sembunyikan apa yang VEDA sedang buat",
+    todo: "Apa perlu dibuat sekarang", water: "Air", upstream: "Hulu", rain: "Hujan",
+    share: "Kongsi dengan keluarga", listen: "Dengar", stop: "Berhenti", details: "Butiran ›", hide_details: "Sembunyikan butiran",
+    why: "Kenapa", explained: "Dalam bahasa mudah", expl_note: "Ditulis oleh AI (Nemotron) daripada fakta yang telah disemak, kemudian disemak semula.",
+    sources: "Dari mana maklumat ini", again: "Tanya soalan lain",
+    disclaimer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
+    share_title: "Kongsi dengan keluarga", send_wa: "Hantar melalui WhatsApp", copy: "Salin teks", copied: "Disalin.",
+    share_note: "Hanya jawapan dikongsi - soalan anda tidak dikongsi.", back: "Kembali",
+    sos_title: "Jika anda terkandas atau dalam bahaya", call999: "Hubungi 999", call991: "Hubungi APM 991",
+    bigger: "Teks lebih besar", tip_label: "Petua", warn_label: "Amaran MetMalaysia",
+    live: "Langsung sekarang", past: "Banjir lalu", madeup: "Ujian rekaan",
+    q_default: "Adakah {town} berisiko banjir sekarang?", town_hint: "Semak sekarang",
+    s_start: "Bermula…", s_plan: "Memahami soalan anda…", s_gather: "Membaca paras sungai, hujan dan amaran…",
+    s_forecast: "Menilai risiko…", s_draft: "Menulis jawapan…", s_critique: "Menyemak semula jawapan…",
+    s_revise: "Membetulkan jawapan…", s_done: "Selesai.",
+    tips: ["Sediakan telefon yang dicas dan power bank sepanjang musim tengkujuh.",
+           "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
+           "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
+           "Ketahui PPS (pusat pemindahan) terdekat - tanya ketua kampung."],
+    no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - cuba lagi sebentar lagi.",
+    level_now: "Kini", alert: "Waspada", warning: "Amaran", danger: "Bahaya", m: "m",
+  },
+};
+const TOWNS = ["Pasir Mas", "Rantau Panjang", "Kota Bharu", "Tumpat"];
+const DATA = [  // value = replay|at ; the live choice is removed when VEDA runs offline (SAMPLE_MODE)
+  { v: "", k: "live" },
+  { v: "nov2024|2024-11-26 18:00", k: "past", when: "26 Nov 2024, 18:00" },
+  { v: "nov2024|2024-11-27 08:00", k: "past", when: "27 Nov 2024, 08:00" },
+  { v: "nov2024|2024-11-27 19:30", k: "past", when: "27 Nov 2024, 19:30" },
+  { v: "synthetic_rising|2024-11-25 18:00", k: "madeup", what: { en: "rising river", ms: "sungai naik" } },
+  { v: "synthetic_calm|2024-06-15 10:00", k: "madeup", what: { en: "calm day", ms: "hari tenang" } },
+  { v: "synthetic_silent_upstream|2024-06-15 10:00", k: "madeup", what: { en: "no reading upstream", ms: "tiada bacaan di hulu" } },
+];
+const ICON = {  // simple shapes so the verdict never relies on colour alone
+  NORMAL: '<path d="M20 2a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-3 26-8-8 3-3 5 5 11-11 3 3z" fill="currentColor"/>',
+  WATCH: '<path d="M20 9C10 9 3 20 3 20s7 11 17 11 17-11 17-11S30 9 20 9zm0 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0-10a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" fill="currentColor"/>',
+  PREPARE: '<path d="M20 3 2 36h36zm-2 12h4v11h-4zm0 14h4v4h-4z" fill="currentColor"/>',
+  ACT: '<path d="M13 2h14l11 11v14L27 38H13L2 27V13zm5 8v13h4V10zm0 17v4h4v-4z" fill="currentColor"/>',
+  INSUFFICIENT_DATA: '<path d="M20 2a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm2 29h-4v-4h4zm3-12c-2 1.6-3 2.4-3 5h-4c0-4 1.8-5.4 3.5-6.7 1.2-1 2-1.6 2-3.1a2.5 2.5 0 0 0-5 0h-4a6.5 6.5 0 0 1 13 0c0 2.6-1.4 3.6-2.5 4.8z" fill="currentColor"/>',
+};
+const STAGES = ["plan", "gather", "forecast", "draft", "critique", "revise"];
 
-// B-75: offline (SAMPLE_MODE) there is no live data - only the scenes; the Nov 2024 replay is the first choice
-fetch("/health").then((r) => r.json()).then((h) => {
-  if (h.sample_mode) { $("live-option").remove(); $("mode").selectedIndex = 0; }
-}).catch(() => {});
-let result = null, shown = "en", t0 = 0;
+let lang = "en", words = null, result = null, sampleMode = false, lastQuestion = "", speaking = false;
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
+const t = (key) => UI[lang][key];
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-function addStep(text, cls) {
+function show(id) {
+  ["s-home", "s-wait", "s-answer", "s-share", "s-sos"].forEach((s) => { $(s).hidden = s !== id; });
+  $("err").hidden = true;
+  window.scrollTo(0, 0);
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-t-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.tLabel)); el.title = t(el.dataset.tLabel); });
+  document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("q").placeholder = UI[lang].q_default.replace("{town}", "Tumpat");
+  $("towns").replaceChildren(...TOWNS.map((town) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = `${esc(town)}<small>${esc(t("town_hint"))}</small>`;
+    b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
+    return b;
+  }));
+  const keep = $("mode").value;
+  $("mode").replaceChildren(...DATA.filter((d) => !(sampleMode && d.k === "live")).map((d) => {
+    const o = document.createElement("option");
+    o.value = d.v;
+    o.textContent = d.k === "live" ? t("live") : d.k === "past" ? `${t("past")} · ${d.when}` : `${t("madeup")} · ${d.what[lang]}`;
+    return o;
+  }));
+  if ([...$("mode").options].some((o) => o.value === keep)) $("mode").value = keep;
+  $("w-more").textContent = $("log").hidden ? t("see_doing") : t("hide_doing");
+  if (words) renderSos();
+  if (result) renderAnswer();
+  if (!$("s-share").hidden) renderShare();
+}
+
+function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang(); }
+
+// ---------- 2. Waiting ----------
+let stageIdx = -1, tipTimer = null, tipIdx = 0, warned = false;
+function setStage(name) {
+  const i = STAGES.indexOf(name);
+  if (i < 0) return;
+  stageIdx = Math.max(stageIdx, i);
+  $("w-status").textContent = t("s_" + name);
+  const pct = name === "revise" ? 88 : [12, 35, 55, 70, 85][i] || 90;
+  bump(pct);
+}
+function bump(pct) {
+  const now = parseFloat($("w-bar").style.width) || 3;
+  const v = Math.max(now, pct);
+  $("w-bar").style.width = v + "%";
+  $("w-bar-box").setAttribute("aria-valuenow", String(Math.round(v)));
+}
+function showTip() {
+  if (warned) return;
+  const tips = UI[lang].tips;
+  $("w-tip").className = "card tip";
+  $("w-tip").innerHTML = `<b>${esc(t("tip_label"))}:</b> ${esc(tips[tipIdx % tips.length])}`;
+  tipIdx += 1;
+}
+function addLog(text) {
   const li = document.createElement("li");
-  if (cls) li.className = cls;
-  const t = document.createElement("span");
-  t.className = "t";
-  t.textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
-  li.append(t, document.createTextNode(text));
-  $("steps").append(li);
+  li.textContent = text;
+  $("log").append(li);
 }
 
-function showAnswer(lang) {
-  if (!result) return;
-  shown = lang;
-  $("answer").lang = lang;                 // screen readers read BM with BM pronunciation
-  // the user's own language: the full answer (with the AI explanation if the Critic approved it);
-  // the other language: the code-written card + that language's disclaimer
-  $("answer").textContent = (lang === result.language || !result.card) ? result.output
-    : result.card[lang] + "\n" + result.disclaimer[lang];
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
-  $("meta").textContent = `Verdict ${result.verdict || "-"} · confidence ${result.confidence || "-"} · ` +
-    `${result.approved_by_critic ? "approved by the Critic" : "checked by code"} · ${result.execution_time} s · ` +
-    `trace ${result.log_file}`;
-}
-
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showAnswer(b.dataset.lang)));
-
-$("ask").addEventListener("submit", async (ev) => {
-  ev.preventDefault();
+async function ask(question, town) {
+  lastQuestion = question;
+  result = null; stageIdx = -1; warned = false; tipIdx = Math.floor(Math.random() * 4);
+  show("s-wait");
+  $("w-place").textContent = town || "";
+  $("w-status").textContent = t("s_start");
+  $("w-bar").style.width = "3%";
+  $("log").replaceChildren();
+  showTip();
+  clearInterval(tipTimer);
+  tipTimer = setInterval(showTip, 9000);
+  const creep = setInterval(() => bump((parseFloat($("w-bar").style.width) || 3) + 0.6), 1000);
   const [replay, at] = ($("mode").value || "|").split("|");
-  const params = new URLSearchParams({ question: $("q").value, replay, at });
-  $("err").hidden = true; $("steps").replaceChildren(); $("answer-box").hidden = true;
-  $("steps-box").hidden = false; $("go").disabled = true; result = null; t0 = performance.now();
+  const params = new URLSearchParams({ question, replay, at });
   try {
     const res = await fetch("/run/stream?" + params);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error((body.error && body.error.message) || ("HTTP " + res.status));
+      throw new Error(res.status === 429 ? t("busy") : (body.error && body.error.message) || ("HTTP " + res.status));
     }
     const reader = res.body.getReader(), dec = new TextDecoder();
     let buf = "";
@@ -161,17 +382,164 @@ $("ask").addEventListener("submit", async (ev) => {
         const block = buf.slice(0, cut); buf = buf.slice(cut + 2);
         const kind = (block.match(/^event: (.*)$/m) || [])[1];
         const data = JSON.parse((block.match(/^data: (.*)$/m) || [, "null"])[1]);
-        if (kind === "step") addStep(data.line, data.status === "failed" ? "fail" : data.line.trim().startsWith("!") ? "note" : "");
+        if (kind === "step") {
+          addLog(data.line);
+          if (data.action === "state") setStage(stageFromLine(data.line));
+        }
+        if (kind === "warning" && data.headings && data.headings.length) {
+          warned = true;
+          $("w-tip").className = "card tip warn";
+          $("w-tip").innerHTML = `<b>${esc(t("warn_label"))}:</b> ${esc(data.headings.join(" · "))}`;
+        }
         if (kind === "error") throw new Error(data.message);
-        if (kind === "result") { result = data; $("answer-box").hidden = false; showAnswer(data.language || "en"); }
+        if (kind === "result") { result = data; }
       }
     }
+    if (!result) throw new Error("No answer came back.");
+    bump(100);
+    $("w-status").textContent = t("s_done");
+    renderAnswer();
+    show("s-answer");
   } catch (e) {
+    show("s-home");
     $("err").textContent = e.message; $("err").hidden = false;
   } finally {
-    $("go").disabled = false;
+    clearInterval(tipTimer); clearInterval(creep);
+  }
+}
+const STAGE_LINES = { "Understanding the question": "plan", "Checking river gauges, rain and warnings": "gather",
+  "Working out the risk": "forecast", "Writing the answer": "draft", "Checking the answer": "critique", "Fixing the answer": "revise" };
+function stageFromLine(line) { return STAGE_LINES[line.replace(/^> /, "").trim()] || ""; }
+
+// ---------- 3. Answer ----------
+function rowHtml(label, main, sub) {
+  return `<div><b>${esc(label)}</b><span>${esc(main)}${sub ? `<br><span class="sub">${esc(sub)}</span>` : ""}</span></div>`;
+}
+function levelBar(b) {
+  if (!b || b.danger_m == null || b.alert_m == null) return "";
+  const lo = Math.min(b.level_m, b.alert_m) - (b.danger_m - b.alert_m) * 0.6;
+  const hi = Math.max(b.level_m, b.danger_m) + (b.danger_m - b.alert_m) * 0.4;
+  const pos = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+  const w = b.warning_m != null ? b.warning_m : (b.alert_m + b.danger_m) / 2;
+  const style = `--a:${pos(b.alert_m)}%;--w:${pos(w)}%;--d:${pos(b.danger_m)}%`;
+  const p = pos(b.level_m);
+  const shift = p > 75 ? "-100%" : p < 25 ? "0" : "-50%";          // keep the label inside the bar
+  const item = (v, key, colour) => `<li><i style="background:var(${colour})"></i>${esc(t(key))} ${v} ${t("m")}</li>`;
+  return `<div class="levelbar" style="${style}" role="img" aria-label="${esc(t("level_now"))} ${b.level_m} ${t("m")}; ${esc(t("alert"))} ${b.alert_m}; ${esc(t("danger"))} ${b.danger_m}">` +
+    `<span class="mark" style="left:${p}%;transform:translateX(${shift})">${esc(t("level_now"))} ${b.level_m} ${t("m")}</span><span class="needle" style="left:${p}%"></span></div>` +
+    `<ul class="legend">${item(b.alert_m, "alert", "--v-watch")}` +
+    (b.warning_m != null ? item(b.warning_m, "warning", "--v-prepare") : "") + item(b.danger_m, "danger", "--v-act") + `</ul>`;
+}
+function renderAnswer() {
+  const v = result && result.view;
+  $("a-plain").hidden = !!v;
+  ["a-badge", "a-line", "a-rows", "a-strip"].forEach((id) => { $(id).hidden = !v; });
+  document.querySelector("#s-answer .todo").hidden = !v;
+  document.querySelector("#s-answer .actions").hidden = !v;
+  if (!v) {  // no place / not covered: the plain reply in the language it was written in
+    $("a-label").hidden = true; $("a-place").textContent = ""; $("a-details").hidden = true;
+    $("a-plain-text").textContent = result ? result.output : "";
+    return;
+  }
+  $("a-label").hidden = !v.label;
+  if (v.label) $("a-label-text").textContent = v.label[lang];
+  $("a-place").textContent = v.place || "";
+  $("a-badge").className = "badge v-" + v.verdict;
+  $("a-badge").setAttribute("aria-label", v.headline[lang]);
+  $("a-badge").innerHTML = `<svg viewBox="0 0 40 40" aria-hidden="true">${ICON[v.verdict]}</svg><span>${esc(v.headline[lang])}</span>`;
+  $("a-line").textContent = v.line[lang];
+  $("a-todo").textContent = v.todo[lang];
+  let rows = "";
+  if (v.water) rows += rowHtml(t("water"), v.water[lang].main, v.water[lang].compare);
+  if (v.upstream[lang].length) rows += rowHtml(t("upstream"), v.upstream[lang][0], v.upstream[lang].slice(1).join(" "));
+  rows += rowHtml(t("rain"), v.rain ? v.rain[lang] : t("no_rain"), "");
+  $("a-rows").innerHTML = rows;
+  const open = !$("a-details").hidden;
+  $("a-strip").innerHTML = `<span>${esc(v.strip[lang])}</span><span>${esc(open ? t("hide_details") : t("details"))}</span>`;
+  $("a-why").textContent = v.why[lang];
+  $("a-bar-box").innerHTML = levelBar(v.level_bar);
+  $("a-expl-box").hidden = !v.explanation;
+  if (v.explanation) { $("a-expl").textContent = v.explanation.text; $("a-expl").lang = v.explanation.language || ""; }
+  $("a-sources").innerHTML = v.sources[lang].map((s) =>
+    `<li class="${s.used ? "" : "out"}">${s.used ? "✓" : "–"} ${esc(s.name)} <span class="sub">(${esc(s.note)})</span></li>`).join("");
+}
+
+// ---------- 4. Share ----------
+function renderShare() {
+  const text = result && result.view ? result.view.share[lang] : (result ? result.output : "");
+  $("sh-text").textContent = text;
+  $("sh-wa").href = "https://wa.me/?text=" + encodeURIComponent(text);
+  $("sh-copied").textContent = "";
+}
+
+// ---------- 5. Emergency ----------
+function renderSos() {
+  $("e-steps").replaceChildren(...words.emergency.steps[lang].map((s) => { const li = document.createElement("li"); li.textContent = s; return li; }));
+}
+
+// ---------- Listen (the browser's own voice; nothing leaves the device) ----------
+function stopSpeaking() { if (window.speechSynthesis) speechSynthesis.cancel(); speaking = false; $("a-listen").textContent = t("listen"); }
+function listen() {
+  if (!window.speechSynthesis || !result || !result.view) return;
+  if (speaking) { stopSpeaking(); return; }
+  const v = result.view;
+  const text = [v.place, v.headline[lang], v.line[lang], t("todo") + ": " + v.todo[lang]].join(". ");
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === "ms" ? "ms-MY" : "en-GB";
+  const voice = speechSynthesis.getVoices().find((x) => x.lang && x.lang.toLowerCase().startsWith(lang === "ms" ? "ms" : "en"));
+  if (voice) u.voice = voice;
+  u.onend = () => stopSpeaking();
+  speaking = true; $("a-listen").textContent = t("stop");
+  speechSynthesis.speak(u);
+}
+
+// ---------- wiring ----------
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+$("aa").addEventListener("click", () => {
+  const big = !document.documentElement.classList.contains("big");
+  document.documentElement.classList.toggle("big", big);
+  $("aa").setAttribute("aria-pressed", String(big));
+  store.set("veda.big", big ? "1" : "0");
+});
+$("home-link").addEventListener("click", () => { stopSpeaking(); show("s-home"); });
+$("ask").addEventListener("submit", (ev) => { ev.preventDefault(); if ($("q").value.trim()) ask($("q").value.trim(), ""); });
+$("sos").addEventListener("click", () => show("s-sos"));
+$("e-back").addEventListener("click", () => show("s-home"));
+$("w-more").addEventListener("click", () => {
+  $("log").hidden = !$("log").hidden;
+  $("w-more").setAttribute("aria-expanded", String(!$("log").hidden));
+  $("w-more").textContent = $("log").hidden ? t("see_doing") : t("hide_doing");
+});
+$("a-strip").addEventListener("click", () => {
+  $("a-details").hidden = !$("a-details").hidden;
+  $("a-strip").setAttribute("aria-expanded", String(!$("a-details").hidden));
+  renderAnswer();
+});
+$("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
+$("a-listen").addEventListener("click", listen);
+$("a-again").addEventListener("click", () => { stopSpeaking(); show("s-home"); });
+$("sh-back").addEventListener("click", () => show("s-answer"));
+$("sh-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("sh-text").textContent); $("sh-copied").textContent = t("copied"); }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($("sh-text"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
   }
 });
+
+// start: language from the saved choice, else the browser (ms -> BM); URL ?lang= / ?replay=&at= for demos
+const params = new URLSearchParams(location.search);
+lang = params.get("lang") || store.get("veda.lang") || ((navigator.language || "").toLowerCase().startsWith("ms") ? "ms" : "en");
+if (!UI[lang]) lang = "en";
+if (store.get("veda.big") === "1") { document.documentElement.classList.add("big"); $("aa").setAttribute("aria-pressed", "true"); }
+applyLang();
+fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
+fetch("/health").then((r) => r.json()).then((h) => {
+  sampleMode = !!h.sample_mode;
+  applyLang();
+  const want = params.get("replay") ? `${params.get("replay")}|${params.get("at") || ""}` : null;
+  if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").value = want;
+}).catch(() => {});
 </script>
 </body>
 </html>

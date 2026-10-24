@@ -8,7 +8,8 @@ POST /run         {"question", "replay"?, "at"?} -> the answer as JSON (official
                   trace_id, log_file, execution_time ...)
 GET  /run/stream  same input as query parameters -> Server-Sent Events: one "step" event per trace step as it
                   happens (the B-17 listener), then one "result" event
-GET  /            the web page (app/web/index.html)
+GET  /ui/words    fixed wording for screens that call no engine (headlines, emergency steps, disclaimer)
+GET  /            the web page (app/web/index.html): home, waiting, answer, share, emergency
 Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is running -> 429 (one writer for the
 World Model on disk). Nothing secret is ever returned: every text goes through the trace's redaction.
 """
@@ -26,7 +27,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app import card as card_mod
-from app import config, progress, trace
+from app import config, progress, trace, view
 from app.adapters import nightshift, zetaris
 from app.agents.coordinator import SAFETY
 
@@ -112,7 +113,7 @@ def result_json(r):
            "safety_fixes": a.get("safety", []), "agents": agents,
            "log_file": _log_path(r["trace"]),
            "execution_time": (r.get("timing") or {}).get("total"), "timing": r.get("timing"),
-           "card": None, "disclaimer": dict(SAFETY)}
+           "card": None, "disclaimer": dict(SAFETY), "view": view.answer_view(r)}
     if r.get("card"):
         out["card"] = {lang: trace.redact(card_mod.render(r["card"], lang)) for lang in ("en", "ms")}
     return out
@@ -190,6 +191,9 @@ def run_stream(question: str = "", replay: str = "", at: str = ""):
     events = queue.Queue()
 
     def on_step(rec):
+        active = (rec.get("details") or {}).get("active") if rec.get("action") == "data.met_warnings" else None
+        if active:                                   # the waiting screen shows it in place of a tip
+            events.put(("warning", {"headings": [trace.redact(w.get("heading") or "") for w in active][:2]}))
         line = progress.describe(rec)
         if line:
             events.put(("step", {"line": trace.redact(line), "agent": rec.get("agent_name"),
@@ -211,6 +215,12 @@ def run_stream(question: str = "", replay: str = "", at: str = ""):
             kind, data = item
             yield f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/ui/words")
+def ui_words():
+    """Fixed wording only - no engine call (the emergency screen must work whatever else is down)."""
+    return view.words()
 
 
 @app.get("/", response_class=HTMLResponse)

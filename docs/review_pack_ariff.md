@@ -204,6 +204,21 @@ Without a place name, VEDA gives 1 and 2, then asks for the place. Is this the r
 trapped? Anything to add (e.g. a rescue number other than 999 / 991, or "go to the highest floor / roof")?
 > Answer: ______
 
+**G6.** (added 24 Oct) **The headline on the new web page.** Next to the verdict colour and icon, the answer screen
+shows a short headline instead of the verdict word (the card text and WhatsApp keep the words in G3):
+
+| Verdict | English | Bahasa Melayu |
+|---|---|---|
+| NORMAL | Normal for now | Normal buat masa ini |
+| WATCH | Keep watching | Terus berjaga-jaga |
+| PREPARE | Get ready | Bersedia |
+| ACT | Act now | Bertindak sekarang |
+| INSUFFICIENT_DATA | Can't confirm right now | Tidak dapat disahkan sekarang |
+
+The emergency screen ("I'm stranded / in danger") shows Call 999, Call APM 991 and the ACT advice from G1 as four
+numbered steps. Right words for a resident under stress?
+> Answer: ______
+
 ---
 
 ## H. Backup gauges for Rantau Panjang, Kota Bharu and Pasir Mas — ~10 min (added 23 Oct, B-15)
