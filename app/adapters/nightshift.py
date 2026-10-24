@@ -299,6 +299,12 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     payload, attempts = _call(lane, body, agent, prompt_summary, deadline, max_attempts)
     msg = payload["choices"][0].get("message") or {}
     text = msg.get("content") or ""
+    if not text.strip() and not msg.get("tool_calls"):
+        # audit 24 Oct P2-7: an empty reply (HTTP 200, no text) is named as such, so the draft's empty-response
+        # retry fires - before, it surfaced as "did not return valid JSON"
+        trace.step(agent, "nightshift.chat", input_summary=prompt_summary, status="failed", output_summary="(empty)",
+                   source=f"nightshift:{lane}", retry_count=attempts - 1, decision="Empty response - caller decides")
+        raise NightshiftError("model returned an empty response")
     data = None
     if json_mode:
         try:

@@ -363,3 +363,12 @@ def test_deep_lane_asks_for_super_vl_by_name(monkeypatch):
     assert nightshift.lane_model("deep") == "nvidia/nemotron-3.5-super-vl-120b-a12b" == nightshift.expected_model("deep")
     assert nightshift.AI_LANE == "deep" and nightshift.LANE_TIMEOUT_S["deep"] == 90
     assert nightshift.is_ttfb_cut("HTTP 200: ttfb_timeout:nvidia/x") and not nightshift.is_ttfb_cut("nvidia_500")
+
+
+def test_empty_200_reply_is_an_empty_response_error(fake):
+    """Audit 24 Oct P2-7: HTTP 200 with no text is named 'empty response' (so the draft retry fires), not 'invalid JSON'."""
+    fake["queue"].append(FakeResponse(200, ok_payload(text="")))
+    with pytest.raises(nightshift.NightshiftError) as e:
+        nightshift.chat("fast", [{"role": "user", "content": "x"}], agent="Coordinator", json_mode=True,
+                        max_attempts=1)
+    assert nightshift.is_empty_response(e.value)
