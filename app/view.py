@@ -125,8 +125,9 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
                           "“{min}”.",
                     "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini; ini menetapkan "
                           "sekurang-kurangnya “{min}”."},
-    "rain-heavy": {"en": "Heavy rain is forecast: {n24} mm in 24 hours, {n72} mm in 3 days.",
-                   "ms": "Hujan lebat dijangka: {n24} mm dalam 24 jam, {n72} mm dalam 3 hari."},
+    "rain-heavy": {"en": "Heavy rain is forecast: {amounts}.", "ms": "Hujan lebat dijangka: {amounts}."},
+    "mm_24": {"en": "{mm} mm in 24 hours", "ms": "{mm} mm dalam 24 jam"},
+    "mm_72": {"en": "{mm} mm in 3 days", "ms": "{mm} mm dalam 3 hari"},
     "rain-wet-ground": {"en": "{n72} mm of rain is forecast in 3 days, on ground already wet from the past week.",
                         "ms": "{n72} mm hujan dijangka dalam 3 hari, di atas tanah yang sudah basah sejak minggu lepas."},
     "rising-fast": {"en": "The river is rising fast, so VEDA moved up one step.",
@@ -439,7 +440,12 @@ def why(forecast, lang):
             out.append(tmpl[lang].format(where=_place_of(up.get("gauge", "")), window=window))
         elif rule.startswith("rain"):
             r = fc.get("rain") or {}
-            out.append(tmpl[lang].format(n24=_num(r.get("next_24h_mm")), n72=_num(r.get("next_72h_mm"))))
+            if rule == "rain-heavy":                       # A-P3-5: only the amounts that are known
+                amounts = [WHY[k][lang].format(mm=_num(r[f]))
+                           for k, f in (("mm_24", "next_24h_mm"), ("mm_72", "next_72h_mm")) if r.get(f) is not None]
+                out.append(tmpl[lang].format(amounts=", ".join(amounts)))
+            else:
+                out.append(tmpl[lang].format(n24=_num(r.get("next_24h_mm")), n72=_num(r.get("next_72h_mm"))))
         elif rule in ("upstream-rain", "upstream+local-rain"):
             out.append(_why_rain(fc.get("rain_upstream") or {}, rule, lang))
         elif rule == "met-warning-no-river":

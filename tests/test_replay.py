@@ -90,9 +90,9 @@ def test_critic_requires_the_replay_title():
 
 @pytest.mark.parametrize("peak, when", [
     ({"observed_when": "27 Nov 2024 19:30"}, "2024-11-27 19:30"),
-    ({"observed_when": "29 Nov 2024"}, "2024-11-29 00:00"),
-    ({"observed_when": "printed '1/12/2014 2:00' - ambiguous", "event": "Dec 2014"}, "2014-12-01 00:00"),
-    ({"observed_when": "2014", "event": "Dec 2014 (as reported by Kosmo)"}, "2014-12-01 00:00"),
+    ({"observed_when": "29 Nov 2024"}, "2024-11-30 00:00"),             # A-P3-5: known from the END of the day
+    ({"observed_when": "printed '1/12/2014 2:00' - ambiguous", "event": "Dec 2014"}, "2015-01-01 00:00"),   # month
+    ({"observed_when": "2014", "event": "Dec 2014 (as reported by Kosmo)"}, "2015-01-01 00:00"),
 ])
 def test_peak_times_are_read(peak, when):
     assert forecast_agent.peak_time(peak).strftime("%Y-%m-%d %H:%M") == when

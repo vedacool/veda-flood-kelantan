@@ -7,11 +7,11 @@
 import argparse
 import sys
 import time
-from datetime import datetime
 
 from dotenv import load_dotenv
 
 from app import config, progress, trace
+
 
 def progress_printer():
     """A listener for loop.run(on_step=...): one short line per step, as it happens (B-17)."""
@@ -36,13 +36,13 @@ def main(argv):
     args = ap.parse_args(argv[1:])
     question = " ".join(args.question) or "Is Rantau Panjang at risk of flooding?"
     at = None
-    if args.replay:
-        at_text = args.at or config.REPLAYS[args.replay]["default_at"]
-        notice = config.no_recorded_data(args.replay, at_text)
-        if notice:                                     # offline: no recorded data at this time -> a notice, no verdict
-            print(f"{notice['en']}\n{notice['ms']}")
+    if args.replay:                  # the API's own check (A-P3-5): the replay window, the time format, recorded times
+        from app.main import BadInput, parse_input
+        try:
+            _, _, at = parse_input(question, args.replay, args.at or config.REPLAYS[args.replay]["default_at"])
+        except BadInput as e:
+            print(str(e).replace(" / ", "\n"))         # a notice, never a verdict
             return 2
-        at = datetime.strptime(at_text, "%Y-%m-%d %H:%M").replace(tzinfo=config.MYT)
     result = loop.run(question, quiet=not args.verbose, on_step=None if args.verbose else progress_printer(),
                       replay=args.replay, at=at, default_scene=True)
     answer = result["answer"]

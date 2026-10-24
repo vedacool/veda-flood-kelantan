@@ -186,3 +186,12 @@ def test_web_picker_offers_only_recorded_times():
     page = main.WEB_PAGE.read_text(encoding="utf-8")
     offered = re.findall(r'v: "(\w+)\|([0-9-]+ [0-9:]+)"', page)
     assert offered and all(at in config.REPLAYS[s]["scenes"] for s, at in offered), offered
+
+
+def test_cli_at_outside_the_replay_window_gets_the_api_notice(monkeypatch, capsys):
+    import run
+    monkeypatch.setenv("SAMPLE_MODE", "false")
+    assert run.main(["run.py", "--replay", "nov2024", "--at", "2024-12-25 08:00", "Rantau Panjang?"]) == 2
+    assert "This replay covers 2024-11-26 08:00 to 2024-11-27 19:30 (MYT)." in capsys.readouterr().out
+    assert run.main(["run.py", "--replay", "nov2024", "--at", "27/11/2024", "Rantau Panjang?"]) == 2
+    assert "'at' must look like" in capsys.readouterr().out

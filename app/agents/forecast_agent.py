@@ -21,7 +21,7 @@ Mode "now" (quick path): current levels only, no projection.
 Reads historic peaks from the World Model; writes its forecast there as a fact about the place.
 """
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app import trace
 from app.config import MYT
@@ -151,7 +151,8 @@ def _rain(rain):
     past7, n24, n72 = rain.get("rain_past_7d_mm"), rain.get("rain_next_24h_mm"), rain.get("rain_next_72h_mm")
     fired = []
     if (n72 or 0) >= RAIN_PREPARE_72H_MM or (n24 or 0) >= RAIN_PREPARE_24H_MM:
-        fired.append(("PREPARE", "rain-heavy", f"heavy rain forecast: {n24} mm in 24 h, {n72} mm in 72 h"))
+        parts = [f"{v} mm in {h} h" for v, h in ((n24, 24), (n72, 72)) if v is not None]   # A-P3-5: never "None mm"
+        fired.append(("PREPARE", "rain-heavy", "heavy rain forecast: " + ", ".join(parts)))
     elif (n72 or 0) >= RAIN_WATCH_72H_MM and (past7 or 0) >= WET_GROUND_7D_MM:
         fired.append(("WATCH", "rain-wet-ground", f"{n72} mm forecast in 72 h on wet ground ({past7} mm in 7 days)"))
     return fired, {"next_24h_mm": n24, "next_72h_mm": n72, "past_7d_mm": past7, "wet_ground":
@@ -219,14 +220,23 @@ def _rain_upstream(ru):
 
 
 def peak_time(p):
-    """When a historic peak happened (MYT), from 'observed_when' ('27 Nov 2024 19:30', '29 Nov 2024', '2014') or the
-    event name ('Dec 2014 ...'); None if it cannot be read."""
+    """From when a historic peak is KNOWN to have happened (MYT), from 'observed_when' ('27 Nov 2024 19:30',
+    '29 Nov 2024', '2014') or the event name ('Dec 2014 ...'); None if it cannot be read. A date without a time counts
+    from the END of that day (month / year: the end of it) - the peak may have come late that day, and a replay must
+    never use it earlier (audit A-P3-5: date-only peaks parsed to midnight)."""
     for text, fmt in ((p.get("observed_when"), "%d %b %Y %H:%M"), (p.get("observed_when"), "%d %b %Y"),
                       ((p.get("event") or "")[:8], "%b %Y"), (p.get("observed_when"), "%Y")):
         try:
-            return datetime.strptime(str(text).strip(), fmt).replace(tzinfo=MYT)
+            t = datetime.strptime(str(text).strip(), fmt).replace(tzinfo=MYT)
         except (ValueError, TypeError):
             continue
+        if fmt == "%d %b %Y":
+            return t + timedelta(days=1)
+        if fmt == "%b %Y":
+            return t.replace(year=t.year + (t.month == 12), month=t.month % 12 + 1)
+        if fmt == "%Y":
+            return t.replace(year=t.year + 1)
+        return t
     return None
 
 
@@ -258,7 +268,7 @@ def _confidence(main, others, fired, rain, now_only):
         score = min(score, 0.69)
         why.append(f"backup gauge in use ({main['backup_for']} silent)")
     if main.get("freshness") == "aging":
-        score -= 0.15
+        score = min(score - 0.15, 0.69)          # A-P3-5: an aging reading is never "high" confidence
         why.append("controlling reading is aging")
     rs = rates(main)
     if now_only:

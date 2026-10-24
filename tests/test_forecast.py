@@ -182,3 +182,30 @@ def test_card_leads_with_the_action_then_the_verdict():
     lines = card.render(card.build(PLAN, ev, verdict(ev)), "en").split("\n")
     assert lines[0].startswith("WHAT TO DO NOW: Check again in 3 hours")
     assert lines[1] == "Rantau Panjang: WATCH - JPS level Alert" and lines[3].startswith("Next 24 h:")
+
+
+# -- audit A-P3-5: small logic edges ---------------------------------------------------------------------------
+def test_date_only_peaks_count_from_the_end_of_the_day():
+    from datetime import datetime
+    from app.config import MYT
+    pt = forecast_agent.peak_time
+    assert pt({"observed_when": "27 Nov 2024 19:30"}) == datetime(2024, 11, 27, 19, 30, tzinfo=MYT)
+    assert pt({"observed_when": "29 Nov 2024"}) == datetime(2024, 11, 30, 0, 0, tzinfo=MYT)
+    assert pt({"event": "Dec 2014 flood"}) == datetime(2015, 1, 1, tzinfo=MYT)
+    assert pt({"observed_when": "2014"}) == datetime(2015, 1, 1, tzinfo=MYT)
+    assert pt({"observed_when": "?"}) is None
+
+
+def test_rain_reason_never_says_none_mm():
+    fired, _ = forecast_agent._rain({"rain_past_7d_mm": 10.0, "rain_next_24h_mm": None, "rain_next_72h_mm": 250.0})
+    assert fired[0][2] == "heavy rain forecast: 250.0 mm in 72 h" and "None" not in fired[0][2]
+    from app import view
+    fc = {"verdict": "PREPARE", "triggers": [{"level": "PREPARE", "rule": "rain-heavy", "reason": fired[0][2]}],
+          "rain": {"next_24h_mm": None, "next_72h_mm": 250.0}}
+    assert view.why(fc, "en") == "Heavy rain is forecast: 250 mm in 3 days." and "None" not in view.why(fc, "ms")
+
+
+def test_an_aging_reading_is_never_high_confidence():
+    g = {"name": "g", "freshness": "aging", "change_1h_m": 0.0, "change_3h_m": 0.0, "tide_influenced": False}
+    c = forecast_agent._confidence(g, [], [], None, False)
+    assert c["label"] != "high" and "controlling reading is aging" in c["reasons"]
