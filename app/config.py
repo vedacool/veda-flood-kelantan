@@ -65,6 +65,17 @@ REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "kind": "replay", "rain_ta
                                        "default_at": "2024-11-27 12:00",
                                        "window": ("2024-11-27 06:00", "2024-11-27 12:00"),
                                        "scenes": ["2024-11-27 12:00"]}}
+def no_recorded_data(scenario, at_text):
+    """Offline (SAMPLE_MODE) a scene has recorded data only at its listed times ("scenes"); any other time inside
+    its window would answer "Can't confirm" for the wrong reason (Session B, 24 Oct). -> the notice (EN + BM) for a
+    time with no recorded data, or None. Live mode reads the full data through Zetaris: never a notice."""
+    if not sample_mode() or scenario not in REPLAYS or at_text in REPLAYS[scenario]["scenes"]:
+        return None
+    times = ", ".join(REPLAYS[scenario]["scenes"])
+    return {"en": f"No recorded data for this time in this scene; available times: {times}.",
+            "ms": f"Tiada data yang direkodkan untuk masa ini dalam senario ini; masa yang ada: {times}."}
+
+
 SAMPLE_SCENE = "synthetic_calm"          # a bare question in SAMPLE_MODE runs on this scene (Husaini 23 Oct)
 
 

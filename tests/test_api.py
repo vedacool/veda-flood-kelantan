@@ -6,7 +6,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from app import gazetteer, main
+from app import config, gazetteer, main
 
 
 @pytest.fixture
@@ -154,3 +154,35 @@ def test_web_runs_write_progress_to_stdout_without_the_question(monkeypatch, tmp
     assert "0123456789" not in out and "Mak saya" not in out
     assert (tmp_path / f"trace-{r['run_id']}.jsonl").exists()
     gazetteer.clear_cache()
+
+
+def test_offline_time_without_recorded_data_gets_a_notice_not_a_verdict(monkeypatch):
+    """Session B, 24 Oct: offline, data exists only at a scene's recorded times."""
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    c = TestClient(main.app)
+    r = c.post("/run", json={"question": "Rantau Panjang?", "replay": "nov2024", "at": "2024-11-27 10:00"})
+    err = r.json()["error"]
+    assert r.status_code == 400 and err["code"] == "no_recorded_data"
+    assert "No recorded data for this time in this scene; available times: 2024-11-26 18:00, 2024-11-27 08:00, " \
+           "2024-11-27 19:30." in err["message"] and "Tiada data yang direkodkan" in err["message"]
+    assert main.parse_input("Rantau Panjang?", "nov2024", "2024-11-27 19:30")[2] is not None   # a recorded time works
+
+
+def test_live_mode_accepts_any_time_in_the_window(monkeypatch):
+    monkeypatch.setenv("SAMPLE_MODE", "false")
+    assert main.parse_input("Rantau Panjang?", "nov2024", "2024-11-27 10:00")[1] == "nov2024"
+
+
+def test_cli_offline_prints_the_notice(monkeypatch, capsys):
+    import run
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    assert run.main(["run.py", "--replay", "nov2024", "--at", "2024-11-27 10:00", "Rantau Panjang?"]) == 2
+    out = capsys.readouterr().out
+    assert "available times: 2024-11-26 18:00" in out and "masa yang ada:" in out
+
+
+def test_web_picker_offers_only_recorded_times():
+    import re
+    page = main.WEB_PAGE.read_text(encoding="utf-8")
+    offered = re.findall(r'v: "(\w+)\|([0-9-]+ [0-9:]+)"', page)
+    assert offered and all(at in config.REPLAYS[s]["scenes"] for s, at in offered), offered

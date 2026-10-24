@@ -31,13 +31,18 @@ def main(argv):
     ap.add_argument("question", nargs="*")
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--replay", choices=sorted(config.REPLAYS), help="replay a past flood (B-70)")
-    ap.add_argument("--at", help="replay time in MYT, 'YYYY-MM-DD HH:MM' (default: the scenario's first scene)")
+    ap.add_argument("--at", help="replay time in MYT, 'YYYY-MM-DD HH:MM' (default: the scenario's first scene; "
+                                 "offline: only the scene's recorded times)")
     args = ap.parse_args(argv[1:])
     question = " ".join(args.question) or "Is Rantau Panjang at risk of flooding?"
     at = None
     if args.replay:
-        at = datetime.strptime(args.at or config.REPLAYS[args.replay]["default_at"], "%Y-%m-%d %H:%M").replace(
-            tzinfo=config.MYT)
+        at_text = args.at or config.REPLAYS[args.replay]["default_at"]
+        notice = config.no_recorded_data(args.replay, at_text)
+        if notice:                                     # offline: no recorded data at this time -> a notice, no verdict
+            print(f"{notice['en']}\n{notice['ms']}")
+            return 2
+        at = datetime.strptime(at_text, "%Y-%m-%d %H:%M").replace(tzinfo=config.MYT)
     result = loop.run(question, quiet=not args.verbose, on_step=None if args.verbose else progress_printer(),
                       replay=args.replay, at=at, default_scene=True)
     answer = result["answer"]

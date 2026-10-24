@@ -99,6 +99,9 @@ def parse_input(question, replay=None, at=None):
     lo, hi = (datetime.strptime(t, "%Y-%m-%d %H:%M").replace(tzinfo=config.MYT) for t in sc["window"])
     if not lo <= when <= hi:
         raise BadInput("outside_replay", f"This replay covers {sc['window'][0]} to {sc['window'][1]} (MYT).")
+    notice = config.no_recorded_data(replay, when.strftime("%Y-%m-%d %H:%M"))
+    if notice:                                     # offline only: a notice, never a verdict
+        raise BadInput("no_recorded_data", f"{notice['en']} / {notice['ms']}")
     return question.strip(), replay, when
 
 
