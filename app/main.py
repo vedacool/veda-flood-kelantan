@@ -22,6 +22,7 @@ GET  /            the web page (app/web/index.html): home, waiting, answer, shar
 Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is running -> 429 (one writer for the
 World Model on disk). Nothing secret is ever returned: every text goes through the trace's redaction.
 """
+import asyncio
 import json
 import logging
 import os
@@ -50,7 +51,9 @@ ADMIN_PAGE = config.ROOT / "app" / "web" / "admin.html"
 RECORDED = config.ROOT / "data" / "sample" / "live_traces"
 RUN_ID = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
 QUESTION_HIDDEN = "(the question is not shown here - privacy)"
-_watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: one queue each
+_watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: (event loop, asyncio.Queue) each
+MAX_WATCHERS = 20                  # audit 24 Oct P1-1: more open live logs than this -> 503 (one visitor can't fill up)
+WATCH_QUEUE = 1000                 # records kept per slow watcher; past that its records are dropped, never the run
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
 
@@ -198,10 +201,17 @@ def _publish(rec):
         watchers = list(_watchers)
     if watchers:
         data = public_record(rec, _live_question.get(run_id))
-        for q in watchers:
-            q.put(data)
+        for loop_, q in watchers:                   # the run is on a worker thread; each queue lives on the event loop
+            loop_.call_soon_threadsafe(_offer, q, data)
     if rec.get("action") == "run_end":
         _live_question.pop(run_id, None)
+
+
+def _offer(q, data):
+    try:
+        q.put_nowait(data)
+    except asyncio.QueueFull:
+        pass
 
 
 def _run(question, replay, at, on_step=None, lang=None):
@@ -222,10 +232,15 @@ def _run(question, replay, at, on_step=None, lang=None):
 
 
 @app.get("/health")
-def health():
-    """Is VEDA ready? In SAMPLE_MODE everything is offline replay, so nothing is called."""
+async def health():
+    """Is VEDA ready? In SAMPLE_MODE everything is offline replay, so nothing is called. Async (audit 24 Oct P1-1):
+    the offline answer never waits for a worker thread; the live checks run on one."""
     if config.sample_mode():
         return {"status": "ok", "sample_mode": True, "zetaris": "replay (offline)", "nightshift": "not used"}
+    return await run_in_threadpool(_live_health)
+
+
+def _live_health():
     status = {"status": "ok", "sample_mode": False, "busy": _busy.locked()}
     try:
         status["zetaris"] = "ok" if zetaris._post("SELECT 1 AS x", 1, timeout=10).ok else "error"
@@ -362,26 +377,30 @@ def live_page():
 
 
 @app.get("/live/stream")
-def live_stream():
-    """Every trace record of whatever run is going, as it happens (a comment line every 15 s keeps it open)."""
-    q = queue.Queue()
+async def live_stream():
+    """Every trace record of whatever run is going, as it happens (a comment line every 15 s keeps it open).
+    Async, one asyncio.Queue per watcher (audit 24 Oct P1-1): an open live log holds no worker thread, and at most
+    MAX_WATCHERS are open at once (503 above)."""
+    entry = (asyncio.get_running_loop(), asyncio.Queue(maxsize=WATCH_QUEUE))
     with _watch_lock:
-        _watchers.append(q)
+        if len(_watchers) >= MAX_WATCHERS:
+            return _error(503, "too_many_watchers", "The live log is full right now - please try again in a minute.")
+        _watchers.append(entry)
 
-    def stream():
+    async def stream():
         try:
             yield ": connected\n\n"
             while True:
                 try:
-                    rec = q.get(timeout=15)
-                except queue.Empty:
+                    rec = await asyncio.wait_for(entry[1].get(), timeout=15)
+                except asyncio.TimeoutError:
                     yield ": still here\n\n"
                     continue
                 yield f"event: trace\ndata: {json.dumps(rec, ensure_ascii=False)}\n\n"
         finally:
             with _watch_lock:
-                if q in _watchers:
-                    _watchers.remove(q)
+                if entry in _watchers:
+                    _watchers.remove(entry)
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
 

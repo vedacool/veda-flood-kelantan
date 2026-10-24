@@ -1,7 +1,7 @@
 """The live log (Cowork weekend plan B6, 24 Oct): every trace record reaches /live as it happens, word for word but
 without the question; a Nemotron call shows 'waiting' before its line; recorded runs replay; logs/ stay local."""
+import asyncio
 import json
-import queue
 
 import pytest
 from starlette.testclient import TestClient
@@ -52,16 +52,20 @@ def test_a_run_is_published_to_live_watchers(monkeypatch, tmp_path):
     gazetteer.clear_cache()
     real = loop.run
     monkeypatch.setattr(loop, "run", lambda *a, **k: real(*a, **k, log_dir=tmp_path))
-    q = queue.Queue()
-    main._watchers.append(q)
+    class Direct:                                   # stands in for the event loop: hands the record over at once
+        def call_soon_threadsafe(self, fn, *a):
+            fn(*a)
+    q = asyncio.Queue()
+    entry = (Direct(), q)
+    main._watchers.append(entry)
     try:
         main._run("Mak saya di Tumpat kodQZXWV, selamat ke?", "", None)
     finally:
-        main._watchers.remove(q)
+        main._watchers.remove(entry)
         gazetteer.clear_cache()
     got = []
     while not q.empty():
-        got.append(q.get())
+        got.append(q.get_nowait())
     assert got[0]["action"] == "run_start" and got[-1]["action"] == "run_end"
     assert "kodQZXWV" not in json.dumps(got) and any(r["agent_name"] == "Forecast" for r in got)
 
@@ -98,3 +102,41 @@ def test_live_page_is_self_contained():
     assert "VEDA · live log" in page and "/live/stream" in page and "Waiting for" in page
     assert not re.search(r'<(script|link)[^>]+(src|href)="https?:', page)
     assert 'data-speed="1"' in page and 'data-speed="4"' in page
+
+
+def test_45_open_live_logs_never_slow_health(monkeypatch):
+    """Audit 24 Oct P1-1: 45 held /live/stream connections froze /health (10 s). Now the streams are async, at most
+    MAX_WATCHERS are accepted (503 above) and /health answers at once - on a real uvicorn server."""
+    import socket
+    import threading
+    import time
+    import uvicorn
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(main.app, host="127.0.0.1", port=port, log_level="error"))
+    threading.Thread(target=server.run, daemon=True).start()
+    for _ in range(100):
+        if server.started:
+            break
+        time.sleep(0.05)
+    socks, codes = [], []
+    try:
+        for _ in range(45):
+            c = socket.create_connection(("127.0.0.1", port), timeout=5)
+            c.sendall(b"GET /live/stream HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+            codes.append(c.recv(64).split(b" ")[1])
+            socks.append(c)
+        t0 = time.perf_counter()
+        h = socket.create_connection(("127.0.0.1", port), timeout=5)
+        h.sendall(b"GET /health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        reply = h.recv(4096)
+        took = time.perf_counter() - t0
+        h.close()
+    finally:
+        for c in socks:
+            c.close()
+        server.should_exit = True
+    assert codes.count(b"200") == main.MAX_WATCHERS and codes.count(b"503") == 45 - main.MAX_WATCHERS
+    assert b" 200 " in reply.split(b"\r\n")[0] + b" " and took < 2
