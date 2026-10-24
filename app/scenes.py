@@ -114,6 +114,26 @@ def build_all():
             "scenes": [build(s) for s in expected()["scenes"]]}
 
 
+# ---------- where each shown value comes from (Cowork B-91b) ----------
+def news_values(scene, gauge):
+    """The values of one gauge row that the cited news article itself states (the reviewed allow-list in
+    scenes_expected.json) -> [{field, value, source, url}]. Every other value in the row is demo data."""
+    shown = {"level": gauge["level_m"], **{k: gauge["thresholds"].get(k) for k in ("alert", "warning", "danger")}}
+    out = []
+    for article in scene.get("news") or []:
+        for v in article["values"]:
+            if v["station"] == gauge["station"] and shown.get(v["field"]) == v["value"]:
+                out.append({"field": v["field"], "value": v["value"], "source": article["source"], "url": article["url"]})
+    return out
+
+
+def tagged(scene, data):
+    """The scene's data with each gauge row's news values marked (rain: Open-Meteo archive; the rest: demo data)."""
+    if not data:
+        return data
+    return {**data, "gauges": [{**g, "news": news_values(scene, g)} for g in data["gauges"]]}
+
+
 # ---------- checking the expectations against the REAL run output ----------
 def compact(result):
     """The parts of a run result the check needs (the page sends exactly this shape, kept under the proxy's 16 KB)."""
@@ -187,7 +207,7 @@ async def handle(tail, request):
     if request.method == "GET" and parts == ["data.json"]:
         exp, data = expected(), {s["id"]: s for s in scene_data()["scenes"]}
         return JSONResponse({"bands": exp["_bands"], "levels": HEADLINE,
-                             "scenes": [{**s, "data": data.get(s["id"])} for s in exp["scenes"]]})
+                             "scenes": [{**s, "data": tagged(s, data.get(s["id"]))} for s in exp["scenes"]]})
     if request.method == "POST" and len(parts) == 2 and parts[0] in ids and parts[1] == "check":
         body = await request.body()
         if len(body) > MAX_BODY:

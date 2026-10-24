@@ -165,3 +165,58 @@ def test_page_words_and_links():
     en, ms = ui.split("\n  ms: {", 1)
     keys = lambda block: set(re.findall(r"(?:^|[{,]|\n)\s*([a-z_0-9]+): (?=[\"{])", block))   # noqa: E731
     assert keys(en) - {"en"} == keys(ms) and len(keys(ms)) > 40
+
+
+def test_every_data_row_has_a_source_tag():
+    """Cowork B-91b: each row of "What the data showed" ends with where its values come from."""
+    body = PAGE.split("function dataRows(d) {", 1)[1].split("\n}\n", 1)[0]
+    pushes = body.split("rows.push(")[1:]
+    assert len(pushes) == 5 and all("srcs" in p or "gaugeSources(g)" in p for p in pushes)
+    assert "function gaugeSources(g)" in PAGE and 'srcTag("src_demo")' in PAGE and 'srcTag("src_om")' in PAGE
+    for key, en, ms in (("src_news", "News report", "Laporan berita"), ("src_demo", "Demo data", "Data demo"),
+                        ("src_om", "Open-Meteo archive", "Arkib Open-Meteo")):
+        assert f'{key}: "{en}"' in PAGE and f'{key}: "{ms}"' in PAGE
+
+
+def test_news_report_tags_only_on_the_allow_listed_values():
+    """A value is tagged 'News report' only if the scene's allow-list (with the article's URL) names it, and the
+    shown value equals it; trends, ages and made-up scenes are never news."""
+    c = TestClient(main.app)
+    want = {"rp-before": {("_DPMS0003", "level"), ("_DPMS0003", "warning"), ("_DTMH0008", "level"), ("_DTMH0008", "danger")},
+            "rp-morning": {("_DPMS0003", "level"), ("_DPMS0003", "warning"), ("_DTMH0008", "level"), ("_DTMH0008", "danger")},
+            "rp-peak": {("_DPMS0003", "level"), ("_DPMS0003", "danger"), ("_DTMH0008", "level"), ("_DTMH0008", "danger")}}
+    for s in c.get("/scenes/data.json").json()["scenes"]:
+        allowed = {(v["station"], v["field"], v["value"], a["url"]) for a in s.get("news") or [] for v in a["values"]}
+        assert all(a["url"].startswith("https://") for a in s.get("news") or [])
+        tagged = set()
+        for g in s["data"]["gauges"]:
+            for n in g["news"]:
+                assert (g["station"], n["field"], n["value"], n["url"]) in allowed, (s["id"], g["name"], n)
+                assert n["field"] in ("level", "alert", "warning", "danger")
+                tagged.add((g["station"], n["field"]))
+        assert tagged == want.get(s["id"], set()), s["id"]
+    peak = next(s for s in c.get("/scenes/data.json").json()["scenes"] if s["id"] == "rp-peak")
+    rp = next(g for g in peak["data"]["gauges"] if g["station"] == "_DPMS0003")
+    assert {n["url"] for n in rp["news"]} == {"https://www.kosmo.com.my/2024/11/27/paras-air-sungai-golok-lepasi-bacaan-bah-kuning-2014/"}
+
+
+def test_review_texts_and_banned_malay_words():
+    exp = scenes.EXPECTED.read_text(encoding="utf-8")
+    for banned in ("tiang paras sungai", "Tiang paras sungai", "tolok", "tiang"):
+        assert banned not in exp and banned not in PAGE.split("\n  ms: {", 1)[1], banned
+    for text in ("Heavy rain has fallen over the past day, here and across the border in Thailand.",
+                 "Hujan lebat turun sejak semalam, di sini dan di seberang sempadan di Thailand.",
+                 "An ordinary Saturday morning in June", "Pagi Sabtu biasa pada bulan Jun",
+                 "Tumpat is near the river mouth, so VEDA checks two river level stations, one of them affected by the tide.",
+                 "Tumpat berhampiran muara sungai, jadi VEDA menyemak dua stesen paras air, salah satunya dipengaruhi air pasang.",
+                 "Either is acceptable: the river here is low, but VEDA may stay cautious because it can't see upstream.",
+                 "VEDA's own rain rule (there is no official JPS rule for rain alone)",
+                 '"The river level is used."', '"Paras sungai digunakan."',
+                 "Penyemak mendapati stesen hulu berhenti menghantar bacaan, lalu meminta Ejen Data mencari stesen lain.",
+                 "Nearest rain point VEDA uses: Kota Bharu", "Titik hujan terdekat yang digunakan VEDA: Kota Bharu"):
+        assert text in exp, text
+    assert ("The people in this story are imagined. River readings marked 'News report' were reported at the time; "
+            "the rest is demo data.") in PAGE
+    judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
+    for name in ("Penyemak", "Ejen Data", "Ejen Ramalan", "Semakan keselamatan"):     # the same BM names as /judges
+        assert f'"{name}"' in judges and name in PAGE
