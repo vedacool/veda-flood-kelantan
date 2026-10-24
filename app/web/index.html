@@ -9,12 +9,14 @@
   /* Cowork weekend plan B (24 Oct): EN and BM equal, no jargon, text >= 18 px, touch targets >= 44 px, works at 375 px.
      Plain HTML/CSS/JS, nothing loaded from outside. */
   :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
-          --on-accent: #ffffff; --danger: #b3261e;
-          --v-normal: #1e6b3a; --v-watch: #f0c330; --v-prepare: #c25e00; --v-act: #b3261e; --v-unknown: #5a5c62;
-          --on-normal: #ffffff; --on-watch: #1c1c1a; --on-prepare: #ffffff; --on-act: #ffffff; --on-unknown: #ffffff; }
+          --on-accent: #ffffff; --danger: #b3261e; --warn-text: #8a4a00;
+          /* verdict colours differ in lightness too (relative luminance ACT 0.07 < NORMAL 0.15 < unknown 0.29 <
+             PREPARE 0.40 < WATCH 0.68), each with text at >= 5.3:1 - accessibility pass 24 Oct */
+          --v-normal: #257a43; --v-watch: #f6d548; --v-prepare: #f2933a; --v-act: #8f1d16; --v-unknown: #8e949b;
+          --on-normal: #ffffff; --on-watch: #1c1c1a; --on-prepare: #1c1c1a; --on-act: #ffffff; --on-unknown: #1c1c1a; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
-            --on-accent: #151514; --danger: #f08a80; }
+            --on-accent: #151514; --danger: #f08a80; --warn-text: #f0b45a; }
   }
   * { box-sizing: border-box; }
   html { font-size: 18px; }
@@ -105,7 +107,7 @@
   .how .secs { margin-left: auto; font-family: ui-monospace, Consolas, monospace; }
   .how p { margin: 6px 0 0; word-break: break-word; }
   .how .ai { font-weight: 700; }
-  .how .warn { color: var(--v-prepare); font-weight: 700; }
+  .how .warn { color: var(--warn-text); font-weight: 700; }
   .steps { padding-left: 1.4em; }
   .steps li { margin: 0 0 10px; }
   @media (max-width: 400px) { .rows > div { grid-template-columns: 1fr; gap: 2px; } .actions { grid-template-columns: 1fr; } }

@@ -223,3 +223,23 @@ def test_calm_and_cant_confirm_lines(views):
     assert views["synthetic_calm"][1]["note"]["en"] == "Nothing to do now. VEDA checks again whenever you ask."
     card = {"verdict": "INSUFFICIENT_DATA", "gauge": None, "replay": None}
     assert view._line(card, {}, "en").startswith("We could not get a fresh river reading, so we will not guess.")
+
+
+def test_verdict_colours_have_contrast_and_differ_in_lightness():
+    """Accessibility pass 24 Oct: text on each verdict colour >= 4.5:1, and the colours differ in lightness (not only
+    hue) so the verdict reads without colour vision."""
+    html = (config.ROOT / "app" / "web" / "index.html").read_text(encoding="utf-8")
+
+    def lum(h):
+        c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    lums = []
+    for v in ("normal", "watch", "prepare", "act", "unknown"):
+        bg = re.search(rf"--v-{v}: (#[0-9a-f]{{6}})", html).group(1)
+        fg = re.search(rf"--on-{v}: (#[0-9a-f]{{6}})", html).group(1)
+        a, b = sorted((lum(bg), lum(fg)), reverse=True)
+        assert (a + 0.05) / (b + 0.05) >= 4.5, v
+        lums.append(lum(bg))
+    lums.sort()
+    assert all(hi / lo >= 1.3 for lo, hi in zip(lums, lums[1:])), lums
