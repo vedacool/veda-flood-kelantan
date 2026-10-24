@@ -47,7 +47,9 @@ def test_sungai_kelantan_readings_cited_24_oct():
         ("_DKBR0007", "2024-11-29 21:00"): ("5.53", "true")}                 # Bernama: "as of 9 pm today"
     for r in added.values():
         assert len(r["quote"].replace("...", " ").split()) <= 15, r["quote"]
-        assert "JPS" in r["source_name"] or "DID" in r["source_name"]
+        assert "JPS" in r["source_name"]
+        if r["source_name"].startswith("Bernama, 29 Nov"):                  # Cowork 24 Oct: the DID rows' label
+            assert r["source_name"].endswith("(as reported, citing JPS (DID))")
 
 
 @pytest.mark.parametrize("bad, problem", [
