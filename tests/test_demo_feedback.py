@@ -60,6 +60,21 @@ def test_language_from_query_then_phone():
     assert "Tempat mana yang anda semak?" in ms
     assert "dalam <i>group</i> keluarga" in ms and "Lingkungan umur (pilihan)" in ms       # Cowork BM review 24 Oct
     assert "Saya benarkan nama pertama dan jawapan saya dipetik dalam pembentangan VEDA" in ms
+    assert "Mohon jangan tulis nombor telefon, e-mel atau alamat anda." in ms              # Cowork review 24 Oct
+    assert "Please don't write your phone number, email or address." in fb.form_page("en")
+
+
+def test_choices_are_easy_to_tap_and_the_scale_stays_on_one_row():
+    """Every radio / checkbox sits inside its label (the whole label is the tap target, at least 44 x 44 px) and the
+    1-5 scale is a five-column grid, so "5" never wraps onto its own line on a 320 px phone."""
+    page = fb.form_page("en")
+    boxes = page.count('type="radio"') + page.count('type="checkbox"')
+    assert boxes == 5 + 3 + 5 + 5 + 1 and page.count('<label class="opt"><input type=') == boxes
+    assert "label.opt{display:flex;align-items:center;gap:12px;min-height:44px;min-width:44px" in fb.CSS
+    assert "input[type=radio],input[type=checkbox]{flex:none;width:28px;height:28px" in fb.CSS   # never shrinks
+    assert ".scale{display:grid;grid-template-columns:repeat(5,minmax(44px,1fr))" in fb.CSS
+    scale = page.split('<div class="scale">', 1)[1].split("</div>", 1)[0]
+    assert [f'value="{i}"' in scale for i in range(1, 6)] == [True] * 5
 
 
 def test_export_is_one_csv_with_every_answer(tmp_path):

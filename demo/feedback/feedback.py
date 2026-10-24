@@ -52,7 +52,7 @@ T = {
            "too_long": "That was too long - please shorten it.",
            "privacy": "We store only your answers and the time (to the minute) - no IP address, phone or email."},
     "ms": {"title": "Beritahu pendapat anda", "intro": "Lapan soalan ringkas tentang demo VEDA. Semuanya pilihan. "
-           "Jangan tulis nombor telefon, e-mel atau alamat anda.",
+           "Mohon jangan tulis nombor telefon, e-mel atau alamat anda.",
            "q1": "Tempat mana yang anda semak?", "other": "Lain-lain", "other_name": "Tempat mana?",
            "q2": "Selepas membaca jawapan, apa yang akan anda buat?", "q3": "Ada apa-apa yang mengelirukan?",
            "q4": "Adakah anda akan kongsi ini dalam <i>group</i> keluarga?", "yes": "Ya", "maybe": "Mungkin",
@@ -77,7 +77,10 @@ h1{font-size:1.45rem;margin:8px 0 12px}.seg{display:inline-flex;border:1px solid
 .seg a{min-width:48px;min-height:44px;padding:8px 12px;font-weight:700;text-align:center;color:var(--fg);text-decoration:none}
 .seg a[aria-current]{background:var(--accent);color:var(--on-accent)}fieldset{border:1px solid var(--line);border-radius:14px;
 background:var(--card);margin:12px 0;padding:12px 16px}legend{font-weight:700;padding:0 4px}
-label.opt{display:flex;align-items:center;gap:10px;min-height:44px}input[type=radio],input[type=checkbox]{width:24px;height:24px}
+label.opt{display:flex;align-items:center;gap:12px;min-height:44px;min-width:44px;padding:4px 0;cursor:pointer}
+input[type=radio],input[type=checkbox]{flex:none;width:28px;height:28px;margin:0;accent-color:var(--accent)}
+.scale{display:grid;grid-template-columns:repeat(5,minmax(44px,1fr));gap:4px}.scale label.opt{flex-direction:column;gap:2px;
+justify-content:center;font-weight:700}
 textarea,input[type=text]{font:inherit;width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--muted);
 border-radius:12px;background:var(--card);color:var(--fg)}textarea{min-height:88px}.row{display:flex;flex-wrap:wrap;gap:4px 16px}
 .note{color:var(--muted)}button,.btn{font:inherit;min-height:48px;width:100%;padding:10px 16px;border-radius:12px;
@@ -127,7 +130,7 @@ def form_page(lang, error=""):
             f'{radios("share", [(s, t[s]) for s in SHARE])}</div>'
             f'<label for="q4w" class="note">{t["why"]}</label>'
             f'<input type="text" id="q4w" name="share_why" maxlength="{MAX_TEXT}"></fieldset>'
-            f'<fieldset><legend>5. {t["q5"]}</legend><div class="row">'
+            f'<fieldset><legend>5. {t["q5"]}</legend><div class="scale">'
             f'{radios("ease", [(str(i), str(i)) for i in range(1, 6)])}</div>'
             f'<p class="note">{t["hard"]} · {t["easy"]}</p></fieldset>'
             f'<fieldset><legend><label for="q6">6. {t["q6"]}</label></legend>'
