@@ -36,7 +36,7 @@ Then open http://127.0.0.1:8000, tap a town or type a question (for example *"Ma
 malam ni?"*), in English or Bahasa Melayu (EN | BM at the top). Offline, pick a scene under **Data** (the Nov 2024
 past-flood replay or a made-up test scene); "See what VEDA is doing ›" shows each step live while it works.
 
-**Python 3.13 without Docker:**
+**Python 3.10+ without Docker** ([JPS reading] recommended; tested on 3.10-3.13):
 ```
 python -m venv .venv
 .venv\Scripts\activate                       # macOS/Linux: source .venv/bin/activate

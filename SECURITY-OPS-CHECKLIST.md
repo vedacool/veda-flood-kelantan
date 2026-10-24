@@ -64,7 +64,14 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       4. Before publishing: CI green on the new repo; history search **0 unexplained**; the clean-clone test
          (fresh clone, empty `.env`, Zetaris and Nightshift stopped, SAMPLE_MODE); gitleaks over the full history.
       5. Create the new public repo (suggested name: **`vedacool/veda-kelantan`**), push, check CI, then record it in
-         `docs/DECISIONS.md` and update links (README clone URL, `metadata.json` repository).
+         `docs/DECISIONS.md` and update links. **Link sweep (only after the public repo exists)**, in the public repo's
+         working clone: `python scripts/public_links.py` (dry run: lists every CHANGE and every KEEP), check it, then
+         `python scripts/public_links.py --apply`, `pytest -q`, commit (`docs: B-77 links point to the public repo`),
+         push. It switches every link to `github.com/vedacool/veda` in tracked files - today: `docs/JUDGES.md` (both
+         clone commands), `metadata.json`, the User-Agents in `app/ingest/jps.py`, `scripts/load_osm.py`,
+         `spikes/s5_jps.py`, and line 29 here - and keeps the lines that name the private repo on purpose (this list,
+         `docs/DECISIONS.md`, `docs/submission.md`). A different repo name: add `--to https://github.com/vedacool/<name>`.
+         Then apply the same commit to the private repo's main so the two stay in step.
       **Dry run 23 Oct 18:25 MYT** (scratch only, nothing created on GitHub, private repo untouched): 122 -> 122
       commits, authors and dates unchanged, + 1 map commit = **123**; **first commit 22 Oct 2026 10:22:15 MYT
       (02:22:15 UTC)**, same ID as the original (nothing to strip in it); **commit map 122 lines** (+1 header); 226

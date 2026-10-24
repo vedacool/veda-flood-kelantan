@@ -6,13 +6,14 @@ needed**. Offline (SAMPLE_MODE) runs VEDA's real agents and rules on recorded sc
 (river readings reported in the news, each cited) or a made-up test scene (labelled on every answer).
 
 ## 1. Start it (about 3 minutes)
-You need **Python 3.13** and **git**. In a terminal:
+You need **Python 3.10 or newer ([JPS reading] recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.10, [JPS reading],
+3.12 and [JPS reading]: install, 853 tests, 33 safety scenarios and every row below.) In a terminal:
 
 **Windows (PowerShell)**
 ```
 git clone https://github.com/vedacool/veda.git
 cd veda
-py -3.13 -m venv .venv
+py -3 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 $env:SAMPLE_MODE="true"; .venv\Scripts\python -m app.main
 ```
@@ -21,7 +22,7 @@ $env:SAMPLE_MODE="true"; .venv\Scripts\python -m app.main
 ```
 git clone https://github.com/vedacool/veda.git
 cd veda
-python3.13 -m venv .venv
+python3 -m venv .venv          # python3 --version must say 3.10 or newer
 .venv/bin/python -m pip install -r requirements.txt
 SAMPLE_MODE=true .venv/bin/python -m app.main
 ```
