@@ -94,6 +94,10 @@ T = {  # fixed wording, BM + EN
     "until": {"en": "Rain likely until about {t}, then easing", "ms": "Hujan dijangka hingga kira-kira {t}, kemudian reda"},
     "until_heavy": {"en": "Heavy rain likely until about {t}, then easing",
                     "ms": "Hujan lebat dijangka hingga kira-kira {t}, kemudian reda"},
+    # audit 24 Oct P3: the rain lasts to the end of the forecast data -> no "then easing"
+    "until_open": {"en": "Rain likely until at least {t}", "ms": "Hujan dijangka sekurang-kurangnya hingga {t}"},
+    "until_heavy_open": {"en": "Heavy rain likely until at least {t}",
+                         "ms": "Hujan lebat dijangka sekurang-kurangnya hingga {t}"},
     "may_reach": {"en": "may reach here in {a}-{b} h", "ms": "mungkin sampai ke sini dalam {a}-{b} jam"},
     "rising": {"en": "rising", "ms": "sedang naik"},
     "warning": {"en": "MetMalaysia warning", "ms": "Amaran MetMalaysia"},
@@ -343,6 +347,7 @@ def rain_up(ru):
                       for u in sorted(heavy, key=lambda u: -(u["past_72h_mm"] or 0))[:2]],
             "local_12h_mm": local.get("max_12h_mm"), "local_heavy": bool(local.get("heavy")),
             "until": local.get("until"), "until_heavy": bool(local.get("until_heavy")),
+            "until_ends": local.get("until_ends", True),
             "golok": bool(ru.get("golok")), "combined": bool(ru.get("combined")),
             # Cowork 24 Oct: the Thai-side Golok points' rain when it is not heavy (heavy rain is in "heavy" above)
             "thai": [{"name": gauge_place(u["name"]), "past_72h_mm": u["past_72h_mm"]} for u in ru.get("upstream", [])
@@ -380,8 +385,8 @@ def rain_lines(card, lang):
         out.append(("rain_here", T["rain_here"][lang].format(mm=_num(r["local_12h_mm"])) + "."))
         out.append(("small_rivers", T["small_rivers"][lang] + "."))
     if r["until"]:
-        out.append(("until", T["until_heavy" if r["until_heavy"] else "until"][lang].format(t=when_text(r["until"], lang))
-                    + "."))
+        key = ("until_heavy" if r["until_heavy"] else "until") + ("" if r.get("until_ends", True) else "_open")
+        out.append(("until", T[key][lang].format(t=when_text(r["until"], lang)) + "."))
     if r["golok"]:
         out.append(("thailand", T["thailand"][lang] + "."))
     elif r.get("thai"):

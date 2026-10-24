@@ -57,3 +57,16 @@ def test_main_reads_no_env_file_in_the_demo(demo, monkeypatch):
     finally:
         monkeypatch.delenv("VEDA_DEMO")
         importlib.reload(main)                         # back to the normal module for the other tests
+
+
+def test_no_api_docs_in_the_demo(demo, monkeypatch):
+    """Audit 24 Oct P3: /docs, /redoc and /openapi.json listed the admin routes on the public demo."""
+    from app import main
+    importlib.reload(main)
+    try:
+        c = TestClient(main.app)
+        assert all(c.get(p).status_code == 404 for p in ("/docs", "/redoc", "/openapi.json"))
+    finally:
+        monkeypatch.delenv("VEDA_DEMO")
+        importlib.reload(main)
+    assert TestClient(main.app).get("/openapi.json").status_code == 200        # still there off the demo

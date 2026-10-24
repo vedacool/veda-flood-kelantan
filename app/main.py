@@ -55,7 +55,9 @@ _watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: (eve
 MAX_WATCHERS = 20                  # audit 24 Oct P1-1: more open live logs than this -> 503 (one visitor can't fill up)
 WATCH_QUEUE = 1000                 # records kept per slow watcher; past that its records are dropped, never the run
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
-app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
+app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.",
+              # audit 24 Oct P3: no /docs, /redoc, /openapi.json in the public demo (they listed the admin routes)
+              **({"docs_url": None, "redoc_url": None, "openapi_url": None} if config.demo_mode() else {}))
 
 
 # A-P3-2 (24 Oct): security headers on every response. The pages are one file each with their own inline <style> and

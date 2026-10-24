@@ -41,7 +41,7 @@ def describe(rec):
         return f"  Critic -> Data & Reconciler: {out}"
     if a == "rain.upstream":           # B-88: rain upstream (and when it may arrive) + rain here
         return f"  rain: {out}"
-    if a == "forecast.met_warning":    # rule A not applied yet: said plainly
+    if a == "forecast.met_warning":    # rule A: an official MetMalaysia rain warning sets a minimum verdict
         return f"  ! {out} - {rec.get('decision')}"
     if a == "card.advice":
         return f"  advice: {out}"

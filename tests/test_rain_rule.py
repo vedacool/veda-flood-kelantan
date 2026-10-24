@@ -388,3 +388,34 @@ def test_rain_upstream_not_read_this_run_is_not_used(tmp_path, monkeypatch, seco
     assert "Kuala Krai" not in r["answer"]["text"]
     row = next(s for s in view.sources(r["evidence"], r["plan"], "en") if s["kind"] == "rain_upstream")
     assert not row["used"] and "could not be read" in row["note"]
+
+
+# -- audit 24 Oct P3 --------------------------------------------------------------------------------------------
+def test_thresholds_compare_the_unrounded_sum():
+    """99.96 mm in 72 h is shown as 100.0 but is not >= 100 mm."""
+    f = rain_rule.features([(NOW - timedelta(hours=k), 99.96 / 72) for k in range(72)], NOW)
+    assert f["past_72h_mm"] == 100.0 and rain_rule.heavy_upstream(f) == (False, False)
+    f = rain_rule.features([(NOW - timedelta(hours=k), 100.0 / 72) for k in range(72)], NOW)
+    assert rain_rule.heavy_upstream(f)[0]
+
+
+def test_then_easing_only_when_the_rain_stops_inside_the_data():
+    from app import card
+    stops = rain_rule.features(hours(0, back=1) + [(NOW + timedelta(hours=k), 5.0 if k <= 3 else 0.0)
+                                                   for k in range(1, 13)], NOW)
+    lasts = rain_rule.features(hours(5.0, back=1, ahead=12), NOW)
+    assert stops["until_ends"] and not lasts["until_ends"]
+    for f, easing in ((stops, True), (lasts, False)):
+        r = {"heavy": [], "local_12h_mm": None, "local_heavy": False, "until": f["until"], "until_heavy": False,
+             "until_ends": f["until_ends"], "golok": False, "combined": False, "thai": []}
+        text = " ".join(t for _, t in card.rain_lines({"rain_up": r}, "en"))
+        assert ("then easing" in text) is easing and ("at least" in text) is not easing
+
+
+def test_met_warning_names_bahaya_when_buruk_is_also_active(run_ctx):
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "Amaran Hujan Berterusan (Tahap Buruk)"},
+                                                     {"heading": "Amaran Hujan Berterusan (Tahap Bahaya)"}]}
+    fc = verdict(ev)
+    assert fc["verdict"] == "PREPARE" and any("Bahaya" in t["reason"] for t in fc["triggers"])
+    assert not any("Buruk" in t["reason"] for t in fc["triggers"])

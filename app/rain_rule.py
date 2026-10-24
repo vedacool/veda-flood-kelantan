@@ -30,8 +30,13 @@ HORIZON_H = 72
 
 
 def _sum(hours, lo, hi):
-    """Rain in (lo, hi] from [(t, mm)]."""
-    return round(sum(mm for t, mm in hours if lo < t <= hi and mm is not None), 1)
+    """Rain in (lo, hi] from [(t, mm)], unrounded (audit 24 Oct P3: thresholds compare the real sum; 99.96 is not
+    100). features() rounds what is shown."""
+    return sum(mm for t, mm in hours if lo < t <= hi and mm is not None)
+
+
+def _r(v):
+    return None if v is None else round(v, 1)
 
 
 def features(hours, now):
@@ -42,17 +47,20 @@ def features(hours, now):
     windows = [_sum(hours, now - 12 * h + k * h, now + k * h) for k in range(13)] if forecast else [
         _sum(hours, now - 12 * h, now)]
     until = heavy = None
+    in_horizon = [t for t, _ in forecast if t <= now + HORIZON_H * h]
     rainy = [t for t, mm in forecast if t <= now + HORIZON_H * h and mm >= UNTIL_MM_H]
     if rainy:
         until = max(rainy)
         heavy = any(mm >= HEAVY_MM_H for t, mm in forecast if t <= until)
-    return {"past_12h_mm": _sum(hours, now - 12 * h, now), "past_24h_mm": _sum(hours, now - 24 * h, now),
-            "past_72h_mm": _sum(hours, now - 72 * h, now),
-            "next_12h_mm": _sum(hours, now, now + 12 * h) if forecast else None,
-            "next_24h_mm": _sum(hours, now, now + 24 * h) if forecast else None,
-            "next_72h_mm": _sum(hours, now, now + 72 * h) if forecast else None,
-            "max_12h_mm": max(windows), "has_forecast": bool(forecast),
-            "until": until.isoformat() if until else None, "until_heavy": bool(heavy)}
+    raw = {"past_12h_mm": _sum(hours, now - 12 * h, now), "past_24h_mm": _sum(hours, now - 24 * h, now),
+           "past_72h_mm": _sum(hours, now - 72 * h, now),
+           "next_12h_mm": _sum(hours, now, now + 12 * h) if forecast else None,
+           "next_24h_mm": _sum(hours, now, now + 24 * h) if forecast else None,
+           "next_72h_mm": _sum(hours, now, now + 72 * h) if forecast else None, "max_12h_mm": max(windows)}
+    return {**{k: _r(v) for k, v in raw.items()}, "raw": raw, "has_forecast": bool(forecast),
+            "until": until.isoformat() if until else None, "until_heavy": bool(heavy),
+            # audit 24 Oct P3: "then easing" only when the rain stops before the forecast data ends
+            "until_ends": bool(until and until < max(in_horizon))}
 
 
 def _key(k):
@@ -88,9 +96,10 @@ def arrival(start, target, links):
 
 def heavy_upstream(f):
     """(fallen, forecast): heavy rain that has fallen at this point / heavy rain forecast there."""
-    fallen = f["past_72h_mm"] >= UPSTREAM_72H_MM or f["past_24h_mm"] >= UPSTREAM_24H_MM
-    forecast = f["has_forecast"] and ((f["next_72h_mm"] or 0) >= UPSTREAM_72H_MM
-                                      or (f["next_24h_mm"] or 0) >= UPSTREAM_24H_MM)
+    r = f.get("raw") or f                                 # the unrounded sums (older facts: the rounded ones)
+    fallen = r["past_72h_mm"] >= UPSTREAM_72H_MM or r["past_24h_mm"] >= UPSTREAM_24H_MM
+    forecast = f["has_forecast"] and ((r["next_72h_mm"] or 0) >= UPSTREAM_72H_MM
+                                      or (r["next_24h_mm"] or 0) >= UPSTREAM_24H_MM)
     return fallen, bool(forecast)
 
 
@@ -115,8 +124,10 @@ def assess(controlling, local_point, points, links, golok=False):
     lf = (points.get(local_point) or {}).get("features")
     local = None if not lf else {"point": local_point, "name": points[local_point]["name"],
                                  "max_12h_mm": lf["max_12h_mm"], "past_12h_mm": lf["past_12h_mm"],
-                                 "next_12h_mm": lf["next_12h_mm"], "heavy": lf["max_12h_mm"] >= LOCAL_12H_MM,
-                                 "until": lf["until"], "until_heavy": lf["until_heavy"]}
+                                 "next_12h_mm": lf["next_12h_mm"],
+                                 "heavy": (lf.get("raw") or lf)["max_12h_mm"] >= LOCAL_12H_MM,
+                                 "until": lf["until"], "until_heavy": lf["until_heavy"],
+                                 "until_ends": lf.get("until_ends", True)}
     arriving = [u for u in up if u["heavy_fallen"] and u["window"] and u["window"]["min"] <= ARRIVAL_WITHIN_H]
     heavy = [u for u in up if u["heavy_fallen"] or u["heavy_forecast"]]
     thai = [u["point"] for u in up if points[u["point"]].get("thai")]          # Cowork 24 Oct: Thai-side Golok points

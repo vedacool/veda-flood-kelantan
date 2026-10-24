@@ -44,7 +44,7 @@ BAND_NAMES = {  # JPS level names shown with every verdict (B-21)
     "warning": {"en": "Warning", "ms": "Amaran"},
     "danger": {"en": "Danger", "ms": "Bahaya"},
 }
-NOT_CHECKED = ["MetMalaysia warnings (used to pick the full path, not yet in the verdict)", "official warnings / evacuation orders (no source yet)",
+NOT_CHECKED = ["MetMalaysia warnings without a Waspada / Buruk / Bahaya level (rule A uses leveled rain warnings only)", "official warnings / evacuation orders (no source yet)",
                "step-down wait of 12-24 h (A3, needs a verdict history)",
                "JKR road closures and official PPS openings (no source; OSM shows possible PPS and bridges only)"]
 
@@ -199,7 +199,9 @@ def _met_warning(evidence):
                        + "; ".join(str(w.get("heading")) for w in other[:2]),
                        decision="no Waspada / Buruk / Bahaya level -> no minimum set (rule A)")
         return []
-    w, level, minimum = max(leveled, key=lambda x: LEVELS.index(x[2]))
+    # the highest minimum, then the highest level: Bahaya before Buruk (both PREPARE) - audit 24 Oct P3
+    order = [lv for lv, _, _ in reversed(MET_LEVELS)]
+    w, level, minimum = max(leveled, key=lambda x: (LEVELS.index(x[2]), order.index(x[1])))
     trace.step(AGENT, "forecast.met_warning", output_summary=f"rain warning ({level.capitalize()}) → minimum {minimum}",
                input_summary=w.get("heading"), target_agent="Coordinator",
                decision="rule A (tentative, L11): an official MetMalaysia rain warning for this district sets a "
