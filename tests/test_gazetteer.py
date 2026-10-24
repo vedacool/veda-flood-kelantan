@@ -125,7 +125,8 @@ def test_result_carries_nearest_covered(offline, tmp_path):
     trace.end_run()
     r = loop.run("Is Kuala Besar safe?", quiet=True, log_dir=tmp_path, default_scene=True)
     out = main.result_json(r)
-    assert out["nearest_covered"] and set(out["nearest_covered"]) == {"place", "km"}
+    assert out["nearest_covered"] and set(out["nearest_covered"]) == {"place", "km", "from_place"}
+    assert out["nearest_covered"]["from_place"] == "Kuala Besar"
     r = loop.run("Is Tumpat safe?", quiet=True, log_dir=tmp_path, default_scene=True)
     assert main.result_json(r)["nearest_covered"] is None
     trace.start_run("gazetteer test", log_dir=tmp_path, quiet=True)

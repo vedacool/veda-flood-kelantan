@@ -186,7 +186,9 @@ def result_json(r):
     out["explanation_lang"] = expl.get("language") if expl else None
     # A6: a recognised Kelantan place VEDA does not cover yet -> the nearest covered town and how far (else None)
     near = (r.get("plan") or {}).get("nearest") if (r.get("plan") or {}).get("place_status") == "not_covered" else None
-    out["nearest_covered"] = {"place": near["name"], "km": near["km"]} if near else None
+    # from_place: the recognised place name the distance is measured from (a gazetteer name, never the question)
+    out["nearest_covered"] = ({"place": near["name"], "km": near["km"], "from_place": r["plan"].get("known")}
+                              if near else None)
     return out
 
 
