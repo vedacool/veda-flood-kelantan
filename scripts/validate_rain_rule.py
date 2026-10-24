@@ -27,7 +27,10 @@ POINTS_SQL = "SELECT location_id, point_key, station_key, name FROM veda_pg.rain
 # Reported river readings VEDA may use for Nov 2024 (news, cited - data/replay/nov2024_anchors.csv); for the Sg.
 # Kelantan towns there are none, so the lead time before Alert / Danger cannot be measured from VEDA's own data.
 CROSSINGS = {"rantau_panjang": "first report 26 Nov 08:00 already above Alert (8.27 m, Alert 7.0) and Warning (8.0); "
-                               "above Danger (9.0) by 27 Nov 19:30 (10.94 m) - exact crossing times not reported"}
+                               "above Danger (9.0) by 27 Nov 19:30 (10.94 m) - exact crossing times not reported",
+             "kota_bharu": "news REPORT times only (not crossing times, no lead time claimed): Bernama, dateline 27 Nov, "
+                           "published 28 Nov 01:10 - Tambatan D'Raja overflowing; RTM 28 Nov 11:08 and Bernama 28 Nov "
+                           "12:51 - APM Kelantan: above the danger level (sources: data/replay/README.md)"}
 
 
 def hourly_sql(table):

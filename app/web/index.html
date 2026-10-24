@@ -131,14 +131,14 @@
   <form id="ask">
     <label for="q" data-t="or_type"></label>
     <div class="ask">
-      <input id="q" maxlength="500" required aria-describedby="privacy">
+      <input id="q" maxlength="500" required aria-describedby="privacy-line">
       <button class="primary" type="submit" data-t="ask"></button>
     </div>
-    <p id="privacy" class="note" data-t="privacy"></p>
+    <p id="privacy-line" class="note"><span data-t="privacy_short"></span>
+      <button class="linkish" type="button" id="priv-more" aria-expanded="false" aria-controls="privacy" data-t="more"></button></p>
+    <p id="privacy" class="note" data-t="privacy" hidden></p>
   </form>
   <button class="sos" type="button" id="sos" data-t="sos"></button>
-  <label for="mode" data-t="data_label"></label>
-  <select id="mode"></select>
   <footer>
     <p data-t="footer"></p>
     <p data-t="credits_lead"></p>
@@ -147,6 +147,10 @@
        <a href="https://open-meteo.com/">Open-Meteo</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) ·
        © OpenStreetMap contributors (ODbL)</p>
     <p data-t="credits_replay"></p>
+    <div id="demo-box" hidden><!-- shown with ?demo=1, a ?replay= link, or offline (SAMPLE_MODE) -->
+      <button class="linkish" type="button" id="demo-link" aria-expanded="false" aria-controls="demo-pick" data-t="demo_data"></button>
+      <div id="demo-pick" hidden><label for="mode" data-t="data_label"></label><select id="mode"></select></div>
+    </div>
   </footer>
 </section>
 
@@ -181,6 +185,7 @@
       <div id="a-bar-box"></div></div>
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
       <p class="note" data-t="expl_note"></p></div>
+    <div class="card" id="a-water-box"><h2 data-t="water_detail"></h2><ul class="sources" id="a-water"></ul></div>
     <div class="card"><h2 data-t="sources"></h2><ul class="sources" id="a-sources"></ul></div>
     <button class="linkish" type="button" id="a-how" data-t="how_link"></button>
   </div>
@@ -235,6 +240,8 @@ const UI = {
     home_title: "Is my area at risk of flooding?", or_type: "Or type a question", ask: "Ask",
     privacy: "Please don't type names, IC, phone numbers or addresses. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked.",
     sos: "I'm stranded / in danger", data_label: "Data",
+    privacy_short: "Your question stays private ·", more: "more ›", less: "less ‹", demo_data: "Demo data",
+    water_detail: "Water in detail",
     footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
     credits_lead: "River levels: Jabatan Pengairan dan Saliran (JPS) Malaysia, read live on this machine and used for non-commercial public-safety research. Also:",
     credits_replay: "Past flood replay (Nov 2024): readings as reported by Bernama and Kosmo, citing JPS. Made-up test scenes use invented readings.",
@@ -270,6 +277,8 @@ const UI = {
     home_title: "Adakah kawasan saya berisiko banjir?", or_type: "Atau taip soalan", ask: "Tanya",
     privacy: "Jangan taip nama, IC, nombor telefon atau alamat. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.",
     sos: "Saya terkandas / dalam bahaya", data_label: "Data",
+    privacy_short: "Soalan anda kekal peribadi ·", more: "lagi ›", less: "kurang ‹", demo_data: "Data demo",
+    water_detail: "Air secara terperinci",
     footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
     credits_lead: "Paras sungai: Jabatan Pengairan dan Saliran (JPS) Malaysia, dibaca secara langsung di komputer ini dan digunakan untuk penyelidikan keselamatan awam bukan komersial. Juga:",
     credits_replay: "Ulang tayang banjir lalu (Nov 2024): bacaan seperti yang dilaporkan oleh Bernama dan Kosmo, memetik JPS. Senario ujian rekaan menggunakan bacaan rekaan.",
@@ -337,6 +346,7 @@ function show(id) {
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  $("priv-more").textContent = t($("privacy").hidden ? "more" : "less");
   document.querySelectorAll("[data-t-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.tLabel)); el.title = t(el.dataset.tLabel); });
   document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   $("q").placeholder = UI[lang].q_default.replace("{town}", "Tumpat");
@@ -523,7 +533,9 @@ function renderAnswer() {
   $("a-line").textContent = v.line[lang];
   $("a-todo").textContent = v.todo[lang];
   let rows = "";
-  if (v.water) rows += rowHtml(t("water"), v.water[lang].main, v.water[lang].compare);
+  if (v.water) rows += rowHtml(t("water"), v.water[lang].main, "");           // one plain sentence; numbers in Details
+  $("a-water-box").hidden = !v.water;
+  if (v.water) $("a-water").innerHTML = v.water[lang].detail.map((x) => `<li>${esc(x)}</li>`).join("");
   if (v.upstream[lang].length) rows += rowHtml(t("upstream"), v.upstream[lang][0], v.upstream[lang].slice(1).join(" "));
   const more = (v.rain_more && v.rain_more[lang]) || [];      // B-88: heavy rain here, until when, small rivers, Thailand
   rows += rowHtml(t("rain"), v.rain ? v.rain[lang] : (more[0] || t("no_rain")), (v.rain ? more : more.slice(1)).join(" "));
@@ -599,6 +611,13 @@ $("aa").addEventListener("click", () => {
 $("home-link").addEventListener("click", () => { stopSpeaking(); show("s-home"); });
 $("ask").addEventListener("submit", (ev) => { ev.preventDefault(); if ($("q").value.trim()) ask($("q").value.trim(), ""); });
 $("sos").addEventListener("click", () => show("s-sos"));
+function toggle(btn, box, open, closed) {
+  box.hidden = !box.hidden;
+  btn.setAttribute("aria-expanded", String(!box.hidden));
+  btn.textContent = t(box.hidden ? closed : open);
+}
+$("priv-more").addEventListener("click", () => toggle($("priv-more"), $("privacy"), "less", "more"));
+$("demo-link").addEventListener("click", () => toggle($("demo-link"), $("demo-pick"), "demo_data", "demo_data"));
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
   $("log").hidden = !$("log").hidden;
@@ -635,10 +654,14 @@ applyLang();
 // ran on live data although the link asked for a past flood); applyLang keeps the choice when /health re-renders it
 const want = params.get("replay") ? `${params.get("replay")}|${params.get("at") || ""}` : null;
 if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").value = want;
+// Cowork 24 Oct: the data / scene picker is for demos only - ?demo=1, a ?replay= link, or offline (SAMPLE_MODE)
+const demo = () => { $("demo-box").hidden = !(params.get("demo") === "1" || want || sampleMode); };
+demo();
 fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
 fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
   applyLang();
+  demo();
 }).catch(() => {});
 </script>
 </body>

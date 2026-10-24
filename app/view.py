@@ -212,10 +212,38 @@ def _trend(card, forecast):
     return "steady" if abs(mid) < 0.005 else "rising" if mid > 0 else "falling"
 
 
+RIVER_RULES = ("level>=", "danger<=", "alert<=", "no-trigger", "rising-fast")
+SET_BY = {  # Cowork 24 Oct: the line under the badge says what SET the verdict (never a river line that reads as a
+    # contradiction when rain or the river upstream raised it)
+    "rain_both": {"en": "Heavy rain upstream is on its way, and it is raining hard here.",
+                  "ms": "Hujan lebat dari hulu sedang menuju ke sini, dan hujan turun dengan lebat di sini."},
+    "rain_up": {"en": "Heavy rain has fallen upstream, and the water may come this way.",
+                "ms": "Hujan lebat telah turun di hulu, dan airnya mungkin mengalir ke sini."},
+    "upstream_gauge": {"en": "The river upstream is high, and the water may be on its way.",
+                       "ms": "Sungai di hulu tinggi, dan airnya mungkin sedang menuju ke sini."},
+    "rain_forecast": {"en": "Heavy rain is forecast.", "ms": "Hujan lebat dijangka."},
+}
+
+
+def set_by(forecast):
+    """Which kind of source set the verdict: 'river' (this town's river), 'upstream_gauge', 'rain_up', 'rain_both' or
+    'rain_forecast' - from the triggers at the verdict's level (rising-fast belongs to the town's river)."""
+    fc = forecast or {}
+    top = [t["rule"] for t in fc.get("triggers") or [] if t["level"] == fc.get("verdict")]
+    if not top or any(r.startswith(RIVER_RULES) for r in top):
+        return "river"
+    r = top[0]
+    return ("rain_both" if r == "upstream+local-rain" else "rain_up" if r == "upstream-rain" else
+            "upstream_gauge" if r.startswith("sentinel") else "rain_forecast" if r.startswith("rain") else "river")
+
+
 def _line(card, forecast, lang):
-    """The one line under the verdict badge."""
+    """The one line under the verdict badge: the reason that set the verdict, in plain words."""
     if card["verdict"] == "INSUFFICIENT_DATA" or not card.get("gauge"):
         return W["no_reading_past"][lang] if card.get("replay") else W["cant_confirm"][lang]
+    by = set_by(forecast)
+    if by != "river":
+        return SET_BY[by][lang]
     comp, th = card.get("comparison") or {}, card.get("thresholds") or {}
     if comp.get("danger") is not None and comp["danger"] >= 0:
         key = "danger"
@@ -257,7 +285,44 @@ def _water(card, forecast, evidence, lang):
         if d is not None:
             compare.append(W["vs_level"][lang].format(d=_num(abs(d)), side=W["above" if d >= 0 else "below"][lang],
                                                       name=LEVEL[key][lang], t=_num(card["thresholds"][key])))
-    return {"main": " · ".join(parts), "compare": "; ".join(compare)}
+    # Cowork 24 Oct: the row says ONE plain thing; the numbers above go to Details ("Water in detail")
+    return {"main": _water_plain(card, forecast, lang), "detail": [" · ".join(parts)] + compare}
+
+
+WP = {
+    "rising": {"en": "Rising about {r} cm an hour.", "ms": "Naik kira-kira {r} cm sejam."},
+    "falling": {"en": "Falling about {r} cm an hour.", "ms": "Turun kira-kira {r} cm sejam."},
+    "steady": {"en": "Steady.", "ms": "Stabil."},
+    "tidal": {"en": "The sea tide moves this river, so we don't show a trend.",
+              "ms": "Pasang surut laut menggerakkan sungai ini, jadi kami tidak menunjukkan trend."},
+    "over_danger": {"en": "Already {d} m over the danger mark.", "ms": "Sudah {d} m melebihi paras bahaya."},
+    "over_alert": {"en": "Over the alert mark, {d} m under the danger mark.",
+                   "ms": "Melebihi paras waspada, {d} m di bawah paras bahaya."},
+    "under_alert": {"en": "{d} m under the alert mark.", "ms": "{d} m di bawah paras waspada."},
+    "calm": {"en": "Calm, below the alert mark.", "ms": "Tenang, di bawah paras waspada."},
+}
+
+
+def _water_plain(card, forecast, lang):
+    """The Water row in plain words: how it moves, and where it stands against the alert / danger marks."""
+    comp = card.get("comparison") or {}
+    d_alert, d_danger = comp.get("alert"), comp.get("danger")
+    if d_danger is not None and d_danger >= 0:
+        where = WP["over_danger"][lang].format(d=_num(d_danger))
+    elif d_alert is not None and d_alert >= 0:
+        where = WP["over_alert"][lang].format(d=_num(abs(d_danger))) if d_danger is not None else ""
+    else:
+        where = None                                                   # below the alert mark (or no marks)
+    if card.get("tidal"):
+        return WP["tidal"][lang] + (f" {where}" if where else "")
+    trend, rate = _trend(card, forecast), _rate(forecast)
+    if where is None and trend != "rising":
+        return WP["calm"][lang] if d_alert is not None else WP["steady"][lang]
+    move = (WP[trend][lang].format(r=_range_cm(rate["min"], rate["max"])) if trend in ("rising", "falling")
+            else WP["steady"][lang] if trend else "")
+    if where is None:
+        where = WP["under_alert"][lang].format(d=_num(abs(d_alert))) if d_alert is not None else ""
+    return " ".join(x for x in (move, where) if x)
 
 
 def _upstream(forecast, lang):

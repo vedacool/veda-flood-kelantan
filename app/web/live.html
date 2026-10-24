@@ -70,6 +70,7 @@
 <body>
 <header>
   <h1>VEDA · live log</h1>
+  <span class="note">The question itself is never shown here.</span>
   <a href="/">← Ask a question</a>
 </header>
 <div class="wrap">
@@ -88,7 +89,7 @@
   <aside><div class="panel">
     <h2>Who is working</h2>
     <ul class="who" id="who"></ul>
-    <p class="note">Word for word from the trace (<code>logs/trace-&lt;run_id&gt;.jsonl</code>). The user's question is not shown.</p>
+    <p class="note">Word for word from the trace (<code>logs/trace-&lt;run_id&gt;.jsonl</code>).</p>
   </div></aside>
 </div>
 <script>
@@ -99,7 +100,8 @@ const AGENTS = [  // name in the trace -> colour token
   ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];
 const COLOUR = Object.fromEntries(AGENTS);
 const NEMOTRON = "Nemotron 3.5 Super VL";
-const REQUESTS = ["critic.request", "data.request", "verdict.recomputed"];   // agents asking each other, shown apart
+const HIDDEN = /^\(the question is not shown/;           // said once in the header instead of on every bubble
+const REQUESTS =["critic.request", "data.request", "verdict.recomputed"];   // agents asking each other, shown apart
 let mode = "live", speed = 1, t0 = null, timer = null, source = null, waitEl = null, recorded = null, runTs0 = null;
 
 function whoPanel() {
@@ -165,7 +167,7 @@ function add(rec) {
   if (request) top.append(el("span", "tag req-tag", "request"));
   top.append(el("span", "clock", clockText(rec)));
   li.append(top);
-  if (rec.input_summary) li.append(el("p", "inp", "in: " + rec.input_summary));
+  if (rec.input_summary && !HIDDEN.test(rec.input_summary)) li.append(el("p", "inp", "in: " + rec.input_summary));
   if (rec.output_summary) li.append(el("p", "out", rec.output_summary));
   if (rec.decision) li.append(el("p", "dec", rec.decision));
   const d = rec.details || {};

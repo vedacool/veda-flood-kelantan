@@ -38,7 +38,7 @@ def _public_strings(v, lang):
     wording for live data - it is checked separately)."""
     out = [v["headline"][lang], v["line"][lang], v["todo"][lang], v["why"][lang]] + v["upstream"][lang]
     if v["water"]:
-        out += [v["water"][lang]["main"], v["water"][lang]["compare"]]
+        out += [v["water"][lang]["main"]] + v["water"][lang]["detail"]
     if v["rain"]:
         out.append(v["rain"][lang])
     if v["label"]:
@@ -83,11 +83,11 @@ def test_labels_say_replay_or_made_up(views):
     assert views["nov2024"][1]["label"]["en"].startswith("Past flood replay")
     assert views["nov2024"][1]["strip"]["en"] == ("✓ Double-checked · combined from 2 sources: river here, rain"
                                                   " · 2 left out")
-    assert "(reading reported in the news)" in views["nov2024"][1]["water"]["en"]["main"]
+    assert "(reading reported in the news)" in views["nov2024"][1]["water"]["en"]["detail"][0]
     for key in ("synthetic_calm", "synthetic_rising", "synthetic_silent_upstream"):
         v = views[key][1]
         assert v["label"]["en"].startswith("Made-up test scene") and v["label"]["ms"].startswith("Senario ujian rekaan")
-        assert "(made-up test reading)" in v["water"]["en"]["main"] and v["synthetic"]
+        assert "(made-up test reading)" in v["water"]["en"]["detail"][0] and v["synthetic"]
 
 
 def test_rising_line_agrees_with_the_water_row(views):
@@ -96,7 +96,7 @@ def test_rising_line_agrees_with_the_water_row(views):
             continue
         main = v["water"]["en"]["main"]
         if "still rising" in v["line"]["en"]:
-            assert "rising" in main, main
+            assert main.startswith("Rising"), main
         if "about the same" in main:
             assert "rising" not in v["line"]["en"] and "falling" not in v["line"]["en"]
 
@@ -104,8 +104,11 @@ def test_rising_line_agrees_with_the_water_row(views):
 def test_act_replay_rows(views):
     v = views["nov2024"][1]
     assert v["verdict"] == "ACT" and v["line"]["en"] == "The river is 1.94 m above the danger level and still rising."
-    assert v["water"]["en"]["main"] == ("10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour"
-                                        " · up 35 cm in 3 hours")
+    assert v["water"]["en"]["main"] == "Rising about 12-15 cm an hour. Already 1.94 m over the danger mark."
+    assert v["water"]["en"]["detail"] == [
+        "10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour · up 35 cm in 3 hours",
+        "3.94 m above the alert level (7 m)", "1.94 m above the danger level (9 m)"]
+    assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras bahaya."
     assert v["combined"] is None                      # the river here alone already says Act now
     assert v["upstream"]["en"] == ["No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."]
     assert v["why"]["en"] == "The river is at or above the danger level."
@@ -249,3 +252,24 @@ def test_hide_question_keeps_a_place_name_that_is_only_part_of_it():
     q = "Is Rantau Panjang at risk of flooding right now?"
     v = view.hide_question({"input": "Rantau Panjang", "cut": q[:30] + "...", "copy": q[:-1]}, q, "X")
     assert v == {"input": "Rantau Panjang", "cut": "X", "copy": "X"}
+
+
+def test_line_under_the_badge_says_what_set_the_verdict(views):
+    """Cowork 24 Oct: never 'Get ready' over a calm-river line - the reason that set the verdict, in plain words."""
+    assert views["nov2024"][1]["line"]["en"] == "The river is 1.94 m above the danger level and still rising."
+    assert views["synthetic_silent_upstream"][1]["line"]["en"] == "The river upstream is high, and the water may be on its way."
+    fc = {"verdict": "PREPARE", "triggers": [{"level": "WATCH", "rule": "upstream-rain"},
+                                             {"level": "PREPARE", "rule": "upstream+local-rain"}]}
+    assert view.set_by(fc) == "rain_both"
+    assert view.SET_BY["rain_both"]["en"] == "Heavy rain upstream is on its way, and it is raining hard here."
+    assert view.set_by({"verdict": "PREPARE", "triggers": [{"level": "WATCH", "rule": "level>=alert"},
+                                                           {"level": "PREPARE", "rule": "rising-fast"}]}) == "river"
+
+
+def test_water_row_is_one_plain_sentence(views):
+    assert views["synthetic_calm"][1]["water"]["en"]["main"] == "The sea tide moves this river, so we don't show a trend."
+    card = {"comparison": {"alert": -1.0, "danger": -3.0}, "tidal": False}
+    fc = {"controlling": [{"role": "controlling", "rate_m_per_h": {"min": 0.0, "max": 0.002}}]}
+    assert view._water_plain(card, fc, "en") == "Calm, below the alert mark."
+    card["comparison"] = {"alert": 0.3, "danger": -0.7}
+    assert view._water_plain(card, fc, "en") == "Steady. Over the alert mark, 0.7 m under the danger mark."

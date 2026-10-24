@@ -345,6 +345,13 @@ fires), and for towns on Sg. Golok (Rantau Panjang, Tumpat): "Rain upstream in T
   Rantau Panjang never fires: its upstream is in Thailand (no rain point).
 - **Lead time:** VEDA cannot measure it yet. For Rantau Panjang the cited reports start on 26 Nov 08:00, already above
   Alert; for the Sg. Kelantan towns VEDA has no Nov 2024 river readings (JPS data is not redistributed).
+- **What the news reported (report times, not crossing times - no lead time is claimed):** in the Nov 2024 replay the
+  rule raised Kota Bharu at 10:00 on 27 Nov; that night the news reported the river at Kota Bharu overflowing.
+  Sources: Bernama, dateline Kota Bharu 27 Nov 2024, published 28 Nov 01:10 - Sungai Kelantan at Tambatan D'Raja
+  overflowing (https://web11.bernama.com/en/news.php?id=2368507; the site did not answer when we re-checked on 24 Oct
+  2026); RTM, 28 Nov 2024 11:08 - APM Kelantan: the river "telah melebihi paras bahaya" (https://berita.rtm.gov.my/?p=128138);
+  Bernama, Kota Bharu 28 Nov 2024 12:51 - APM Kelantan: the level "has exceeded the danger point"
+  (https://bernama.com/en/news.php?id=2368592). The last two were re-checked on 24 Oct 2026.
 - **14 ordinary days (1–14 Oct 2024):** the upstream rule fired for **1 hour** (4 Oct 18:00, Limau Kasturi); the
   "one level up" rule never fired.
 
@@ -358,7 +365,8 @@ Pasir Mas / Kota Bharu / Tumpat? Without them, rain at those points can only lif
 
 **L8.** Do you know the times Sg. Kelantan crossed Waspada / Bahaya at Pasir Mas, Kota Bharu (Tambatan Diraja) and
 Tumpat in Nov 2024 (a JPS or news source we can cite)? With them we can report how many hours of warning this rule
-would have given.
+would have given. (What we have so far is above: news REPORT times for Kota Bharu - 28 Nov 01:10, 11:08, 12:51 - not
+the times the river crossed.)
 > Answer: ______
 
 ---
