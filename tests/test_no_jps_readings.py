@@ -90,3 +90,16 @@ def test_publish_trace_redacts_readings_in_prompts_and_keeps_cited_values(tmp_pa
     assert out.name == f"2026-10-25_1015MYT_test_{rid}.trace.jsonl"
     assert "10.94" not in text and "1.94 m" not in text and "(9 m)" in text            # 9 m = the cited Danger level
     assert '"duration_ms": 12000' in text and "per organiser ruling 23 Oct" in text.splitlines()[0]
+
+
+def test_clock_fixture_is_the_exact_clock_query_whatever_the_file_order(tmp_path):
+    """Audit 24 Oct P1-4: other fixtures contain current_timestamp() too; on Linux the wrong one came first."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mss", ROOT / "scripts" / "make_synthetic_scenes.py")
+    mss = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mss)
+    (tmp_path / "0.json").write_text(json.dumps({"sql": "WITH clock AS (SELECT current_timestamp()) SELECT 1",
+                                                 "rows": [["0"]]}), encoding="utf-8")
+    (tmp_path / "1.json").write_text(json.dumps({"sql": "SELECT current_timestamp() AS now_utc",
+                                                 "rows": [["2026-10-22 13:33:08"]]}), encoding="utf-8")
+    assert mss.clock_fixture(tmp_path)["rows"][0][0] == "2026-10-22 13:33:08"

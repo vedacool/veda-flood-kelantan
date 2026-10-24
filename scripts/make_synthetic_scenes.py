@@ -184,10 +184,16 @@ def live_path_values(gauges, rnd):
     return vals
 
 
+def clock_fixture(folder=FIXTURES):
+    """The recorded clock: the fixture whose SQL is exactly the clock query. Other fixtures also contain
+    current_timestamp(), and glob order differs between file systems (audit 24 Oct, P1-4: a Linux clone failed)."""
+    docs = (json.loads(f.read_text(encoding="utf-8")) for f in sorted(folder.glob("*.json")))
+    return next(d for d in docs if " ".join(d.get("sql", "").split()) == "SELECT current_timestamp() AS now_utc")
+
+
 def write_fixtures(gauges, rnd, check):
-    clock_doc = json.loads(next(f for f in FIXTURES.glob("*.json") if "current_timestamp()" in
-                                f.read_text(encoding="utf-8")).read_text(encoding="utf-8"))
-    clock = datetime.fromisoformat(str(clock_doc["rows"][0][0]).split(".")[0]).replace(tzinfo=timezone.utc)
+    clock_doc = clock_fixture()
+    clock =datetime.fromisoformat(str(clock_doc["rows"][0][0]).split(".")[0]).replace(tzinfo=timezone.utc)
     vals = live_path_values(gauges, rnd)
     changed = []
     for path in sorted(FIXTURES.glob("*.json")):
