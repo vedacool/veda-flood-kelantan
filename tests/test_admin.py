@@ -89,3 +89,32 @@ def test_admin_page_is_self_contained():
     assert "Found by VEDA · waiting for a person" in page and "only facts written by code" in page
     assert "Sources · the network grows, with approval" in page and '"X-VEDA-Admin": "1"' in page
     assert not re.search(r'<(script|link)[^>]+(src|href)="https?:', page)
+
+
+def test_recent_answers_show_the_final_verdict_after_a_recompute(tmp_path, monkeypatch):
+    """Session B bug (24 Oct): the silent-upstream Pasir Mas run was listed NORMAL while the answer said WATCH."""
+    from datetime import datetime
+    from app import gazetteer, loop
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    monkeypatch.setattr(admin, "LOGS", tmp_path)
+    gazetteer.clear_cache()
+    r = loop.run("Pasir Mas banjir tak esok?", quiet=True, replay="synthetic_silent_upstream",
+                 at=datetime(2024, 6, 15, 10, 0, tzinfo=config.MYT), log_dir=tmp_path)
+    gazetteer.clear_cache()
+    assert r["forecast"]["verdict"] == "WATCH"
+    end = [json.loads(x) for x in open(r["trace"], encoding="utf-8")][-1]
+    assert end["action"] == "run_end" and end["details"]["verdict"] == "WATCH"
+    assert end["details"]["first_verdict"] == "NORMAL" and end["details"]["recomputed_from"] == "NORMAL"
+    row = admin.summary(tmp_path / f"trace-{r['run_id']}.jsonl")
+    assert row["verdict"] == "WATCH" and row["recomputed_from"] == "NORMAL"
+
+
+def test_old_traces_without_run_end_verdict_use_the_last_verdict_line(tmp_path):
+    lines = [{"action": "run_start", "run_id": "r", "timestamp": "2026-10-24T01:00:00Z"},
+             {"action": "forecast.verdict", "input_summary": "Pasir Mas", "output_summary": "NORMAL (confidence high, 0.85)"},
+             {"action": "forecast.verdict", "input_summary": "Pasir Mas", "output_summary": "WATCH (confidence high, 0.8)"},
+             {"action": "run_end", "status": "success", "details": {"ai_fallbacks": []}}]
+    p = tmp_path / "trace-old.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in lines) + "\n", encoding="utf-8")
+    row = admin.summary(p)
+    assert row["verdict"] == "WATCH" and row["recomputed_from"] == "NORMAL"

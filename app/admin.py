@@ -97,13 +97,17 @@ def summary(path):
     by = {}
     for r in recs:
         by.setdefault(r["action"], r)
-    verdict = (by.get("forecast.verdict") or {}).get("output_summary") or ""
     end = next((r for r in reversed(recs) if r["action"] == "run_end"), {})
+    # the FINAL verdict: run_end says it (from 25 Oct); older traces -> the LAST forecast.verdict line, never the first
+    verdicts = [(r.get("output_summary") or "").split(" ")[0] for r in recs if r["action"] == "forecast.verdict"]
+    final = (end.get("details") or {}).get("verdict") or (verdicts[-1] if verdicts else None)
+    first = (end.get("details") or {}).get("first_verdict") or (verdicts[0] if verdicts else None)
     timing = ((by.get("timing") or {}).get("details") or {}).get("timing") or {}
     ai = [r for r in recs if r["action"] == "nightshift.chat" and r.get("status") == "success"]
     return {"run_id": recs[0]["run_id"], "started": _myt(recs[0]["timestamp"]), "mode": recs[0].get("mode"),
             "place": (by.get("forecast.verdict") or {}).get("input_summary"),
-            "verdict": verdict.split(" ")[0] if verdict else None, "seconds": timing.get("total"),
+            "verdict": final, "recomputed_from": first if first and final and first != final else None,
+            "seconds": timing.get("total"),
             "ai_calls": len(ai), "ai_fallbacks": (end.get("details") or {}).get("ai_fallbacks") or [],
             "status": end.get("status") or "unfinished",
             "replay": ((by.get("replay") or {}).get("output_summary"))}

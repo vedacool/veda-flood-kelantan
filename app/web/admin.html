@@ -154,7 +154,7 @@ async function overview() {
     if (r.ok) overview();
   }));
   $("recent").innerHTML = o.recent.map((x) => `<tr>${cell(`<a href="/admin?run=${esc(x.run_id)}">${esc(x.run_id)}</a>`, esc(x.started),
-    esc(x.place), esc(x.verdict), esc(x.replay || (x.mode === "live" ? "live" : x.mode)), esc(x.seconds ?? "-"),
+    esc(x.place), esc(x.verdict) + (x.recomputed_from ? ` <span class="muted">(recomputed from ${esc(x.recomputed_from)})</span>` : ""), esc(x.replay || (x.mode === "live" ? "live" : x.mode)), esc(x.seconds ?? "-"),
     x.ai_fallbacks.length ? `<span class="warn">fallback: ${esc(x.ai_fallbacks.join("; "))}</span>` : esc(x.ai_calls + " call(s)"))}</tr>`).join("");
 }
 
@@ -163,7 +163,7 @@ async function runDetail(id) {
   const d = await get("/admin/api/run/" + encodeURIComponent(id));
   const s = d.run || {};
   $("r-title").textContent = `Run ${id}`;
-  $("r-sum").textContent = `${s.started || ""} · ${s.place || "-"} · ${s.verdict || "-"} · ${s.replay || s.mode || ""} · ${s.seconds ?? "-"} s · ${s.status || ""}`;
+  $("r-sum").textContent = `${s.started || ""} · ${s.place || "-"} · ${s.verdict || "-"}${s.recomputed_from ? ` (recomputed from ${s.recomputed_from})` : ""} · ${s.replay || s.mode || ""} · ${s.seconds ?? "-"} s · ${s.status || ""}`;
   $("r-live").href = "/live?run=" + encodeURIComponent(id);
   $("r-ai").innerHTML = d.ai.map((a) => `<tr>${cell(a.step, esc(a.agent), `<code>${esc(a.requested || "-")}</code>`,
     `<code>${esc(a.served || "-")}</code>`, esc(a.receipt || "-"), a.seconds,

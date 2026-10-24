@@ -79,6 +79,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                             "are labelled", details={"scenario": replay, "at": at.isoformat()})
     world = world or open_world(run_.run_id)
     state, p, evidence, fc, card, answer, status = "plan", None, None, None, None, None, "success"
+    first_verdict = None
     reviews, timing, budget = [], {}, None
     pool = ThreadPoolExecutor(max_workers=1)
     pre = pool.submit(trace.bind(data_agent.prefetch), world, now, replay)    # world refresh while code routes
@@ -158,6 +159,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
             elif state == "forecast":
                 old = fc["verdict"] if fc else None
                 fc = forecast_agent.forecast(p, evidence, world)
+                first_verdict = first_verdict or fc["verdict"]           # run_end says the final AND the first
                 if old is not None:                       # B-71(b): back here after the Critic's request
                     trace.step("System", "verdict.recomputed", input_summary="new source from the Data & Reconciler",
                                output_summary=f"verdict recomputed after the Critic's request: {old} → {fc['verdict']}",
@@ -237,7 +239,10 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         except Exception:                    # its own failure is already in the trace
             pass
         pool.shutdown()
-        path = trace.end_run(status, (answer or {}).get("text"))
+        final = (fc or {}).get("verdict")                 # the FINAL verdict (after any recompute / minimum / rule)
+        path = trace.end_run(status, (answer or {}).get("text"), details={
+            "verdict": final, "first_verdict": first_verdict,
+            "recomputed_from": first_verdict if final and first_verdict and final != first_verdict else None})
         if own_world:
             world.close()
     return {"run_id": run_.run_id, "status": status, "answer": answer, "plan": p, "evidence": evidence,

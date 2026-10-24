@@ -198,8 +198,9 @@ def ai_fallback(agent, what, reason):
                 details={"what": what, "reason": summarize(reason, 300)})
 
 
-def end_run(status="success", output_summary=None):
-    """Write the run_end line and clear the current run. Returns the trace file path."""
+def end_run(status="success", output_summary=None, details=None):
+    """Write the run_end line and clear the current run. Returns the trace file path. details are added to the
+    line (the loop adds the final verdict and, when it changed, the first one)."""
     run = _current.get()
     if run is None:
         raise RuntimeError("trace.end_run() called without an active run")
@@ -208,7 +209,7 @@ def end_run(status="success", output_summary=None):
     try:
         step("System", "run_end", output_summary=output_summary or f"Run finished after {run.step} steps",
              status=status, decision=("AI fallback used: " + "; ".join(run.fallbacks)) if run.fallbacks
-             else "no AI fallback in this run", details={"ai_fallbacks": list(run.fallbacks)})
+             else "no AI fallback in this run", details={"ai_fallbacks": list(run.fallbacks), **(details or {})})
     finally:
         _current.set(None)
     return run.path
