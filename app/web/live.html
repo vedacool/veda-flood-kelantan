@@ -120,11 +120,12 @@
 const $ = (id) => document.getElementById(id);
 // The two public header lines follow the main page's EN | BM toggle (wording review 24 Oct); the log stays English.
 const HEAD = {
-  en: { hint: "Press play to watch each agent step, recorded live.",
+  en: { hint: "Press play to watch each agent step, recorded live.", live: "Live", replay: "Replay", play: "Play ▶",
         redacted: "River readings are hidden, as the organisers asked. Details ▾",
         note: "The question itself is never shown here.",
         waiting: "Waiting for a question… Ask one on VEDA's main page and every step appears here as it happens." },
-  ms: { hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.",
+  ms: { hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.", live: "Langsung", replay: "Ulang tayang",
+        play: "Main ▶",
         redacted: "Bacaan sungai disembunyikan, seperti yang diminta penganjur. Butiran ▾",
         note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
         waiting: "Menunggu soalan… Tanya di halaman utama VEDA dan setiap langkah akan muncul di sini ketika ia berlaku." },
@@ -160,6 +161,8 @@ function applyHeadLang() {
   labelRuns();
   $("h-note").textContent = h.note; $("h-note").lang = pageLang();
   $("hint").textContent = h.hint; $("hint").lang = pageLang();
+  // B-100: the controls in the page's language (the 1× / 4× labels are the same in both)
+  $("b-live").textContent = h.live; $("b-replay").textContent = h.replay; $("b-play").textContent = h.play;
   if (Object.values(HEAD).some((x) => x.waiting === $("status").textContent)) $("status").textContent = h.waiting;
 }
 window.addEventListener("storage", (e) => { if (e.key === "veda.lang") applyHeadLang(); });

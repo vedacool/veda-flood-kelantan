@@ -11,8 +11,9 @@ import pytest
 from app import card
 from app.agents import coordinator, critic
 
+# made-up level (no real JPS reading in the repo, B-75)
 GAUGE = {"station": "station:jps:_DPMS0003", "name": "Sg. Golok di Rantau Panjang (F1)", "role": "controlling",
-         "level_m": [JPS reading], "band": "alert", "observed_at": "2026-10-22T12:45:00Z", "age_minutes": 16,
+         "level_m": 7.25, "band": "alert", "observed_at": "2026-10-22T12:45:00Z", "age_minutes": 16,
          "freshness": "fresh", "health": {"ok": True},
          "thresholds": {"normal_m": 5.0, "alert_m": 7.0, "warning_m": 8.0, "danger_m": 9.0}}
 EVIDENCE = {"place": {"name": "Rantau Panjang"}, "usable": True, "clock": "2026-10-22T13:00:00Z",
@@ -60,9 +61,9 @@ def test_act_advice_never_sends_people_into_water():
 def test_english_card_reads_in_order():
     lines = card.render(build(), "en").split("\n")
     assert lines[1] == "Rantau Panjang: WATCH - JPS level Alert"
-    assert lines[2] == ("River: [JPS reading] m at 22 Oct 20:45 (Sg. Golok di Rantau Panjang (F1)); [distance] above Alert (7 m), "
-                        "[distance] below Danger (9 m), [distance] below the Nov 2024 (29 Nov) peak (11.43 m).")
-    assert lines[3] == "Compared with 2014: 3.75 m below the Dec 2014 peak here (10.84 m)."
+    assert lines[2] == ("River: 7.25 m at 22 Oct 20:45 (Sg. Golok di Rantau Panjang (F1)); 0.25 m above Alert (7 m), "
+                        "1.75 m below Danger (9 m), 4.18 m below the Nov 2024 (29 Nov) peak (11.43 m).")
+    assert lines[3] == "Compared with 2014: 3.59 m below the Dec 2014 peak here (10.84 m)."
     assert lines[4] == "Next 24 h: 6.9-7.4 m (if it keeps changing at this rate). Confidence: high."
     assert lines[5] == "Rain next 24 h: 10.9 mm (Open-Meteo)."
     assert lines[6] == "Sources: JPS 16 min ago; Open-Meteo 2 h ago; MetMalaysia forecast for today."
@@ -73,8 +74,8 @@ def test_malay_card_reads_in_order():
     lines = card.render(build(), "ms").split("\n")
     assert lines[0].startswith("APA PERLU DIBUAT SEKARANG: Semak semula dalam 3 jam")
     assert lines[1] == "Rantau Panjang: BERJAGA-JAGA - paras JPS Waspada"
-    assert "[distance] di atas Waspada (7 m), [distance] di bawah Bahaya (9 m)" in lines[2]
-    assert lines[3] == "Berbanding 2014: 3.75 m di bawah puncak Dis 2014 di sini (10.84 m)."
+    assert "0.25 m di atas Waspada (7 m), 1.75 m di bawah Bahaya (9 m)" in lines[2]
+    assert lines[3] == "Berbanding 2014: 3.59 m di bawah puncak Dis 2014 di sini (10.84 m)."
     assert lines[4] == "24 jam akan datang: 6.9-7.4 m (jika terus berubah pada kadar ini). Keyakinan: tinggi."
     assert lines[-1].startswith("Diketepikan: amaran banjir data.gov.my (sudah lama tidak dikemas kini")
 
@@ -106,7 +107,7 @@ def test_card_fits_a_whatsapp_message(verdict, lang):
 # -- explanation check (Husaini: every number must be in the card) --------------------------------------------
 @pytest.mark.parametrize("text, problem", [
     ("The river passed the Alert level of 7 m a short while ago.", None),
-    ("Paras sungai [JPS reading] m, sedikit di atas paras Waspada 7.0 m.", None),          # 7.0 = 7 by value
+    ("Paras sungai 7.25 m, sedikit di atas paras Waspada 7.0 m.", None),          # 7.0 = 7 by value
     ("The river may reach 8.5 m tonight.", "not in the card"),
     ("This is a PREPARE situation.", "not the card's"),
     ("", "empty"),
@@ -165,7 +166,7 @@ def test_place_replies_in_the_users_language(r, lang, expected):
 
 
 def test_numbers_are_compared_by_value():
-    assert {7.0, [JPS reading], 9.0} <= card.numbers(build())
+    assert {7.0, 7.25, 9.0} <= card.numbers(build())
     assert not re.search(r"\d", card.place_reply(res("not_covered"), "en"))
 
 
@@ -235,10 +236,10 @@ def test_short_gauge_name():
 def test_key_facts_are_words_without_minus_signs():
     c = build(verdict="WATCH")
     ms = card.key_facts(c, None, "ms")
-    assert ms["vs_alert"] == "[distance] di atas paras Waspada (7 m)" and ms["vs_danger"].startswith("[distance] di bawah paras Bahaya")
+    assert ms["vs_alert"] == "0.25 m di atas paras Waspada (7 m)" and ms["vs_danger"].startswith("1.75 m di bawah paras Bahaya")
     assert ms["verdict"] == "BERJAGA-JAGA" and ms["jps_level"] == "Waspada"
     en = card.key_facts(c, None, "en")
-    assert en["vs_danger"] == "[distance] below the Danger level (9 m)"
+    assert en["vs_danger"] == "1.75 m below the Danger level (9 m)"
     for facts in (ms, en):
         text = json.dumps(facts, ensure_ascii=False)
         assert "-0." not in text and "-1." not in text and "rule" not in text.lower()
@@ -248,7 +249,7 @@ def test_key_facts_are_words_without_minus_signs():
 @pytest.mark.parametrize("text, lang, problem", [
     ("Tahap air di bawah alarm, tidak ada aturan lain aktif.", "ms", "Indonesian word"),
     ("Penduduk bisa mengungsi ke rumah sakit.", "ms", "Indonesian word"),
-    ("Sungai [distance] di atas paras Waspada (7 m); keadaan masih aman di rumah.", "ms", None),   # 'aman', 'Waspada' ok
+    ("Sungai 0.25 m di atas paras Waspada (7 m); keadaan masih aman di rumah.", "ms", None),   # 'aman', 'Waspada' ok
     ("The river is -0.57 m from Alert.", "en", "minus sign"),
     ("Next 24 h stays near 6.9-7.4 m.", "en", None),                                         # a range dash is fine
     ("No rule was triggered for this verdict.", "en", "internal term"),
