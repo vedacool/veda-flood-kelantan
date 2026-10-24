@@ -245,7 +245,7 @@ def test_draft_gets_key_facts_intent_and_user_type(offline, force):
 def test_trapped_with_a_known_place_gets_act_advice_whatever_the_river(offline):
     r = loop.run("Saya terkandas di Tumpat, air keliling rumah", llm=stub(), log_dir=offline, quiet=True)
     lines_ = r["answer"]["text"].split("\n")
-    assert lines_[0] == "Anda terkandas: utamakan keselamatan."                     # labelled, safety first
+    assert lines_[0] == "Jika anda terkandas: utamakan keselamatan dahulu."                   # labelled, safety first
     assert "Jika terkandas: kekal di tempat tinggi" in lines_[1] and "999 / 991" in lines_[1]
     if r["forecast"]["verdict"] == "NORMAL":                                       # no contradiction on the card
         assert "Paras sungai normal, tetapi banjir setempat masih boleh memerangkap anda." in lines_
@@ -260,4 +260,4 @@ def test_trapped_label_stays_when_the_verdict_is_already_act(offline):
     r = loop.run("Saya terkandas di Rantau Panjang, air keliling rumah", llm=stub(), log_dir=offline, quiet=True,
                  replay="synthetic_rising", at=datetime(2024, 11, 25, 18, 0, tzinfo=config.MYT))
     assert r["forecast"]["verdict"] == "ACT"
-    assert "Anda terkandas: utamakan keselamatan." in r["answer"]["text"].split("\n")
+    assert "Jika anda terkandas: utamakan keselamatan dahulu." in r["answer"]["text"].split("\n")

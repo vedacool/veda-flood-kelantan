@@ -108,7 +108,7 @@ def test_act_replay_rows(views):
     assert v["water"]["en"]["detail"] == [
         "10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour · up 35 cm in 3 hours",
         "3.94 m above the alert level (7 m)", "1.94 m above the danger level (9 m)"]
-    assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras bahaya."
+    assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras Bahaya."
     assert v["combined"] is None                      # the river here alone already says Act now
     assert v["upstream"]["en"][0].startswith("Heavy rain upstream: Buke Ta (Waeng; Thailand)")      # Thai-side rain
     assert v["upstream"]["en"][1] == "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."

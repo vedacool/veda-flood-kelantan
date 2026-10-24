@@ -269,16 +269,17 @@ const UI = {
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
     answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
-    ai_failed: "AI step not used", fallbacks: "AI fallbacks in this run",
+    ai_failed: "AI step not used", fallbacks: "AI steps replaced by code in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
+    empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
     level_now: "Now", alert: "Alert", warning: "Warning", danger: "Danger", m: "m",
   },
   ms: {
     home_title: "Adakah kawasan saya berisiko banjir?", or_type: "Atau taip soalan", ask: "Tanya",
-    privacy: "Jangan taip nama, IC, nombor telefon atau alamat. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.",
+    privacy: "Mohon jangan taip nama, IC, nombor telefon atau alamat. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.",
     sos: "Saya terkandas / dalam bahaya", data_label: "Data",
     privacy_short: "Soalan anda kekal peribadi ·", more: "lagi ›", less: "kurang ‹", demo_data: "Data demo",
-    water_detail: "Air secara terperinci",
+    water_detail: "Butiran paras air",
     footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
     credits_lead: "Paras sungai: Jabatan Pengairan dan Saliran (JPS) Malaysia, dibaca secara langsung di komputer ini dan digunakan untuk penyelidikan keselamatan awam bukan komersial. Juga:",
     credits_replay: "Ulang tayang banjir lalu (Nov 2024): bacaan seperti yang dilaporkan oleh Bernama dan Kosmo, memetik JPS. Senario ujian rekaan menggunakan bacaan rekaan.",
@@ -292,7 +293,7 @@ const UI = {
     share_note: "Hanya jawapan dikongsi - soalan anda tidak dikongsi.", back: "Kembali",
     sos_title: "Jika anda terkandas atau dalam bahaya", call999: "Hubungi 999", call991: "Hubungi APM 991",
     bigger: "Teks lebih besar", tip_label: "Petua", warn_label: "Amaran MetMalaysia",
-    live: "Langsung sekarang", past: "Banjir lalu", madeup: "Ujian rekaan",
+    live: "Data semasa", past: "Banjir lalu", madeup: "Ujian rekaan",
     q_default: "Adakah {town} berisiko banjir sekarang?", town_hint: "Semak sekarang",
     s_start: "Bermula…", s_plan: "Memahami soalan anda…", s_gather: "Membaca paras sungai, hujan dan amaran…",
     s_forecast: "Menilai risiko…", s_draft: "Menulis jawapan…", s_critique: "Menyemak semula jawapan…",
@@ -306,8 +307,9 @@ const UI = {
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
     answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
-    ai_failed: "Langkah AI tidak digunakan", fallbacks: "Sandaran AI dalam larian ini",
-    no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - cuba lagi sebentar lagi.",
+    ai_failed: "Langkah AI tidak digunakan", fallbacks: "Langkah AI yang diganti dengan kod",
+    no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
+    empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
     level_now: "Kini", alert: "Waspada", warning: "Amaran", danger: "Bahaya", m: "m",
   },
 };
@@ -336,6 +338,9 @@ const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) 
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
 const t = (key) => UI[lang][key];
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// English words kept in BM text are shown in italics (wording review 24 Oct)
+const EN_IN_BM = /\bpower bank\b/g;
+const escBm = (s) => lang === "ms" ? esc(s).replace(EN_IN_BM, (w) => `<i lang="en">${w}</i>`) : esc(s);
 
 function show(id) {
   ["s-home", "s-wait", "s-answer", "s-share", "s-sos", "s-how"].forEach((s) => { $(s).hidden = s !== id; });
@@ -427,6 +432,8 @@ async function ask(question, town) {
       const body = await res.json().catch(() => ({}));
       if (res.status === 429) throw new Error(t("busy"));
       if (res.status >= 500) throw new Down();
+      const code = body.error && body.error.code;             // the two input errors read in the page language
+      if (code === "empty_question" || code === "question_too_long") throw new Error(t(code));
       throw new Error((body.error && body.error.message) || ("HTTP " + res.status));
     }
     const reader = res.body.getReader(), dec = new TextDecoder();
@@ -531,7 +538,7 @@ function renderAnswer() {
   $("a-badge").setAttribute("aria-label", v.headline[lang]);
   $("a-badge").innerHTML = `<svg viewBox="0 0 40 40" aria-hidden="true">${ICON[v.verdict]}</svg><span>${esc(v.headline[lang])}</span>`;
   $("a-line").textContent = v.line[lang];
-  $("a-todo").textContent = [v.todo[lang]].concat((v.todo_more && v.todo_more[lang]) || []).join(" ");
+  $("a-todo").innerHTML = escBm([v.todo[lang]].concat((v.todo_more && v.todo_more[lang]) || []).join(" "));
   let rows = "";
   if (v.water) rows += rowHtml(t("water"), v.water[lang].main, "");           // one plain sentence; numbers in Details
   $("a-water-box").hidden = !v.water;

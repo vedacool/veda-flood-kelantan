@@ -18,6 +18,7 @@
     ],
     "must_not": [
       "INSUFFICIENT DATA",
+      "Can't confirm right now",
       "River:"
     ],
     "must_trace": [

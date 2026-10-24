@@ -70,7 +70,7 @@
 <body>
 <header>
   <h1>VEDA · live log</h1>
-  <span class="note">The question itself is never shown here.</span>
+  <span class="note" id="h-note">The question itself is never shown here.</span>
   <a href="/">← Ask a question</a>
 </header>
 <div class="wrap">
@@ -95,6 +95,20 @@
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
+// The two public header lines follow the main page's EN | BM toggle (wording review 24 Oct); the log stays English.
+const HEAD = {
+  en: { note: "The question itself is never shown here.",
+        waiting: "Waiting for a question… Ask one on VEDA's main page and every step appears here as it happens." },
+  ms: { note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
+        waiting: "Menunggu soalan… Tanya di halaman utama VEDA dan setiap langkah akan muncul di sini ketika ia berlaku." },
+};
+const pageLang = () => { try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; } };
+function applyHeadLang() {
+  const h = HEAD[pageLang()];
+  $("h-note").textContent = h.note; $("h-note").lang = pageLang();
+  if (Object.values(HEAD).some((x) => x.waiting === $("status").textContent)) $("status").textContent = h.waiting;
+}
+window.addEventListener("storage", (e) => { if (e.key === "veda.lang") applyHeadLang(); });
 const AGENTS = [  // name in the trace -> colour token
   ["System", "--c-system"], ["Coordinator", "--c-coordinator"], ["Data & Reconciler", "--c-data"],
   ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];
@@ -189,7 +203,7 @@ function goLive() {
   mode = "live"; $("b-live").setAttribute("aria-pressed", "true"); $("rec").value = ""; $("rnote").hidden = true;
   $("b-play").hidden = true;
   $("feed").replaceChildren(); whoPanel();
-  $("status").textContent = "Waiting for a question… Ask one on the main page (/) and every step appears here as it happens.";
+  $("status").textContent = HEAD[pageLang()].waiting;
   if (source) source.close();
   source = new EventSource("/live/stream");
   source.addEventListener("trace", (ev) => add(JSON.parse(ev.data)));
@@ -260,6 +274,7 @@ if (params.get("run")) {  // one run from logs/ (this computer only), replayed f
 } else {
   goLive();
 }
+applyHeadLang();
 </script>
 </body>
 </html>

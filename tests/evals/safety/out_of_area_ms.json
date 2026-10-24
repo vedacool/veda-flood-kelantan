@@ -5,7 +5,7 @@
   "expect": {
     "verdict": null,
     "must": [
-      "Machang di Kelantan tetapi belum diliputi VEDA",
+      "Machang terletak di Kelantan tetapi belum diliputi VEDA",
       "Bukan amaran rasmi"
     ],
     "must_not": [

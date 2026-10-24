@@ -184,7 +184,7 @@ Every answer starts with one fixed advice line for its verdict, written by code 
 **G2.** "Check again in 3 hours" for WATCH — the right interval?
 > Answer: ______
 
-**G3.** (added 23 Oct) The verdict in BM cards: NORMAL / **BERJAGA-JAGA** (WATCH) / **BERSEDIA** (PREPARE) / **BERTINDAK** (ACT) / **DATA TIDAK MENCUKUPI**. We avoided Waspada / Amaran / Bahaya because those are JPS's own level names, shown next to the verdict ("BERSEDIA - paras JPS Amaran"). Clear for residents?
+**G3.** (added 23 Oct) The verdict in BM cards: NORMAL / **BERJAGA-JAGA** (WATCH) / **BERSEDIA** (PREPARE) / **BERTINDAK** (ACT) / ~~DATA TIDAK MENCUKUPI~~ *(24 Oct, wording review: the card and WhatsApp text now use the page's headline for this one - "Can't confirm right now" / "Tidak dapat disahkan sekarang", see G6 - so card and page match)*. We avoided Waspada / Amaran / Bahaya because those are JPS's own level names, shown next to the verdict ("BERSEDIA - paras JPS Amaran"). Clear for residents?
 > Answer: ______
 
 **G4.** (added 23 Oct) VEDA's code rejects an AI explanation in BM that contains these **Indonesian words** (then the
@@ -205,7 +205,7 @@ trapped? Anything to add (e.g. a rescue number other than 999 / 991, or "go to t
 > Answer: ______
 
 **G6.** (added 24 Oct) **The headline on the new web page.** Next to the verdict colour and icon, the answer screen
-shows a short headline instead of the verdict word (the card text and WhatsApp keep the words in G3):
+shows a short headline instead of the verdict word (the card text and WhatsApp keep the words in G3, except INSUFFICIENT_DATA, which uses this headline everywhere since 24 Oct):
 
 | Verdict | English | Bahasa Melayu |
 |---|---|---|

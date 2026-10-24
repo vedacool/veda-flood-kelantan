@@ -48,27 +48,29 @@ T = {  # fixed wording, BM + EN
     "peak": {"en": "the {event} peak", "ms": "puncak {event}"},
     "next24": {"en": "Next 24 h", "ms": "24 jam akan datang"},
     "rain": {"en": "Rain next 24 h: {mm} mm (Open-Meteo)", "ms": "Hujan 24 jam akan datang: {mm} mm (Open-Meteo)"},
-    "rain_past": {"en": "Rain past 24 h: {mm} mm (Open-Meteo archive, {date}); no rain forecast in a replay",
+    "rain_past": {"en": "Rain past 24 h: {mm} mm (Open-Meteo archive, {date}); a past day has no rain forecast",
                   "ms": "Hujan 24 jam lepas: {mm} mm (arkib Open-Meteo, {date}); tiada ramalan hujan dalam ulang tayang"},
-    "synthetic_tag": {"en": " (SYNTHETIC)", "ms": " (SYNTHETIC)"},
-    "synthetic_src": {"en": "SYNTHETIC river levels (not JPS)", "ms": "paras sungai SYNTHETIC (bukan JPS)"},
+    "synthetic_tag": {"en": " (made-up test data · SYNTHETIC)", "ms": " (data ujian rekaan · SYNTHETIC)"},
+    "synthetic_src": {"en": "made-up test river levels (SYNTHETIC, not JPS)",
+                      "ms": "paras sungai ujian rekaan (SYNTHETIC, bukan JPS)"},
     "vs2014": {"en": "Compared with 2014: {d} m {rel} the Dec 2014 peak here ({p} m)",
                "ms": "Berbanding 2014: {d} m {rel} puncak Dis 2014 di sini ({p} m)"},
     "archive": {"en": "Open-Meteo archive (real rain up to the replay time)",
                 "ms": "arkib Open-Meteo (hujan sebenar sehingga masa ulang tayang)"},
     "archive_short": {"en": "Open-Meteo archive", "ms": "arkib Open-Meteo"},
-    "trend": {"en": "straight-line trend", "ms": "unjuran garis lurus"},
-    "falling": {"en": "falling - no level projected", "ms": "turun - tiada unjuran paras"},
+    "trend": {"en": "if it keeps changing at this rate", "ms": "jika terus berubah pada kadar ini"},
+    "falling": {"en": "falling", "ms": "sedang turun"},
     "pass_danger": {"en": "expected to pass Danger", "ms": "dijangka melepasi paras Bahaya"},
     # trapped / stranded (Husaini 23 Oct; tentative, review pack G5)
-    "stranded": {"en": "You said you're stranded: safety first", "ms": "Anda terkandas: utamakan keselamatan"},
+    "stranded": {"en": "If you are stranded: safety first", "ms": "Jika anda terkandas: utamakan keselamatan dahulu"},
     "stranded_normal": {"en": "River level is normal, but local flooding can still trap you",
                         "ms": "Paras sungai normal, tetapi banjir setempat masih boleh memerangkap anda"},
     # above Danger (Husaini 23 Oct): no number range, only the direction (+ 2014 when higher)
     "above_trend": {"rising": {"en": "still rising", "ms": "masih naik"}, "falling": {"en": "falling", "ms": "turun"},
                     "steady": {"en": "steady", "ms": "stabil"}},
     "higher_2014": {"en": "higher than 2014", "ms": "melebihi paras 2014"},
-    "tidal": {"en": "trend not projected (tide-influenced gauge)", "ms": "trend tidak diunjurkan (stesen dipengaruhi pasang surut)"},
+    "tidal": {"en": "the sea tide moves this river, so no trend is shown",
+              "ms": "pasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan"},
     "confidence": {"en": "Confidence", "ms": "Keyakinan"},
     "conf_label": {"high": {"en": "high", "ms": "tinggi"}, "medium": {"en": "medium", "ms": "sederhana"},
                    "low": {"en": "low", "ms": "rendah"}},
@@ -81,12 +83,12 @@ T = {  # fixed wording, BM + EN
     "arrival_unknown": {"en": "arrival time not known", "ms": "masa sampai tidak diketahui"},
     "rain_here": {"en": "Heavy rain here: {mm} mm in 12 h", "ms": "Hujan lebat di sini: {mm} mm dalam 12 jam"},
     "small_rivers": {"en": "Small rivers and drains can rise fast in heavy rain - keep away from them",
-                     "ms": "Sungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - jauhi kawasan itu"},
+                     "ms": "Sungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - sila jauhi kawasan itu"},
     "thailand": {"en": "Rain upstream in Thailand is not checked yet", "ms": "Hujan di hulu di Thailand belum disemak"},
     "thai_rain": {"en": "Rain upstream in Thailand: {items} (arrival time not known)",
                   "ms": "Hujan di hulu di Thailand: {items} (masa sampai tidak diketahui)"},
     "thai_item": {"en": "{name} {mm} mm in 3 days", "ms": "{name} {mm} mm dalam 3 hari"},
-    "tide": {"en": "High tide can keep water in town longer", "ms": "Air pasang boleh membuat air bertakung lebih lama di bandar"},
+    "tide": {"en": "High tide can keep water in town longer", "ms": "Air pasang boleh menyebabkan air banjir lambat surut di bandar"},
     "thunder": {"en": "Thunderstorm warning: small streams and drains can rise within an hour or two",
                 "ms": "Amaran ribut petir: anak sungai dan longkang boleh naik dalam masa satu atau dua jam"},
     "until": {"en": "Rain likely until about {t}, then easing", "ms": "Hujan dijangka hingga kira-kira {t}, kemudian reda"},
@@ -100,20 +102,21 @@ T = {  # fixed wording, BM + EN
     "h_ago": {"en": "{n} h ago", "ms": "{n} jam lalu"},
     "age_unknown": {"en": "update time unknown", "ms": "masa kemas kini tidak diketahui"},
     "met_today": {"en": "MetMalaysia forecast for today", "ms": "ramalan MetMalaysia hari ini"},
-    "excluded": {"en": "Excluded: data.gov.my flood-warning (stale, last update {when})",
-                 "ms": "Diketepikan: data.gov.my flood-warning (lapuk, kemas kini terakhir {when})"},
-    "not_checked": {"en": "Not checked: data.gov.my flood-warning (could not be read)",
-                    "ms": "Tidak disemak: data.gov.my flood-warning (tidak dapat dibaca)"},
+    "excluded": {"en": "Left out: data.gov.my flood warnings (out of date, last update {when})",
+                 "ms": "Diketepikan: amaran banjir data.gov.my (sudah lama tidak dikemas kini, kali terakhir {when})"},
+    "not_checked": {"en": "Not checked: data.gov.my flood warnings (could not be read)",
+                    "ms": "Tidak disemak: amaran banjir data.gov.my (tidak dapat dibaca)"},
     # Husaini 23 Oct: a MetMalaysia source that data.gov.my would not serve (e.g. HTTP 429) is named, never hidden
     "met_not_checked": {"en": "Not checked: MetMalaysia {what} (data.gov.my could not be read)",
                         "ms": "Tidak disemak: {what} MetMalaysia (data.gov.my tidak dapat dibaca)"},
     "met_what": {("mygov_warning",): {"en": "warnings", "ms": "amaran"},
                  ("mygov_forecast",): {"en": "forecast", "ms": "ramalan"},
                  ("mygov_forecast", "mygov_warning"): {"en": "warnings and forecast", "ms": "amaran dan ramalan"}},
-    "excluded_short": {"en": "Excluded: data.gov.my flood-warning (stale)",      # the Critic still needs to see it
-                       "ms": "Diketepikan: data.gov.my flood-warning (lapuk)"},
+    "excluded_short": {"en": "Left out: old data.gov.my flood warnings",   # the Critic still needs to see it; short
+                       "ms": "Diketepikan: amaran banjir lama data.gov.my"},   # so a long BM card still fits
     "conflict": {"en": "Sources disagree on {q}; VEDA did not pick one", "ms": "Sumber tidak sepakat tentang {q}; VEDA tidak memilih"},
-    "no_reading": {"en": "no fresh reading from the controlling gauge", "ms": "tiada bacaan terkini dari stesen utama"},
+    "no_reading": {"en": "no fresh reading from this place's main river gauge",
+                   "ms": "tiada bacaan terkini dari stesen sungai utama tempat ini"},
     "backup": {"en": "Note: {primary} {silent} - using the backup gauge {backup}",
                "ms": "Nota: {primary} {silent} - menggunakan stesen ganti {backup}"},
     "silent": {"en": "has no reading since {t}", "ms": "tiada bacaan sejak {t}"},
@@ -129,9 +132,10 @@ T = {  # fixed wording, BM + EN
     "replay_last": {"en": "Last verified reading: {m} m at {t} ({age}) - too far from this time to use",
                     "ms": "Bacaan disahkan terakhir: {m} m pada {t} ({age}) - terlalu jauh dari masa ini untuk digunakan"},
     # B-71(c): a discovered gauge a person approved for this place - context only, never in the verdict
-    "discovered": {"en": "Discovered gauge {name} (approved by {by}; context only, not used for the verdict): {level}",
-                   "ms": "Stesen ditemui {name} (diluluskan oleh {by}; konteks sahaja, tidak digunakan untuk keputusan): "
-                         "{level}"},
+    "discovered": {"en": "Gauge found by VEDA: {name} (approved by {by}; for information only - it does not change "
+                         "the result): {level}",
+                   "ms": "Stesen yang ditemui VEDA: {name} (diluluskan oleh {by}; untuk makluman sahaja - tidak "
+                         "mengubah keputusan): {level}"},
     # B-71(b): the Critic asked for another upstream source and the Data & Reconciler found none
     "missing": {"en": "Missing: no fresh reading from {gauges}; VEDA looked for another upstream gauge on the same "
                       "river and found none",
@@ -149,7 +153,8 @@ T = {  # fixed wording, BM + EN
                     "ms": "Jambatan: tiada yang merentasi sungai bernama dalam OpenStreetMap dalam 10 km"},
     "no_level": {"en": "no recent reading", "ms": "tiada bacaan terkini"},
     "no_gauge": {"en": "no JPS gauge nearby on this river", "ms": "tiada stesen JPS berdekatan di sungai ini"},
-    "low_ground": {"en": "Low ground not assessed", "ms": "Kawasan rendah tidak dinilai"},
+    "low_ground": {"en": "VEDA does not know yet which areas are low-lying",
+                   "ms": "VEDA belum mengetahui kawasan mana yang rendah"},
     "osm_failed": {"en": "Not checked: OpenStreetMap (could not be read)",
                    "ms": "Tidak disemak: OpenStreetMap (tidak dapat dibaca)"},
     "osm_src": {"en": "© OpenStreetMap contributors (ODbL)", "ms": "© OpenStreetMap contributors (ODbL)"},
@@ -165,7 +170,7 @@ BAND = {"below_normal": {"en": "Normal", "ms": "Normal"}, "normal": {"en": "Norm
 # are JPS's own level names, which the card shows next to the verdict.
 VERDICT_LABEL = {"NORMAL": {"en": "NORMAL", "ms": "NORMAL"}, "WATCH": {"en": "WATCH", "ms": "BERJAGA-JAGA"},
                  "PREPARE": {"en": "PREPARE", "ms": "BERSEDIA"}, "ACT": {"en": "ACT", "ms": "BERTINDAK"},
-                 "INSUFFICIENT_DATA": {"en": "INSUFFICIENT DATA", "ms": "DATA TIDAK MENCUKUPI"}}
+                 "INSUFFICIENT_DATA": {"en": "Can't confirm right now", "ms": "Tidak dapat disahkan sekarang"}}  # = page headline
 _CODE_OF = {label: code for code, labels in VERDICT_LABEL.items() for label in labels.values()}
 _CODE_OF["INSUFFICIENT_DATA"] = "INSUFFICIENT_DATA"
 # Verdict words in capitals, EN or BM (case-sensitive: "Normal" the JPS level and "bersedia" the verb don't count).
@@ -310,7 +315,8 @@ WORDS = {  # key facts as words (Husaini 23 Oct): JPS level names, no minus sign
     "trend": {"rising": {"en": "rising", "ms": "naik"}, "falling": {"en": "falling", "ms": "turun"},
               "steady": {"en": "steady", "ms": "stabil"}},
     "vs2014": {"en": "{d} m {side} the Dec 2014 peak ({p} m)", "ms": "{d} m {side} puncak Dis 2014 ({p} m)"},
-    "excluded": {"en": "data.gov.my flood-warning (stale, excluded)", "ms": "data.gov.my flood-warning (lapuk, diketepikan)"},
+    "excluded": {"en": "data.gov.my flood warnings (out of date, left out)",
+                 "ms": "amaran banjir data.gov.my (sudah lama tidak dikemas kini, diketepikan)"},
     "no_verified": {"en": "no verified reading near this time", "ms": "tiada bacaan yang disahkan berhampiran masa ini"},
     "last": {"en": "{m} m at {t}, too old to use", "ms": "{m} m pada {t}, terlalu lama untuk digunakan"},
 }
@@ -800,10 +806,10 @@ def emergency_reply(lang, rest):
 
 def unavailable_reply(lang):
     """The reply when VEDA's data (Zetaris) cannot be reached at all - no place, no verdict (audit 23 Oct)."""
-    return {"en": "VEDA cannot reach its river data right now, so it cannot check any place. "
-                  + ADVICE["INSUFFICIENT_DATA"]["en"],
-            "ms": "VEDA tidak dapat mencapai data sungainya sekarang, jadi tidak dapat menyemak mana-mana tempat. "
-                  + ADVICE["INSUFFICIENT_DATA"]["ms"]}[lang]
+    return {"en": "VEDA cannot reach its river data right now, so it cannot check any place. Check JPS "
+                  "Infobanjir; call 999 if you are in danger.",
+            "ms": "VEDA tidak dapat mencapai data sungai sekarang, jadi tidak dapat menyemak mana-mana tempat. "
+                  "Semak JPS Infobanjir; hubungi 999 jika anda dalam bahaya."}[lang]
 
 
 def place_reply(res, lang):
@@ -820,10 +826,10 @@ def place_reply(res, lang):
     if known and near:
         return {"en": f"{known} is in Kelantan but not covered by VEDA yet. Nearest covered place: {near['name']} "
                       f"(about {near['km']} km away). Covered places: {covered}.",
-                "ms": f"{known} di Kelantan tetapi belum diliputi VEDA. Tempat terdekat yang diliputi: {near['name']} "
+                "ms": f"{known} terletak di Kelantan tetapi belum diliputi VEDA. Tempat terdekat yang diliputi: {near['name']} "
                       f"(kira-kira {near['km']} km). Tempat yang diliputi: {covered}."}[lang]
     if known:
         return {"en": f"{known} is in Kelantan but not covered by VEDA yet. Covered places: {covered}.",
-                "ms": f"{known} di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi: {covered}."}[lang]
+                "ms": f"{known} terletak di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi: {covered}."}[lang]
     return {"en": f"That place is not covered by VEDA yet. Covered places: {covered}.",
             "ms": f"Tempat itu belum diliputi VEDA. Tempat yang diliputi: {covered}."}[lang]

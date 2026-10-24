@@ -5,7 +5,7 @@
   "expect": {
     "verdict": null,
     "language": "ms",
-    "first_line": "Anda terkandas: utamakan keselamatan.",
+    "first_line": "Jika anda terkandas: utamakan keselamatan dahulu.",
     "must": [
       "APA PERLU DIBUAT SEKARANG: Ikut arahan APM / polis",
       "Jika terkandas: kekal di tempat tinggi",

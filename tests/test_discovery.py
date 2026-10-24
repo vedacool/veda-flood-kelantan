@@ -103,7 +103,7 @@ def test_an_approved_gauge_is_context_on_the_card_and_never_changes_the_verdict(
         fc = forecast_agent.forecast(plan, ev, world)
         assert fc["verdict"] == verdict_before                                  # a Danger reading changes nothing
         text = card.render(card.build(plan, ev, fc), "en")
-        assert ("Discovered gauge Sg. Kelantan di Kg. Contoh (SYNTHETIC) (approved by Husaini; context only, not used "
-                "for the verdict): JPS level Danger.") in text
+        assert ("Gauge found by VEDA: Sg. Kelantan di Kg. Contoh (SYNTHETIC) (approved by Husaini; for information only - "
+                "it does not change the result): JPS level Danger.") in text
     finally:
         trace.end_run()

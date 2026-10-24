@@ -256,7 +256,7 @@ def test_tide_advice_for_tidal_towns_at_keep_watching_or_higher(verdict_, tidal,
 
 def test_scene_tide_line_on_kota_bharu_and_no_verdict_change(scene):
     r = scene["Kota"]
-    assert "Air pasang boleh membuat air bertakung lebih lama di bandar." in r["answer"]["text"]
+    assert "Air pasang boleh menyebabkan air banjir lambat surut di bandar." in r["answer"]["text"]
     assert r["forecast"]["verdict"] == "PREPARE"                # same as without the line
 
 
@@ -337,10 +337,10 @@ def test_no_river_get_ready_card_and_screen(run_ctx):
     c = card_mod.build({"place": {"name": "Kota Bharu"}}, ev, fc)
     assert c["gauge"] is None and c["no_river"]                 # a stale level is never shown as current
     text = card_mod.render(c, "en")
-    assert "Kota Bharu: PREPARE" in text and "No fresh reading from the controlling gauge." in text
+    assert "Kota Bharu: PREPARE" in text and "No fresh reading from this place's main river gauge." in text
     assert view._line(c, fc, "en") == ("MetMalaysia has an official danger-level rain warning for this district. We could "
-                                       "not get a river reading, so get ready anyway.")
-    assert view._line(c, fc, "ms").endswith("Kami tidak dapat bacaan sungai, jadi bersedialah juga.")
+                                       "not get a river reading, so please get ready now.")
+    assert view._line(c, fc, "ms").endswith("Kami tidak dapat bacaan sungai, jadi sila bersedia sekarang.")
     assert view.combined(fc, "en") is None
     from app import trace
     rec = [json.loads(x) for x in trace.current_run().path.read_text(encoding="utf-8").splitlines()]

@@ -1,0 +1,87 @@
+{
+  "run_id": "20261024-155557-2365",
+  "trace_id": "20261024-155557-2365",
+  "status": "success",
+  "output": "Machang terletak di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi: Kota Bharu, Pasir Mas, Rantau Panjang, Tumpat.\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
+  "language": "ms",
+  "verdict": null,
+  "confidence": null,
+  "drafted_by": "code",
+  "approved_by_critic": false,
+  "safety_fixes": [
+    "disclaimer + 999 / 991 set in ms"
+  ],
+  "agents": [
+    "Data & Reconciler",
+    "Coordinator"
+  ],
+  "log_file": "output_examples/06_out_of_area.trace.jsonl",
+  "execution_time": 0.0,
+  "timing": {
+    "plan": 0.0,
+    "total": 0.0
+  },
+  "card": null,
+  "disclaimer": {
+    "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
+    "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
+  },
+  "view": null,
+  "other": {
+    "kind": "not_covered",
+    "nearest": null,
+    "text": {
+      "en": "VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now.",
+      "ms": "Buat masa ini VEDA meliputi Rantau Panjang, Pasir Mas, Kota Bharu dan Tumpat."
+    }
+  },
+  "how": {
+    "rows": [
+      {
+        "key": "plan",
+        "name": {
+          "en": "Understand the question",
+          "ms": "Memahami soalan"
+        },
+        "who": "Coordinator",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Coordinator",
+            "action": "gazetteer.resolve",
+            "status": "success",
+            "text": "not_covered: Machang is in Kelantan but not covered by VEDA yet. Covered places: Kota Bharu, Pasir Mas, Rantau Panjang, Tumpat."
+          }
+        ],
+        "ai": [],
+        "queries": 13
+      },
+      {
+        "key": "safety",
+        "name": {
+          "en": "Safety check",
+          "ms": "Semakan keselamatan"
+        },
+        "who": "System",
+        "seconds": null,
+        "lines": [
+          {
+            "agent": "System",
+            "action": "safety",
+            "status": "fallback",
+            "text": "disclaimer + 999 / 991 set in ms - BUILD_BRIEF section 7: never NORMAL on missing data, never into water, disclaimer, ranges, replay label, no open-PPS / cut-off claims"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      }
+    ],
+    "total_s": 0.0,
+    "fallbacks": []
+  },
+  "input": {
+    "question": "Machang banjir tak?"
+  },
+  "about": "Out of area - a Kelantan district VEDA does not cover yet (reply in BM)",
+  "mode": "SAMPLE_MODE (offline, recorded data)"
+}

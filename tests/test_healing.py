@@ -219,15 +219,15 @@ def test_unreadable_but_known_stale_is_excluded_on_the_card():
     got = data_agent._cross_check({"gauges": []}, NOW, w, "r", None, prefetched=True)
     assert got["status"] == "stale" and got["from_memory"]
     c = card.build({}, {"place": {"name": "X"}, "context": {}, "cross_check": got}, {"verdict": "NORMAL"})
-    assert "Diketepikan: data.gov.my flood-warning (lapuk" in card.render(c, "ms")
+    assert "Diketepikan: amaran banjir data.gov.my (sudah lama tidak dikemas kini" in card.render(c, "ms")
 
 
 def test_unreadable_and_unknown_is_not_checked_on_the_card():
     got = data_agent._cross_check({"gauges": []}, NOW, WorldModel(), "r", None, prefetched=True)
     c = card.build({}, {"place": {"name": "X"}, "context": {}, "cross_check": got}, {"verdict": "NORMAL"})
     assert got["status"] == "not_checked"
-    assert "Tidak disemak: data.gov.my flood-warning" in card.render(c, "ms")
-    assert "Not checked: data.gov.my flood-warning" in card.render(c, "en")
+    assert "Tidak disemak: amaran banjir data.gov.my" in card.render(c, "ms")
+    assert "Not checked: data.gov.my flood warnings" in card.render(c, "en")
 
 
 def test_status_read_less_than_15_minutes_ago_is_not_queried_again():

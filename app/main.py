@@ -123,7 +123,7 @@ def parse_input(question, replay=None, at=None):
     if not isinstance(question, str) or not question.strip():
         raise BadInput("empty_question", "Ask a question about a place in Kelantan.")
     if len(question) > MAX_QUESTION:
-        raise BadInput("question_too_long", f"Keep the question under {MAX_QUESTION} characters.")
+        raise BadInput("question_too_long", f"Please keep the question under {MAX_QUESTION} characters.")
     if replay in (None, ""):
         if at:
             raise BadInput("at_without_replay", "'at' is only used with 'replay'.")

@@ -43,8 +43,8 @@ W = {
     "change_3h_up": {"en": "up {c} cm in 3 hours", "ms": "naik {c} cm dalam 3 jam"},
     "change_3h_down": {"en": "down {c} cm in 3 hours", "ms": "turun {c} cm dalam 3 jam"},
     "change_3h_flat": {"en": "no change in 3 hours", "ms": "tiada perubahan dalam 3 jam"},
-    "tidal": {"en": "the sea tide moves this river, so no trend", "ms": "pasang surut laut menggerakkan sungai ini, "
-                                                                        "jadi tiada trend"},
+    "tidal": {"en": "the sea tide moves this river, so no trend is shown",
+              "ms": "pasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan"},
     "vs_level": {"en": "{d} m {side} the {name} level ({t} m)", "ms": "{d} m {side} paras {name} ({t} m)"},
     "up_none": {"en": "No fresh reading upstream ({where}) - VEDA can't see what may be coming.",
                 "ms": "Tiada bacaan terkini di hulu ({where}) - VEDA tidak dapat melihat apa yang mungkin sampai."},
@@ -133,9 +133,9 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
     "rising-fast": {"en": "The river is rising fast, so VEDA moved up one step.",
                     "ms": "Paras sungai naik dengan cepat, jadi VEDA naikkan satu tahap."},
     "no-trigger": {"en": "The river is below the alert level and nothing else points to a flood.",
-                   "ms": "Paras sungai di bawah paras Waspada dan tiada tanda lain banjir."},
+                   "ms": "Paras sungai di bawah paras Waspada dan tiada tanda lain yang menunjukkan banjir."},
     "fail-safe": {"en": "VEDA has no fresh, checked river reading for this place, so it will not guess.",
-                  "ms": "VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak meneka."},
+                  "ms": "VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak akan meneka."},
 }
 KIND = {  # the strip's short names for the kinds of source used
     "river": {"en": "river here", "ms": "sungai di sini"}, "upstream": {"en": "river upstream", "ms": "sungai di hulu"},
@@ -161,7 +161,7 @@ LEFT_OUT = {
     "too_old": {"en": "reading too old ({age})", "ms": "bacaan terlalu lama ({age})"},
     "past": {"en": "not available for this date", "ms": "tiada untuk tarikh ini"},       # Cowork 24 Oct
     "unreadable": {"en": "could not be read", "ms": "tidak dapat dibaca"},
-    "stale": {"en": "out of date", "ms": "sudah lapuk"},
+    "stale": {"en": "out of date", "ms": "sudah lama tidak dikemas kini"},
     "quick": {"en": "not needed for a quick check", "ms": "tidak perlu untuk semakan pantas"},
     "not_needed": {"en": "not needed for this question", "ms": "tidak perlu untuk soalan ini"},
 }
@@ -236,9 +236,9 @@ SET_BY = {  # Cowork 24 Oct: the line under the badge says what SET the verdict 
     "met_warning": {"en": "MetMalaysia has an official {level} rain warning for this district.",
                     "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini."},
     "met_warning_no_river": {"en": "MetMalaysia has an official {level} rain warning for this district. We could not "
-                                   "get a river reading, so get ready anyway.",
+                                   "get a river reading, so please get ready now.",
                              "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini. Kami "
-                                   "tidak dapat bacaan sungai, jadi bersedialah juga."},
+                                   "tidak dapat bacaan sungai, jadi sila bersedia sekarang."},
 }
 
 
@@ -329,11 +329,11 @@ WP = {
     "steady": {"en": "Steady.", "ms": "Stabil."},
     "tidal": {"en": "The sea tide moves this river, so we don't show a trend.",
               "ms": "Pasang surut laut menggerakkan sungai ini, jadi kami tidak menunjukkan trend."},
-    "over_danger": {"en": "Already {d} m over the danger mark.", "ms": "Sudah {d} m melebihi paras bahaya."},
+    "over_danger": {"en": "Already {d} m over the danger mark.", "ms": "Sudah {d} m melebihi paras Bahaya."},
     "over_alert": {"en": "Over the alert mark, {d} m under the danger mark.",
-                   "ms": "Melebihi paras waspada, {d} m di bawah paras bahaya."},
-    "under_alert": {"en": "{d} m under the alert mark.", "ms": "{d} m di bawah paras waspada."},
-    "calm": {"en": "Calm, below the alert mark.", "ms": "Tenang, di bawah paras waspada."},
+                   "ms": "Melebihi paras Waspada, {d} m di bawah paras Bahaya."},
+    "under_alert": {"en": "{d} m under the alert mark.", "ms": "{d} m di bawah paras Waspada."},
+    "calm": {"en": "Calm, below the alert mark.", "ms": "Tenang, di bawah paras Waspada."},
 }
 
 

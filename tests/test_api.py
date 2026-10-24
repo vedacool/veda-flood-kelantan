@@ -114,7 +114,7 @@ def test_web_page_is_served(client):
     assert not re.search(r"<(script|link|img|iframe)[^>]+(src|href)=\"https?://", r.text)   # nothing loaded from outside
     assert "CC BY 4.0" in r.text and "open-meteo.com" in r.text           # audit 23 Oct: data credits
     assert "Jabatan Pengairan dan Saliran (JPS) Malaysia" in r.text and "non-commercial" in r.text   # JPS credit
-    assert "Jangan taip nama, IC" in r.text and "Your question is not sent to any AI model" in r.text   # BM + EN
+    assert "Mohon jangan taip nama, IC" in r.text and "Your question is not sent to any AI model" in r.text   # BM + EN
     assert "Soalan anda tidak dihantar kepada mana-mana model AI" in r.text
 
 
@@ -133,7 +133,7 @@ def test_sample_mode_question_runs_on_the_synthetic_calm_day(monkeypatch, tmp_pa
     gazetteer.clear_cache()
     r = main._run("Tumpat ok?", None, None)
     assert r["answer"]["text"].startswith("SYNTHETIC · calm day")
-    assert "River (SYNTHETIC)" in r["answer"]["text"] and "SYNTHETIC river levels (not JPS)" in r["answer"]["text"]
+    assert "River (made-up test data · SYNTHETIC)" in r["answer"]["text"] and "made-up test river levels (SYNTHETIC, not JPS)" in r["answer"]["text"]
 
 
 def test_scene_picker_lists_replay_first_then_synthetic_scenes():

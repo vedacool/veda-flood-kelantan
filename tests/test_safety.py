@@ -49,7 +49,7 @@ def test_unsafe_explanation_is_removed(lang, bad):
 def test_normal_without_fresh_data_becomes_insufficient():
     c = card.build({}, EVIDENCE, {**FC, "verdict": "NORMAL"})
     out = safety.gate(answer(c), c, {**EVIDENCE, "usable": False}, FC)
-    assert "INSUFFICIENT DATA" in out["text"] and "NORMAL" not in out["text"]
+    assert "Can't confirm right now" in out["text"] and "NORMAL" not in out["text"]
     assert card.ADVICE["INSUFFICIENT_DATA"]["en"] in out["text"]
 
 

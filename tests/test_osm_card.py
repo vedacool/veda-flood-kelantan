@@ -42,10 +42,10 @@ def test_cut_off_question_states_bridge_facts_only():
     assert "Jambatan Contoh merentasi Sg. Golok (2.1 km); paras sungai di situ: Bahaya." in ms
     assert "Jambatan di Jalan Contoh merentasi Sg. Golok (4 km); paras sungai di situ: tiada bacaan terkini." in ms
     assert "FT 3" not in ms                                                               # 2 bridges shown
-    assert "Kawasan rendah tidak dinilai." in ms and "PPS" not in ms.split("WHAT")[0].split("\n", 1)[1]
+    assert "VEDA belum mengetahui kawasan mana yang rendah." in ms and "PPS" not in ms.split("WHAT")[0].split("\n", 1)[1]
     en = card.render(build("cut_off"), "en")
     assert "Jambatan Contoh crosses Sg. Golok (2.1 km); river level there: Danger." in en
-    assert "Low ground not assessed." in en
+    assert "VEDA does not know yet which areas are low-lying." in en
     for text in (ms, en):
         assert card.osm_claim(text) is None and "putus" not in text and "cut off" not in text
 
@@ -73,7 +73,7 @@ def test_risk_question_gets_no_osm_lines():
 def test_osm_lines_sit_outside_the_cap_and_other_lines_still_fit():
     """Husaini 23 Oct: up to 3 possible PPS and 2 bridges past the ~750 cap (evacuation / cut-off questions only)."""
     full = card.render(build("cut_off", base=EVIDENCE), "ms")          # stale source + rain + forecast: over the cap
-    assert "Jambatan Contoh merentasi" in full and "Jalan Contoh merentasi" in full and "tidak dinilai" in full
+    assert "Jambatan Contoh merentasi" in full and "Jalan Contoh merentasi" in full and "kawasan mana yang rendah" in full
     rest = [l for k, l in card._lines(build("cut_off", base=EVIDENCE), "ms", None, False, set(card.FIT_STEPS))
             if k not in card.OSM_LINES]
     assert card._length([(None, l) for l in rest]) <= card.MAX_CARD_CHARS + 100     # the cap still trims the rest
@@ -88,7 +88,7 @@ def test_key_facts_carry_the_label_and_the_bridge_facts():
     f = card.key_facts(build("evacuation"), lang="ms")
     assert f["possible_pps"]["note"].startswith("Kemungkinan PPS — bukan senarai rasmi")
     b = card.key_facts(build("cut_off"), lang="en")["bridges"]
-    assert b[0].startswith("Jambatan Contoh crosses Sg. Golok") and b[-1] == "Low ground not assessed"
+    assert b[0].startswith("Jambatan Contoh crosses Sg. Golok") and b[-1] == "VEDA does not know yet which areas are low-lying"
 
 
 @pytest.mark.parametrize("text", [

@@ -63,10 +63,10 @@ def test_english_card_reads_in_order():
     assert lines[2] == ("River: [JPS reading] m at 22 Oct 20:45 (Sg. Golok di Rantau Panjang (F1)); [distance] above Alert (7 m), "
                         "[distance] below Danger (9 m), [distance] below the Nov 2024 (29 Nov) peak (11.43 m).")
     assert lines[3] == "Compared with 2014: 3.75 m below the Dec 2014 peak here (10.84 m)."
-    assert lines[4] == "Next 24 h: 6.9-7.4 m (straight-line trend). Confidence: high."
+    assert lines[4] == "Next 24 h: 6.9-7.4 m (if it keeps changing at this rate). Confidence: high."
     assert lines[5] == "Rain next 24 h: 10.9 mm (Open-Meteo)."
     assert lines[6] == "Sources: JPS 16 min ago; Open-Meteo 2 h ago; MetMalaysia forecast for today."
-    assert lines[7] == "Excluded: data.gov.my flood-warning (stale, last update 2024-02-23)."
+    assert lines[7] == "Left out: data.gov.my flood warnings (out of date, last update 2024-02-23)."
 
 
 def test_malay_card_reads_in_order():
@@ -75,13 +75,13 @@ def test_malay_card_reads_in_order():
     assert lines[1] == "Rantau Panjang: BERJAGA-JAGA - paras JPS Waspada"
     assert "[distance] di atas Waspada (7 m), [distance] di bawah Bahaya (9 m)" in lines[2]
     assert lines[3] == "Berbanding 2014: 3.75 m di bawah puncak Dis 2014 di sini (10.84 m)."
-    assert lines[4] == "24 jam akan datang: 6.9-7.4 m (unjuran garis lurus). Keyakinan: tinggi."
-    assert lines[-1].startswith("Diketepikan: data.gov.my flood-warning (lapuk")
+    assert lines[4] == "24 jam akan datang: 6.9-7.4 m (jika terus berubah pada kadar ini). Keyakinan: tinggi."
+    assert lines[-1].startswith("Diketepikan: amaran banjir data.gov.my (sudah lama tidak dikemas kini")
 
 
 def test_tidal_gauge_says_trend_not_projected():
     text = card.render(build(rng=None, tidal=True), "en")
-    assert "Trend not projected (tide-influenced gauge). Confidence: high." in text
+    assert "The sea tide moves this river, so no trend is shown. Confidence: high." in text
 
 
 def test_upstream_rise_with_travel_time():
@@ -153,8 +153,8 @@ def res(status, known=None, nearest=None, suggestions=()):
     (res("not_covered", "Bachok", {"name": "Kota Bharu", "km": 20}), "en",
      "Bachok is in Kelantan but not covered by VEDA yet. Nearest covered place: Kota Bharu (about 20 km away)."),
     (res("not_covered", "Bachok", {"name": "Kota Bharu", "km": 20}), "ms",
-     "Bachok di Kelantan tetapi belum diliputi VEDA. Tempat terdekat yang diliputi: Kota Bharu (kira-kira 20 km)."),
-    (res("not_covered", "Machang"), "ms", "Machang di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi:"),
+     "Bachok terletak di Kelantan tetapi belum diliputi VEDA. Tempat terdekat yang diliputi: Kota Bharu (kira-kira 20 km)."),
+    (res("not_covered", "Machang"), "ms", "Machang terletak di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi:"),
     (res("not_covered"), "en", "That place is not covered by VEDA yet."),
     (res("not_covered"), "ms", "Tempat itu belum diliputi VEDA."),
     (res("not_covered", "Kelantan"), "ms", "Sila nyatakan bandar atau daerah di Kelantan."),
@@ -180,7 +180,7 @@ def test_verdict_reads_in_the_answer_language(verdict, en, ms):
 
 def test_insufficient_data_has_no_underscore():
     c = card.build({}, EVIDENCE, forecast(verdict="INSUFFICIENT_DATA"))
-    assert ": INSUFFICIENT DATA" in card.render(c, "en") and ": DATA TIDAK MENCUKUPI" in card.render(c, "ms")
+    assert ": Can't confirm right now" in card.render(c, "en") and ": Tidak dapat disahkan sekarang" in card.render(c, "ms")
 
 
 def test_bm_months():
@@ -205,7 +205,7 @@ def test_long_card_is_trimmed_to_the_cap_and_keeps_what_matters(lang):
     # every allowed cut is made; what is left may still pass ~750 when all protected lines are needed (BM: 784)
     assert len(text) <= card.MAX_CARD_CHARS + 50 and T_UP[lang] not in text and "120.5" not in text
     assert card.ADVICE["ACT"][lang] in text and ("2014" in text)                       # action + 2014 line stay
-    assert "CONTINUOUS RAIN WARNING" in text and "data.gov.my flood-warning" in text   # warning + excluded stay
+    assert "CONTINUOUS RAIN WARNING" in text and "data.gov.my" in text   # warning + excluded stay
     assert card.months_ms("(Kosmo), 22 Oct 20:45") in card.months_ms(text)            # short label keeps the time
 
 
@@ -306,5 +306,5 @@ def test_projection_reaching_danger_shows_words_not_numbers(lang, words):
 
 
 def test_projection_below_danger_keeps_its_range():
-    assert "Next 24 h: 6.9-7.4 m (straight-line trend)" in card.render(build(rng=(6.9, 7.4)), "en")
+    assert "Next 24 h: 6.9-7.4 m (if it keeps changing at this rate)" in card.render(build(rng=(6.9, 7.4)), "en")
     assert "Next 24 h: 8.5-8.99 m" in card.render(build(rng=(8.5, 8.99)), "en")

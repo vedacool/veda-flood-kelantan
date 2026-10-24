@@ -1,0 +1,364 @@
+{
+  "run_id": "20261024-155556-133b",
+  "trace_id": "20261024-155556-133b",
+  "status": "success",
+  "output": "SYNTHETIC · calm day\nAPA PERLU DIBUAT SEKARANG: Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS.\nTumpat: NORMAL - paras JPS Normal\nSungai (data ujian rekaan · SYNTHETIC): 0.58 m pada 15 Jun 10:00 (Sg. Kelantan di Kg. Kok Majid (F1)); 0.62 m di bawah Waspada (1.2 m), 1.22 m di bawah Bahaya (1.8 m).\n(bacaan SYNTHETIC - direka untuk demo luar talian, bukan bacaan JPS sebenar)\nPasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan. Keyakinan: tinggi.\nSumber: paras sungai ujian rekaan (SYNTHETIC, bukan JPS).\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
+  "language": "ms",
+  "verdict": "NORMAL",
+  "confidence": "high",
+  "drafted_by": "code",
+  "approved_by_critic": true,
+  "safety_fixes": [],
+  "agents": [
+    "Data & Reconciler",
+    "Coordinator",
+    "Forecast",
+    "Critic"
+  ],
+  "log_file": "output_examples/04_normal_day_bm.trace.jsonl",
+  "execution_time": 0.0,
+  "timing": {
+    "plan": 0.0,
+    "gather": 0.0,
+    "forecast": 0.0,
+    "draft": 0.0,
+    "critique": 0.0,
+    "total": 0.0
+  },
+  "card": {
+    "en": "SYNTHETIC · calm day\nWHAT TO DO NOW: No action needed. Keep an eye on JPS updates.\nTumpat: NORMAL - JPS level Normal\nRiver (made-up test data · SYNTHETIC): 0.58 m at 15 Jun 10:00 (Sg. Kelantan di Kg. Kok Majid (F1)); 0.62 m below Alert (1.2 m), 1.22 m below Danger (1.8 m).\n(SYNTHETIC reading - made up for the offline demo, not a real JPS reading)\nThe sea tide moves this river, so no trend is shown. Confidence: high.\nSources: made-up test river levels (SYNTHETIC, not JPS).",
+    "ms": "SYNTHETIC · calm day\nAPA PERLU DIBUAT SEKARANG: Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS.\nTumpat: NORMAL - paras JPS Normal\nSungai (data ujian rekaan · SYNTHETIC): 0.58 m pada 15 Jun 10:00 (Sg. Kelantan di Kg. Kok Majid (F1)); 0.62 m di bawah Waspada (1.2 m), 1.22 m di bawah Bahaya (1.8 m).\n(bacaan SYNTHETIC - direka untuk demo luar talian, bukan bacaan JPS sebenar)\nPasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan. Keyakinan: tinggi.\nSumber: paras sungai ujian rekaan (SYNTHETIC, bukan JPS)."
+  },
+  "disclaimer": {
+    "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
+    "ms": "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
+  },
+  "view": {
+    "verdict": "NORMAL",
+    "place": "Tumpat",
+    "headline": {
+      "en": "Normal for now",
+      "ms": "Normal buat masa ini"
+    },
+    "label": {
+      "en": "Made-up test scene · 15 Jun 2024, 10:00",
+      "ms": "Senario ujian rekaan · 15 Jun 2024, 10:00"
+    },
+    "line": {
+      "en": "The river is 0.62 m below the alert level.",
+      "ms": "Paras sungai 0.62 m di bawah paras Waspada."
+    },
+    "todo": {
+      "en": "No action needed. Keep an eye on JPS updates.",
+      "ms": "Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS."
+    },
+    "water": {
+      "en": {
+        "main": "The sea tide moves this river, so we don't show a trend.",
+        "detail": [
+          "0.58 m at 10:00 (made-up test reading) · the sea tide moves this river, so no trend is shown",
+          "0.62 m below the alert level (1.2 m)",
+          "1.22 m below the danger level (1.8 m)"
+        ]
+      },
+      "ms": {
+        "main": "Pasang surut laut menggerakkan sungai ini, jadi kami tidak menunjukkan trend.",
+        "detail": [
+          "0.58 m pada 10:00 (bacaan ujian rekaan) · pasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan",
+          "0.62 m di bawah paras Waspada (1.2 m)",
+          "1.22 m di bawah paras Bahaya (1.8 m)"
+        ]
+      }
+    },
+    "upstream": {
+      "en": [
+        "Tambatan D'Raja: normal."
+      ],
+      "ms": [
+        "Tambatan D'Raja: normal."
+      ]
+    },
+    "rain": null,
+    "rain_more": {
+      "en": [],
+      "ms": []
+    },
+    "rain_share": {
+      "en": [],
+      "ms": []
+    },
+    "todo_more": {
+      "en": [],
+      "ms": []
+    },
+    "why": {
+      "en": "The river is below the alert level and nothing else points to a flood.",
+      "ms": "Paras sungai di bawah paras Waspada dan tiada tanda lain yang menunjukkan banjir."
+    },
+    "combined": null,
+    "note": {
+      "en": "Nothing to do now. VEDA checks again whenever you ask.",
+      "ms": "Tiada apa perlu dibuat sekarang. VEDA menyemak semula setiap kali anda bertanya."
+    },
+    "level_bar": {
+      "level_m": 0.58,
+      "alert_m": 1.2,
+      "warning_m": 1.6,
+      "danger_m": 1.8
+    },
+    "explanation": null,
+    "sources": {
+      "en": [
+        {
+          "kind": "river",
+          "name": "River level: Sg. Kelantan di Kg. Kok Majid",
+          "used": true,
+          "left_out": false,
+          "note": "used"
+        },
+        {
+          "kind": "river",
+          "name": "River level: Sg. Golok di Kuala Jambu",
+          "used": true,
+          "left_out": false,
+          "note": "used"
+        },
+        {
+          "kind": "upstream",
+          "name": "River upstream: Sg. Kelantan di Tambatan D'Raja",
+          "used": true,
+          "left_out": false,
+          "note": "used"
+        },
+        {
+          "kind": "rain",
+          "name": "Rain record (Open-Meteo archive)",
+          "used": false,
+          "left_out": false,
+          "note": "not used: not needed for this question"
+        },
+        {
+          "kind": "forecast",
+          "name": "MetMalaysia forecast",
+          "used": false,
+          "left_out": false,
+          "note": "not used: not available for this date"
+        },
+        {
+          "kind": "warnings",
+          "name": "MetMalaysia warnings",
+          "used": false,
+          "left_out": false,
+          "note": "not used: not needed for this question"
+        },
+        {
+          "kind": "flood_warnings",
+          "name": "Flood warnings (data.gov.my)",
+          "used": false,
+          "left_out": false,
+          "note": "not used: not needed for a quick check"
+        }
+      ],
+      "ms": [
+        {
+          "kind": "river",
+          "name": "Paras sungai: Sg. Kelantan di Kg. Kok Majid",
+          "used": true,
+          "left_out": false,
+          "note": "digunakan"
+        },
+        {
+          "kind": "river",
+          "name": "Paras sungai: Sg. Golok di Kuala Jambu",
+          "used": true,
+          "left_out": false,
+          "note": "digunakan"
+        },
+        {
+          "kind": "upstream",
+          "name": "Sungai di hulu: Sg. Kelantan di Tambatan D'Raja",
+          "used": true,
+          "left_out": false,
+          "note": "digunakan"
+        },
+        {
+          "kind": "rain",
+          "name": "Rekod hujan (arkib Open-Meteo)",
+          "used": false,
+          "left_out": false,
+          "note": "tidak digunakan: tidak perlu untuk soalan ini"
+        },
+        {
+          "kind": "forecast",
+          "name": "Ramalan MetMalaysia",
+          "used": false,
+          "left_out": false,
+          "note": "tidak digunakan: tiada untuk tarikh ini"
+        },
+        {
+          "kind": "warnings",
+          "name": "Amaran MetMalaysia",
+          "used": false,
+          "left_out": false,
+          "note": "tidak digunakan: tidak perlu untuk soalan ini"
+        },
+        {
+          "kind": "flood_warnings",
+          "name": "Amaran banjir (data.gov.my)",
+          "used": false,
+          "left_out": false,
+          "note": "tidak digunakan: tidak perlu untuk semakan pantas"
+        }
+      ]
+    },
+    "double_checked": true,
+    "emergency": false,
+    "synthetic": true,
+    "strip": {
+      "en": "✓ Double-checked · combined from 3 sources: river here, river upstream",
+      "ms": "✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, sungai di hulu"
+    },
+    "share": {
+      "en": "VEDA · Tumpat: Normal for now\nMade-up test scene · 15 Jun 2024, 10:00\nWhat to do now: No action needed. Keep an eye on JPS updates.\nThe river is 0.62 m below the alert level.\nThe sea tide moves this river, so we don't show a trend.\n✓ Double-checked · combined from 3 sources: river here, river upstream\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
+      "ms": "VEDA · Tumpat: Normal buat masa ini\nSenario ujian rekaan · 15 Jun 2024, 10:00\nApa perlu dibuat sekarang: Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS.\nParas sungai 0.62 m di bawah paras Waspada.\nPasang surut laut menggerakkan sungai ini, jadi kami tidak menunjukkan trend.\n✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, sungai di hulu\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
+    }
+  },
+  "other": null,
+  "how": {
+    "rows": [
+      {
+        "key": "plan",
+        "name": {
+          "en": "Understand the question",
+          "ms": "Memahami soalan"
+        },
+        "who": "Coordinator",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Coordinator",
+            "action": "gazetteer.resolve",
+            "status": "success",
+            "text": "found: Using Tumpat."
+          },
+          {
+            "agent": "Coordinator",
+            "action": "route",
+            "status": "success",
+            "text": "quick path, answer in BM - quick: linked gauges below Alert and steady, no active warning, data fresh, simple question"
+          }
+        ],
+        "ai": [],
+        "queries": 12
+      },
+      {
+        "key": "gather",
+        "name": {
+          "en": "Gather the data",
+          "ms": "Mengumpul data"
+        },
+        "who": "Data & Reconciler",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Data & Reconciler",
+            "action": "data.sources",
+            "status": "success",
+            "text": "3 source(s) used, 4 skipped"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      },
+      {
+        "key": "forecast",
+        "name": {
+          "en": "Work out the risk",
+          "ms": "Menilai risiko"
+        },
+        "who": "Forecast",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Forecast",
+            "action": "forecast.verdict",
+            "status": "success",
+            "text": "NORMAL (confidence high, 0.75) - controlling gauge below alert and no other rule fired"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      },
+      {
+        "key": "draft",
+        "name": {
+          "en": "Write the answer",
+          "ms": "Menulis jawapan"
+        },
+        "who": "Coordinator",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Coordinator",
+            "action": "draft",
+            "status": "success",
+            "text": "quick path: answer written by code -> card written by code"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      },
+      {
+        "key": "critique",
+        "name": {
+          "en": "Double-check the answer",
+          "ms": "Menyemak semula jawapan"
+        },
+        "who": "Critic",
+        "seconds": 0.0,
+        "lines": [
+          {
+            "agent": "Critic",
+            "action": "critic.code_checks",
+            "status": "success",
+            "text": "0 problem(s) - all code checks pass"
+          },
+          {
+            "agent": "Critic",
+            "action": "critic.review",
+            "status": "approved",
+            "text": "approve: 0 problem(s) - quick plan: review by code checks only"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      },
+      {
+        "key": "safety",
+        "name": {
+          "en": "Safety check",
+          "ms": "Semakan keselamatan"
+        },
+        "who": "System",
+        "seconds": null,
+        "lines": [
+          {
+            "agent": "System",
+            "action": "safety",
+            "status": "success",
+            "text": "all safety checks passed - BUILD_BRIEF section 7: never NORMAL on missing data, never into water, disclaimer, ranges, replay label, no open-PPS / cut-off claims"
+          }
+        ],
+        "ai": [],
+        "queries": 0
+      }
+    ],
+    "total_s": 0.0,
+    "fallbacks": []
+  },
+  "input": {
+    "question": "Tumpat selamat ke?"
+  },
+  "about": "Normal day - the same in Bahasa Melayu",
+  "mode": "SAMPLE_MODE (offline, recorded data)"
+}
