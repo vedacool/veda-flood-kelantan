@@ -631,12 +631,14 @@ lang = params.get("lang") || store.get("veda.lang") || ((navigator.language || "
 if (!UI[lang]) lang = "en";
 if (store.get("veda.big") === "1") { document.documentElement.classList.add("big"); $("aa").setAttribute("aria-pressed", "true"); }
 applyLang();
+// ?replay=&at= is applied at once - not after /health, which can take seconds live (24 Oct: a tap before it answered
+// ran on live data although the link asked for a past flood); applyLang keeps the choice when /health re-renders it
+const want = params.get("replay") ? `${params.get("replay")}|${params.get("at") || ""}` : null;
+if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").value = want;
 fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
 fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
   applyLang();
-  const want = params.get("replay") ? `${params.get("replay")}|${params.get("at") || ""}` : null;
-  if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").value = want;
 }).catch(() => {});
 </script>
 </body>

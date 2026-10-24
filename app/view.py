@@ -554,8 +554,11 @@ def hide_question(value, question, mark="(question not shown)"):
             return {k: hide(x, k) for k, x in v.items()}
         if isinstance(v, list):
             return [hide(x) for x in v]
-        if isinstance(v, str) and q and (key == "normalized" or q in v or (len(v) >= 12 and v.rstrip(".… ") in q)):
-            return mark
+        if isinstance(v, str) and q:
+            cut = v.rstrip(".… ")
+            shortened = len(cut) >= 12 and cut in q and (v.endswith(("...", "…")) or len(cut) >= 0.6 * len(q))
+            if key == "normalized" or q in v or shortened:          # not a place name that merely appears in it
+                return mark
         return v
     return hide(value)
 

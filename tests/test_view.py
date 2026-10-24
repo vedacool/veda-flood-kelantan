@@ -243,3 +243,9 @@ def test_verdict_colours_have_contrast_and_differ_in_lightness():
         lums.append(lum(bg))
     lums.sort()
     assert all(hi / lo >= 1.3 for lo, hi in zip(lums, lums[1:])), lums
+
+
+def test_hide_question_keeps_a_place_name_that_is_only_part_of_it():
+    q = "Is Rantau Panjang at risk of flooding right now?"
+    v = view.hide_question({"input": "Rantau Panjang", "cut": q[:30] + "...", "copy": q[:-1]}, q, "X")
+    assert v == {"input": "Rantau Panjang", "cut": "X", "copy": "X"}
