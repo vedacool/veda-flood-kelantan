@@ -103,10 +103,14 @@ numbered steps, **the river here** on a gauge post (the gauge's own JPS Normal /
 the Dec 2014 flood line where the gauge has one), **coming from upstream** (hulu → hilir: the rain area and the
 upstream gauges, then "you"), the rain here, and **Send to family on WhatsApp** (level, what to do, who checked it,
 when and from what source, a link back - never the question). Numbers and gauge names stay in **Details**.
+Under the town list, **"Where these towns are"** is a small sketch map (static, offline, built once from
+OpenStreetMap lines by `scripts/make_home_map.py`): Sg. Kelantan and Sg. Golok with arrows downstream, the Thai border
+and Thailand, the sea, the two upstream gauges (Kuala Krai, Kg. Jenob) and the four towns - tap a town on the map to
+check it, as on its row.
 
-| Home | Act now (Nov 2024 peak) | Can't confirm | WhatsApp text |
-|---|---|---|---|
-| ![Home](docs/media/v2/home-en-first-screen.png) | ![Act now](docs/media/v2/act-now-rantau-panjang-peak-en-first-screen.png) | ![Can't confirm](docs/media/v2/cant-confirm-pasir-mas-peak-en.png) | ![Share text](docs/media/v2/share-text-en.png) |
+| Home | Map on Home | Act now (Nov 2024 peak) | Can't confirm | WhatsApp text |
+|---|---|---|---|---|
+| ![Home](docs/media/v2/home-en-first-screen.png) | ![Map](docs/media/v2/map-en.png) | ![Act now](docs/media/v2/act-now-rantau-panjang-peak-en-first-screen.png) | ![Can't confirm](docs/media/v2/cant-confirm-pasir-mas-peak-en.png) | ![Share text](docs/media/v2/share-text-en.png) |
 
 More screens, EN and BM: [`docs/media/v2/`](docs/media/v2/).
 See `input_examples/` and `output_examples/` (6 real runs, each with its full trace).
@@ -187,6 +191,7 @@ repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 repl
 | **SYNTHETIC scenes and offline fixtures** (`data/replay/synthetic_anchors.csv`, fixtures flagged `synthetic`) | Made up by `scripts/make_synthetic_scenes.py` from cited facts only (MIT, like the code); the rising scene is a made-up stress scenario: synthetic river levels, real archived rain | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
 | **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures: the MetMalaysia warnings / forecast rows and the `/flood-warning` readings are SYNTHETIC (seeded script); only place names, station positions and the feed's last-update time are recorded as served |
 | **Open-Meteo** forecast and historical archive ([open-meteo.com](https://open-meteo.com/)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Rain forecast (live) and real archive rain for every scene, shown with its date; credited on the page and named on every card |
+| **OpenStreetMap** river lines (Sg. Kelantan, Sg. Golok) and coastline for the Home sketch map (`data/map/home_map_lines.json`, simplified) | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); credited under the map | Fetched once by `scripts/make_home_map.py --fetch`; the SVG is built from the committed file, no network at run time |
 | **OpenStreetMap**: named schools, masjid / surau, community halls, and road bridges over rivers near each covered place ([openstreetmap.org](https://www.openstreetmap.org/), via the Overpass API) | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); credited on every card that uses it | Loaded once by `scripts/load_osm.py` into veda-pg, read through Zetaris. An evacuation question lists up to 3 **possible** evacuation centres (PPS) ("not an official list, confirm with APM / the village head"); a cut-off question lists bridges as facts (what river they cross, how far, the JPS level at the nearest gauge on that river) and says VEDA does not know yet which areas are low-lying. VEDA never says a PPS is open and never predicts a road being cut off. The SAMPLE_MODE fixture of this table is OSM data and stays under the ODbL |
 
 **VEDA's code** is released under the [MIT License](LICENSE), © 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad

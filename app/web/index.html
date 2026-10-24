@@ -128,6 +128,30 @@
   .flow .s-rising .dot { background: #F6D46B; } .flow .s-normal .dot { background: #DDEBE3; }
   .flow .s-none .dot { background: transparent; border-style: dashed; } .flow .s-you .dot { background: var(--fg); }
   .flow b { display: block; } .flow span { color: var(--muted); }
+  /* "Where these towns are" (scripts/make_home_map.py): fixed light colours so it reads the same in dark mode */
+  .map-box { padding: 12px 10px; }
+  .map-box h2, .map-box p { padding: 0 6px; }
+  .home-map { width: 100%; height: auto; display: block; margin: 8px 0; background: #f3f1ea; border-radius: 10px; }
+  .m-land { fill: #f3f1ea; } .m-sea { fill: #cfe3f1; } .m-thai { fill: #e2ddd1; }
+  .m-coast { fill: none; stroke: #7aa6c8; stroke-width: 1.5; }
+  .m-border { fill: none; stroke: #5B6470; stroke-width: 2; stroke-dasharray: 6 5; transform: translate(-4px, 0); }
+  .m-river { fill: none; stroke: #1f6fb2; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+  .m-arrow { fill: none; stroke: #ffffff; stroke-width: 2; stroke-linecap: round; }
+  .m-label { font: 700 18px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #14232F; paint-order: stroke;
+             stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .m-small { font-size: 17px; font-weight: 400; }
+  .m-town-label { font-size: 20px; font-weight: 800; }
+  .m-thai-label { letter-spacing: .12em; fill: #3f4650; }
+  .m-sea-label { fill: #1f5f8b; font-style: italic; font-weight: 600; }
+  .m-gauge { fill: #ffffff; stroke: #14232F; stroke-width: 3; }
+  .m-dot { fill: #14232F; stroke: #ffffff; stroke-width: 2; }
+  .m-hit { fill: transparent; }
+  .m-town { cursor: pointer; }
+  .m-town:focus { outline: none; }
+  .m-town:focus-visible .m-hit, .m-town:hover .m-hit { fill: rgba(31, 95, 139, .10); stroke: #1f5f8b; stroke-width: 3; }
+  .m-cloud path:first-child { fill: #ffffff; stroke: #5B6470; stroke-width: 2; }
+  .m-rain { stroke: #1f6fb2; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+  .m-north path { fill: #14232F; } .m-scale path { stroke: #14232F; stroke-width: 2.5; fill: none; }
   .wa { background: #1B7F3B; color: #ffffff; border-color: #1B7F3B; font-weight: 800; grid-column: 1 / -1; min-height: 56px; }
   .oneline { font-size: 1.1rem; margin: 10px 0 4px; }
   .calm { font-weight: 700; margin: 4px 0 8px; }
@@ -192,6 +216,35 @@
   </div>
   <div class="town-list" id="towns"></div>
   <p class="small-note" id="few-readings" data-t="few_readings" hidden></p>
+  <!-- Cowork / Husaini 24 Oct: "Where these towns are" - a static sketch, built once by scripts/make_home_map.py -->
+  <div class="card map-box" id="map-box">
+    <h2 data-t="map_heading"></h2>
+<!-- MAP START (scripts/make_home_map.py) -->
+<svg viewBox="0 0 340 465" class="home-map" role="group" aria-labelledby="map-title map-alt">
+<title id="map-title" data-t="map_title"></title><desc id="map-alt" data-t="map_alt"></desc>
+<rect width="340" height="465" class="m-land"/>
+<path d="M18.7 299.1 L26.5 284.5 L36.6 282.4 L42.7 283.6 L39.2 279.0 L46.4 277.1 L50.2 273.3 L47.9 267.9 L52.1 258.3 L56.2 258.2 L58.2 254.0 L63.7 256.6 L69.9 255.7 L76.8 250.1 L77.5 245.4 L81.4 245.5 L83.5 242.0 L83.0 230.3 L80.8 231.0 L82.0 228.9 L79.0 220.8 L72.6 218.6 L73.4 211.5 L76.0 211.6 L78.2 205.0 L76.7 197.7 L80.9 198.2 L84.9 194.7 L82.4 184.8 L86.2 182.2 L84.1 179.6 L86.0 176.6 L87.6 178.4 L87.0 174.8 L89.1 176.9 L90.4 172.1 L92.6 173.5 L100.2 166.7 L99.5 159.2 L103.3 152.9 L106.2 153.8 L110.6 147.6 L114.8 148.1 L117.6 145.6 L117.4 142.3 L126.2 141.3 L127.0 136.9 L132.8 130.8 L144.8 126.1 L148.8 120.1 L148.9 113.5 L154.0 110.1 L160.7 95.1 L164.1 94.3 L166.3 88.7 L164.2 83.3 L161.5 83.3 L160.4 76.4 L158.3 76.5 L157.7 61.7 L159.2 46.8 L164.9 41.8 L165.1 36.5 L165.1 -10 L-10 -10 L-10 299.1 Z" class="m-thai"/>
+<path d="M-34.1 -144.2 L-17.2 -118.2 L14.1 -77.7 L21.9 -73.9 L24.5 -76.4 L33.4 -65.8 L46.5 -62.1 L83.4 -19.8 L109.9 3.8 L119.6 6.3 L121.6 [JPS reading] L122.9 [JPS reading] L123.0 [JPS reading] L131.8 19.8 L143.8 23.5 L163.7 36.1 L166.1 34.8 L166.3 36.7 L176.5 44.4 L194.6 54.0 L200.3 49.5 L201.1 54.4 L205.9 47.2 L240.5 48.7 L248.4 51.5 L261.8 61.9 L285.9 71.8 L291.1 72.0 L301.2 78.9 L304.1 77.8 L317.0 98.0 L319.3 97.9 L351.3 170.6 L340 170.6 L340 0 L0 0 L0 -144.2 Z" class="m-sea"/>
+<path d="M18.7 299.1 L26.5 284.5 L36.6 282.4 L42.7 283.6 L39.2 279.0 L46.4 277.1 L50.2 273.3 L47.9 267.9 L52.1 258.3 L56.2 258.2 L58.2 254.0 L63.7 256.6 L69.9 255.7 L76.8 250.1 L77.5 245.4 L81.4 245.5 L83.5 242.0 L83.0 230.3 L80.8 231.0 L82.0 228.9 L79.0 220.8 L72.6 218.6 L73.4 211.5 L76.0 211.6 L78.2 205.0 L76.7 197.7 L80.9 198.2 L84.9 194.7 L82.4 184.8 L86.2 182.2 L84.1 179.6 L86.0 176.6 L87.6 178.4 L87.0 174.8 L89.1 176.9 L90.4 172.1 L92.6 173.5 L100.2 166.7 L99.5 159.2 L103.3 152.9 L106.2 153.8 L110.6 147.6 L114.8 148.1 L117.6 145.6 L117.4 142.3 L126.2 141.3 L127.0 136.9 L132.8 130.8 L144.8 126.1 L148.8 120.1 L148.9 113.5 L154.0 110.1 L160.7 95.1 L164.1 94.3 L166.3 88.7 L164.2 83.3 L161.5 83.3 L160.4 76.4 L158.3 76.5 L157.7 61.7 L159.2 46.8 L164.9 41.8 L165.1 36.5" class="m-border"/>
+<path d="M351.3 170.6 L319.3 97.9 L317.0 98.0 L304.1 77.8 L301.2 78.9 L291.1 72.0 L285.9 71.8 L261.8 61.9 L248.4 51.5 L240.5 48.7 L205.9 47.2 L200.3 49.5 L201.1 54.4 L194.6 54.0 L176.5 44.4 L166.1 34.8 L166.3 36.7 L163.7 36.1 L123.0 [JPS reading] L122.9 [JPS reading] L143.8 23.5 L131.8 19.8 L109.9 3.8 L121.6 [JPS reading] L119.6 6.3 L83.4 -19.8 L46.5 -62.1 L33.4 -65.8 L24.5 -76.4 L21.9 -73.9 L14.1 -77.7 L-17.2 -118.2 L-34.1 -144.2" class="m-coast"/>
+<path d="M219.0 431.1 L221.8 424.3 L219.1 421.8 L213.8 423.0 L199.1 399.8 L197.9 383.2 L191.4 381.0 L178.4 368.8 L172.8 350.8 L175.1 338.4 L183.8 337.2 L193.1 339.8 L194.9 338.0 L195.9 329.5 L193.0 322.9 L196.7 313.9 L195.1 302.7 L198.8 286.7 L207.1 281.5 L209.5 276.3 L204.6 265.1 L214.3 254.2 L212.0 243.5 L215.0 231.7 L222.4 218.3 L229.0 188.5 L223.3 174.9 L215.0 164.7 L196.8 153.7 L194.4 149.2 L200.0 145.1 L222.3 145.7 L230.0 140.8 L236.2 133.3 L235.0 113.1 L242.6 101.1 L242.9 84.8 L250.0 77.6 L250.7 73.0 L243.5 67.6 L241.7 63.4 L244.1 50.6" class="m-river"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(198.5 391.5) rotate(-94)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(173.9 344.6) rotate(-79)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(195.4 333.8) rotate(-83)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(196.9 294.7) rotate(-77)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(209.4 259.6) rotate(-48)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(225.7 203.4) rotate(-78)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(195.6 151.4) rotate(-118)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(233.1 137.1) rotate(-50)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(246.4 81.2) rotate(-45)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(242.9 57.0) rotate(-79)" class="m-arrow"/>
+<path d="M18.7 299.1 L26.5 284.5 L36.6 282.4 L42.7 283.6 L39.2 279.0 L46.4 277.1 L50.2 273.3 L47.9 267.9 L52.1 258.3 L56.2 258.2 L58.2 254.0 L63.7 256.6 L69.9 255.7 L76.8 250.1 L77.5 245.4 L81.4 245.5 L83.5 242.0 L83.0 230.3 L80.8 231.0 L82.0 228.9 L79.0 220.8 L72.6 218.6 L73.4 211.5 L76.0 211.6 L78.2 205.0 L76.7 197.7 L80.9 198.2 L84.9 194.7 L82.4 184.8 L86.2 182.2 L84.1 179.6 L86.0 176.6 L87.6 178.4 L87.0 174.8 L89.1 176.9 L90.4 172.1 L92.6 173.5 L100.2 166.7 L99.5 159.2 L103.3 152.9 L106.2 153.8 L110.6 147.6 L114.8 148.1 L117.6 145.6 L117.4 142.3 L126.2 141.3 L127.0 136.9 L132.8 130.8 L144.8 126.1 L148.8 120.1 L148.9 113.5 L154.0 110.1 L160.7 95.1 L164.1 94.3 L166.3 88.7 L164.2 83.3 L161.5 83.3 L160.4 76.4 L158.3 76.5 L157.7 61.7 L159.2 46.8 L164.9 41.8 L165.1 36.5" class="m-river"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(42.8 278.1) rotate(-15)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(54.2 258.2) rotate(-1)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(73.3 252.9) rotate(-39)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(83.2 236.2) rotate(-92)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(75.8 219.7) rotate(-161)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(77.5 201.3) rotate(-102)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(84.3 183.5) rotate(-34)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(87.3 176.6) rotate(-99)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(96.4 170.1) rotate(-42)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(108.4 150.7) rotate(-55)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(121.8 141.8) rotate(-6)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(146.8 123.1) rotate(-56)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(162.4 94.7) rotate(-13)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(160.9 79.8) rotate(-99)" class="m-arrow"/><path d="M-5 -4 L3 0 L-5 4" transform="translate(162.1 44.3) rotate(-41)" class="m-arrow"/>
+<text x="14.2" y="22.4" class="m-label m-thai-label" data-t="map_thailand"></text>
+<g transform="translate(30.6 208.0)" class="m-cloud"><path d="M-14 6 a8 8 0 0 1 2 -15 a11 11 0 0 1 21 -2 a8 8 0 0 1 7 17 Z"/><path d="M-8 10 l-3 7 M0 10 l-3 7 M8 10 l-3 7" class="m-rain"/><text x="-18" y="34" class="m-label m-small" data-t="map_rain"></text></g>
+<text x="332" y="30.9" class="m-label m-sea-label" text-anchor="end" data-t="map_sea"></text>
+<circle cx="222.8" cy="424.9" r="6" class="m-gauge"/><text x="212.8" y="422.9" text-anchor="end" class="m-label">Kuala Krai</text><text x="212.8" y="440.9" text-anchor="end" class="m-label m-small" data-t="map_gauge"></text>
+<circle cx="51.4" cy="261.0" r="6" class="m-gauge"/><text x="61.4" y="259.0" text-anchor="start" class="m-label">Kg. Jenob</text><text x="61.4" y="277.0" text-anchor="start" class="m-label m-small" data-t="map_gauge"></text>
+<g class="m-town" role="button" tabindex="0" data-town="Pasir Mas"><rect x="175.8" y="130.8" width="128.4" height="56" rx="10" class="m-hit"/><circle cx="191.8" cy="142.8" r="8" class="m-dot"/><text x="183.8" y="172.8" text-anchor="start" class="m-label m-town-label">Pasir Mas</text></g>
+<g class="m-town" role="button" tabindex="0" data-town="Rantau Panjang"><rect x="0.4" y="141.8" width="174.4" height="56" rx="10" class="m-hit"/><circle cx="102.6" cy="157.8" r="8" class="m-dot"/><text x="87.6" y="187.8" text-anchor="middle" class="m-label m-town-label">Rantau Panjang</text></g>
+<g class="m-town" role="button" tabindex="0" data-town="Kota Bharu"><rect x="232.4" y="74.3" width="90.0" height="56" rx="10" class="m-hit"/><circle cx="248.4" cy="102.3" r="8" class="m-dot"/><text x="260.4" y="99.3" class="m-label m-town-label">Kota<tspan x="260.4" dy="21">Bharu</tspan></text></g>
+<g class="m-town" role="button" tabindex="0" data-town="Tumpat"><rect x="123.2" y="33.8" width="101.6" height="56" rx="10" class="m-hit"/><circle cx="208.8" cy="61.8" r="8" class="m-dot"/><text x="196.8" y="68.8" text-anchor="end" class="m-label m-town-label">Tumpat</text></g>
+<g transform="translate(26 391)" class="m-north"><path d="M0 -16 L7 6 L0 1 L-7 6 Z"/><text x="0" y="24" text-anchor="middle" class="m-label m-small">N</text></g>
+<g class="m-scale"><path d="M14 447 h98.7 M14 442 v10 M112.7 442 v10"/><text x="63.4" y="438" text-anchor="middle" class="m-label m-small">20 km</text></g>
+</svg>
+<!-- MAP END -->
+    <p data-t="map_note"></p>
+    <p class="small-note" data-t="map_credit"></p>
+  </div>
   <form id="ask">
     <label for="q" data-t="or_type"></label>
     <div class="ask">
@@ -362,6 +415,11 @@ const UI = {
     river_here: "The river here", from_upstream: "Coming from upstream", send_family: "Send to family on WhatsApp",
     check_again: "Check again", see_text: "See or copy the text ›", open_jps: "Open JPS Infobanjir",
     check_yourself: "Check it yourself:", normal: "Normal", y2014: "Dec 2014 flood", check_row: "Check ›",
+    map_heading: "Where these towns are", map_title: "Map: where the four towns are",
+    map_note: "Water flows from upstream (hulu) down to the towns and the sea (hilir). Tap a town to check it.",
+    map_credit: "Sketch from © OpenStreetMap contributors (ODbL)", map_thailand: "THAILAND", map_sea: "South China Sea",
+    map_rain: "rain in Thailand", map_gauge: "upstream gauge", map_check: "Check {town}",
+    map_alt: "Sketch map of north Kelantan. Sungai Kelantan flows north from Kuala Krai past Pasir Mas and Kota Bharu to the South China Sea near Tumpat. Sungai Golok flows north-east from Kg. Jenob past Rantau Panjang, along the border with Thailand, to the sea. Thailand lies west of the Golok.",
   },
   ms: {
     home_title: "Adakah kawasan saya berisiko banjir?", or_type: "Atau taip soalan", ask: "Tanya",
@@ -410,6 +468,11 @@ const UI = {
     river_here: "Sungai di sini", from_upstream: "Dari hulu", send_family: "Hantar kepada keluarga melalui WhatsApp",
     check_again: "Semak semula", see_text: "Lihat atau salin teks ›", open_jps: "Buka JPS Infobanjir",
     check_yourself: "Semak sendiri:", normal: "Normal", y2014: "Banjir Dis 2014", check_row: "Semak ›",
+    map_heading: "Di mana bandar-bandar ini", map_title: "Peta: di mana empat bandar ini",
+    map_note: "Air mengalir dari hulu ke bandar-bandar dan ke laut (hilir). Tekan bandar untuk menyemaknya.",
+    map_credit: "Lakaran daripada © penyumbang OpenStreetMap (ODbL)", map_thailand: "THAILAND", map_sea: "Laut China Selatan",
+    map_rain: "hujan di Thailand", map_gauge: "tolok hulu", map_check: "Semak {town}",
+    map_alt: "Peta lakaran utara Kelantan. Sungai Kelantan mengalir ke utara dari Kuala Krai melalui Pasir Mas dan Kota Bharu ke Laut China Selatan berhampiran Tumpat. Sungai Golok mengalir ke timur laut dari Kg. Jenob melalui Rantau Panjang, di sepanjang sempadan Thailand, ke laut. Thailand terletak di sebelah barat Sungai Golok.",
   },
 };
 // Rantau Panjang first: the Nov 2024 replay has its river level all evening (Cowork 24 Oct). River = its controlling
@@ -462,9 +525,10 @@ function applyLang() {
   document.querySelectorAll("[data-t-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.tLabel)); el.title = t(el.dataset.tLabel); });
   document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   $("q").placeholder = UI[lang].q_default.replace("{town}", "Tumpat");
+  document.querySelectorAll(".m-town").forEach((g) => g.setAttribute("aria-label", t("map_check").replace("{town}", g.dataset.town)));
   $("towns").replaceChildren(...TOWNS.map((town) => {
     const b = document.createElement("button");
-    b.type = "button";
+    b.type = "button"; b.dataset.town = town;
     b.innerHTML = `<span><b>${esc(town)}</b><small>${esc(RIVER[town])}</small></span><span class="go">${esc(t("check_row"))}</span>`;
     b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
     return b;
@@ -875,6 +939,12 @@ $("a-change").addEventListener("click", () => {
   if (pressed) pressed.focus();
 });
 $("w-check").addEventListener("click", () => { if (skipCheck) skipCheck(); });
+// the map's towns (dot + name = one target) do exactly what tapping the town's row does
+function townFromMap(g) { const row = [...$("towns").children].find((b) => b.dataset.town === g.dataset.town); if (row) row.click(); }
+document.querySelectorAll(".m-town").forEach((g) => {
+  g.addEventListener("click", () => townFromMap(g));
+  g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); townFromMap(g); } });
+});
 $("scenes-link").addEventListener("click", () => { $("scenes").hidden = !$("scenes").hidden; renderMoment(); });
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
