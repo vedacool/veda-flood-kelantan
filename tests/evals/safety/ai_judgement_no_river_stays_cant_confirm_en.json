@@ -1,0 +1,25 @@
+{
+  "name": "ai_judgement_no_river_stays_cant_confirm_en",
+  "about": "No verified river reading; Nemotron says NORMAL -> stays Can't confirm (replay 27 Nov 08:00)",
+  "question": "Is Rantau Panjang at risk in the next two days?",
+  "stale_hours": 5,
+  "llm": {
+    "explanation": "VEDA cannot confirm the river level now, so check the JPS website.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "NORMAL",
+      "reasons": [
+        "note"
+      ],
+      "confidence": "high"
+    }
+  },
+  "expect": {
+    "verdict": "INSUFFICIENT_DATA",
+    "must_not": [
+      "NORMAL"
+    ]
+  },
+  "replay": "nov2024",
+  "at": "2024-11-27 08:00"
+}

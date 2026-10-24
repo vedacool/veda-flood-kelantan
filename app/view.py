@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 
 from app import card as card_mod
-from app import progress, trace
+from app import config, progress, trace
 from app.agents.coordinator import SAFETY
 from app.config import MYT, REPLAYS
 
@@ -140,6 +140,8 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
     "sentinel>=alert": {"en": "The river upstream at {where} is high{window}.",
                         "ms": "Sungai di hulu ({where}) tinggi{window}."},
     "window": {"en": "; the water may reach here in {a}–{b} hours", "ms": "; air mungkin sampai ke sini dalam {a}–{b} jam"},
+    "ai-judgement": {"en": "Nemotron weighed all sources and raised the level.",
+                     "ms": "Nemotron menimbang semua sumber dan menaikkan tahap."},
     "upstream-rain": {"en": "Heavy rain has fallen upstream ({where}, {mm} mm in 3 days); {when}.",
                       "ms": "Hujan lebat telah turun di hulu ({where}, {mm} mm dalam 3 hari); {when}."},
     "upstream-rain-fc": {"en": "Heavy rain is forecast upstream ({where}, {mm} mm in 24 hours).",
@@ -260,6 +262,9 @@ def _trend(card, forecast):
 RIVER_RULES = ("level>=", "danger<=", "alert<=", "no-trigger", "rising-fast")
 SET_BY = {  # Cowork 24 Oct: the line under the badge says what SET the verdict (never a river line that reads as a
     # contradiction when rain or the river upstream raised it)
+    # Part 7: the AI raised it - the facts it cited, in the words code wrote for them (never the AI's own words)
+    "ai_judgement": {"en": "Nemotron weighed all sources and raised this to {level}: {facts}.",
+                     "ms": "Nemotron menimbang semua sumber dan menaikkan tahap ini ke {level}: {facts}."},
     "rain_both": {"en": "Heavy rain upstream is on its way, and it is raining hard here.",
                   "ms": "Hujan lebat dari hulu sedang menuju ke sini, dan hujan turun dengan lebat di sini."},
     "rain_up": {"en": "Heavy rain has fallen upstream, and the water may come this way.",
@@ -284,6 +289,8 @@ def set_by(forecast):
     if not top or any(r.startswith(RIVER_RULES) for r in top):
         return "river"
     r = top[0]
+    if "ai-judgement" in top:
+        return "ai_judgement"
     return ("rain_both" if r == "upstream+local-rain" else "rain_up" if r == "upstream-rain" else
             "upstream_gauge" if r.startswith("sentinel") else "rain_forecast" if r.startswith("rain") else
             "met_warning" if r == "met-warning" else "met_warning_no_river" if r == "met-warning-no-river" else "river")
@@ -303,6 +310,10 @@ def _met_level(forecast):
 
 def _line(card, forecast, lang):
     """The one line under the verdict badge: the reason that set the verdict, in plain words."""
+    if set_by(forecast) == "ai_judgement":                   # Part 7: Nemotron raised it - the cited facts
+        t = next(t for t in forecast["triggers"] if t["rule"] == "ai-judgement")
+        return SET_BY["ai_judgement"][lang].format(level=HEADLINE[card["verdict"]][lang],
+                                                   facts=(t.get("texts") or {}).get(lang, ""))
     if set_by(forecast) == "met_warning_no_river":           # Cowork 24 Oct: Get ready with no river reading
         return SET_BY["met_warning_no_river"][lang].format(level=MET_LEVEL_WORD[_met_level(forecast) or "buruk"][lang])
     if card["verdict"] == "INSUFFICIENT_DATA" or not card.get("gauge"):
@@ -956,7 +967,39 @@ def answer_view(result):
     view["flow"] = _both(lambda lang: flow(card, forecast, lang)) if flow(card, forecast, "en") else None
     view["line_is_river"] = set_by(forecast) == "river"
     view["share"] = _both(lambda lang: share_v2(view, card, evidence, lang))
+    view["judgement"] = judgement_row(result) if plan.get("effort") == "full" else None
     return view
+
+
+JUDGE = {  # Part 7: the Details row "Rules said / Nemotron said / Final" on every full run
+    "rules": {"en": "Rules said", "ms": "Peraturan"}, "ai": {"en": "Nemotron said", "ms": "Nemotron"},
+    "final": {"en": "Final", "ms": "Keputusan"},
+    "live_only": {"en": "Nemotron's judgement: live mode only", "ms": "Penilaian Nemotron: mod langsung sahaja"},
+    "not_run": {"en": "Nemotron's judgement did not run this time", "ms": "Penilaian Nemotron tidak dijalankan kali ini"},
+    "agreed": {"en": "Nemotron agreed with the rules.", "ms": "Nemotron bersetuju dengan peraturan."},
+    "raised": {"en": "Nemotron raised the level; VEDA checked the facts it cited.",
+               "ms": "Nemotron menaikkan tahap; VEDA menyemak fakta yang dirujuknya."},
+    "lower": {"en": "Nemotron judged lower; VEDA keeps the safer level.",
+              "ms": "Nemotron menilai lebih rendah; VEDA kekalkan tahap yang lebih selamat."},
+    "ignored": {"en": "Nemotron's level was not used (it did not pass VEDA's checks).",
+                "ms": "Tahap Nemotron tidak digunakan (tidak lulus semakan VEDA)."},
+}
+
+
+def judgement_row(result):
+    """The Details row for the AI's level - offline / demo: 'live mode only' (no model runs; a stand-in AI's level
+    is never shown on a screen)."""
+    if result.get("sample_mode", config.sample_mode()):
+        return {"status": "live_only", "text": dict(JUDGE["live_only"])}
+    j = result.get("ai_judgement") or {}
+    if not j or j.get("status") == "not_run":
+        return {"status": "not_run", "text": dict(JUDGE["not_run"])}
+    name = lambda lv, lang: HEADLINE[lv][lang] if lv in HEADLINE else "–"          # noqa: E731
+    return {"status": j["status"],
+            "rules": _both(lambda lang: f"{JUDGE['rules'][lang]}: {name(j.get('code_level'), lang)}"),
+            "ai": _both(lambda lang: f"{JUDGE['ai'][lang]}: {name(j.get('ai_level'), lang)}"),
+            "final": _both(lambda lang: f"{JUDGE['final'][lang]}: {name(j.get('final'), lang)}"),
+            "text": dict(JUDGE[j["status"]])}
 
 
 def hide_question(value, question, mark="(question not shown)"):
@@ -993,7 +1036,7 @@ STEP_SHOWN = {  # which trace lines each row repeats (outputs and decisions only
     "gazetteer.resolve": "output", "route": "both", "data.sources": "decision", "data.cross_check": "output",
     "data.reconcile": "output", "forecast.verdict": "both", "draft": "decision", "critic.code_checks": "both",
     "critic.requery": "both", "critic.review": "both", "critic.request": "output", "data.request": "output",
-    "verdict.recomputed": "output", "ai.fallback": "output", "safety": "both",
+    "verdict.recomputed": "output", "ai.fallback": "output", "safety": "both", "critic.ai_judgement": "both",
 }
 
 
@@ -1032,6 +1075,8 @@ def how_it_worked(trace_path):
                               "seconds": round((r.get("duration_ms") or 0) / 1000, 1), "status": r.get("status"),
                               "note": None if r.get("status") == "success" else r.get("output_summary")})
         elif a in STEP_SHOWN:
+            if a == "critic.code_checks" and (r.get("details") or {}).get("checks"):
+                cur["checks"] = list(r["details"]["checks"])       # Part 7: the Critic's code checks, listed
             show = STEP_SHOWN[a]
             parts = ([r.get("output_summary")] if show in ("output", "both") else []) + (
                 [r.get("decision")] if show in ("decision", "both") else [])

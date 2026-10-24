@@ -1,0 +1,25 @@
+{
+  "name": "ai_judgement_capped_one_level_en",
+  "about": "Nemotron asks ACT citing one upstream gauge -> capped at one level up (PREPARE) [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is above its Alert level, so keep watching official updates.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "ACT",
+      "reasons": [
+        "upstream.2"
+      ],
+      "confidence": "high"
+    }
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "must_trace": [
+      "at most one level up",
+      "\"capped\": true"
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}

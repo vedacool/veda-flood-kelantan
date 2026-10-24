@@ -307,7 +307,7 @@ def small_llm(replies):
 
 def test_small_review_sends_only_key_facts_and_the_explanation():
     llm = small_llm(["ok"])
-    assert critic._small_review(small_answer(), FORECAST, llm, 60, "fast") == ("approve", [], "")
+    assert critic._small_review(small_answer(), FORECAST, llm, 60, "fast")[:3] == ("approve", [], "")
     req = llm.seen[0]
     assert req["system"] == critic.SMALL_SYSTEM and req["kw"]["max_tokens"] == 4096 and not req["kw"]["thinking"]
     body = json.loads(req["user"])
@@ -316,7 +316,7 @@ def test_small_review_sends_only_key_facts_and_the_explanation():
 
 
 def test_small_review_rejection_carries_the_reason():
-    decision, problems, fix = critic._small_review(small_answer(), FORECAST, small_llm(["no"]), 60, "fast")
+    decision, problems, fix, _ = critic._small_review(small_answer(), FORECAST, small_llm(["no"]), 60, "fast")
     assert decision == "reject" and fix == "says falling, facts say rising"
     assert problems == [{"type": "unsupported", "detail": "says falling, facts say rising", "by": "model"}]
 

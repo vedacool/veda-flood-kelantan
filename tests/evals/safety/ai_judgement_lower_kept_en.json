@@ -1,0 +1,27 @@
+{
+  "name": "ai_judgement_lower_kept_en",
+  "about": "Nemotron judges NORMAL -> VEDA keeps WATCH (never lower) [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is above its Alert level, so keep watching official updates.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "NORMAL",
+      "reasons": [
+        "vs_danger"
+      ],
+      "confidence": "high"
+    }
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "must": [
+      "The river is above its Alert level, so keep watching official updates."
+    ],
+    "must_trace": [
+      "AI judged lower; VEDA keeps the safer level"
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}

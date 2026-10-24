@@ -171,6 +171,9 @@
   .oneline { font-size: 1.1rem; margin: 10px 0 4px; }
   .calm { font-weight: 700; margin: 4px 0 8px; }
   .combined { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-weight: 600; }
+  .judge { margin-top: 12px; }
+  .judge-row { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 4px; font-weight: 600; }
+  .judge .sub { margin: 0; }
   .todo h2 { text-transform: uppercase; letter-spacing: .03em; }
   .rows { display: grid; gap: 0; }
   .rows > div { display: grid; grid-template-columns: 6.5em 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -407,7 +410,9 @@
   <div id="a-details" hidden>
     <div class="card"><h2 data-t="why"></h2><p id="a-why" style="margin:0"></p>
       <p id="a-combined" class="combined" hidden></p>
-      <div id="a-bar-box"></div></div>
+      <div id="a-bar-box"></div>
+      <!-- Part 7: Rules said / Nemotron said / Final (full runs); offline: "live mode only" -->
+      <div class="judge" id="a-judge" hidden><p class="judge-row" id="a-judge-row"></p><p class="sub" id="a-judge-text"></p></div></div>
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
       <!-- B3: the AI paragraph is written once, in the question's language (result.explanation_lang) -->
       <p class="note" id="a-expl-lang" hidden><span id="a-expl-lang-text"></span> ·
@@ -502,6 +507,7 @@ const UI = {
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
     answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
+    checks: "The Critic's {n} code checks",
     ai_failed: "AI step not used", fallbacks: "AI steps replaced by code in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
@@ -562,6 +568,7 @@ const UI = {
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
     answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
+    checks: "{n} semakan kod oleh Penyemak",
     ai_failed: "Langkah AI tidak digunakan", fallbacks: "Langkah AI yang diganti dengan kod",
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
@@ -1003,6 +1010,13 @@ function renderAnswer() {
   $("a-strip").innerHTML = `<span>${esc(v.strip[lang])}</span><span>${esc(open ? t("hide_details") : t("details"))}</span>`;
   $("a-why").textContent = v.why[lang];
   $("a-bar-box").innerHTML = levelBar(v.level_bar);
+  const jg = v.judgement;                     // Part 7: the AI's own level next to the rules' (never a stand-in's)
+  $("a-judge").hidden = !jg;
+  if (jg) {
+    $("a-judge-row").hidden = !jg.rules;
+    $("a-judge-row").innerHTML = jg.rules ? [jg.rules[lang], jg.ai[lang], jg.final[lang]].map((x) => `<span>${esc(x)}</span>`).join("") : "";
+    $("a-judge-text").textContent = jg.text[lang];
+  }
   $("a-how").hidden = !result.how;
   $("a-expl-box").hidden = !v.explanation;
   if (v.explanation) { $("a-expl").textContent = v.explanation.text; $("a-expl").lang = v.explanation.language || ""; }
@@ -1031,6 +1045,8 @@ function renderHow() {
       `<span class="secs">${r.seconds != null ? r.seconds + " s" : ""}</span></div>` +
       (r.queries ? `<p class="sub">${esc(t("queries").replace("{n}", r.queries))}</p>` : "") +
       r.lines.map((l) => `<p lang="en"${l.status === "fallback" ? ' class="warn"' : ""}>${esc(l.text)}</p>`).join("") +
+      (r.checks ? `<details class="checks"><summary>${esc(t("checks").replace("{n}", r.checks.length))}</summary>` +
+        `<ul lang="en">${r.checks.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></details>` : "") +
       (ai || (aiStep ? "" : `<p class="sub">${esc(t("code_only"))}</p>`)) + `</li>`;
   }).join("") + (h.fallbacks && h.fallbacks.length
     ? `<li><p class="warn">${esc(t("fallbacks"))}: ${esc(h.fallbacks.join("; "))}</p></li>` : "");

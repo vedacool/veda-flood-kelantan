@@ -366,6 +366,11 @@ def forecast(plan, evidence, world=None, now=None):
             "heavy rain upstream arriving within 24 h (" + "; ".join(
                 f"{u['name']}, {u['window']['min']:g}-{u['window']['max']:g} h" for u in came)
             + f") while it rains heavily here ({local.get('max_12h_mm')} mm in 12 h) - one level up")})
+    ai = evidence.get("ai_minimum")          # Part 7: an AI raise the Critic's code accepted - applied last, only up
+    if ai and ai.get("level") in LEVELS and LEVELS.index(ai["level"]) > base:
+        base = LEVELS.index(ai["level"])
+        triggers.append({"level": ai["level"], "rule": "ai-judgement", "reason": ai["reason"],
+                         "texts": ai.get("texts")})
     main_trend = next(t for t in trends if t["role"] == "controlling")
     top = (main_trend["projection_m"].get("24h") or {}).get("max")
     history, bigger = _history(world, main, top, _clock(evidence) if evidence.get("replay") else None)

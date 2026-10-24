@@ -182,6 +182,11 @@ def result_json(r):
         out["card"] = {lang: trace.redact(card_mod.render(r["card"], lang)) for lang in ("en", "ms")}
     # A4 (24 Oct evening): the AI paragraph is written once, in the question's language - the page notes it when the
     # reader switches EN | BM. None when no AI paragraph is shown.
+    # Part 7: the AI's own level and what VEDA did with it (full runs). Offline: no model runs -> 'live_only'
+    j = r.get("ai_judgement")
+    out["ai_judgement"] = ({"status": "live_only"} if r.get("sample_mode", config.sample_mode()) and (r.get("plan") or {}).get("effort")
+                           == "full" else {k: j.get(k) for k in ("ai_level", "code_level", "final", "reasons",
+                                                                 "confidence", "status", "why", "capped")} if j else None)
     expl = (out["view"] or {}).get("explanation")
     out["explanation_lang"] = expl.get("language") if expl else None
     # A6: a recognised Kelantan place VEDA does not cover yet -> the nearest covered town and how far (else None)

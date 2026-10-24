@@ -41,4 +41,13 @@ Jenob → Rantau Panjang travel time, if you know it: ____ h
 above 2014: a real record, or a different gauge datum? Date: ☐ 1 Dec 2014 ☐ other ____ · 28.99 m: ☐ real ☐ datum
 changed ☐ don't know
 
+**(g) Nemotron may raise the level (built 24 Oct, live only).** In its check of each full answer, Nemotron also
+gives its own level and names up to 2 facts behind it. VEDA's code uses a **higher** level only if every named fact
+is real and points to more risk, and Nemotron is at least medium-sure — then at most **one level up** (more only if
+a named fact is itself higher, e.g. the town's river passing Danger within 24 h). It can **never lower** the rules'
+level and never changes "Can't confirm". The screen says "Nemotron weighed all sources and raised this to <level>:
+<facts>". **This overlaps (d):** Nemotron could raise Rantau Panjang because Kg. Jenob rises fast — without your
+travel time or threshold. (In a 24 Oct test on made-up Jenob-like facts it kept NORMAL every time.) Keep it?
+☐ yes ☐ yes, but not for upstream gauges ☐ no
+
 Thank you — your answers go into `docs/DECISIONS.md` with your name and the date.

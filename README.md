@@ -50,7 +50,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 34 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 40 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -143,6 +143,14 @@ flowchart LR
   recomputed if one is found ("verdict recomputed after the Critic's request: NORMAL → WATCH"); every run, gauges JPS
   publishes that VEDA has not mapped yet are noticed as "discovered" - a person approves one (`python -m app.discover approve <station_key> --place <town> --by <name>`; `list` shows them)
   before it appears, and then only as context, never in the verdict.
+- **AI judgement in the loop (Part 7, 24 Oct): code sets a floor, Nemotron can only raise it.** In the same review
+  call, the Critic's Nemotron also gives its own level from all the facts and cites up to 2 fact ids. Code then
+  decides: a higher level is used only when every cited fact exists and can support a raise and the AI's confidence
+  is medium or high - at most one level up, unless a cited fact itself stands higher (e.g. the 24 h range passing
+  Danger). A lower AI level is recorded and VEDA keeps the safer level; "Can't confirm" is never changed by the AI.
+  A raised answer says "Nemotron weighed all sources and raised this to <level>: <the cited facts, in the words code
+  wrote>", Details show "Rules said / Nemotron said / Final", and the AI's level is traced on every full run
+  (`critic.ai_judgement`). Offline there is no model, so Details say "Nemotron's judgement: live mode only".
 - **Code decides the path.** The quick path (about 6 s, written by code) is used when nothing is wrong. The full path
   (≤150 s, with Nemotron) is used when a gauge is at Alert or above, the river is rising, a MET warning is active, a
   source is stale or missing, or the question is about evacuation, being cut off, or the next days.
@@ -158,7 +166,7 @@ flowchart LR
 | **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Super VL by name, lane `deep`) |
 | **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT_DATA. Per-source circuit breaker. | No |
 | **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain - including rain **upstream + here** (B-88, `app/rain_rule.py`: heavy rain at an upstream rain point lifts a town to at least Keep watching; when it can arrive within 24 h while it also rains heavily in town, one level up). Builds the 24 h range, the confidence, and the comparison with past floods. | No |
-| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Live, **24 Oct 2026, 12:19-13:14 MYT: the AI review was done in 6 of 7 full-path runs** (23 Oct, 22:47-23:07: 8 of 10 full runs; test harness on 23 Oct: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
+| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts (each with an id) and the explanation, and answers: does the explanation contradict, exaggerate or downplay a fact? - and, in the same call, which level would it give, citing up to 2 fact ids (code accepts only a cited, one-level raise; see "AI judgement in the loop"). Live, **24 Oct 2026, 12:19-13:14 MYT: the AI review was done in 6 of 7 full-path runs** (23 Oct, 22:47-23:07: 8 of 10 full runs; test harness on 23 Oct: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never "a PPS is open" or "the road will be cut off". | No |
 
 Models are reached only through Meterless **Nightshift**: both AI steps ask for NVIDIA Nemotron 3.5 Super VL **by
@@ -223,8 +231,8 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
 - **Offline test suite (`python -m pytest -q`): 944 tests pass (24 Oct 2026), 13 skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 34 scenarios, 34 of 34 pass; pass^3:
-  34 of 34 in all 3 repeat runs in CI (the Docker job runs them 3 times on every push; 24 Oct at `af05b22`: green, job
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 40 scenarios (5 of them for Nemotron's judgement,
+  Part 7), 40 of 40 pass locally; pass^3: 34 of 34 in all 3 repeat runs in CI (the Docker job runs them 3 times on every push; 24 Oct at `af05b22`: green, job
   32 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
@@ -353,8 +361,8 @@ Zetaris.
   explanation contradict, exaggerate or downplay a fact? Measured live, 24 Oct 2026, 12:19-13:14 MYT: 10 of 10
   runs answered within 150 s; explanation shown in 6 of 7 full-path runs, AI review done in 6 of 7 (23 Oct, 22:47-23:07
   MYT: 8 of 10 and 8 of 10).
-- **What is unique:** the model never decides - code reads, checks and reconciles the data and sets the verdict with
-  rules a person can read; the model explains, a second model call checks the explanation against the facts, and a
+- **What is unique:** code reads, checks and reconciles the data and sets the verdict with rules a person can read;
+  the model can only raise that level, by one step, citing facts code checks - never lower it; the model explains, a second model call checks the explanation against the facts, and a
   safety gate checks every answer last. The served model is verified on every call; one source failing never blocks
   the river answer (per-source circuit breakers); a flood replay cuts every source at the replay time so nothing from
   later leaks in.

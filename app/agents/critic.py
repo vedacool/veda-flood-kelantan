@@ -26,6 +26,7 @@ from app import config, trace
 from app.adapters import nightshift, zetaris
 from app.agents import coordinator, data_agent
 from app.agents.data_agent import AGREE_M, FRESHNESS, source_id
+from app.agents.forecast_agent import LEVELS, warning_level
 from app.engines.world_model.veda_ingest import place_id
 
 AGENT = "Critic"
@@ -282,20 +283,123 @@ SMALL_EVIDENCE_NOTE = ("Every line of the draft except the explanation was writt
 # The AI review with a card (Husaini 23 Oct): the card's key facts + the model-written explanation only, one yes/no
 # question. Probe 23 Oct: 10/10 completed, 2/2 planted errors rejected at 2000 tokens (200 -> all empty: Lightning
 # spends hidden tokens even with reasoning off).
+# Part 7 (Cowork 24 Oct): the same call also returns the AI's own level - fact ids only, no free text (probe 24 Oct:
+# with a sentence per reason 8/10 completed; ids only 9/10, median ~8 s). Code decides what the level may do (judge).
 SMALL_SYSTEM = ("You check one short explanation that a flood assistant for Kelantan will show to residents. FACTS "
-                "were written by code from verified data. Does the explanation contradict, exaggerate or downplay any "
-                "fact? The explanation may be in English or Malay. Reply JSON only: {\"ok\": true or false, "
-                "\"reason\": \"at most 20 words\"}")
+                "were written by code from verified data; each fact has an id. (1) Does the explanation contradict, "
+                "exaggerate or downplay any fact? The explanation may be in English or Malay. (2) Judge the flood "
+                "level for the place yourself from ALL the FACTS: NORMAL, WATCH, PREPARE, ACT, or INSUFFICIENT_DATA "
+                "when the facts cannot tell. verdict is what VEDA's rules decided; you may agree, or judge higher or "
+                "lower. reasons: the ids of at most 2 facts that decide your level. Reply JSON only: {\"ok\": true "
+                "or false, \"reason\": \"at most 20 words\", \"ai_level\": \"...\", \"reasons\": [\"<fact id>\"], "
+                "\"confidence\": \"low\" or \"medium\" or \"high\"}")
+AI_LEVELS = LEVELS + ("INSUFFICIENT_DATA",)
+MAX_REASONS = 2
+TOWN_LEVEL = {"Alert": "WATCH", "Warning": "PREPARE", "Danger": "ACT"}       # the town gauge's JPS band -> its level
+RAISE_RAIN = ("rain_up", "rain_here", "thailand", "thunder")                   # rain lines that can support a raise
+LIST_IDS = {"upstream": "upstream", "rain_upstream_and_here": "rain", "met_warnings": "met_warning",
+            "conflicts": "conflict", "excluded": "excluded"}
+TOWN_FACTS = ("river", "jps_level", "vs_alert", "vs_danger", "trend", "next_24h")
+
+
+def judge_facts(card, forecast, lang):
+    """The card's key facts with an id each (lists become 'upstream.1', 'rain.2' ...) -> (facts in `lang`, meta).
+    meta[id] = {'raise': can this fact support a higher level, 'level': the level the fact itself stands at (or None),
+    'text': {'en', 'ms'}} - the code-written words the screen shows when the AI cites it."""
+    both = {lg: card_mod.key_facts(card, forecast, lg) for lg in ("en", "ms")}
+    kinds = [k for k, _ in card_mod.rain_lines(card, "en")]
+    town = TOWN_LEVEL.get((card.get("level_name") or {}).get("en") or "")
+    gauge = (card.get("gauge") or {}).get("name")
+    rng, th = card.get("range_24h") or {}, card.get("thresholds") or {}
+    facts, meta = {}, {}
+
+    def add(fid, key, i=None):
+        pick = (lambda lg: both[lg][key]) if i is None else (lambda lg: both[lg][key][i])     # noqa: E731
+        facts[fid] = pick(lang)
+        text = {lg: str(pick(lg)) for lg in ("en", "ms")}
+        if key in TOWN_FACTS and gauge:
+            text = {lg: f"{gauge}: {t}" for lg, t in text.items()}
+        raise_, level = False, None
+        if key in ("river", "jps_level", "vs_alert", "vs_danger"):
+            raise_, level = town is not None, town
+        elif key == "trend":
+            raise_ = card.get("trend") == "rising"
+        elif key == "next_24h":
+            if card.get("pass_danger"):
+                raise_, level = True, "ACT"
+            elif rng and th.get("alert") is not None and rng.get("max", 0) >= th["alert"]:
+                raise_, level = True, "WATCH"
+        elif key == "vs_2014":
+            raise_ = ((card.get("vs_2014") or {}).get("diff_m") or -1) >= 0
+        elif key == "upstream":
+            raise_ = True
+        elif key == "rain_upstream_and_here":
+            raise_ = i < len(kinds) and kinds[i] in RAISE_RAIN
+        elif key == "met_warnings":
+            raise_, level = True, warning_level(card["warnings"][i])[1]
+        meta[fid] = {"raise": raise_, "level": level, "text": text}
+
+    for key, val in both[lang].items():
+        if isinstance(val, list) and key in LIST_IDS:
+            for i in range(len(val)):
+                add(f"{LIST_IDS[key]}.{i + 1}", key, i)
+        else:
+            add(key, key)
+    return facts, meta
+
+
+def judge(data, code_level, meta):
+    """The AI's level -> what VEDA does with it (code decides; the AI can only raise). Never raises.
+    -> {ai_level, code_level, final, reasons: [{fact, text}], confidence, status, why, capped}
+    status: agreed | raised | lower | ignored. A raise needs medium / high confidence and 1-2 cited facts that exist
+    and can support a raise; it goes at most one level above the code level, unless a cited fact itself stands
+    higher (then up to that fact's level). The rules' 'Can't confirm' is never changed."""
+    data = data if isinstance(data, dict) else {}
+    ai, conf = data.get("ai_level"), data.get("confidence")
+    ids = data.get("reasons")
+    ids = [x for x in ids if isinstance(x, str)] if isinstance(ids, list) else []
+    out = {"ai_level": ai if ai in AI_LEVELS else None, "code_level": code_level, "final": code_level,
+           "reasons": [{"fact": x, "text": (meta.get(x) or {}).get("text")} for x in ids[:MAX_REASONS]],
+           "confidence": conf if conf in ("low", "medium", "high") else None, "capped": False}
+
+    def done(status, why):
+        return {**out, "status": status, "why": why}
+    if ai not in AI_LEVELS:
+        return done("ignored", "no valid level in the AI's reply")
+    if ai == code_level:
+        return done("agreed", "the AI agrees with the rules")
+    if code_level not in LEVELS:
+        return done("ignored", "the rules cannot confirm the level - the AI cannot change 'Can't confirm'")
+    if ai == "INSUFFICIENT_DATA" or LEVELS.index(ai) < LEVELS.index(code_level):
+        return done("lower", "AI judged lower; VEDA keeps the safer level")
+    if out["confidence"] not in ("medium", "high"):
+        return done("ignored", f"the AI's confidence is {out['confidence'] or 'missing'} - a raise needs medium or high")
+    if not ids or len(ids) > MAX_REASONS:
+        return done("ignored", f"a raise needs 1-{MAX_REASONS} cited facts (got {len(ids)})")
+    unknown = [x for x in ids if x not in meta]
+    if unknown:
+        return done("ignored", f"cites a fact that was not given: {', '.join(unknown)}")
+    weak = [x for x in ids if not meta[x]["raise"]]
+    if weak:
+        return done("ignored", f"cites a fact that cannot support a raise: {', '.join(weak)}")
+    own = [LEVELS.index(meta[x]["level"]) for x in ids if meta[x]["level"] in LEVELS]
+    limit = max([LEVELS.index(code_level) + 1] + own)
+    final = LEVELS[min(LEVELS.index(ai), limit, len(LEVELS) - 1)]
+    out.update(final=final, capped=final != ai)
+    return done("raised", f"the AI raised {code_level} -> {final}" + (
+        f" (it asked {ai}; at most one level up unless a cited fact stands higher)" if final != ai else ""))
 SMALL_MAX_TOKENS = 4096          # B-85: measured at 4096 on Super VL (reviews used 205-727 tokens, 23 Oct)
 FAST_FAIL_S, MAX_RETRIES = 10, 2      # retry only a failure that came back fast; a ~45 s cut-off is never retried
 
 
 def _small_review(answer, forecast, llm, budget_s, lane):
-    """-> (decision, problems, fix) or raises NightshiftError. Retries a fast failure (< FAST_FAIL_S) up to
-    MAX_RETRIES times while the budget allows."""
+    """-> (decision, problems, fix, judgement) or raises NightshiftError. Retries a fast failure (< FAST_FAIL_S) up
+    to MAX_RETRIES times while the budget allows. judgement = judge() of the AI's own level (Part 7)."""
+    lang = answer.get("language") if answer.get("language") in ("en", "ms") else "en"
+    facts, meta = judge_facts(answer["card"], forecast, lang)
     msgs = [{"role": "system", "content": SMALL_SYSTEM},
-            {"role": "user", "content": json.dumps({"FACTS": card_mod.key_facts(answer["card"], forecast, answer.get("language")),
-                                                    "EXPLANATION": answer["explanation"]}, ensure_ascii=False)}]
+            {"role": "user", "content": json.dumps({"FACTS": facts, "EXPLANATION": answer["explanation"]},
+                                                   ensure_ascii=False)}]
     start, tries = time.monotonic(), 0
     while True:
         tries += 1
@@ -315,10 +419,11 @@ def _small_review(answer, forecast, llm, budget_s, lane):
                 continue
             raise
     data = r.data if isinstance(r.data, dict) else {}
+    j = judge(data, answer["card"]["verdict"], meta)
     if data.get("ok") is True:
-        return "approve", [], ""
+        return "approve", [], "", j
     reason = str(data.get("reason") or "model rejected without a usable reason")[:300]
-    return "reject", [{"type": "unsupported", "detail": reason, "by": "model"}], reason
+    return "reject", [{"type": "unsupported", "detail": reason, "by": "model"}], reason, j
 
 
 def _model_review(question, answer, facts, findings, recheck, llm, budget_s, lane="deep", forecast=None):
@@ -348,7 +453,18 @@ def _model_review(question, answer, facts, findings, recheck, llm, budget_s, lan
                 for p in (data.get("problems") or []) if isinstance(p, dict)]
     if decision == "reject" and not problems:
         problems = [{"type": "other", "detail": "model rejected without a usable reason", "by": "model"}]
-    return decision, problems, str(data.get("fix") or "")[:500]
+    return decision, problems, str(data.get("fix") or "")[:500], None
+
+
+def _trace_judgement(j, round_no):
+    names = ", ".join(r["fact"] for r in j.get("reasons") or [])
+    trace.step(AGENT, "critic.ai_judgement", input_summary=f"draft round {round_no}",
+               output_summary=(f"rules {j.get('code_level')} · Nemotron {j.get('ai_level') or '-'} · final "
+                               f"{j.get('final')} ({j['status']})" + (f" - cites {names}" if names else "")),
+               status="success" if j["status"] in ("agreed", "raised", "lower") else "fallback", source="code",
+               target_agent="Forecast" if j["status"] == "raised" else None, decision=j.get("why"),
+               details={k: j.get(k) for k in ("ai_level", "code_level", "final", "reasons", "confidence", "status",
+                                              "why", "capped")})
 
 
 def review(question, plan, evidence, forecast, answer, world=None, round_no=1, llm=None, budget_s=None,
@@ -371,7 +487,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                output_summary=f"{len(findings)} problem(s)", source="code", details={"checks": CODE_CHECKS},
                status="needs_revision" if findings else "success",
                decision="; ".join(f"{f['type']}: {f['detail']}" for f in findings) or "all code checks pass")
-    checked_by, status_note, critic_lane_used = ["code"], None, None
+    checked_by, status_note, critic_lane_used, judgement = ["code"], None, None, None
     if not recheck_data:
         recheck = {"problems": [], "note": skip_reason or "re-query skipped"}
     elif round_no == 1:
@@ -413,9 +529,9 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
         try:
             remaining = REVIEW_CAP_S if budget_s is None else max(1.0, min(REVIEW_CAP_S,
                                                                           budget_s - (time.monotonic() - t_start)))
-            decision, model_problems, fix = _model_review(question, answer, facts, code_problems, recheck, llm,
-                                                          remaining, lane=first,   # re-query time already used
-                                                          forecast=forecast)
+            decision, model_problems, fix, judgement = _model_review(
+                question, answer, facts, code_problems, recheck, llm, remaining, lane=first,   # re-query time used
+                forecast=forecast)
             checked_by.append("model")
             critic_lane_used = first
         except nightshift.NightshiftError as e:
@@ -433,6 +549,11 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     result = {"decision": decision, "problems": problems, "fix": fix, "round": round_no, "checked_by": checked_by,
               "critic_lane": critic_lane_used if "model" in checked_by else None,
               "recheck": {k: v for k, v in recheck.items() if k != "problems"}}
+    if plan.get("effort") == "full":         # Part 7: the AI's level is recorded on every full run (or why not)
+        result["ai_judgement"] = judgement or {
+            "status": "not_run", "ai_level": None, "code_level": forecast.get("verdict"),
+            "final": forecast.get("verdict"), "reasons": [], "why": status_note or "no AI review in this round"}
+        _trace_judgement(result["ai_judgement"], round_no)
     trace.step(AGENT, "critic.review", input_summary=f"draft round {round_no} ({answer.get('drafted_by')})",
                output_summary=f"{decision}: {len(problems)} problem(s)" + (f" - fix: {fix}" if fix else ""),
                status="approved" if decision == "approve" else "needs_revision", target_agent="Coordinator",

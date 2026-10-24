@@ -1,0 +1,27 @@
+{
+  "name": "ai_judgement_invented_fact_ignored_en",
+  "about": "Nemotron cites a fact that was never given -> its level is ignored [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is above its Alert level, so keep watching official updates.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "PREPARE",
+      "reasons": [
+        "upstream.7"
+      ],
+      "confidence": "high"
+    }
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "must": [
+      "The river is above its Alert level, so keep watching official updates."
+    ],
+    "must_trace": [
+      "cites a fact that was not given: upstream.7"
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}

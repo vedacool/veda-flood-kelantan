@@ -204,18 +204,19 @@ def _draft_call(llm, request, feedback, budget_s):
 
 
 def draft(question, p, evidence, forecast=None, card=None, llm=None, budget_s=None, feedback=None, previous=None,
-          use_model=True, skip_reason=None):
+          use_model=True, skip_reason=None, by_design=False):
     """The answer -> {'text', 'language', 'drafted_by', 'explanation', 'safety_line'}. Never raises.
     The card lines (action, verdict + JPS level, comparison, range, sources) are inserted by code; Nemotron writes
     only the explanation (B-21). The Coordinator does not check it: the Critic does (card.explanation_problem in its
     code checks + its AI review; B-14, 23 Oct). use_model=False (quick path, or no time left) -> the card alone.
-    feedback = the Critic's review of `previous` (revise round)."""
+    feedback = the Critic's review of `previous` (revise round). by_design: the card alone on purpose (Part 7: the AI
+    raised the level, so the explanation written for the lower level is not used) - 'code', not an AI fallback."""
     llm = llm or nightshift.chat
     card = card or card_mod.build(p, evidence, forecast)
     language = p.get("question_language", "en")
     drafted_by, why, explanation = "llm", None, None
     if not use_model:
-        drafted_by = "code" if p.get("effort") == "quick" else "fallback"
+        drafted_by = "code" if p.get("effort") == "quick" or by_design else "fallback"
         why = (skip_reason or "model not used") + " -> card written by code"
     else:
         # Husaini 23 Oct: the card's key facts only (no card text, no question - user_type carries who is asking)

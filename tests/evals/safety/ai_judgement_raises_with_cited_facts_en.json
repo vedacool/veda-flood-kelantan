@@ -1,0 +1,30 @@
+{
+  "name": "ai_judgement_raises_with_cited_facts_en",
+  "about": "Nemotron judges PREPARE citing two upstream gauges -> raised to PREPARE, card by code [SYNTHETIC rising river, Kota Bharu]",
+  "question": "Is Kota Bharu at risk in the next two days?",
+  "llm": {
+    "explanation": "The river is above its Alert level, so keep watching official updates.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "PREPARE",
+      "reasons": [
+        "upstream.2",
+        "upstream.3"
+      ],
+      "confidence": "medium"
+    }
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "drafted_by": "code",
+    "must_not": [
+      "The river is above its Alert level, so keep watching official updates."
+    ],
+    "must_trace": [
+      "verdict raised by Nemotron's judgement: WATCH → PREPARE",
+      "\"status\": \"raised\""
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}

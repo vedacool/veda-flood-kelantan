@@ -84,7 +84,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                             "are labelled", details={"scenario": replay, "at": at.isoformat()})
     world = world or open_world(run_.run_id)
     state, p, evidence, fc, card, answer, status = "plan", None, None, None, None, None, "success"
-    first_verdict = None
+    first_verdict, judgement = None, None
     reviews, timing, budget = [], {}, None
     pool = ThreadPoolExecutor(max_workers=1)
     pre = pool.submit(trace.bind(data_agent.prefetch), world, now, replay)    # world refresh while code routes
@@ -175,8 +175,13 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 fc = forecast_agent.forecast(p, evidence, world)
                 first_verdict = first_verdict or fc["verdict"]           # run_end says the final AND the first
                 if old is not None:                       # B-71(b): back here after the Critic's request
-                    trace.step("System", "verdict.recomputed", input_summary="new source from the Data & Reconciler",
-                               output_summary=f"verdict recomputed after the Critic's request: {old} → {fc['verdict']}",
+                    by_ai = (evidence.get("ai_minimum") or {}).get("level") == fc["verdict"] != old
+                    trace.step("System", "verdict.recomputed",
+                               input_summary=("Nemotron's higher level, accepted by the Critic's code" if by_ai else
+                                              "new source from the Data & Reconciler"),
+                               output_summary=(f"verdict raised by Nemotron's judgement: {old} → {fc['verdict']}"
+                                               if by_ai else
+                                               f"verdict recomputed after the Critic's request: {old} → {fc['verdict']}"),
                                target_agent="Coordinator", decision=("verdict changed -> a new answer is drafted"
                                                                      if fc["verdict"] != old else
                                                                      "verdict unchanged -> the answer is redrafted with "
@@ -195,9 +200,12 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                "is trapped / stranded -> ACT advice on the card; the verdict still shows the data")
                 state = "draft"
             elif state == "draft":
-                why = "quick path: answer written by code" if p["effort"] == "quick" else short("the answer")
+                why = ("quick path: answer written by code" if p["effort"] == "quick" else
+                       "the AI raised the level: card written by code (the explanation was for the lower level)"
+                       if evidence.get("ai_minimum") else short("the answer"))
                 answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
-                                           budget_s=model_time(), use_model=why is None, skip_reason=why)
+                                           budget_s=model_time(), use_model=why is None, skip_reason=why,
+                                           by_design=bool(evidence.get("ai_minimum")))
                 state = "critique"
             elif state == "critique":
                 quick = p["effort"] == "quick"
@@ -210,6 +218,19 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
                     continue
                 reviews.append(rv)
+                j = rv.get("ai_judgement")
+                if j and (judgement is None or judgement.get("status") == "not_run"):
+                    judgement = j                         # the run's judgement: the first one the AI gave
+                if j and j.get("status") == "raised" and not evidence.get("ai_minimum"):
+                    # Part 7: an accepted raise -> the Forecast agent recomputes with it as a minimum, the card is
+                    # rebuilt and written by code (no second model call), then checked again by code
+                    judgement = j
+                    evidence["ai_minimum"] = {"level": j["final"], "texts": {
+                        lg: " · ".join(r["text"][lg] for r in j["reasons"] if r.get("text")) for lg in ("en", "ms")},
+                        "reason": "Nemotron weighed all sources: " + "; ".join(r["text"]["en"] for r in j["reasons"])}
+                    state = "forecast"
+                    timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
+                    continue
                 upstream_missing = [m for m in evidence.get("missing_sources") or [] if m["role"] == "upstream"]
                 if upstream_missing and not card.get("missing"):
                     card["missing"] = upstream_missing     # the card says what is missing (B-71(b))
@@ -260,4 +281,5 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         if own_world:
             world.close()
     return {"run_id": run_.run_id, "status": status, "answer": answer, "plan": p, "evidence": evidence,
-            "forecast": fc, "card": card, "reviews": reviews, "timing": timing, "trace": str(path)}
+            "forecast": fc, "card": card, "reviews": reviews, "timing": timing, "trace": str(path),
+            "ai_judgement": judgement, "sample_mode": config.sample_mode()}

@@ -5,7 +5,8 @@
 
 Each scenario (tests/evals/<set>/<name>.json) gives a question, optionally a replay scene, a data situation
 ("stale_hours": the controlling gauge is that much older) and a stand-in AI ("llm": the explanation it writes and
-whether the Critic approves, rejects or is down - used for the hostile cases), plus what the answer must and must
+whether the Critic approves, rejects or is down - used for the hostile cases - and, Part 7, "judge": the level the
+stand-in AI gives with its cited fact ids), plus what the answer must and must
 not contain. Runs in SAMPLE_MODE from the committed fixtures: no network, no keys. Real agent logic throughout.
 """
 import json
@@ -36,7 +37,8 @@ def stand_in(spec):
             decision = "approve" if spec.get("critic") == "deep_down" else spec.get("critic", "approve")
             problems = [] if decision == "approve" else [{"type": "unclear", "detail": "eval rejection"}]
             return SimpleNamespace(data={"decision": decision, "problems": problems, "fix": "eval",
-                                         "ok": decision == "approve", "reason": "eval rejection"}, text="")
+                                         "ok": decision == "approve", "reason": "eval rejection",
+                                         **(spec.get("judge") or {})}, text="")      # Part 7: the AI's own level
         if spec.get("explanation") is None:
             raise nightshift.NightshiftError("eval: no explanation")
         return SimpleNamespace(data={"explanation": spec["explanation"]}, text="")

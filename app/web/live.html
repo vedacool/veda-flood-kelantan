@@ -178,6 +178,7 @@ function add(rec) {
   if (rec.target_agent) top.append(el("span", "to", "→ " + rec.target_agent));
   top.append(el("span", "act", rec.action + (rec.status && rec.status !== "success" ? ` · ${rec.status}` : "")));
   if (rec.action === "ai.fallback") top.append(el("span", "tag", "AI fallback"));
+  if (rec.action === "critic.ai_judgement") top.append(el("span", "tag req-tag", "AI judgement"));   // Part 7
   if (request) top.append(el("span", "tag req-tag", "request"));
   top.append(el("span", "clock", clockText(rec)));
   li.append(top);
