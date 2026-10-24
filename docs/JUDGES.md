@@ -7,7 +7,8 @@ needed**. Offline (SAMPLE_MODE) runs VEDA's real agents and rules on recorded sc
 
 ## 1. Start it (about 3 minutes)
 You need **Python 3.10 or newer ([JPS reading] recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.10, [JPS reading],
-3.12 and [JPS reading]: install, 853 tests, 33 safety scenarios and every row below.) In a terminal:
+3.12 and [JPS reading]: install, the tests - 853 then - the safety scenarios and every row below. At `af05b22`: 938 tests and 34
+safety scenarios, run by CI on Python 3.13.) In a terminal:
 
 **Windows (PowerShell)**
 ```
@@ -33,7 +34,9 @@ PowerShell: `$env:VEDA_PORT="8001"` - and use 8001 in the links below.) Prefer D
 
 ## 2. Try these (about 5 minutes)
 Each link opens the page on one scene; then tap the town named. A grey label above the answer always says which data
-it used: **Past flood replay** or **Made-up test scene**.
+it used: **Replay · 27 Nov 2024, 7:30 pm · Change** (the moment of the past flood replay) or **Made-up test scene ·
+<scene>**. In the Nov 2024 replay only Rantau Panjang has cited river readings all evening; the other towns honestly
+show **Can't confirm**.
 
 | Try | Open, then tap | What you should see |
 |---|---|---|
@@ -68,7 +71,7 @@ Six ready-made inputs are in `input_examples/`, with VEDA's real answers and tra
   redacted). Replay one at 4× in the live log: [127.0.0.1:8000/live](http://127.0.0.1:8000/live) → *Replay a recorded
   run…* → pick one → **4×**.
 - **Every test and measurement**, with dates and how to reproduce them: [`docs/EVIDENCE.md`](EVIDENCE.md).
-- `python -m pytest -q` (853 offline tests) and `python scripts/run_evals.py` (33 safety scenarios).
+- `python -m pytest -q` (938 offline tests at `af05b22`) and `python scripts/run_evals.py` (34 safety scenarios).
 
 ## What only works live, and why
 | Live only | Why it is not in offline mode |

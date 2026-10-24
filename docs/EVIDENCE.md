@@ -11,6 +11,9 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 
 | Date | What was tested | Result | Kind | Reproduce / source | Status |
 |---|---|---|---|---|---|
+| 24 Oct ~18:10 | Offline test suite at `af05b22` | **938 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`); CI run 40083934555 green at `af05b22` | Re-verified 24 Oct (local at `76c61d9`, docs only after `af05b22`) |
+| 24 Oct ~18:10 | Safety scenarios at `af05b22` | **34 of 34**; ×3 in CI: the Docker job log of run 40083934555 shows "34/34 passed" three times (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | Re-verified 24 Oct (1 run locally; ×3 from the CI log) |
+| 24 Oct 12:19-13:14 | **Live, Super VL by name, 10 runs** (town buttons, EN + BM alternating, build `586d05a`) | **10 of 10 answered within 150 s** (3 quick 5.5-6.4 s, 7 full 27.6-80.4 s); AI explanation shown in **6 of 7** full-path runs; Critic AI review **6 of 7**; every call that answered was served by `nvidia/nemotron-3.5-super-vl-120b-a12b` | live | [`docs/EVIDENCE-live-24oct.md`](EVIDENCE-live-24oct.md) (built from the 10 traces redacted with `scripts/publish_trace.py`) | Not re-verified (Session A's measurement) |
 | 24 Oct ~12:30 | The 6 input examples through `POST /run` and the CLI (offline, after example 05 moved to the Nov 2024 replay, 27 Nov 08:00) | All 6 answer on both paths with the same verdicts: PREPARE, ACT, NORMAL, NORMAL, INSUFFICIENT DATA, not covered; `output_examples/` regenerated from them | manual | `curl -X POST localhost:8000/run -H "Content-Type: application/json" -d @input_examples/0N_*.json`; `python scripts/make_examples.py` | Re-verified 24 Oct |
 | 24 Oct ~12:15 | Offline test suite | **853 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`) | Re-verified 24 Oct |
 | 24 Oct ~12:15 | Safety scenarios | **33 of 33**; CI runs them 3 times in the Docker job (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | 33/33 re-verified 24 Oct (1 run); ×3 from commit `586d05a` message |
@@ -48,10 +51,11 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 22 Oct 15:50 153 · 16:12 171 · 16:54 208 · 17:22 217 · 18:28 252 · 18:44 273 · ~19:12 312 ·
 23 Oct audit 598 -> 633 · 16:53 698 (clean clone) · 18:25 746 (dry run) ·
 24 Oct 00:00 769 · 09:10 766 (the unused model-planning code deleted) · 09:21 777 · 09:27 785 · 09:30 788 · 09:36 795 ·
-09:42 799 · 09:47 801 · 10:14 827 · 10:23 828 · 11:15 830 · 11:28 838 · 11:57 847 · 12:06 **853** (`586d05a`).
+09:42 799 · 09:47 801 · 10:14 827 · 10:23 828 · 11:15 830 · 11:28 838 · 11:57 847 · 12:06 853 (`586d05a`) ·
+17:56 **938** (`af05b22`).
 
 **Safety scenarios:** 22 Oct 23:52 13/13 · 23 Oct 09:03 18/18 · 13:52 20/20 (pass^3) · 17:53 23/23 · 18:25 24/24 ·
-24 Oct 00:00 25 · 09:05 25/25 ×3 in CI · 10:14 28/28 · 11:28 29/29 · 11:44 30/30 · 11:57 32/32 · 12:06 **33/33 ×3**.
+24 Oct 00:00 25 · 09:05 25/25 ×3 in CI · 10:14 28/28 · 11:28 29/29 · 11:44 30/30 · 11:57 32/32 · 12:06 33/33 ×3 · 17:56 **34/34 ×3** (`af05b22`).
 
 ## Known gaps in the sources (found while writing this file)
 - Fixed 24 Oct: `data/sample/live_traces/README.md` gave the 12:29-13:29 runs' **total** time as the Critic review's
