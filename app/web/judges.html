@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA - for judges</title>
+<link rel="icon" href="data:,">
+<style>
+  /* B-90 "For judges": how VEDA works, and real recorded live runs replayed step by step. Same look as the app
+     (text >= 18 px, works at 375 px and 1440 px), EN + BM, nothing loaded from outside. Only the published,
+     redacted recorded traces are shown (data/sample/live_traces via /trace/recorded) - never live JPS readings. */
+  :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
+          --on-accent: #ffffff; --warn-text: #8a4a00; --warn-bg: #fff3df; --req-bg: #e6f0f8; --ai-bg: #eef4e2;
+          /* the agents' colours - the same as the live log (live.html), white text on each */
+          --c-system: #5a5c62; --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f;
+          --c-nemotron: #4f7d00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
+            --on-accent: #151514; --warn-text: #f0b45a; --warn-bg: #3a2a10; --req-bg: #1d2a33; --ai-bg: #222b17; }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+           background: var(--card); position: sticky; top: 0; z-index: 2; }
+  header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; color: var(--fg);
+                  text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 8px 0 8px; }
+  h2 { font-size: 1.3rem; margin: 28px 0 8px; }
+  h3 { font-size: 1.1rem; margin: 0 0 6px; }
+  p { margin: 8px 0; }
+  a { color: var(--accent); }
+  button, .btn { font: inherit; min-height: 48px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
+                 background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; display: inline-flex;
+                 align-items: center; justify-content: center; gap: 8px; }
+  button:focus-visible, .btn:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  [aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; min-width: 48px; padding: 8px 12px; font-weight: 700; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+  .note { color: var(--muted); }
+  [hidden] { display: none !important; }
+  .diagram { width: 100%; max-width: 520px; height: auto; display: block; margin: 8px auto 4px; }
+  .diagram .box { fill: var(--card); stroke: var(--line); stroke-width: 2; }
+  .diagram .agent { stroke-width: 0; }
+  .diagram text { font: 700 19px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--fg); }
+  .diagram text.on { fill: #fff; }
+  .diagram text.small { font-weight: 400; }
+  .diagram .flow { stroke: var(--muted); stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  .diagram .uses { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 5; fill: none; }
+  .diagram #arrow path { fill: var(--muted); }
+  .decides { list-style: none; padding: 0; margin: 0; }
+  .decides li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .decides li:last-child { border-bottom: 0; }
+  .decides .tag { white-space: normal; }
+  .tag { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: 999px; background: var(--ag, var(--c-system));
+         color: #fff; font-weight: 700; font-size: 1rem; white-space: nowrap; margin-right: 6px; }
+  .runs { display: grid; gap: 10px; }
+  .run { width: 100%; text-align: left; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .run small { color: var(--muted); font-size: 1rem; font-weight: 400; }
+  .run b { font-size: 1.05rem; }
+  details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--accent); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+  .status { color: var(--muted); margin: 4px 0 0; }
+  ol.steps { list-style: none; padding: 0; margin: 0; }
+  ol.steps > li { padding: 10px 12px; border-left: 6px solid var(--ag, var(--c-system)); background: var(--card);
+                  border-radius: 10px; margin: 0 0 8px; border-top: 1px solid var(--line); border-right: 1px solid var(--line);
+                  border-bottom: 1px solid var(--line); }
+  ol.steps > li.stage { background: transparent; border-right: 0; border-top: 0; border-bottom: 0; padding: 14px 4px 4px 10px; }
+  ol.steps > li.stage .text { font-weight: 800; font-size: 1.1rem; }
+  ol.steps > li.ai { background: var(--ai-bg); }
+  ol.steps > li.req { background: var(--req-bg); border-left-width: 10px; }
+  ol.steps > li.failed { background: var(--warn-bg); }
+  .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .clock { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .text { margin: 4px 0 0; word-break: break-word; }
+  .hl { font-weight: 700; }
+  .failed .hl { color: var(--warn-text); }
+  .raw summary { font-weight: 400; min-height: 36px; font-size: 1rem; }
+  pre { font: 1rem/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0;
+        padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--line); }
+  .links li { margin: 0 0 10px; }
+  @media (min-width: 1024px) {
+    main { max-width: 1100px; padding: 24px 32px 48px; }
+    .one-minute { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+    .one-minute .diagram { margin-top: 0; }
+    .runs { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/" id="home">VEDA</a>
+  <div class="seg" role="group" aria-label="Language / Bahasa">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
+  </div>
+</header>
+<main id="judges">
+  <h1 data-t="title"></h1>
+  <p data-t="intro"></p>
+
+  <!-- a. VEDA in one minute -->
+  <h2 data-t="one_minute"></h2>
+  <div class="one-minute">
+    <svg class="diagram" viewBox="0 0 360 420" role="img" aria-labelledby="d-title d-desc">
+      <title id="d-title" data-t="d_title"></title><desc id="d-desc" data-t="d_desc"></desc>
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 10 5 0 10z"/></marker></defs>
+      <!-- the flow: question -> four agents -> safety gate -> answer -->
+      <rect class="box" x="8" y="6" width="196" height="40" rx="10"/>
+      <text x="106" y="33" text-anchor="middle" data-t="d_question"></text>
+      <rect class="agent" x="8" y="62" width="196" height="44" rx="10" fill="var(--c-coordinator)"/>
+      <text class="on" x="106" y="91" text-anchor="middle" data-t="ag_coordinator"></text>
+      <rect class="agent" x="8" y="122" width="196" height="44" rx="10" fill="var(--c-data)"/>
+      <text class="on" x="106" y="151" text-anchor="middle" data-t="ag_data"></text>
+      <rect class="agent" x="8" y="182" width="196" height="44" rx="10" fill="var(--c-forecast)"/>
+      <text class="on" x="106" y="211" text-anchor="middle" data-t="ag_forecast"></text>
+      <rect class="agent" x="8" y="242" width="196" height="44" rx="10" fill="var(--c-critic)"/>
+      <text class="on" x="106" y="271" text-anchor="middle" data-t="ag_critic"></text>
+      <rect class="box" x="1" y="302" width="210" height="40" rx="10"/>
+      <text x="106" y="329" text-anchor="middle" data-t="d_gate"></text>
+      <path class="flow" d="M106 46v14"/><path class="flow" d="M106 106v14"/><path class="flow" d="M106 166v14"/>
+      <path class="flow" d="M106 226v14"/><path class="flow" d="M106 286v14"/>
+      <!-- what they use: Nemotron beside the Coordinator (it writes), Zetaris beside the Data & Reconciler (it reads);
+           the Critic uses both - its line to Nemotron runs round the right so no lines cross -->
+      <rect class="agent" x="228" y="56" width="124" height="66" rx="10" fill="var(--c-nemotron)"/>
+      <text class="on" x="290" y="84" text-anchor="middle">Nemotron</text>
+      <text class="on small" x="290" y="108" text-anchor="middle">Nightshift</text>
+      <rect class="box" x="228" y="150" width="104" height="44" rx="10"/>
+      <text x="280" y="179" text-anchor="middle">Zetaris</text>
+      <path class="uses" d="M204 84h24M204 150 228 166M204 256 266 194M204 272h142V122"/>
+      <!-- the shared memory -->
+      <rect class="box" x="8" y="362" width="344" height="50" rx="10" stroke-dasharray="6 5"/>
+      <text x="180" y="393" text-anchor="middle" data-t="d_memory"></text>
+    </svg>
+    <ul class="decides" id="decides"></ul>
+  </div>
+
+  <!-- b. Watch a real live run -->
+  <h2 data-t="watch"></h2>
+  <p data-t="watch_intro"></p>
+  <div class="runs" id="featured"></div>
+  <details class="card" id="all-box"><summary data-t="all_runs"></summary><div class="runs" id="all"></div></details>
+  <p class="note" data-t="no_request"></p>
+
+  <div class="card" id="player" hidden>
+    <h3 id="p-label"></h3>
+    <p id="p-question"></p>
+    <div class="controls">
+      <button type="button" class="primary" id="p-play"></button>
+      <div class="seg" role="group" id="p-speed" aria-label="Speed">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+      </div>
+      <button type="button" id="p-all"></button>
+    </div>
+    <p class="status" id="p-status" role="status" aria-live="polite"></p>
+    <ol class="steps" id="p-steps"></ol>
+    <p><a class="btn" id="p-download" download></a> <a id="p-file" target="_blank" rel="noopener"></a></p>
+    <p class="note" id="p-redaction" lang="en"></p>
+  </div>
+
+  <!-- d. links -->
+  <h2 data-t="more"></h2>
+  <ul class="links">
+    <li><a id="l-repo" href="https://github.com/vedacool/veda" target="_blank" rel="noopener" data-t="l_repo"></a></li>
+    <li><a href="https://github.com/vedacool/veda/blob/main/docs/EVIDENCE.md" target="_blank" rel="noopener" data-t="l_evidence"></a></li>
+    <li><a href="https://github.com/vedacool/veda/blob/main/README.md#how-it-works" target="_blank" rel="noopener" data-t="l_how"></a></li>
+    <li><a href="/" data-t="l_try"></a></li>
+  </ul>
+  <p class="note" data-t="footer"></p>
+</main>
+
+<script>
+"use strict";
+// The repo's address: scripts/public_links.py rewrites it to the public repo on publishing day (B-77).
+const REPO = "https://github.com/vedacool/veda";
+const UI = {
+  en: { title: "For judges", intro: "How VEDA works in one minute, and real recorded live runs replayed step by step - every agent, every data query and every AI call, as it happened.",
+    one_minute: "VEDA in one minute", d_title: "How VEDA answers a question",
+    d_desc: "A question goes to the Coordinator, then the Data & Reconciler, the Forecast agent and the Critic, then the safety gate. The Data & Reconciler and the Critic read data through Zetaris; the Coordinator and the Critic call Nemotron through Meterless Nightshift; all share the Meterless World Model.",
+    d_question: "Your question", d_gate: "Safety gate", d_memory: "World Model: shared memory",
+    ag_coordinator: "Coordinator", ag_data: "Data & Reconciler", ag_forecast: "Forecast", ag_critic: "Critic", ag_system: "System",
+    decides: [
+      ["coordinator", "Coordinator", "Decides the path: a quick answer or a full check. Builds the answer card in code; the model only adds a 1-2 sentence explanation."],
+      ["data", "Data & Reconciler", "Decides which sources to trust: reads every source through Zetaris, leaves out stale or broken ones and says why."],
+      ["forecast", "Forecast", "Decides the level - Normal for now, Keep watching, Get ready, Act now or Can't confirm right now - with rules a person can read: the river, the upstream gauges, rain upstream and in town, MetMalaysia warnings."],
+      ["critic", "Critic", "Decides whether the answer may go out: re-checks the facts in Zetaris, can ask the Data & Reconciler for a missing upstream reading, and has Nemotron check the explanation against the facts."],
+      ["nemotron", "Nemotron (via Meterless Nightshift)", "Decides nothing. Writes the short explanation and reviews it; every call names the model that actually answered."],
+      ["system", "Zetaris", "The one data layer: every agent reads data only through it, and every query is in the trace."],
+      ["system", "Meterless World Model", "The agents' shared memory: every fact with its source and time, and the health of each source."],
+      ["system", "Safety gate", "The last check on every answer: never \"Normal\" on missing data, never \"go into the water\", always the disclaimer and 999 / 991."]],
+    watch: "Watch a real live run",
+    watch_intro: "These are real runs recorded live on 23 Oct 2026 (Zetaris + Nemotron through Nightshift). JPS river readings are redacted - they are not redistributed, per the organisers' ruling - so you will see \"[JPS reading — not redistributed]\" in their place. Pick one to replay it here.",
+    all_runs: "All 18 recorded live runs", label: "Recorded live run · {when} MYT",
+    why_2341: "Rantau Panjang, question in BM · Keep watching · the newest: shows which sources were used and left out",
+    why_2252: "Kota Bharu · the Critic's AI review failed twice (NVIDIA error), was retried and approved - failure handled in the open",
+    no_request: "None of these 18 recorded live runs needed the Critic to ask the Data & Reconciler for more data. That exchange (shown highlighted when it happens) can be seen offline in the made-up \"silent upstream gauge\" scene for Pasir Mas.",
+    play: "Play", pause: "Pause", replay: "Play again", show_all: "Show all steps",
+    waiting_ai: "waiting for Nemotron to answer…",
+    status: "{n} of {total} steps · {t} s of {end} s (real time {speed})", done: "All {total} steps · the run took {end} s",
+    download: "Download the full trace (JSONL)", file: "Open the published file on GitHub", raw: "Show raw",
+    asked: "Question asked:", step_names: { plan: "Understanding the question", gather: "Checking river gauges, rain and warnings",
+      forecast: "Working out the risk", draft: "Writing the answer", critique: "Checking the answer", revise: "Fixing the answer" },
+    nemo_ok: "Nemotron answered · {model} · receipt {receipt} · {s} s", nemo_fail: "No answer from the model ({why}) - VEDA carries on",
+    more: "More", l_repo: "The code on GitHub", l_evidence: "Every test and measurement (docs/EVIDENCE.md)",
+    l_how: "How VEDA decides (README: How it works)", l_try: "Try VEDA yourself",
+    footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
+    load_fail: "Could not load the recorded runs." },
+  ms: { title: "Untuk juri", intro: "Cara VEDA berfungsi dalam satu minit, dan larian sebenar yang dirakam secara langsung dimainkan semula langkah demi langkah - setiap ejen, setiap pertanyaan data dan setiap panggilan AI, seperti yang berlaku.",
+    one_minute: "VEDA dalam satu minit", d_title: "Cara VEDA menjawab soalan",
+    d_desc: "Soalan pergi kepada Penyelaras, kemudian Ejen Data, Ejen Ramalan dan Penyemak, kemudian semakan keselamatan. Ejen Data dan Penyemak membaca data melalui Zetaris; Penyelaras dan Penyemak memanggil Nemotron melalui Meterless Nightshift; semuanya berkongsi Meterless World Model.",
+    d_question: "Soalan anda", d_gate: "Semakan keselamatan", d_memory: "World Model: memori bersama",
+    ag_coordinator: "Penyelaras", ag_data: "Ejen Data", ag_forecast: "Ejen Ramalan", ag_critic: "Penyemak", ag_system: "Sistem",
+    decides: [
+      ["coordinator", "Penyelaras", "Memutuskan laluan: jawapan pantas atau semakan penuh. Membina kad jawapan dengan kod; model hanya menambah penjelasan 1-2 ayat."],
+      ["data", "Ejen Data", "Memutuskan sumber mana yang boleh dipercayai: membaca setiap sumber melalui Zetaris, mengetepikan yang lapuk atau rosak dan menyatakan sebabnya."],
+      ["forecast", "Ejen Ramalan", "Memutuskan tahap - Normal buat masa ini, Terus berjaga-jaga, Bersedia, Bertindak sekarang atau Tidak dapat disahkan sekarang - dengan peraturan yang boleh dibaca: sungai, tolok di hulu, hujan di hulu dan di bandar, amaran MetMalaysia."],
+      ["critic", "Penyemak", "Memutuskan sama ada jawapan boleh dihantar: menyemak semula fakta dalam Zetaris, boleh meminta Ejen Data mencari bacaan hulu yang tiada, dan meminta Nemotron menyemak penjelasan dengan fakta."],
+      ["nemotron", "Nemotron (melalui Meterless Nightshift)", "Tidak memutuskan apa-apa. Menulis penjelasan ringkas dan menyemaknya; setiap panggilan menyatakan model yang sebenarnya menjawab."],
+      ["system", "Zetaris", "Satu-satunya lapisan data: setiap ejen membaca data hanya melaluinya, dan setiap pertanyaan ada dalam jejak."],
+      ["system", "Meterless World Model", "Memori bersama ejen: setiap fakta dengan sumber dan masanya, serta keadaan setiap sumber."],
+      ["system", "Semakan keselamatan", "Semakan terakhir bagi setiap jawapan: tidak pernah \"Normal\" jika data tiada, tidak pernah \"masuk ke dalam air\", sentiasa ada penafian dan 999 / 991."]],
+    watch: "Tonton larian langsung sebenar",
+    watch_intro: "Ini larian sebenar yang dirakam secara langsung pada 23 Okt 2026 (Zetaris + Nemotron melalui Nightshift). Bacaan sungai JPS disunting - tidak diedarkan semula, mengikut keputusan penganjur - jadi anda akan melihat \"[JPS reading — not redistributed]\" di tempatnya. Pilih satu untuk dimainkan semula di sini.",
+    all_runs: "Semua 18 larian langsung yang dirakam", label: "Larian langsung dirakam · {when} MYT",
+    why_2341: "Rantau Panjang, soalan dalam BM · Terus berjaga-jaga · yang terbaru: menunjukkan sumber yang digunakan dan diketepikan",
+    why_2252: "Kota Bharu · semakan AI Penyemak gagal dua kali (ralat NVIDIA), dicuba semula dan diluluskan - kegagalan ditangani secara terbuka",
+    no_request: "Tiada satu pun daripada 18 larian langsung ini memerlukan Penyemak meminta lebih banyak data daripada Ejen Data. Pertukaran itu (diserlahkan apabila berlaku) boleh dilihat di luar talian dalam senario rekaan \"tolok hulu senyap\" untuk Pasir Mas.",
+    play: "Main", pause: "Jeda", replay: "Main semula", show_all: "Tunjuk semua langkah",
+    waiting_ai: "menunggu jawapan Nemotron…",
+    status: "{n} daripada {total} langkah · {t} s daripada {end} s (masa sebenar {speed})", done: "Semua {total} langkah · larian mengambil masa {end} s",
+    download: "Muat turun jejak penuh (JSONL)", file: "Buka fail yang diterbitkan di GitHub", raw: "Tunjuk mentah",
+    asked: "Soalan yang ditanya:", step_names: { plan: "Memahami soalan", gather: "Menyemak tolok sungai, hujan dan amaran",
+      forecast: "Menilai risiko", draft: "Menulis jawapan", critique: "Menyemak jawapan", revise: "Membetulkan jawapan" },
+    nemo_ok: "Nemotron menjawab · {model} · resit {receipt} · {s} s", nemo_fail: "Tiada jawapan daripada model ({why}) - VEDA meneruskan",
+    more: "Lagi", l_repo: "Kod di GitHub", l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
+    l_how: "Cara VEDA membuat keputusan (README: How it works)", l_try: "Cuba VEDA sendiri",
+    footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
+    load_fail: "Larian yang dirakam tidak dapat dimuatkan." },
+};
+const FEATURED = { "234156-dd79": "why_2341", "225213-cac7": "why_2252" };
+const COLOUR = { "System": "--c-system", "Coordinator": "--c-coordinator", "Data & Reconciler": "--c-data",
+                 "Forecast": "--c-forecast", "Critic": "--c-critic", "Nemotron": "--c-nemotron" };
+// the agent who works in each step (the same mapping as the app's checking screen, from the trace's step names)
+const STAGE_AGENT = { plan: "Coordinator", gather: "Data & Reconciler", forecast: "Forecast", draft: "Coordinator",
+                      revise: "Coordinator", critique: "Critic" };
+const REQUESTS = ["critic.request", "data.request", "verdict.recomputed"];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
+let lang = new URLSearchParams(location.search).get("lang") || store.get("veda.lang") || "en";
+if (!UI[lang]) lang = "en";
+const t = (k) => UI[lang][k];
+let runs = [], current = null, timer = null, shown = 0, speed = 1, playing = false;
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll(".seg [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("home").href = "/?lang=" + lang;
+  $("decides").innerHTML = t("decides").map(([who, name, what]) =>
+    `<li><span class="tag" style="--ag:var(--c-${who})">${esc(name)}</span> ${esc(what)}</li>`).join("");
+  renderRuns();
+  if (current) { renderPlayerHead(); renderSteps(); }
+}
+
+function when(name) {           // 2026-10-23_2341MYT_... -> "23 Oct 2026 23:41"
+  const m = name.match(/^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})MYT/);
+  const mon = lang === "ms" ? ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"]
+                            : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return m ? `${+m[3]} ${mon[+m[2] - 1]} ${m[1]} ${m[4]}:${m[5]}` : name;
+}
+function runButton(r, why) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "run";
+  b.innerHTML = `<b>${esc(t("label").replace("{when}", when(r.name)))}</b><span>“${esc(r.question)}”</span>` +
+                (why ? `<small>${esc(t(why))}</small>` : "");
+  b.addEventListener("click", () => openRun(r));
+  return b;
+}
+function renderRuns() {
+  const feat = Object.keys(FEATURED).map((k) => runs.find((r) => r.name.includes(k))).filter(Boolean);
+  $("featured").replaceChildren(...feat.map((r) => runButton(r, FEATURED[Object.keys(FEATURED).find((k) => r.name.includes(k))])));
+  $("all").replaceChildren(...runs.slice().reverse().map((r) => runButton(r)));
+}
+
+async function openRun(r) {
+  stop();
+  const res = await fetch("/trace/recorded/" + encodeURIComponent(r.name));
+  if (!res.ok) { $("p-status").textContent = t("load_fail"); return; }
+  const data = await res.json();
+  const t0 = Date.parse(data.records[0].timestamp);
+  current = { run: r, note: data.note, records: data.records.map((rec) => ({ rec, at: (Date.parse(rec.timestamp) - t0) / 1000 })) };
+  current.end = current.records.length ? current.records[current.records.length - 1].at : 0;
+  shown = 0;
+  $("player").hidden = false;
+  renderPlayerHead();
+  renderSteps();
+  $("player").scrollIntoView({ behavior: "smooth", block: "start" });
+  play();
+}
+function renderPlayerHead() {
+  $("p-label").textContent = t("label").replace("{when}", when(current.run.name));
+  $("p-question").innerHTML = `<b>${esc(t("asked"))}</b> “${esc(current.run.question)}”`;
+  $("p-redaction").textContent = current.note || "";
+  const lines = [JSON.stringify({ redaction: current.note, run_id: current.run.run_id }),
+                 ...current.records.map((x) => JSON.stringify(x.rec))].join("\n") + "\n";
+  $("p-download").href = URL.createObjectURL(new Blob([lines], { type: "application/x-ndjson" }));
+  $("p-download").download = current.run.name;
+  $("p-download").textContent = t("download");
+  $("p-file").href = `${REPO}/blob/main/data/sample/live_traces/${encodeURIComponent(current.run.name)}`;
+  $("p-file").textContent = t("file");
+  $("p-all").textContent = t("show_all");
+  updateStatus();
+}
+
+// one trace record -> {who, tagColour, text, kind}
+function describe(rec) {
+  const a = rec.action, d = rec.details || {}, out = rec.output_summary || "", dec = rec.decision || "";
+  const secs = rec.duration_ms ? ` (${(rec.duration_ms / 1000).toFixed(1)} s)` : "";
+  if (a === "state") return { who: STAGE_AGENT[rec.input_summary] || "System", stage: true,
+                              text: (t("step_names")[rec.input_summary] || rec.input_summary) };
+  if (a === "nightshift.chat") {
+    const ok = rec.status === "success" && d.served_model;
+    return { who: "Nemotron", via: rec.agent_name, kind: ok ? "ai" : "failed", hl: true,
+             text: ok ? t("nemo_ok").replace("{model}", d.served_model).replace("{receipt}", d.receipt_id || "-")
+                            .replace("{s}", ((rec.duration_ms || 0) / 1000).toFixed(1))
+                      : t("nemo_fail").replace("{why}", out.slice(0, 140)) };
+  }
+  if (REQUESTS.includes(a)) return { who: rec.agent_name, kind: "req", hl: true,
+                                     text: `${rec.agent_name}${rec.target_agent ? " → " + rec.target_agent : ""}: ${out}` };
+  if (a === "run_start") return { who: "System", text: out };
+  if (a === "zetaris.run_sql") return { who: rec.agent_name, text: `Zetaris: ${rec.input_summary || ""} → ${out}${secs}` };
+  const parts = [out, dec && dec !== out ? dec : ""].filter(Boolean);
+  return { who: rec.agent_name || "System", kind: rec.status === "failed" ? "failed" : "", text: parts.join(" - ") + secs };
+}
+// the trace's agent names in the page's language (the same names as the app's checking screen)
+const AGENT_KEY = { "Coordinator": "ag_coordinator", "Data & Reconciler": "ag_data", "Forecast": "ag_forecast",
+                    "Critic": "ag_critic", "System": "ag_system" };
+const agentName = (who) => (AGENT_KEY[who] && t(AGENT_KEY[who])) || who;
+function stepHtml(x, i) {
+  const s = describe(x.rec);
+  const tagName = s.who === "Nemotron" ? `${agentName(s.via)} → Nemotron` : agentName(s.who);
+  const colour = COLOUR[s.who] || "--c-system";
+  const cls = [s.stage ? "stage" : "", s.kind || ""].filter(Boolean).join(" ");
+  return `<li class="${cls}" style="--ag:var(${colour})"><div class="head"><span class="tag" style="--ag:var(${colour})">${esc(tagName)}</span>` +
+    `<span class="clock">+${x.at.toFixed(0)} s</span></div>` +
+    `<p class="text${s.hl ? " hl" : ""}"${s.stage ? "" : ' lang="en"'}>${esc(s.text)}</p>` +
+    `<details class="raw"><summary>${esc(t("raw"))}</summary><pre lang="en">${esc(JSON.stringify(x.rec, null, 2))}</pre></details></li>`;
+}
+function renderSteps() {
+  $("p-steps").innerHTML = current.records.slice(0, shown).map(stepHtml).join("");
+  updateStatus();
+}
+function updateStatus() {
+  if (!current) return;
+  const total = current.records.length;
+  $("p-status").textContent = shown >= total
+    ? t("done").replace("{total}", total).replace("{end}", current.end.toFixed(0))
+    : t("status").replace("{n}", shown).replace("{total}", total)
+        .replace("{t}", (shown ? current.records[shown - 1].at : 0).toFixed(0)).replace("{end}", current.end.toFixed(0))
+        .replace("{speed}", speed + "×")
+      // the run really waited here for the model: say so, rather than look stuck
+      + (playing && current.records[shown].rec.action === "nightshift.chat" ? " · " + t("waiting_ai") : "");
+  $("p-play").textContent = playing ? t("pause") : shown >= total ? t("replay") : t("play");
+}
+function next() {
+  if (!current || shown >= current.records.length) { playing = false; updateStatus(); return; }
+  const li = document.createElement("template");
+  li.innerHTML = stepHtml(current.records[shown], shown);
+  $("p-steps").append(li.content.firstChild);
+  shown += 1;
+  updateStatus();
+  if (shown < current.records.length) {
+    const gap = (current.records[shown].at - current.records[shown - 1].at) * 1000 / speed;
+    timer = setTimeout(next, Math.max(150 / speed, gap));
+  } else { playing = false; updateStatus(); }
+}
+function play() {
+  if (shown >= current.records.length) { shown = 0; $("p-steps").innerHTML = ""; }
+  playing = true; next();
+}
+function stop() { clearTimeout(timer); playing = false; }
+
+$("p-play").addEventListener("click", () => { if (playing) { stop(); updateStatus(); } else play(); });
+$("p-all").addEventListener("click", () => { stop(); shown = current.records.length; renderSteps(); });
+document.querySelectorAll("#p-speed button").forEach((b) => b.addEventListener("click", () => {
+  speed = Number(b.dataset.speed);
+  document.querySelectorAll("#p-speed button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  if (playing) { clearTimeout(timer); next(); } else updateStatus();
+}));
+document.querySelectorAll(".seg [data-lang]").forEach((b) => b.addEventListener("click", () => {
+  lang = b.dataset.lang; store.set("veda.lang", lang);
+  const u = new URL(location.href); u.searchParams.set("lang", lang); history.replaceState(null, "", u);
+  applyLang();
+}));
+
+fetch("/trace/recorded").then((r) => r.ok ? r.json() : Promise.reject()).then((list) => { runs = list; renderRuns(); })
+  .catch(() => { $("featured").textContent = t("load_fail"); });
+applyLang();
+</script>
+</body>
+</html>

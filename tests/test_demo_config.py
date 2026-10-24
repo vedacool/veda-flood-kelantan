@@ -46,6 +46,17 @@ def test_banner_is_one_line_in_the_page_language_with_a_feedback_link():
     assert "COPY demo-banner.js /etc/nginx/demo/demo-banner.js" in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
 
 
+def test_banner_links_to_the_judges_page_and_is_on_it_too():
+    """B-90: "For judges ›" / "Untuk juri ›" in the banner; /judges gets the banner like the home page and /live."""
+    banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
+    assert '<a id="veda-demo-judges" href="/judges"' in banner and ">For judges ›</a>" in banner
+    assert banner.index("veda-demo-judges") < banner.index("veda-demo-feedback")
+    assert "location ~ ^/(live|judges)?$ {" in NGINX
+    js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
+    assert 'judges: "For judges ›"' in js and 'judges: "Untuk juri ›"' in js
+    assert 'judges.href = "/judges?lang=" + l;' in js
+
+
 def test_docker_logs_rotate_and_the_proxy_has_a_process_cap():
     assert 'options: { max-size: "10m", max-file: "3" }' in COMPOSE
     assert COMPOSE.count("logging: *logging") == 3

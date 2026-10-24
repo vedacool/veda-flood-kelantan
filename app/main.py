@@ -392,6 +392,12 @@ def live_page():
     return LIVE_PAGE.read_text(encoding="utf-8")
 
 
+@app.get("/judges", response_class=HTMLResponse)
+def judges_page():
+    """B-90 'For judges': how VEDA works + the published recorded live runs (/trace/recorded) replayed step by step."""
+    return (config.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
+
+
 @app.get("/live/stream")
 async def live_stream():
     """Every trace record of whatever run is going, as it happens (a comment line every 15 s keeps it open).

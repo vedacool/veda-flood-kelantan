@@ -70,6 +70,11 @@ curl -X POST http://127.0.0.1:8000/run -H "Content-Type: application/json" -d @i
 Six ready-made inputs are in `input_examples/`, with VEDA's real answers and traces in `output_examples/`.
 
 ## 3. Where to see the agents (about 2 minutes)
+- **For judges** ([127.0.0.1:8000/judges](http://127.0.0.1:8000/judges), also linked from the public demo's banner):
+  VEDA in one minute (the four agents, Zetaris, Nemotron through Nightshift, the World Model - and what each one
+  decides), then the 18 recorded live runs (23 Oct 2026) replayed step by step on the page at 1× or 4×: each agent's
+  steps, every Zetaris query, every Nemotron call with the model that answered and its receipt, and **Show raw** for
+  the exact trace line. JPS readings in them are redacted.
 - **The live log** (`/live`) and **How VEDA worked this out**, above: the run you just made, step by step.
 - **Its trace file:** every agent step, Zetaris query and model call is one JSON line in `logs/trace-<run_id>.jsonl`.
 - **Recorded live runs with Nemotron:** `data/sample/live_traces/` - 18 real live runs from 23 Oct 2026 with the AI
