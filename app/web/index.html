@@ -496,7 +496,7 @@ const UI = {
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
            "Know where your nearest evacuation centre (PPS) is - ask the village head."],
-    check_town: "Check {town}", check_nearest: "Check {place} ({km} km away)",
+    check_town: "Check {town}", check_nearest: "Check {place} ({km} km from {from})",
     expl_lang_note: "Written in Bahasa Melayu when you asked", expl_recheck: "Check again in English",
     how_link: "See how VEDA worked this out ›", how_title: "How VEDA worked this out",
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
@@ -556,7 +556,7 @@ const UI = {
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
            "Ketahui pusat pemindahan (PPS) terdekat - tanya ketua kampung."],
-    check_town: "Semak {town}", check_nearest: "Semak {place} ({km} km dari sini)",
+    check_town: "Semak {town}", check_nearest: "Semak {place} ({km} km dari {from})",
     expl_lang_note: "Ditulis dalam English semasa anda bertanya", expl_recheck: "Semak semula dalam BM",
     how_link: "Lihat bagaimana VEDA mendapat jawapan ini ›", how_title: "Bagaimana VEDA mendapat jawapan ini",
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
@@ -948,8 +948,11 @@ function renderAnswer() {
     $("a-choices").replaceChildren(...towns.map((town) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = near ? "primary wide big-choice" : "primary";
-      b.textContent = near ? t("check_nearest").replace("{place}", town).replace("{km}", near.km)
-                           : t("check_town").replace("{town}", town);
+      // the distance is from the place asked about (nearest_covered.from_place), never from the user; without that
+      // name the button just says "Check <town>"
+      b.textContent = near && near.from_place
+        ? t("check_nearest").replace("{place}", town).replace("{km}", near.km).replace("{from}", near.from_place)
+        : t("check_town").replace("{town}", town);
       b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
       return b;
     }));
