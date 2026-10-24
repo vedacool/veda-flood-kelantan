@@ -64,5 +64,9 @@ jobs:
         if: always()
         run: docker logs veda 2>&1 | tail -40
 
-      - name: Safety evals inside the image
-        run: docker run --rm -e SAMPLE_MODE=true veda:ci python scripts/run_evals.py
+      - name: Safety evals inside the image, 3 repeat runs (pass^3)
+        run: |
+          for i in 1 2 3; do
+            echo "== eval run $i of 3"
+            docker run --rm -e SAMPLE_MODE=true veda:ci python scripts/run_evals.py
+          done
