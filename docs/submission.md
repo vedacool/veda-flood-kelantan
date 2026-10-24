@@ -49,8 +49,12 @@ A live log shows each step; every AI call names the model that answered. Judges 
   replay time, so nothing from later leaks in.
 
 ## Pre-existing components (deck / form version; full text: README "Pre-existing components")
-- The **2014 flood peak table** (`data/historic_peaks.csv`, Dec 2014 rows), compiled before 22 Oct 2026 from the JPS
-  2014-2015 highest-level report (as published in USM CGSS slides) and news reports; each row keeps its source URL.
+- **The historic flood peak table** - all of `data/historic_peaks.csv` (15 rows) - was **compiled before 22 Oct
+  2026**. Each row's source: **8 rows** - the Dec 2014 peaks from JPS "Laporan Catatan Aras Air Tertinggi 01-12-2014
+  to 10-02-2015" (as published in USM CGSS slides); **2 Kosmo rows** (27 Nov 2024): the Dec 2014 peak as Kosmo
+  reported it, and a Nov 2024 reading (27 Nov, 7:30 pm); **3 Malay Mail rows** (29 Nov 2024): Nov 2024 peaks; **2 NST
+  rows**: the Nov 2024 peak (29 Nov 2024, citing JPS) and the Dec 2023 peak (26 Dec 2023). Every row keeps its source
+  and URL; the sources are listed under **Data sources and licences**.
 - **Meterless World Model code (Apache-2.0):** `resolve.py` and `stable_ids.py` are Python ports of the Meterless
   reference, and the conformance tests port its runner (attribution in `NOTICE`).
 - Design notes summarised in `docs/BUILD_BRIEF.md` (written 20-22 Oct 2026). All other code was written inside the
