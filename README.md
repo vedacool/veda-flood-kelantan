@@ -29,8 +29,9 @@ A question without a scene runs on the SYNTHETIC calm day.
 docker build -t veda .
 docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda
 ```
-Then open http://127.0.0.1:8000, type a question (for example *"Mak ayah saya di Tumpat, kena pindah malam ni?"*)
-and watch each step appear live.
+Then open http://127.0.0.1:8000, tap a town or type a question (for example *"Mak ayah saya di Tumpat, kena pindah
+malam ni?"*), in English or Bahasa Melayu (EN | BM at the top). Offline, pick a scene under **Data** (the Nov 2024
+past-flood replay or a made-up test scene); "See what VEDA is doing ›" shows each step live while it works.
 
 **Python 3.13 without Docker:**
 ```
