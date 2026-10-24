@@ -355,7 +355,7 @@ ffmpeg on PATH adds the mp4 copies and the lengths in this table.
 **The video files are not in git** (`.gitignore`: about 167 MB together on 24 Oct, too heavy for the public repo).
 They stay in this folder on the recording machine and are uploaded with the submission.
 """
-    (OUT / "README.md").write_text(text, encoding="utf-8")
+    (OUT / "README.md").write_text(text, encoding="utf-8", newline="\n")
 
 
 def main():
