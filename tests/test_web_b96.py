@@ -29,5 +29,16 @@ def test_answer_one_filled_button_listen_link_and_why():
     assert 'id="a-wa"' in actions and 'id="a-listen"' not in actions
     links = re.search(r'<p class="links-row" id="a-links">(.*?)</p>', PAGE, re.S).group(1)
     assert 'id="a-share"' in links and 'id="a-listen"' in links and links.count('class="linkish"') == 2
-    assert 'id="a-why-open"' in PAGE and '<details class="tech"><summary data-t="tech_log">' in PAGE
+    assert 'id="a-why-open"' in PAGE and '<summary id="a-tech-sum" data-t="tech_log">' in PAGE
+    assert 'tech_log: "Show technical log ▾", tech_hide: "Hide technical log ▴"' in PAGE
+
+
+def test_fix_round_plain_replay_line_end_links_and_one_disclaimer():
+    assert '<p id="a-label" class="moment-line" hidden>' in PAGE and 'class="chip"' not in PAGE
+    assert 'replay_of: "Replay of"' in PAGE
+    end = re.search(r'<p class="links-row" id="a-end">(.*?)</p>', PAGE, re.S).group(1)
+    assert 'id="a-check"' in end and 'id="a-again"' in end and end.count('class="linkish"') == 2
+    assert 'data-t="disclaimer"' in PAGE.split('id="s-sos"')[1]                      # only the emergency screen keeps it
+    assert PAGE.split('id="s-sos"')[0].count('data-t="disclaimer"') == 0 and 'data-t="footer"' not in PAGE
+    assert 'i30_how: "Cara VEDA berfungsi: ejen, rakaman sebenar, API ›"' in PAGE
     assert 'useful: "Was this useful? Tell us"' in PAGE and '$("a-useful").hidden = !publicDemo;' in PAGE

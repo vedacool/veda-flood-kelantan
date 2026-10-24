@@ -20,10 +20,9 @@
   * { box-sizing: border-box; }
   html { font-size: 18px; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; background: var(--card);
+  .lhead { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; background: var(--card);
            border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
-  header h1 { font-size: 1.2rem; margin: 0 auto 0 0; }
-  header a { color: var(--accent); }
+  .lhead h1 { font-size: 1.2rem; margin: 0 auto 0 0; }
   button, select { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line);
                    background: var(--card); color: var(--fg); cursor: pointer; }
   button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -65,14 +64,17 @@
   @media (prefers-reduced-motion: reduce) { .who li.working::before { animation: none; } }
   .note { color: var(--muted); }
   [hidden] { display: none !important; }
+  main, aside { min-width: 0; }   /* B-96: no sideways scroll on a phone */
+  #rec { max-width: 100%; }
 </style>
 </head>
 <body>
-<header>
+<!--VEDA:TOP-->
+<!-- B-96: the shared frame above (its VEDA link goes home); this page's own heading below -->
+<div class="lhead">
   <h1>VEDA · live log</h1>
   <span class="note" id="h-note">The question itself is never shown here.</span>
-  <a href="/">← Ask a question</a>
-</header>
+</div>
 <div class="wrap">
   <main>
     <div class="controls">
@@ -109,6 +111,9 @@ function applyHeadLang() {
   if (Object.values(HEAD).some((x) => x.waiting === $("status").textContent)) $("status").textContent = h.waiting;
 }
 window.addEventListener("storage", (e) => { if (e.key === "veda.lang") applyHeadLang(); });
+// B-96: the frame's EN | BM switches this page in place
+window.vedaSetLang = (l) => { try { localStorage.setItem("veda.lang", l); } catch (e) { /* private window */ }
+  applyHeadLang(); if (window.vedaFrameLang) window.vedaFrameLang(l); };
 const AGENTS = [  // name in the trace -> colour token
   ["System", "--c-system"], ["Coordinator", "--c-coordinator"], ["Data & Reconciler", "--c-data"],
   ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];
@@ -277,5 +282,6 @@ if (params.get("run")) {  // one run from logs/ (this computer only), replayed f
 }
 applyHeadLang();
 </script>
+<!--VEDA:FOOT-->
 </body>
 </html>

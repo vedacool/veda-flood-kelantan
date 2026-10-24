@@ -57,6 +57,7 @@
   a { color: var(--accent); }
   [hidden] { display: none !important; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+  .moment-line { color: var(--muted); margin: 0 0 4px; }        /* B-96: plain grey text, never a dashed pill */
   .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700;
           color: var(--muted); }
   /* the replay moment (demo) */
@@ -175,8 +176,9 @@
   #s-home footer a { display: inline-flex; align-items: center; min-height: 44px; }   /* B-96: 44 px taps */
   .i30-links { display: grid; gap: 0; margin: 8px 0 4px; }
   .i30-links a, #a-useful a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
+  #a-useful a { font-weight: 400; }                                   /* B-96: small, plain text */
   .other-head { font-size: 1.2rem; margin: 22px 0 8px; }
-  .links-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 20px; margin: 0 0 6px; }
+  .links-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 14px; margin: 0 0 6px; }
   #a-whybox { margin: 4px 0 8px; }
   .trail { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
   .tech { margin-top: 12px; }
@@ -191,7 +193,9 @@
   .rows b { font-weight: 700; }
   .sub { color: var(--muted); }
   .actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 12px 0; }
-  .strip { width: 100%; justify-content: space-between; text-align: left; font-weight: 600; }
+  .strip { width: 100%; justify-content: space-between; text-align: left; font-weight: 600;
+           border: 0; background: transparent; padding: 8px 0; }                 /* B-96: a plain line, no box */
+  .links-row .sep { display: inline-flex; align-items: center; color: var(--muted); }
   .strip > span:last-child { white-space: nowrap; margin-left: 12px; }      /* "Details ›" never wraps */
   .levelbar { position: relative; height: 26px; border-radius: 8px; margin: 34px 0 8px;
               background: linear-gradient(90deg, var(--v-normal) 0 var(--a), var(--v-watch) var(--a) var(--w),
@@ -360,16 +364,8 @@
     <p id="privacy" class="note" data-t="privacy" hidden></p>
   </form>
   <button class="sos outline" type="button" id="sos" data-t="sos"></button>
-  <footer>
-    <p data-t="footer"></p>
-    <p data-t="credits_lead"></p>
-    <p><a href="https://publicinfobanjir.water.gov.my/">JPS Infobanjir</a> ·
-       <a href="https://data.gov.my/">data.gov.my</a> (MetMalaysia) ·
-       <a href="https://open-meteo.com/">Open-Meteo</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) ·
-       © OpenStreetMap contributors (ODbL)</p>
-    <p data-t="credits_replay"></p>
-    <select id="mode" hidden aria-hidden="true" tabindex="-1"></select><!-- the chosen data; set by the moment chips -->
-  </footer>
+  <!-- B-96: the disclaimer is the frame footer's (once per page); the data-source credits are on /sources -->
+  <select id="mode" hidden aria-hidden="true" tabindex="-1"></select><!-- the chosen data; set by the moment chips -->
 </section>
 
 <!-- 2. Waiting -->
@@ -391,8 +387,8 @@
 
 <!-- 3. Answer -->
 <section id="s-answer" hidden>
-  <p id="a-label" hidden><span class="chip" id="a-label-text"></span>
-    <button type="button" class="linkish" id="a-change" data-t="change" hidden></button></p>
+  <p id="a-label" class="moment-line" hidden><span id="a-label-text"></span><span id="a-change-dot" aria-hidden="true"
+     hidden> · </span><button type="button" class="linkish" id="a-change" data-t="change" hidden></button></p>
   <p class="place" id="a-place"></p>
   <!-- v2 (Cowork blueprint 24 Oct): level word + "Level n of 4" + ONE action line; never colour alone -->
   <div class="verdict" id="a-badge" role="group"></div>
@@ -413,7 +409,7 @@
     <button type="button" class="linkish" id="a-why-open" aria-expanded="false" aria-controls="a-trail-box"
             data-t="why_open"></button>
     <div class="card" id="a-trail-box" hidden><ol class="trail" id="a-trail"></ol>
-      <details class="tech"><summary data-t="tech_log"></summary><ol class="tech-log" id="a-tech" lang="en"></ol></details></div>
+      <details class="tech" id="a-tech-box"><summary id="a-tech-sum" data-t="tech_log"></summary><ol class="tech-log" id="a-tech" lang="en"></ol></details></div>
   </div>
   <div id="a-rows">
     <div class="card" id="a-river-box"><h2 data-t="river_here"></h2><div class="river"><div id="a-post"></div>
@@ -441,10 +437,9 @@
   </div>
   <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p>
     <div class="towns" id="a-choices" style="margin-top:12px"></div></div>
-  <button type="button" class="wide" id="a-check" data-t="check_again" style="margin-top:12px"></button>
-  <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:10px"></button>
+  <p class="links-row" id="a-end"><button type="button" class="linkish" id="a-check" data-t="check_again"></button>
+    <span class="sep" aria-hidden="true">·</span><button type="button" class="linkish" id="a-again" data-t="again"></button></p>
   <button type="button" class="sos outline" id="a-sos" data-t="sos"></button>
-  <p class="note" data-t="disclaimer"></p>
   <p class="note" id="a-useful" hidden><a href="/feedback" data-t="useful"></a></p>
 </section>
 
@@ -530,7 +525,8 @@ const UI = {
     i30_start: "Start: Rantau Panjang at the Nov 2024 flood peak", i30_scenes: "Test it yourself: 7 scenes ›",
     i30_how: "How it works: agents, a live run, the API ›", other_place: "Or check another place",
     why_open: "Why this answer? See how the agents decided ›", why_close: "Hide how the agents decided",
-    tech_log: "Show technical log", useful: "Was this useful? Tell us",
+    tech_log: "Show technical log ▾", tech_hide: "Hide technical log ▴", useful: "Was this useful? Tell us",
+    replay_of: "Replay of",
     ai_failed: "AI step not used", fallbacks: "AI steps replaced by code in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
@@ -594,9 +590,10 @@ const UI = {
     checks: "{n} semakan kod oleh Penyemak",
     i30_line: "VEDA menjawab soalan ini untuk Kelantan. Beberapa ejen AI menyemak kerja satu sama lain, dan setiap langkah direkodkan.",
     i30_start: "Mula: Rantau Panjang semasa kemuncak banjir Nov 2024", i30_scenes: "Uji sendiri: 7 senario ›",
-    i30_how: "Cara VEDA berfungsi: ejen, larian langsung, API ›", other_place: "Atau semak tempat lain",
+    i30_how: "Cara VEDA berfungsi: ejen, rakaman sebenar, API ›", other_place: "Atau semak tempat lain",
     why_open: "Kenapa jawapan ini? Lihat cara ejen membuat keputusan ›", why_close: "Sembunyikan cara ejen membuat keputusan",
-    tech_log: "Tunjuk log teknikal", useful: "Adakah ini berguna? Beritahu kami",
+    tech_log: "Tunjuk log teknikal ▾", tech_hide: "Sembunyikan log teknikal ▴", useful: "Adakah ini berguna? Beritahu kami",
+    replay_of: "Ulang tayang",
     ai_failed: "Langkah AI tidak digunakan", fallbacks: "Langkah AI yang diganti dengan kod",
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
@@ -661,6 +658,8 @@ const escBm = (s) => lang === "ms" ? esc(s).replace(EN_IN_BM, (w) => `<i lang="e
 
 function show(id) {
   ["s-home", "s-wait", "s-answer", "s-share", "s-sos", "s-how"].forEach((s) => { $(s).hidden = s !== id; });
+  // B-96: one link per destination - the answer's own feedback line replaces the footer's Feedback link there
+  document.querySelectorAll('.vf-foot a[href="/feedback"]').forEach((a) => { a.hidden = id === "s-answer" && publicDemo; });
   $("err").hidden = true;
   window.scrollTo(0, 0);
 }
@@ -727,7 +726,7 @@ function renderMoment() {
 }
 function momentLabel() {   // the answer screen's "Replay · 27 Nov 2024, 7:30 pm · Change", from the moment asked about
   const d = DATA.find((x) => x.v === askedMode) || {};
-  if (d.k === "past" && d.full) return `${t("replay_short")} · ${d.full[lang]}`;
+  if (d.k === "past" && d.full) return `${t("replay_of")} ${d.full[lang]}`;
   if (d.k === "madeup") return `${t("madeup_scene")} · ${d.what[lang]}`;
   return null;
 }
@@ -1002,6 +1001,7 @@ function renderAnswer() {
   const moment = v.label && momentLabel();      // Cowork 24 Oct: "Replay · 27 Nov 2024, 7:30 pm · Change"
   if (v.label) $("a-label-text").textContent = moment || v.label[lang];
   $("a-change").hidden = !moment || $("moment").hidden;
+  $("a-change-dot").hidden = $("a-change").hidden;
   $("a-place").textContent = v.place || "";
   $("a-badge").className = "verdict v-" + v.verdict;
   $("a-badge").setAttribute("aria-label", `${v.headline[lang]}. ${v.level_text[lang]}`);
@@ -1168,6 +1168,7 @@ $("a-strip").addEventListener("click", () => {
 $("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
 $("a-listen").addEventListener("click", listen);
 $("a-why-open").addEventListener("click", () => toggle($("a-why-open"), $("a-trail-box"), "why_close", "why_open"));
+$("a-tech-box").addEventListener("toggle", () => { $("a-tech-sum").textContent = t($("a-tech-box").open ? "tech_hide" : "tech_log"); });
 $("a-check").addEventListener("click", () => { stopSpeaking(); ask(lastQuestion, (result && result.view && result.view.place) || ""); });
 // B3: re-ask in the page's language - the standard question for this place, written in that language
 $("a-expl-recheck").addEventListener("click", () => {

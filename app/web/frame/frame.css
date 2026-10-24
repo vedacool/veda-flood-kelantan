@@ -19,8 +19,13 @@
                                                box-shadow: inset 0 -4px 0 var(--accent, #1f5e8c); }
 .vf-strip { margin: 0; padding: 4px 16px; font-size: 1rem; background: #1c1c1a; color: #fff; }
 .vf-foot { margin: 32px 0 0; padding: 14px 16px 24px; border-top: 1px solid var(--line, #d8d6cf);
-           display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; font-size: 1rem; color: var(--muted, #55554f); }
-.vf-foot a { display: inline-flex; align-items: center; min-height: 44px; color: var(--fg, #1c1c1a); }
+           display: flex; flex-wrap: wrap; gap: 0 22px; align-items: center; font-size: 1rem; color: var(--muted, #55554f); }
+.vf-foot a, .vf-foot .vf-big { display: inline-flex; align-items: center; min-height: 44px; color: var(--fg, #1c1c1a); }
+.vf-foot .vf-big { font: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+.vf-foot .vf-big[aria-pressed="true"] { font-weight: 800; }
+.vf-foot .vf-notice { flex-basis: 100%; }
+html.big { font-size: 22px; }
 /* desktop: the bar, the strip and the footer line up with the page's content (max 1200 px, 32 px gutter) */
 @media (min-width: 1024px) { .vf-top, .vf-strip, .vf-foot { padding-left: max(32px, calc((100% - 1200px) / 2 + 32px));
                                                            padding-right: max(32px, calc((100% - 1200px) / 2 + 32px)); } }
+.vf-top [hidden], .vf-foot [hidden] { display: none !important; }

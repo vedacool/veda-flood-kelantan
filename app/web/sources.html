@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA · Data sources</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg: #f4f3ef; --card: #ffffff; --fg: #1c1c1a; --muted: #55554f; --line: #d8d6cf; --accent: #1f5e8c;
+          --on-accent: #ffffff; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --card: #1f1f1d; --fg: #eeeeea; --muted: #b9b8b0; --line: #3a3a36; --accent: #8cc4ec;
+            --on-accent: #151514; }
+  }
+  html { font-size: 18px; } html.big { font-size: 22px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 12px; }
+  ul { padding-left: 1.2em; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); }
+  li a { display: inline-flex; align-items: center; min-height: 44px; }
+</style>
+</head>
+<body>
+<!--VEDA:TOP-->
+<main>
+  <!-- B-96 fix round (Cowork 25 Oct): the data-source credits and licences, reachable from every page's footer -->
+  <h1 data-vf-en="Data sources" data-vf-ms="Sumber data">Data sources</h1>
+  <p data-vf-en="River levels: Jabatan Pengairan dan Saliran (JPS) Malaysia, read live on the machine running VEDA and used for non-commercial public-safety research. JPS readings are never redistributed."
+     data-vf-ms="Paras sungai: Jabatan Pengairan dan Saliran (JPS) Malaysia, dibaca secara langsung di komputer yang menjalankan VEDA dan digunakan untuk penyelidikan keselamatan awam bukan komersial. Bacaan JPS tidak pernah diedarkan semula.">River levels: Jabatan Pengairan dan Saliran (JPS) Malaysia, read live on the machine running VEDA and used for non-commercial public-safety research. JPS readings are never redistributed.</p>
+  <ul>
+    <li><a href="https://publicinfobanjir.water.gov.my/">JPS Infobanjir</a> · <span data-vf-en="river levels and their Normal / Alert / Warning / Danger marks" data-vf-ms="paras sungai dan tanda Normal / Waspada / Amaran / Bahaya">river levels and their Normal / Alert / Warning / Danger marks</span></li>
+    <li><a href="https://data.gov.my/">data.gov.my</a> · <span data-vf-en="MetMalaysia forecasts and warnings, and the flood-warning feed" data-vf-ms="ramalan dan amaran MetMalaysia, dan suapan amaran banjir">MetMalaysia forecasts and warnings, and the flood-warning feed</span></li>
+    <li><a href="https://open-meteo.com/">Open-Meteo</a> · <span data-vf-en="rain, under" data-vf-ms="hujan, di bawah">rain, under</span> <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></li>
+    <li><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · <span data-vf-en="rivers, coast, places, schools and halls, bridges - under the ODbL" data-vf-ms="sungai, pantai, tempat, sekolah dan dewan, jambatan - di bawah ODbL">rivers, coast, places, schools and halls, bridges - under the ODbL</span></li>
+  </ul>
+  <p data-vf-en="Past flood replay (Nov 2024): readings as reported by Bernama, Harian Metro and Kosmo, citing JPS - each one cited with its link. Made-up test scenes use invented readings and say so."
+     data-vf-ms="Ulang tayang banjir lalu (Nov 2024): bacaan seperti yang dilaporkan oleh Bernama, Harian Metro dan Kosmo, memetik JPS - setiap satu dengan pautannya. Senario ujian rekaan menggunakan bacaan rekaan dan menyatakannya.">Past flood replay (Nov 2024): readings as reported by Bernama, Harian Metro and Kosmo, citing JPS - each one cited with its link. Made-up test scenes use invented readings and say so.</p>
+  <p data-vf-en="The full list with licences and terms is in the project README (Data sources and licences)."
+     data-vf-ms="Senarai penuh dengan lesen dan syarat ada dalam README projek (Data sources and licences).">The full list with licences and terms is in the project README (Data sources and licences).</p>
+</main>
+<!--VEDA:FOOT-->
+</body>
+</html>

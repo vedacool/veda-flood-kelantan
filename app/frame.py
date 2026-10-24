@@ -18,6 +18,8 @@ STRIP = ("Demo · past flood replay · not an official warning", "Demo · ulang 
 FEEDBACK = ("Feedback", "Maklum balas")
 API_DOCS = ("API docs", "Dokumen API")
 NOTICE = ("Not an official warning · 999 / APM 991", "Bukan amaran rasmi · 999 / APM 991")
+SOURCES = ("Data sources ›", "Sumber data ›")
+BIGGER = ("Bigger text", "Teks lebih besar")
 
 
 def _words(pair):
@@ -42,11 +44,14 @@ def top(page, demo=None):
 
 
 def foot(public_demo=None):
-    """The footer: Feedback (public demo only) · API docs · the one-line notice."""
+    """The footer: Feedback (public demo only) · API docs · Data sources · Bigger text · the one-line notice. Items are
+    spaced by CSS, never by a written separator (none is left dangling when the line wraps on a phone)."""
     public_demo = config.demo_mode() if public_demo is None else public_demo
     items = ([f'<a href="/feedback" {_words(FEEDBACK)}</a>'] if public_demo else []) + [
-        f'<a href="/api/docs" {_words(API_DOCS)}</a>', f'<span {_words(NOTICE)}</span>']
-    return f'<footer class="vf-foot">{" · ".join(items)}</footer><script src="/frame.js" defer></script>'
+        f'<a href="/api/docs" {_words(API_DOCS)}</a>', f'<a href="/sources" {_words(SOURCES)}</a>',
+        f'<button type="button" class="vf-big" aria-pressed="false" {_words(BIGGER)}</button>',
+        f'<span class="vf-notice" {_words(NOTICE)}</span>']
+    return f'<footer class="vf-foot">{"".join(items)}</footer><script src="/frame.js" defer></script>'
 
 
 def framed(html, page):

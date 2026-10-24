@@ -396,7 +396,7 @@ def _local(request):
 
 @app.get("/live", response_class=HTMLResponse)
 def live_page():
-    return LIVE_PAGE.read_text(encoding="utf-8")
+    return frame.framed(LIVE_PAGE.read_text(encoding="utf-8"), "live")
 
 
 @app.get("/how-it-works", response_class=HTMLResponse)
@@ -409,6 +409,12 @@ def how_page():
 def judges_page():
     """B-96: the page moved to /how-it-works."""
     return RedirectResponse("/how-it-works", status_code=301)
+
+
+@app.get("/sources", response_class=HTMLResponse)
+def sources_page():
+    """B-96: the data sources and their licences (the footer's "Data sources" on every page)."""
+    return frame.framed((config.ROOT / "app" / "web" / "sources.html").read_text(encoding="utf-8"), "sources")
 
 
 FRAME_DIR = config.ROOT / "app" / "web" / "frame"

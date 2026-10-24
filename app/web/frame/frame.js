@@ -15,6 +15,15 @@
   }
   window.vedaFrameLang = words;                      // the page calls this when it changes language itself
   words(current());
+  // "Bigger text": the one saved text-size setting every page shares (localStorage "veda.big")
+  const big = (on) => { document.documentElement.classList.toggle("big", on);
+    document.querySelectorAll(".vf-big").forEach((b) => b.setAttribute("aria-pressed", String(on))); };
+  big(store.get("veda.big") === "1");
+  document.querySelectorAll(".vf-big").forEach((b) => b.addEventListener("click", () => {
+    const on = !document.documentElement.classList.contains("big");
+    store.set("veda.big", on ? "1" : "0");
+    big(on);
+  }));
   if (typeof window.vedaSetLang === "function") return;      // the page binds the buttons itself (index.html)
   document.querySelectorAll(".vf-lang button").forEach((b) => b.addEventListener("click", () => {
     const l = b.dataset.lang;

@@ -112,8 +112,11 @@ def test_web_page_is_served(client):
     r = client.get("/")
     assert r.status_code == 200 and "VEDA - Kelantan flood check" in r.text and "/run/stream" in r.text
     assert not re.search(r"<(script|link|img|iframe)[^>]+(src|href)=\"https?://", r.text)   # nothing loaded from outside
-    assert "CC BY 4.0" in r.text and "open-meteo.com" in r.text           # audit 23 Oct: data credits
-    assert "Jabatan Pengairan dan Saliran (JPS) Malaysia" in r.text and "non-commercial" in r.text   # JPS credit
+    # audit 23 Oct: data credits - B-96: on /sources, linked from every page's footer
+    assert 'href="/sources"' in r.text
+    src = client.get("/sources").text
+    assert "CC BY 4.0" in src and "open-meteo.com" in src
+    assert "Jabatan Pengairan dan Saliran (JPS) Malaysia" in src and "non-commercial" in src   # JPS credit
     assert "Mohon jangan taip nama, IC" in r.text and "Your question is not sent to any AI model" in r.text   # BM + EN
     assert "Soalan anda tidak dihantar kepada mana-mana model AI" in r.text
 
