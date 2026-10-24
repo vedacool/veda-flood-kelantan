@@ -31,7 +31,7 @@ def stub_llm(plan=None, answer=None, fail=False, review=None):
             d = review or "approve"
             data = {"decision": d, "problems": [], "fix": "", "ok": d == "approve", "reason": "stub"}
         else:                                   # draft: only the explanation (B-21) - the card is code
-            data = {"explanation": answer if answer is not None else "The river is steady for now."}
+            data = {"explanation": answer if answer is not None else "VEDA checked the river readings for this place."}
         return SimpleNamespace(data=data, text=json.dumps(data))
     llm.calls = calls
     return llm

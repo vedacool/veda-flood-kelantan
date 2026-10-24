@@ -255,7 +255,7 @@ def _trend(card, forecast):
     if card.get("tidal") or not rate:
         return None
     mid = (rate["min"] + rate["max"]) / 2
-    return "steady" if abs(mid) < 0.005 else "rising" if mid > 0 else "falling"
+    return "steady" if abs(mid) < card_mod.STEADY_M_PER_H else "rising" if mid > 0 else "falling"   # = the card
 
 
 RIVER_RULES = ("level>=", "danger<=", "alert<=", "no-trigger", "rising-fast")

@@ -1,0 +1,22 @@
+{
+  "name": "trend_mismatch_ms",
+  "about": "A1 (24 Oct evening live test): an AI explanation says the river here is falling ('sedang turun') while VEDA's computed trend is rising -> the Critic's code check rejects it and the code-checked card goes out without it [SYNTHETIC rising river, Rantau Panjang]",
+  "question": "Rantau Panjang selamat ke?",
+  "llm": {
+    "explanation": "Paras sungai di Rantau Panjang sedang turun.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "ACT",
+    "language": "ms",
+    "must_not": [
+      "sedang turun"
+    ],
+    "must_trace": [
+      "rising / falling / steady = the computed trend",
+      "trend: says 'turun' about the river here, but its computed trend is rising"
+    ]
+  },
+  "replay": "synthetic_rising",
+  "at": "2024-11-25 18:00"
+}

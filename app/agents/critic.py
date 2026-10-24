@@ -124,6 +124,14 @@ def _sentences(text):
     return [s for s in re.split(r"(?<=[.!?])\s+|\n+", text) if s.strip()]
 
 
+# Which deterministic checks run on every draft (shown in the trace, A1 24 Oct evening)
+CODE_CHECKS = ["verdict words = the card's verdict", "every number is on the card", "no flipped above / below",
+               "no reassurance under WATCH / PREPARE / ACT", "no 'a PPS is open' / cut-off prediction",
+               "no trend words when no trend is known", "rising / falling / steady = the computed trend",
+               "wording (no internal terms, no minus signs, no Indonesian words in BM)",
+               "never 'go into the water'", "stale / excluded source mentioned", "conflicts mentioned"]
+
+
 def code_checks(text, facts, evidence, card=None, explanation=None, lang=None):
     """Deterministic problems in a draft -> [{'type', 'detail', 'by': 'code'}].
     With a card (B-21): the whole text may name only the card's verdict, and the model's explanation may only use
@@ -360,7 +368,7 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     findings = code_checks(answer["text"], facts, evidence, answer.get("card"), answer.get("explanation"),
                            answer.get("language"))
     trace.step(AGENT, "critic.code_checks", input_summary=f"draft round {round_no}",
-               output_summary=f"{len(findings)} problem(s)", source="code",
+               output_summary=f"{len(findings)} problem(s)", source="code", details={"checks": CODE_CHECKS},
                status="needs_revision" if findings else "success",
                decision="; ".join(f"{f['type']}: {f['detail']}" for f in findings) or "all code checks pass")
     checked_by, status_note, critic_lane_used = ["code"], None, None

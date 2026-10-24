@@ -308,3 +308,29 @@ def test_projection_reaching_danger_shows_words_not_numbers(lang, words):
 def test_projection_below_danger_keeps_its_range():
     assert "Next 24 h: 6.9-7.4 m (if it keeps changing at this rate)" in card.render(build(rng=(6.9, 7.4)), "en")
     assert "Next 24 h: 8.5-8.99 m" in card.render(build(rng=(8.5, 8.99)), "en")
+
+
+# -- A1 (24 Oct evening live test): one trend rule, and the explanation must match it ----------------------------
+def test_card_trend_uses_the_screens_steady_band():
+    """Rantau Panjang 24 Oct 18:30: -2 cm in 1 h, +4 cm in 3 h -> steady on the card AND the screen (was 'turun')."""
+    from app import view
+    trend = {"rate_m_per_h": {"min": -0.02, "max": 0.013}}
+    assert card._trend_word(trend) == "steady"
+    assert view._trend({}, {"controlling": [{"role": "controlling", "rate_m_per_h": trend["rate_m_per_h"]}]}) == "steady"
+    assert card._trend_word({"rate_m_per_h": {"min": 0.01, "max": 0.02}}) == "rising"
+    assert card._trend_word({"rate_m_per_h": {"min": -0.03, "max": -0.01}}) == "falling"
+
+
+@pytest.mark.parametrize("trend, text, bad", [
+    ("steady", "Paras air di Rantau Panjang [JPS reading], di bawah paras Waspada dan sedang turun.", "turun"),
+    ("rising", "The river here is falling slowly.", "falling"),
+    ("falling", "Paras sungai masih naik.", "naik"),
+    ("rising", "The river is steady.", "steady"),
+    ("steady", "Sungai di hulu Kg. Jenob sedang naik.", None),          # upstream sentence: not about here
+    ("steady", "Kg. Jenob is rising fast.", None),                     # an upstream gauge by name
+    ("falling", "Hujan lebat turun di sini.", None),                    # rain falling, not the river
+    ("rising", "Paras sungai sedang naik.", None)])
+def test_explanation_trend_words_must_match_the_computed_trend(trend, text, bad):
+    c = {"trend": trend, "upstream": [{"gauge": "Sg. Golok di Kg. Jenob (F1)"}]}
+    problem = card.trend_match_problem(text, c)
+    assert (bad is None and problem is None) or (bad and repr(bad) in problem and trend in problem)

@@ -398,13 +398,18 @@ def rain_lines(card, lang):
     return out
 
 
+STEADY_M_PER_H = 0.005     # under 0.5 cm an hour (the mean of the 1 h and 3 h rates) = steady - card AND screen
+
+
 def _trend_word(trend):
-    """'rising' / 'falling' / 'steady' from the controlling gauge's rates, None when unknown or tide-influenced."""
+    """'rising' / 'falling' / 'steady' from the controlling gauge's rates, None when unknown or tide-influenced.
+    The same rule as the answer screen (view._trend): 24 Oct evening live test, Rantau Panjang -2 cm in 1 h and +4 cm
+    in 3 h - the card said 'turun' while the screen said steady, and the AI repeated 'turun'."""
     rate = trend.get("rate_m_per_h") or {}
     if not rate or trend.get("tide_influenced"):
         return None
     mid = (rate.get("min", 0) + rate.get("max", 0)) / 2
-    return "rising" if mid > 0 else "falling" if mid < 0 else "steady"
+    return "steady" if abs(mid) < STEADY_M_PER_H else "rising" if mid > 0 else "falling"
 
 
 def key_facts(card, forecast=None, lang="en"):
@@ -733,6 +738,11 @@ STYLE_PLACE = "tanah merah"     # the place in the draft prompt's style examples
 _INDONESIAN = re.compile(r"\b(" + "|".join(re.escape(w) for w in INDONESIAN) + r")\b", re.IGNORECASE)
 _INTERNAL = re.compile(r"\b(rules?|trigger(?:s|ed)?|verdicts?|sentinels?)\b", re.IGNORECASE)
 _TREND = re.compile(r"\b(naik|turun|surut|meningkat|menurun|rising|falling|rises|falls|risen|fallen)\b", re.IGNORECASE)
+# A1 (24 Oct evening): the words that say which way the river here is going, per computed trend
+_TREND_WORDS = {"rising": re.compile(r"\b(naik|meningkat|rising|rises|risen)\b", re.IGNORECASE),
+                "falling": re.compile(r"\b(turun|surut|menurun|falling|falls|fallen|dropping|receding)\b", re.IGNORECASE),
+                "steady": re.compile(r"\b(stabil|steady|unchanged|tidak berubah)\b", re.IGNORECASE)}
+_NOT_HERE = re.compile(r"\b(hulu|upstream|hujan|rain|rainfall)\b", re.IGNORECASE)   # upstream / rain sentences
 _MINUS = re.compile(r"(?<![\w.])[-−–]\s?\d")             # "-0.57" - not the dash in a range "5.3-5.47"
 
 
@@ -766,6 +776,26 @@ def trend_problem(text, card):
         return None
     m = _TREND.search(text or "")
     return f"wording: says {m.group(0)!r} but no trend is known for this gauge" if m else None
+
+
+def trend_match_problem(text, card):
+    """A1 (safety, 24 Oct evening): rising / falling / steady words about the river HERE must match the card's computed
+    trend. Sentences about upstream or rain are skipped (an upstream gauge may rise while this one falls; 'hujan turun'
+    is rain falling). No trend known is trend_problem's job."""
+    trend = card.get("trend")
+    if not trend:
+        return None
+    upstream = [gauge_place(u.get("gauge") or "").lower().replace(".", "") for u in card.get("upstream", [])]
+    plain = re.sub(r"\b(Kg|Sg|Kpg|Jln|Bt)\.", r"\1", text or "")      # "Kg. Jenob" is not a sentence end
+    for sentence in re.split(r"(?<=[.!?])\s+", plain):
+        low = sentence.lower()
+        if _NOT_HERE.search(sentence) or any(p and p in low for p in upstream):
+            continue
+        for other, rx in _TREND_WORDS.items():
+            m = rx.search(sentence) if other != trend else None
+            if m:
+                return f"trend: says {m.group(0)!r} about the river here, but its computed trend is {trend}"
+    return None
 
 
 def wording_problem(text, lang, place=None):
@@ -803,7 +833,8 @@ def explanation_problem(text, card, lang=None):
         return f"says the river is {', '.join(flipped)}, but the card says otherwise"
     if card["verdict"] in ("WATCH", "PREPARE", "ACT") and REASSURE.search(text):
         return f"reassuring words ({REASSURE.search(text).group(0)!r}) under a {card['verdict']} card"
-    return osm_claim(text) or trend_problem(text, card) or wording_problem(text, lang, card.get("place"))
+    return (osm_claim(text) or trend_problem(text, card) or trend_match_problem(text, card)
+            or wording_problem(text, lang, card.get("place")))
 
 
 def emergency_reply(lang, rest):

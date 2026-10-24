@@ -25,7 +25,7 @@ def stub(effort="full"):
         calls.append(lane)
         if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):
             return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": "", "ok": True}, text="")
-        return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")
+        return SimpleNamespace(data={"explanation": "VEDA checked the river readings for this place."}, text="")
     llm.calls = calls
     return llm
 
@@ -186,7 +186,7 @@ def test_explanation_is_dropped_when_the_ai_critic_cannot_check_it(offline, forc
         return base(lane, messages, agent, **kw)
     r = loop.run("Is Rantau Panjang at risk?", llm=llm, log_dir=offline, quiet=True)
     assert r["answer"]["explanation"] is None and r["answer"]["drafted_by"] == "code"
-    assert "The river is steady for now." not in r["answer"]["text"] and r["answer"]["approved"]
+    assert "VEDA checked the river readings for this place." not in r["answer"]["text"] and r["answer"]["approved"]
     final = [x for x in lines(r) if x["action"] == "final_answer"][0]
     assert final["decision"].startswith("AI explanation dropped: the Critic's AI review did not run or timed out")
 
@@ -194,7 +194,7 @@ def test_explanation_is_dropped_when_the_ai_critic_cannot_check_it(offline, forc
 def test_explanation_stays_when_the_ai_critic_approved_it(offline, force):
     force("full")
     r = loop.run("Is Rantau Panjang at risk?", llm=stub("full"), log_dir=offline, quiet=True)
-    assert r["answer"]["explanation"] == "The river is steady for now." and r["answer"]["drafted_by"] == "llm"
+    assert r["answer"]["explanation"] == "VEDA checked the river readings for this place." and r["answer"]["drafted_by"] == "llm"
 
 
 # -- audit 23 Oct: no Zetaris at all (clean clone without SAMPLE_MODE, or an outage) ----------------------------
