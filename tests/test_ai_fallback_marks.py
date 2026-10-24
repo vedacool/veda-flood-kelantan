@@ -32,7 +32,7 @@ def llm_with(draft=True, review=True):
             return SimpleNamespace(data={"ok": True, "reason": "matches"}, text="")
         if not draft:
             raise nightshift.NightshiftError("Nightshift failed after 1 attempts: HTTP 200: ttfb_timeout:x")
-        return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")
+        return SimpleNamespace(data={"explanation": "VEDA checked the river readings for this place."}, text="")
     return llm
 
 
