@@ -318,7 +318,9 @@ def main(argv=None):
     if changed and not args.check:
         ANCHORS.write_text(text, encoding="utf-8", newline="")
     changed += write_fixtures(gauges, rnd, args.check)
-    changed += write_page(rnd, args.check)
+    # B-101: the parser-test page has its own seed (its old shared-seed draw happened to equal a private live reading);
+    # no other output changes
+    changed += write_page(random.Random(SEED + 106), args.check)
     changed += write_discover_fixture(args.check)
     print(("differs: " if args.check else "written: ") + (", ".join(changed) or "nothing"))
     return 1 if (args.check and changed) else 0
