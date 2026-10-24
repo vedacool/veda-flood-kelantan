@@ -180,6 +180,10 @@ def result_json(r):
            "how": view.how_it_worked(r["trace"])}
     if r.get("card"):
         out["card"] = {lang: trace.redact(card_mod.render(r["card"], lang)) for lang in ("en", "ms")}
+    # A4 (24 Oct evening): the AI paragraph is written once, in the question's language - the page notes it when the
+    # reader switches EN | BM. None when no AI paragraph is shown.
+    expl = (out["view"] or {}).get("explanation")
+    out["explanation_lang"] = expl.get("language") if expl else None
     return out
 
 

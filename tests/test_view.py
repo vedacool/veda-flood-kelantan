@@ -368,3 +368,16 @@ def test_level_unknown_and_keep_watching_line_match_the_steps():
     assert view.action_lines("WATCH", "X", "en") == ["Check again in 3 hours."] == view.steps("WATCH", "en")[:1]
     assert view.action_lines("WATCH", "X", "ms")[0] == view.steps("WATCH", "ms")[0]
     assert view._range_cm(0.12, 0.15) == "12–15" and view.dash("in 9-17 h") == "in 9–17 h"
+
+
+def test_explanation_lang_is_the_question_language_or_none(views):
+    """A4 (24 Oct evening): the AI paragraph is written once, in the question's language; the result says which."""
+    import copy
+    from app import main
+    r, _ = views["nov2024"]
+    assert main.result_json(r)["explanation_lang"] is None                     # offline: no AI paragraph
+    r2 = copy.deepcopy(r)
+    r2["answer"].update(explanation="Paras sungai melebihi paras Bahaya.", approved=True, language="ms")
+    assert main.result_json(r2)["explanation_lang"] == "ms"
+    r2["answer"]["approved"] = False                                            # not approved -> not shown
+    assert main.result_json(r2)["explanation_lang"] is None
