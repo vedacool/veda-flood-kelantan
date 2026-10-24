@@ -31,3 +31,6 @@ data/snapshots/jps/
 # demo clips (scripts/record_demo.py): too heavy for git (~167 MB); kept on the recording machine
 docs/media/video/*.webm
 docs/media/video/*.mp4
+
+# demo bundles (scripts/make_demo_bundle.py)
+dist/

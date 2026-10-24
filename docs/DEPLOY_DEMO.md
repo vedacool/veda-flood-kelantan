@@ -22,6 +22,34 @@ visitor --HTTPS--> Tailscale Funnel --> 127.0.0.1:8765 --> proxy (nginx) --+--> 
 Commands below are for a Debian / Ubuntu-style system with `sudo`; run them in a terminal on the Wyse (SSH over the
 tailnet is fine).
 
+## Tonight (before the public repo exists): four commands
+No git on the Wyse: the PC makes a bundle from `main` and Tailscale sends it over.
+
+**On the PC** (PowerShell, in `E:\Project\veda`):
+```
+.venv\Scripts\python scripts\make_demo_bundle.py
+tailscale file cp dist\veda-demo-<commit>.tar.gz wyse5070:
+```
+The first command builds `dist\veda-demo-<commit>.tar.gz` from `origin/main` (it refuses a commit older than
+`a6a2280`, any secret-looking file or `.env` value, and anything that fails the JPS guard) and prints the exact file
+name, its size and SHA256. Use that file name in the second command.
+
+**On the Wyse:**
+```
+sudo tailscale file get ~/ && sudo chown "$USER": ~/veda-demo-*.tar.gz && tar -xzf ~/veda-demo-*.tar.gz -C ~
+cd ~/veda-demo && bash demo/setup_wyse.sh
+```
+`setup_wyse.sh` does steps 1, 4 and 5 below in one go: it checks the machine (x86_64, 1.5 GB memory, 3 GB disk,
+Docker - it never installs anything; without Docker it prints step 2 and stops), finds a free port (8765, or the
+next free one), builds and starts the demo, runs the checks (`PASS` / `FAIL` each; nothing is published if one
+fails), shows what Tailscale already serves, then asks **"Publish on Funnel port 443 or 8443?"** (only 8443 is
+offered if 443 is already in use; `skip` publishes nothing). It prints the public link, the feedback link and:
+```
+bash demo/setup_wyse.sh --export      # all feedback answers -> feedback-<date>.csv in the current folder
+bash demo/setup_wyse.sh --stop        # Funnel off for the demo's port only + containers down (answers kept)
+```
+Then do step 6 (test from outside) by hand. Steps 1-9 below are the same thing done by hand, for reference.
+
 ## 1. Check the machine (2 min)
 ```
 uname -m                       # x86_64
@@ -110,7 +138,8 @@ On a phone **on mobile data, not on the tailnet** (or any computer logged out of
    **all 30 are 200**, Funnel is not adding the visitor's address the
    way the proxy expects: in `demo/nginx.conf` change the line `"~(?<last>[^,\s]+)\s*$" $last;` to
    `"~." $remote_addr;` (one shared limit for all visitors together - safe, just stricter), then
-   `docker compose -f demo/compose.yaml --profile demo restart proxy` and test again.
+   `docker compose -f demo/compose.yaml --profile demo up -d --build proxy` (the config is built into the proxy image)
+   and test again.
 4. Nothing leaves VEDA's container (on the Wyse):
    ```
    docker compose -f demo/compose.yaml --profile demo exec -T veda python -c "import urllib.request; urllib.request.urlopen('https://api.open-meteo.com', timeout=5)"

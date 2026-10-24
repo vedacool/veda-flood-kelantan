@@ -43,10 +43,10 @@ services:
 
   proxy:
     profiles: [demo]
-    image: nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10   # pinned by digest
+    build: { context: ., dockerfile: proxy.Dockerfile }   # pinned nginx + demo/nginx.conf built in
+    image: veda-proxy:demo
     entrypoint: ["nginx", "-g", "daemon off;"]     # skip the image's start scripts (they rewrite config files)
     user: "101:101"                                # the image's nginx user; port 8080 needs no root
-    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
     ports: ["127.0.0.1:${DEMO_PORT:-8765}:8080"]
     read_only: true
     tmpfs: ["/tmp:mode=1777,size=32m"]
