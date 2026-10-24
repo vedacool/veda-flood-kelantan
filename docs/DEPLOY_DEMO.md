@@ -12,8 +12,9 @@ visitor --HTTPS--> Tailscale Funnel --> 127.0.0.1:8765 --> proxy (nginx) --+--> 
   and 120 page requests a minute, burst 60; then HTTP 429 - at most 3 open streams (answer steps, live log) per
   visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing) - a one-line demo banner in the page's
   language with a small *Feedback* link, and a *Was this clear? 1-minute feedback* link under each answer
-  (`demo/demo-banner.js`; the app itself is unchanged) - `/admin` and run logs closed (404), no access log (it would
-  store IP addresses), visitors' addresses not passed on.
+  (`demo/demo-banner.js`; the app itself is unchanged) - the public API (`/api/v1/`) and its docs page (`/api/docs`)
+  with the same limits as an answer stream - `/admin`, run logs and FastAPI's own `/docs`, `/redoc`, `/openapi.json`
+  closed (404), no access log (it would store IP addresses), visitors' addresses not passed on.
 - **veda** (the normal VEDA image): `SAMPLE_MODE=true`, read-only filesystem, 1 GB memory limit, on an internal
   network with **no route out** (it cannot fetch anything, whatever the code does). Questions visitors type stay in
   memory (tmpfs) and vanish on restart.

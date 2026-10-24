@@ -21,6 +21,24 @@ def test_rate_limit_and_headers():
     assert 'add_header Strict-Transport-Security "max-age=31536000" always;' in NGINX
 
 
+def test_the_public_api_has_the_run_stream_limits_and_fastapi_docs_are_closed():
+    """Cowork 24 Oct night: /api/v1/ and /api/docs get the same per-visitor limits as /run/stream; FastAPI's own
+    /docs, /redoc and /openapi.json answer 404 at the proxy (the app closes them too in demo mode)."""
+    def block(loc):
+        return NGINX.split(loc, 1)[1].split("\n        }", 1)[0]
+    for loc in ("location ^~ /api/v1/ {", "location = /api/docs {"):
+        b = block(loc)
+        for rule in ("limit_conn streams_per_visitor 3;", "limit_conn streams_all 10;",
+                     "limit_req zone=pages burst=60 nodelay;", "limit_req zone=answers burst=10 nodelay;",
+                     "proxy_pass http://veda;"):
+            assert rule in b, (loc, rule)
+    docs = block("location = /api/docs {")
+    assert "Content-Security-Policy" not in docs.split("#", 1)[0].split("add_header", 1)[-1]  # the app's DOCS_CSP passes
+    assert 'add_header X-Frame-Options "DENY" always;' in docs and "Strict-Transport-Security" in docs
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert re.search(rf"location = {re.escape(path)}\s+\{{ return 404; \}}", NGINX), path
+
+
 def test_open_streams_are_capped_per_visitor_and_in_all():
     """Audit 24 Oct: ~40 open /live/stream connections froze the app. 3 per visitor, 10 in all."""
     assert "events { worker_connections 1024; }" in NGINX
