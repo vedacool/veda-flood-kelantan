@@ -109,7 +109,10 @@ def test_every_expectation_passes_on_the_real_runs(runs):
     for sid, out in runs.items():
         res = scenes.check(sid, out)
         assert [r["id"] for r in res["rows"] if not r["ok"]] == [], (sid, res["rows"])
-        assert res["trail"] and {t["key"] for t in res["trail"]} <= set(scenes.STEPS_SENT)
+        assert res["matched"] == res["total"] == len(res["rows"])
+        for lang in ("en", "ms"):
+            assert [x["key"] for x in res["how"][lang]] == list(scenes.STEPS_SENT), (sid, lang)
+        assert res["log"] and {t["key"] for t in res["log"]} <= set(scenes.STEPS_SENT)
 
 
 def test_a_changed_output_flips_the_check_to_a_cross(runs):
@@ -156,10 +159,16 @@ def test_routes(monkeypatch):
 
 
 def test_page_words_and_links():
-    for text in ('"Did VEDA match what you expected? Tell us"',
-                 'nemotron: "Nemotron\'s own judgement: live mode only."',
-                 'judges_link: "See the recorded live run on the For judges page ›"',
-                 '"A river level post (gauge) measures how high the river is.', 'href="/judges"', "/feedback?lang="):
+    """Cowork wireframes v3 (B-96): the list title and intro, three numbered steps, the result links and last line."""
+    for text in ('list_title: "Test VEDA yourself"',
+                 '"Each test shows the situation and the data, tells you what VEDA should say, then you run it and compare."',
+                 'group_real: "Real flood · November 2024"', 'group_made: "Made-up tests"',
+                 'step1: "The situation"', 'step2: "The data at that moment"', 'step3: "What VEDA should do → what it did"',
+                 'match: "✓ match"', 'different: "✗ different"', 'score: "{n} of {m} matched"',
+                 'how_title: "How VEDA got there"', 'full_answer: "See the full answer VEDA gave ›"',
+                 'live_link: "See a real live run with Nemotron ›"', 'show_log: "Show technical log"',
+                 'feedback_q: "Did VEDA match what you expected?"', 'tell_us: "Tell us"', 'next: "Next test ›"',
+                 '"A river level post (gauge) measures how high the river is.', 'href="/how-it-works#live"', "/feedback?lang="):
         assert text in PAGE, text
     ui = PAGE.split("const UI = {", 1)[1].split("\n};", 1)[0]
     en, ms = ui.split("\n  ms: {", 1)
@@ -168,14 +177,70 @@ def test_page_words_and_links():
 
 
 def test_every_data_row_has_a_source_tag():
-    """Cowork B-91b: each row of "What the data showed" ends with where its values come from."""
+    """Cowork B-91b, B-96: each row of step 2 says where its values come from, as plain grey text (not a tag)."""
     body = PAGE.split("function dataRows(d) {", 1)[1].split("\n}\n", 1)[0]
     pushes = body.split("rows.push(")[1:]
-    assert len(pushes) == 5 and all("srcs" in p or "gaugeSources(g)" in p for p in pushes)
-    assert "function gaugeSources(g)" in PAGE and 'srcTag("src_demo")' in PAGE and 'srcTag("src_om")' in PAGE
-    for key, en, ms in (("src_news", "News report", "Laporan berita"), ("src_demo", "Demo data", "Data demo"),
-                        ("src_om", "Open-Meteo archive", "Arkib Open-Meteo")):
+    assert len(pushes) == 5 and all("origin" in p or "${om}" in p for p in pushes)
+    assert "function origin(g)" in PAGE and 'class="origin"' in PAGE
+    for key, en, ms in (("o_news", "news report: {s}", "laporan berita: {s}"), ("o_demo", "demo data", "data demo"),
+                        ("o_jps", "JPS station list", "senarai stesen JPS"), ("o_om", "Open-Meteo archive", "arkib Open-Meteo")):
         assert f'{key}: "{en}"' in PAGE and f'{key}: "{ms}"' in PAGE
+
+
+def test_the_v3_ui_rules():
+    """Cowork B-96: one filled button (Start test); no guess buttons, no 'Show what to expect', no chips or pills;
+    the expectations show at once with '–' before the run; nothing collapses but the log and per-value details."""
+    assert PAGE.count('class="primary"') == 1 and 'id="start"' in PAGE.split('class="primary"', 1)[1][:30]
+    for gone in ("show-expect", "guess", "chip", "tag-src", "Open ›", "<details id=\"brief\"", "briefing"):
+        assert gone not in PAGE, gone
+    assert PAGE.count("<details") == 2 and PAGE.count("details class=\"more\"") == 2   # the log + per-value details
+    assert 'pending: "–"' in PAGE and "function renderExpect()" in PAGE
+
+
+def test_every_scene_has_a_hook_and_the_list_has_two_groups():
+    exp = scenes.expected()["scenes"]
+    data = {d["id"]: d for d in scenes.scene_data()["scenes"]}
+    for s in exp:
+        assert s["hook"]["en"].strip() and s["hook"]["ms"].strip() and len(s["hook"]["en"]) <= 70, s["id"]
+    assert [s["id"] for s in exp if data[s["id"]]["kind"] == "replay"] == ["rp-before", "rp-morning", "rp-peak"]
+    assert len([s for s in exp if data[s["id"]]["kind"] == "synthetic"]) == 4
+
+
+def test_plain_words_on_screen(runs):
+    """B-96: what the result shows outside the technical log - the ✗ text and "How VEDA got there" - never holds
+    SAMPLE_MODE, not_run, BUILD_BRIEF, internal ids, rule names or confidence decimals."""
+    banned = re.compile(r"SAMPLE_MODE|not_run|BUILD_BRIEF|\d{8}-\d{6}-[0-9a-f]{4}|\(F\d\)|confidence|(?<![\d.])0\.\d{2}|_[a-z]+_|"
+                        r"[a-z]+\.[a-z]+\(|need:|section 7", re.I)
+    for sid, out in runs.items():
+        res = scenes.check(sid, out)
+        for lang in ("en", "ms"):
+            shown = [r["said"][lang] for r in res["rows"]] + [f'{x["who"]}: {x["text"]}' for x in res["how"][lang]]
+            for text in shown:
+                assert not banned.search(text), (sid, lang, text)
+    peak = copy.deepcopy(runs["rp-peak"])                                      # a failing safety row is plain too
+    for st in peak["steps"]:
+        if st["key"] == "safety":
+            st["lines"] = [{"action": "safety", "text": "1 fix: removed an unsafe sentence - BUILD_BRIEF section 7"}]
+    row = next(r for r in scenes.check("rp-peak", peak)["rows"] if r["id"] == "safety")
+    assert row["said"]["en"] == "The safety gate had to fix the answer."
+
+
+def test_how_veda_got_there_reads_the_run(runs):
+    """app/trail.py: the Critic line says what the Critic did in THIS run (asked for data, what was found, approved)."""
+    from app import trail
+    silent = {x["key"]: x["text"] for x in trail.how_lines(runs["pm-silent-upstream"], "en")}
+    assert silent["critique"] == ("Asked the Data agent for a fresh upstream reading. It found Sg. Kelantan di Kusial "
+                                  "Baru. The level was worked out again. Checked the facts again and approved the answer.")
+    assert silent["safety"] == "All safety checks passed."
+    assert silent["gather"].startswith("Used 6 of 11 sources. Left out: Sg. Kelantan di Air Mulih, reading too old")
+    calm = {x["key"]: x["text"] for x in trail.how_lines(runs["tumpat-calm"], "ms")}
+    assert calm["critique"] == "Menyemak semula fakta dan meluluskan jawapan."
+    assert calm["forecast"].startswith("Normal buat masa ini. ")
+    sent_back = copy.deepcopy(runs["tumpat-calm"])
+    for st in sent_back["steps"]:
+        if st["key"] == "critique":
+            st["lines"] = [{"action": "critic.review", "text": "needs_revision: a number is not in the facts"}]
+    assert trail.how_lines(sent_back, "en")[2]["text"] == "Sent the answer back to be fixed."
 
 
 def test_news_report_tags_only_on_the_allow_listed_values():
@@ -215,11 +280,13 @@ def test_review_texts_and_banned_malay_words():
                  "Penyemak mendapati stesen hulu berhenti menghantar bacaan, lalu meminta Ejen Data mencari stesen lain.",
                  "Nearest rain point VEDA uses: Kota Bharu", "Titik hujan terdekat yang digunakan VEDA: Kota Bharu"):
         assert text in exp, text
-    assert ("The people in this story are imagined. River readings marked 'News report' were reported at the time; "
-            "the rest is demo data.") in PAGE
+    for text in ('real: "Real flood, Nov 2024"', 'made: "Made-up test"', 'people: "the people are imagined"',
+                 'real: "Banjir sebenar, Nov 2024"', 'made: "Ujian rekaan"', 'people: "orang dalam cerita ini rekaan"'):
+        assert text in PAGE, text
     judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
-    for name in ("Penyemak", "Ejen Data", "Ejen Ramalan", "Semakan keselamatan"):     # the same BM names as /judges
-        assert f'"{name}"' in judges and name in PAGE
+    from app import trail                                                         # the same BM names as /judges
+    for name in ("Penyemak", "Ejen Data", "Ejen Ramalan", "Semakan keselamatan"):
+        assert f'"{name}"' in judges and name in {a["ms"] for a in trail.AGENTS.values()}
 
 
 def test_each_value_is_tagged_with_its_real_origin():
@@ -242,7 +309,7 @@ def test_each_value_is_tagged_with_its_real_origin():
                 assert not news and g["demo"], (s["id"], g["name"])  # made-up scenes: nothing is news
             trends = g["change_1h_m"] is not None or g["change_3h_m"] is not None
             assert g["demo"] == ("level" not in news or trends), (s["id"], g["name"])
-    assert 'src_jps: "JPS station list"' in PAGE and 'src_jps: "Senarai stesen JPS"' in PAGE
+    assert 'o_jps: "JPS station list"' in PAGE and 'o_jps: "senarai stesen JPS"' in PAGE
 
 
 def test_the_kosmo_2014_sentence_is_tagged_and_1_94_is_never_shown():

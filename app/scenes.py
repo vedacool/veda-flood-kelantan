@@ -21,7 +21,7 @@ from pathlib import Path
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from app import config
+from app import config, trail
 from app.view import HEADLINE
 
 ROOT = config.ROOT
@@ -158,8 +158,12 @@ def compact(result):
     """The parts of a run result the check needs (the page sends exactly this shape, kept under the proxy's 16 KB)."""
     view = result.get("view") or {}
     how = result.get("how") or {}
+    by_lang = {lang: [{"name": s.get("name"), "used": bool(s.get("used")), "note": (s.get("note") or "")[:80]}
+                      for s in (view.get("sources") or {}).get(lang, [])] for lang in ("en", "ms")}
     return {"verdict": result.get("verdict"),
-            "sources": [{"name": s.get("name"), "used": bool(s.get("used"))} for s in (view.get("sources") or {}).get("en", [])],
+            "why": {lang: ((view.get("why") or {}).get(lang) or "")[:240] for lang in ("en", "ms")},
+            "sources": [{"name": s["name"], "used": s["used"]} for s in by_lang["en"]],
+            "sources_by_lang": by_lang,
             "steps": [{"key": r.get("key"), "who": r.get("who"),
                        "lines": [{"action": ln.get("action"), "text": (ln.get("text") or "")[:160]} for ln in r.get("lines", [])][:12]}
                       for r in how.get("rows", []) if r.get("key") in STEPS_SENT]}
@@ -190,31 +194,36 @@ def _said(check, out):
                 parts["en"].append(f"{sub}: {'used' if used else 'left out'}")
                 parts["ms"].append(f"{sub}: {'digunakan' if used else 'diketepikan'}")
         return ok, {lang: "; ".join(parts[lang]) for lang in parts}
-    if "step_present" in check:
-        lines = [ln for s in out.get("steps", []) for ln in s.get("lines", []) if ln.get("action") == check["step_present"]]
-        ok = bool(lines)
-        if ok:
-            return ok, {"en": lines[0]["text"], "ms": lines[0]["text"]}
-        return ok, {"en": "This step did not happen in the run.", "ms": "Langkah ini tidak berlaku dalam larian."}
+    if "step_present" in check:          # plain words on screen (B-96); the raw step text stays in the technical log
+        ok = any(ln.get("action") == check["step_present"] for s in out.get("steps", []) for ln in s.get("lines", []))
+        return ok, STEP_SAID[ok]
     if "safety_passed" in check:
         texts = [ln["text"] for s in out.get("steps", []) if s.get("key") == "safety" for ln in s.get("lines", [])]
-        ok = any(t.startswith("all safety checks passed") for t in texts) == check["safety_passed"]
-        said = texts[0] if texts else "no safety step in the run"
-        return ok, {"en": said, "ms": said}
+        passed = any(t.startswith("all safety checks passed") for t in texts)
+        return passed == check["safety_passed"], SAFETY_SAID[passed]
     return False, {"en": "unknown check", "ms": "semakan tidak dikenali"}
 
 
+STEP_SAID = {True: {"en": "This step happened in the run.", "ms": "Langkah ini berlaku semasa ujian."},
+             False: {"en": "This step did not happen in the run.", "ms": "Langkah ini tidak berlaku semasa ujian."}}
+SAFETY_SAID = {True: {"en": "All safety checks passed.", "ms": "Semua semakan keselamatan lulus."},
+               False: {"en": "The safety gate had to fix the answer.",
+                       "ms": "Semakan keselamatan terpaksa membetulkan jawapan."}}
+
+
 def check(scene_id, out):
-    """Every expectation of a scene against a compact run result -> [{id, ok, said}] + the agents' trail."""
+    """Every expectation of a scene against a compact run result -> [{id, ok, said}], "N of M matched", the plain
+    "How VEDA got there" lines (app/trail.py) and the raw step text for the technical log."""
     scene = next(s for s in expected()["scenes"] if s["id"] == scene_id)
     rows = []
     for e in scene["expect"]:
         ok, said = _said(e["check"], out)
         rows.append({"id": e["id"], "ok": ok, "said": said})
-    trail = [{"key": s["key"], "who": s["who"], "lines": [ln["text"] for ln in s.get("lines", [])][-3:]}
-             for s in out.get("steps", [])]
+    log = [{"key": s["key"], "who": s["who"], "lines": [ln["text"] for ln in s.get("lines", [])]}
+           for s in out.get("steps", [])]                  # raw text: only behind "Show technical log"
     return {"verdict": out.get("verdict"), "verdict_name": {lang: _name(out.get("verdict"), lang) for lang in ("en", "ms")},
-            "rows": rows, "trail": trail}
+            "rows": rows, "matched": sum(r["ok"] for r in rows), "total": len(rows),
+            "how": {lang: trail.how_lines(out, lang) for lang in ("en", "ms")}, "log": log}
 
 
 # ---------- the one route: /scenes, /scenes/<id>, /scenes/data.json, POST /scenes/<id>/check ----------
