@@ -12,12 +12,23 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from app import config, main, scenes, trace
+from app import config, gazetteer, main, scenes, trace
 
 FIXTURES = trace.ROOT / "data" / "fixtures" / "zetaris"
 PAGE = (trace.ROOT / "app" / "web" / "scenes.html").read_text(encoding="utf-8")
 METRES = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s?m(?![m\w])")
 CHECKS = {"verdict_in", "verdict_not_in", "used", "left_out", "step_present", "safety_passed"}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def offline():
+    """SAMPLE_MODE with no credentials, as in CI: the scenes run on the committed fixtures alone."""
+    mp = pytest.MonkeyPatch()
+    mp.setenv("SAMPLE_MODE", "true")
+    gazetteer.clear_cache()
+    yield
+    mp.undo()
+    gazetteer.clear_cache()
 
 
 @pytest.fixture(scope="module")
