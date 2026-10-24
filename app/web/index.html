@@ -13,7 +13,9 @@
           /* verdict colours differ in lightness too (relative luminance ACT 0.07 < NORMAL 0.15 < unknown 0.29 <
              PREPARE 0.40 < WATCH 0.68), each with text at >= 5.3:1 - accessibility pass 24 Oct */
           --v-normal: #257a43; --v-watch: #f6d548; --v-prepare: #f2933a; --v-act: #8f1d16; --v-unknown: #8e949b;
-          --on-normal: #ffffff; --on-watch: #1c1c1a; --on-prepare: #1c1c1a; --on-act: #ffffff; --on-unknown: #1c1c1a; }
+          --on-normal: #ffffff; --on-watch: #1c1c1a; --on-prepare: #1c1c1a; --on-act: #ffffff; --on-unknown: #1c1c1a;
+          /* the agents' colours - the same as the live log (live.html), white text on each */
+          --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
             --on-accent: #151514; --danger: #f08a80; --warn-text: #f0b45a; }
@@ -77,6 +79,13 @@
   .checking ul { list-style: none; padding: 0; margin: 0 0 6px; }
   .checking li { padding: 4px 0; font-size: 1.1rem; }
   .checking li.done::before { content: "✓ "; font-weight: 800; }
+  /* which agent does this step (B1): a small tag in the agent's live-log colour */
+  .agent-tag { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 10px 1px 6px;
+               border-radius: 999px; background: var(--ag); color: #fff; font: 600 .9rem/1.5 system-ui, -apple-system,
+               "Segoe UI", Roboto, sans-serif; white-space: nowrap; vertical-align: middle; }
+  .agent-tag svg { width: 16px; height: 16px; flex: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #log li.stage { font-weight: 700; }
   .status { font-size: 1.15rem; font-weight: 700; min-height: 3em; }
   .bar { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
   .bar > div { height: 100%; width: 3%; background: var(--accent); transition: width .6s ease; }
@@ -391,6 +400,8 @@ const UI = {
     s_start: "Starting…", s_plan: "Understanding your question…", s_gather: "Reading river levels, rain and warnings…",
     s_forecast: "Working out the risk…", s_draft: "Writing the answer…", s_critique: "Double-checking the answer…",
     s_revise: "Fixing the answer…", s_done: "Done.",
+    ag_coordinator: "Coordinator", ag_data: "Data agent", ag_forecast: "Forecast agent",
+    ag_writer: "Coordinator + Nemotron", ag_critic: "Critic",
     tips: ["Keep a charged phone and a power bank ready during the monsoon.",
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
@@ -446,6 +457,8 @@ const UI = {
     s_start: "Bermula…", s_plan: "Memahami soalan anda…", s_gather: "Membaca paras sungai, hujan dan amaran…",
     s_forecast: "Menilai risiko…", s_draft: "Menulis jawapan…", s_critique: "Menyemak semula jawapan…",
     s_revise: "Membetulkan jawapan…", s_done: "Selesai.",
+    ag_coordinator: "Penyelaras", ag_data: "Ejen Data", ag_forecast: "Ejen Ramalan",
+    ag_writer: "Penyelaras + Nemotron", ag_critic: "Penyemak",
     tips: ["Sediakan telefon yang dicas dan power bank sepanjang musim tengkujuh.",
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
@@ -587,12 +600,33 @@ function momentLabel() {   // the answer screen's "Replay · 27 Nov 2024, 7:30 p
 }
 
 // ---------- 2. Waiting ----------
+// B1: which agent works in each step. Keys are the trace's own step names (app/progress.py STEP_LABELS); the agent
+// is the one whose records fill that step in the trace (plan/route: Coordinator, gather: Data & Reconciler, forecast:
+// Forecast, draft/revise: Coordinator calling Nemotron, critique: Critic). Colours as in the live log.
+const AGENT_ICON = {
+  compass: '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 8.5-2 5-5 2 2-5z" fill="currentColor"/>',
+  gauge: '<path d="M3.5 17a8.5 8.5 0 1 1 17 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="m12 17 4.5-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.8" fill="currentColor"/>',
+  cloud: '<path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10.5 4.3 4.3 0 0 1 17.5 19z" fill="currentColor"/>',
+  magnifier: '<circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="m15 15 5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+};
+const AGENT_OF = { plan: ["ag_coordinator", "compass", "--c-coordinator"], gather: ["ag_data", "gauge", "--c-data"],
+                   forecast: ["ag_forecast", "cloud", "--c-forecast"], draft: ["ag_writer", "compass", "--c-coordinator"],
+                   revise: ["ag_writer", "compass", "--c-coordinator"], critique: ["ag_critic", "magnifier", "--c-critic"] };
+const CHECK_STAGE = { "c_gather": "gather", "c_upstream": "gather", "c_forecast": "forecast", "c_draft": "draft",
+                      "c_critique": "critique" };          // c_upstream: rain.upstream is a Data & Reconciler step
+function agentTag(stage) {
+  const a = AGENT_OF[stage];
+  if (!a) return "";
+  const who = a[0] === "ag_writer" && sampleMode ? "ag_coordinator" : a[0];    // offline no model is called
+  return `<span class="agent-tag" style="--ag:var(${a[2]})"><svg viewBox="0 0 24 24" aria-hidden="true">${AGENT_ICON[a[1]]}</svg>` +
+         `<span><span class="sr-only">· </span>${esc(t(who))}</span></span>`;
+}
 let stageIdx = -1, tipTimer = null, tipIdx = 0, warned = false;
 function setStage(name) {
   const i = STAGES.indexOf(name);
   if (i < 0) return;
   stageIdx = Math.max(stageIdx, i);
-  $("w-status").textContent = t("s_" + name);
+  $("w-status").innerHTML = esc(t("s_" + name)) + agentTag(name);
   const pct = name === "revise" ? 88 : [12, 35, 55, 70, 85][i] || 90;
   bump(pct);
 }
@@ -611,7 +645,9 @@ function showTip() {
 }
 function addLog(text) {
   const li = document.createElement("li");
-  li.textContent = text;
+  const stage = stageFromLine(text);
+  if (stage) { li.className = "stage"; li.innerHTML = esc(text) + agentTag(stage); }
+  else li.textContent = text;
   $("log").append(li);
 }
 
@@ -624,7 +660,8 @@ function checking(keys) {
     const each = Math.max(500, Math.min(1000, 3000 / keys.length));       // 2-4 s in all
     $("w-tip").hidden = true; $("w-more").hidden = true; $("log").hidden = true;
     $("w-check").hidden = false;
-    $("w-check-list").replaceChildren(...keys.map((k) => { const li = document.createElement("li"); li.textContent = t(k); li.hidden = true; return li; }));
+    $("w-check-list").replaceChildren(...keys.map((k) => {
+      const li = document.createElement("li"); li.innerHTML = esc(t(k)) + agentTag(CHECK_STAGE[k]); li.hidden = true; return li; }));
     const items = [...$("w-check-list").children];
     let i = 0, timer = null;
     const finish = () => { clearTimeout(timer); skipCheck = null; done(); };
@@ -632,7 +669,7 @@ function checking(keys) {
       if (i > 0) items[i - 1].classList.add("done");
       if (i >= items.length) { timer = setTimeout(finish, 400); return; }
       items[i].hidden = false;
-      $("w-status").textContent = t(keys[i]);
+      $("w-status").innerHTML = esc(t(keys[i])) + agentTag(CHECK_STAGE[keys[i]]);
       i += 1;
       timer = setTimeout(next, each);
     };
