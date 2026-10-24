@@ -232,8 +232,7 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
 - **Offline test suite (`python -m pytest -q`): 944 tests pass (24 Oct 2026), 13 skipped (they need live services).**
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 40 scenarios (5 of them for Nemotron's judgement,
-  Part 7), 40 of 40 pass locally; pass^3: 34 of 34 in all 3 repeat runs in CI (the Docker job runs them 3 times on every push; 24 Oct at `af05b22`: green, job
-  32 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
+  Part 7), 40 of 40 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `943441f`, 24 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
