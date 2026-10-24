@@ -31,6 +31,15 @@ def test_secret_files_and_env_values_are_refused():
     assert any("a .env value inside veda-demo/app/c.py" == p for p in problems)
 
 
+def test_only_secret_env_keys_are_checked(tmp_path, monkeypatch):
+    """Like the commit hook: a model name or a local URL is a setting, not a secret (it is in the code on purpose)."""
+    fake = "-".join(("made", "up", "secret"))
+    (tmp_path / ".env").write_text(f"METERLESS_MODEL_DEEP=nvidia/some-model\nMETERLESS_BASE_URL=http://127.0.0.1:8088/v1\n"
+                                   f"METERLESS_RUNTIME_TOKEN={fake}\nVEDA_PG_PASSWORD={fake}2\n", encoding="utf-8")
+    monkeypatch.setattr(mb, "ROOT", tmp_path)
+    assert sorted(mb.env_values()) == [fake, fake + "2"]
+
+
 def test_bundle_holds_what_the_demo_builds_from_and_never_local_state():
     for p in ("Dockerfile", "requirements-lock.txt", "app", "data", "demo", "docs/DEPLOY_DEMO.md"):
         assert p in mb.PATHS

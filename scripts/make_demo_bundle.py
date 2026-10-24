@@ -35,15 +35,20 @@ def git(*args, binary=False):
 
 
 def env_values():
-    """This machine's .env values (8+ characters) - none may appear in the bundle."""
+    """This machine's secret .env values - none may appear in the bundle. Same rule as the commit hook
+    (tests/test_architecture.py): keys matching config.SECRET_ENV_KEY (TOKEN / KEY / PASSWORD / SECRET), 6+ characters.
+    Settings such as the model name or Nightshift's local address are not secrets and are in the code on purpose."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from app import config
     path = ROOT / ".env"
     if not path.exists():
         return []
     vals = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if "=" in line and not line.lstrip().startswith("#"):
-            v = line.split("=", 1)[1].strip().strip('"').strip("'")
-            if len(v) >= 8 and v.lower() not in ("true", "false"):
+            key, value = line.split("=", 1)
+            v = value.split(" #")[0].strip().strip('"').strip("'")
+            if config.SECRET_ENV_KEY.search(key.strip()) and len(v) >= 6:
                 vals.append(v)
     return vals
 
@@ -107,7 +112,7 @@ def main(argv=None):
     out.write_bytes(data)
     print(f"bundle : {out.relative_to(ROOT)}")
     print(f"commit : {commit} ({a.ref}; has {DEMO_MODE_COMMIT} VEDA_DEMO)")
-    print(f"checks : no secret files, no .env values ({len(env_values())} checked), JPS guard {last}")
+    print(f"checks : no secret files, no secret .env values ({len(env_values())} checked), JPS guard {last}")
     print(f"size   : {len(data) / 1e6:.1f} MB")
     print(f"sha256 : {hashlib.sha256(data).hexdigest()}")
     print(f"next   : tailscale file cp {out.relative_to(ROOT)} wyse5070:")
