@@ -362,3 +362,29 @@ def test_thunderstorm_warning_adds_advice_at_any_verdict_and_changes_nothing(run
     assert any(x["action"] == "forecast.thunderstorm" and x["output_summary"] == "thunderstorm warning → flash-flood advice"
                for x in rec)
     assert not forecast_agent.thunderstorm([{"heading": "CONTINUOUS RAIN WARNING (ALERT LEVEL)"}])
+
+
+# -- audit 24 Oct P1-2: an old rain_upstream fact is never reused as current ------------------------------------
+@pytest.mark.parametrize("second", [("synthetic_calm", datetime(2024, 6, 15, 10, 0, tzinfo=MYT)),
+                                    ("synthetic_upstream_rain", NOW)])
+def test_rain_upstream_not_read_this_run_is_not_used(tmp_path, monkeypatch, second):
+    """Repro: the upstream-rain scene, then a second run on the same World Model whose hourly-rain query gives
+    nothing -> the old rain picture must not raise the verdict, and the source list says it was not read."""
+    from app import view
+    from app.agents import data_agent
+    from app.engines.world_model.world import WorldModel
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    gazetteer.clear_cache()
+    world = WorldModel()
+    first = loop.run("Kota Bharu selamat tak?", quiet=True, replay="synthetic_upstream_rain", at=NOW, world=world,
+                     log_dir=tmp_path)
+    assert first["forecast"]["verdict"] == "PREPARE"
+    monkeypatch.setattr(data_agent.veda_ingest, "ingest_rain_hours", lambda *a, **k: None)
+    scene, at = second
+    r = loop.run("Kota Bharu selamat tak?", quiet=True, replay=scene, at=at, world=world, log_dir=tmp_path)
+    gazetteer.clear_cache()
+    assert r["forecast"]["verdict"] != "PREPARE" and not r["forecast"].get("rain_upstream")
+    assert "upstream-rain" not in [t["rule"] for t in r["forecast"]["triggers"]]
+    assert "Kuala Krai" not in r["answer"]["text"]
+    row = next(s for s in view.sources(r["evidence"], r["plan"], "en") if s["kind"] == "rain_upstream")
+    assert not row["used"] and "could not be read" in row["note"]

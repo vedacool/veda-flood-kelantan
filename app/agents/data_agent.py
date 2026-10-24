@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 from app import config, trace
 from app.adapters import zetaris
-from app.engines.world_model.context import ContextBuilder
+from app.engines.world_model.context import ContextBuilder, _age_minutes as _age_min
 from app.engines.world_model.stable_ids import external_id
 from app.engines.world_model import veda_ingest
 from app.engines.world_model.veda_ingest import (MIN_7D_SQL, NETWORK_SQL, PURPOSES, READINGS_SQL, build_network, fetch_all,
@@ -621,6 +621,7 @@ def prefetch(world, now=None, replay=None):
                                                else "Nothing changed since the last run -> no new events"),
                details={"network": net, "unhealthy": counts["unhealthy"], "queries_in_parallel": len(sqls)})
     return {"clock": clock, "notes": notes, "results": results, "events_added": added,
+            "rain_hours_read": counts.get("rain_hours") is not None,       # audit 24 Oct P1-2
             "replay": {"scenario": replay, "at": _iso(clock)} if replay else None}
 
 
@@ -924,6 +925,17 @@ def gather(plan, world, now=None, pre=None):
     for key, field in (("open_meteo", "rain"), ("open_meteo", "rain_upstream"), ("mygov_forecast", "met_forecast")):
         if key not in wanted and ctx.get(field) is not None:
             ctx[field] = None           # evidence holds only what the plan asked for
+    ru = ctx.get("rain_upstream")
+    if ru is not None:
+        # audit 24 Oct P1-2: the World Model keeps the newest rain_upstream fact whatever its age. Use it only when
+        # the hourly-rain query was read in THIS run and the fact belongs to this run's clock; otherwise it is an
+        # old picture (an earlier run, scene or time) -> not used, and the answer says rain upstream is not checked.
+        age = _age_min((ru.get("provenance") or {}).get("at"), clock)
+        if not pre.get("rain_hours_read", True) or age is None or not 0 <= age <= FRESHNESS["open_meteo"][0]:
+            ctx["rain_upstream"], ctx["rain_upstream_status"] = None, "not_checked"
+            trace.step(AGENT, "data.rain_upstream", output_summary="not checked", status="fallback",
+                       source="open_meteo", decision="Hourly rain not read this run (or the fact is from another "
+                                                     f"time: age {age} min) -> rain upstream not used")
     if ctx.get("rain_upstream"):
         trace_rain_upstream(ctx["rain_upstream"], ctx["place"].get("name"))
     for g in ctx.get("gauges", []) + ctx.get("sentinels", []):

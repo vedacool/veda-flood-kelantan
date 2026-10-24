@@ -151,6 +151,7 @@ SOURCE_NAME = {
     "cross": {"en": "Flood warnings (data.gov.my)", "ms": "Amaran banjir (data.gov.my)"},
     "osm": {"en": "Map data (OpenStreetMap)", "ms": "Data peta (OpenStreetMap)"},
     "rain_up": {"en": "Rain upstream ({n} rain points, Open-Meteo)", "ms": "Hujan di hulu ({n} titik hujan, Open-Meteo)"},
+    "rain_up_any": {"en": "Rain upstream (Open-Meteo)", "ms": "Hujan di hulu (Open-Meteo)"},
     "river": {"en": "River level: {name}", "ms": "Paras sungai: {name}"},
     "upstream": {"en": "River upstream: {name}", "ms": "Sungai di hulu: {name}"},
 }
@@ -588,6 +589,8 @@ def sources(evidence, plan, lang):
     ru = ctx.get("rain_upstream")
     if ru and ru.get("upstream"):                          # B-88: the rain points upstream of this place
         out.append(("rain_upstream", SOURCE_NAME["rain_up"][lang].format(n=len(ru["upstream"])), None, None))
+    elif ctx.get("rain_upstream_status") == "not_checked":    # audit 24 Oct P1-2: not read this run -> said so
+        out.append(("rain_upstream", SOURCE_NAME["rain_up_any"][lang], "unreadable", None))
     rows = []
     for kind, name, reason, age in out:
         why_text = None
