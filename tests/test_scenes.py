@@ -172,7 +172,7 @@ def test_page_words_and_links():
                  'match: "✓ match"', 'different: "✗ different"', 'score: "{n} of {m} matched"',
                  'how_title: "How VEDA got there"', 'full_answer: "See the full answer VEDA gave ›"',
                  'live_link: "See a real live run with Nemotron ›"', 'show_log: "Show technical log ▾"',
-                 'hide_log: "Hide technical log ▴"', 'show_log: "Tunjuk log teknikal ▾"', 'hide_log: "Sembunyi log teknikal ▴"',
+                 'hide_log: "Hide technical log ▴"', 'show_log: "Tunjuk log teknikal ▾"', 'hide_log: "Sembunyikan log teknikal ▴"',
                  'feedback_q: "Did VEDA match what you expected?"', 'tell_us: "Tell us"', 'next: "Next test ›"',
                  '"A river level post (gauge) measures how high the river is.', 'href="/how-it-works#live"', "/feedback?lang="):
         assert text in PAGE, text
