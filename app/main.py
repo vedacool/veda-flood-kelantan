@@ -14,6 +14,9 @@ GET  /live/stream Server-Sent Events: every trace record of whatever run is goin
 GET  /trace/recorded            the recorded live runs in data/sample/live_traces (JPS readings redacted)
 GET  /trace/recorded/{name}     one of them, record by record
 GET  /trace/run/{run_id}        a run from logs/ - this computer only (127.0.0.1), question not shown
+GET  /admin       operator screens (app/web/admin.html) - this computer only: sources + breakers, gauges found by
+                  VEDA (approve as context), recent answers, one run in detail with the exact prompts sent to the AI
+GET  /admin/api/overview, GET /admin/api/run/{run_id}, POST /admin/api/approve   (same: this computer only)
 GET  /ui/words    fixed wording for screens that call no engine (headlines, emergency steps, disclaimer)
 GET  /            the web page (app/web/index.html): home, waiting, answer, share, emergency
 Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is running -> 429 (one writer for the
@@ -34,7 +37,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app import card as card_mod
-from app import config, progress, trace, view
+from app import admin, config, progress, trace, view
 from app.adapters import nightshift, zetaris
 from app.agents.coordinator import SAFETY
 
@@ -42,6 +45,7 @@ load_dotenv(config.ROOT / ".env")
 MAX_QUESTION = 500
 WEB_PAGE = config.ROOT / "app" / "web" / "index.html"
 LIVE_PAGE = config.ROOT / "app" / "web" / "live.html"
+ADMIN_PAGE = config.ROOT / "app" / "web" / "admin.html"
 RECORDED = config.ROOT / "data" / "sample" / "live_traces"
 RUN_ID = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
 QUESTION_HIDDEN = "(the question is not shown here - privacy)"
@@ -336,6 +340,80 @@ def run_trace(run_id: str, request: Request):
     if not RUN_ID.match(run_id) or not path.is_file():
         return _error(404, "not_found", "No run with that id.")
     return _read_trace(path, hide_question=True)
+
+
+LOCAL_ONLY = ("<!doctype html><title>VEDA admin</title><p style='font:18px system-ui;margin:24px'>The operator "
+              "screens open on this computer only (http://127.0.0.1).</p>")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request):
+    if not _local(request):
+        return HTMLResponse(LOCAL_ONLY, status_code=403)
+    return ADMIN_PAGE.read_text(encoding="utf-8")
+
+
+def _with_world(fn):
+    """Run fn(world) holding the run lock (one writer for the World Model on disk); world is None in SAMPLE_MODE
+    (each run has its own in-memory World Model, nothing shared to show). -> (result, None) or (None, error)."""
+    from app import loop
+    if config.sample_mode():
+        return fn(None), None
+    if not _busy.acquire(blocking=False):
+        return None, _error(429, "busy", "VEDA is answering a question - refresh in a minute.")
+    run = trace.start_run("admin", quiet=True)          # the World Model's audit file is named after a run
+    world = loop.open_world(run.run_id)
+    try:
+        return fn(world), None
+    finally:
+        world.store.close()
+        trace.end_run("success")
+        _busy.release()
+
+
+@app.get("/admin/api/overview")
+def admin_overview(request: Request):
+    if not _local(request):
+        return _error(403, "local_only", "This computer only.")
+    out, err = _with_world(admin.overview)
+    return err or out
+
+
+@app.get("/admin/api/run/{run_id}")
+def admin_run(run_id: str, request: Request):
+    if not _local(request):
+        return _error(403, "local_only", "This computer only.")
+    out = admin.run_detail(run_id)
+    return out if out is not None else _error(404, "not_found", "No run with that id.")
+
+
+@app.post("/admin/api/approve")
+async def admin_approve(request: Request):
+    """'Approve as context': a named person, live mode only. The X-VEDA-Admin header makes a browser ask first
+    (CORS preflight), so another web page cannot send this."""
+    if not _local(request):
+        return _error(403, "local_only", "This computer only.")
+    if request.headers.get("x-veda-admin") != "1" or "application/json" not in (request.headers.get("content-type") or ""):
+        return _error(400, "bad_request", "Send JSON from the admin page.")
+    if config.sample_mode():
+        return _error(400, "sample_mode", "SAMPLE_MODE: approval writes to the live World Model - run VEDA live.")
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error(400, "bad_json", "Send JSON.")
+    key, place, by = (str((body or {}).get(k) or "").strip() for k in ("station_key", "place_id", "by"))
+    from app.adapters import zetaris as zt
+
+    def go(world):
+        try:
+            return admin.approve(world, key, place, by)
+        except zt.ZetarisError as e:
+            return False, f"cannot check the place: Zetaris {e.kind}"
+    out, err = await run_in_threadpool(_with_world, go)
+    if err:
+        return err
+    ok, message = out
+    return JSONResponse({"ok": ok, "message": trace.redact(message)}, status_code=200 if ok else 400)
 
 
 @app.get("/ui/words")

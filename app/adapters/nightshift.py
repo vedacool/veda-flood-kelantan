@@ -345,7 +345,10 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
                status="success", target_agent=target_agent, source=f"nightshift:{lane}",
                retry_count=attempts - 1, duration_ms=ms, decision=decision,
                details={"requested_model": model, "app": lane_app(lane), **rc, "expected_model": want, "pinned": pinned, "usage": result.usage,
-                        "attempts": attempts, "json_mode": json_mode, "thinking": bool(thinking)})
+                        "attempts": attempts, "json_mode": json_mode, "thinking": bool(thinking),
+                        # the exact prompt sent (local trace, shown on /admin; published traces are redacted first).
+                        # Never the user's question: the agents send facts written by code (test_privacy_...)
+                        "prompt": [{"role": m.get("role"), "content": m.get("content")} for m in messages]})
     return result
 
 

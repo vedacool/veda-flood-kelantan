@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA - admin</title>
+<link rel="icon" href="data:,">
+<style>
+  /* Operator screens (Cowork weekend plan B8, 24 Oct) - this computer only. Plain HTML/CSS/JS, nothing from outside. */
+  :root { --bg: #f4f4f1; --fg: #1c1c1a; --muted: #55554f; --card: #fff; --line: #d6d5cf; --accent: #1f5f8b; --on-accent: #fff;
+          --ok: #1e6b3a; --warn: #9a5200; --bad: #b3261e; --soft: #eef4f9; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141413; --fg: #ececea; --muted: #b0b0a9; --card: #20201f; --line: #3a3a37; --accent: #82b8de;
+            --on-accent: #141413; --ok: #7fd19b; --warn: #f0b45a; --bad: #f08a80; --soft: #1d2a33; }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; background: var(--card);
+           border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 1.2rem; margin: 0 auto 0 0; }
+  a { color: var(--accent); }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; }
+  h2 { font-size: 1.1rem; margin: 0 0 10px; }
+  .grow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 10px; }
+  .grow div { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+  .grow b { display: block; font-size: 1.8rem; line-height: 1.1; }
+  .tbl { width: 100%; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 700; }
+  .ok { color: var(--ok); font-weight: 700; } .warn { color: var(--warn); font-weight: 700; } .bad { color: var(--bad); font-weight: 700; }
+  .muted { color: var(--muted); }
+  button, input, select { font: inherit; min-height: 44px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+                          background: var(--card); color: var(--fg); }
+  button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; cursor: pointer; }
+  .approve { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .approve input { width: 11em; }
+  .banner { background: var(--soft); border-left: 6px solid var(--accent); border-radius: 10px; padding: 12px 14px; margin: 0 0 16px;
+            font-weight: 700; }
+  pre { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+        padding: 10px; font: .9rem/1.4 ui-monospace, Consolas, monospace; margin: 6px 0 0; max-height: 28em; overflow: auto; }
+  code { font: .9rem ui-monospace, Consolas, monospace; word-break: break-word; }
+  details { margin: 8px 0; } summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VEDA · admin</h1>
+  <a href="/admin">Overview</a> <a href="/live">Live log</a> <a href="/">Public page</a>
+</header>
+<main>
+  <p id="err" class="bad" role="alert" hidden></p>
+
+  <div id="v-overview" hidden>
+    <section>
+      <h2>Sources · the network grows, with approval</h2>
+      <div class="grow" id="grow"></div>
+      <p class="muted" id="grow-next"></p>
+    </section>
+    <section>
+      <h2>Source health and circuit breakers</h2>
+      <div class="tbl"><table><thead><tr><th>Source</th><th>Status</th><th>Newest data</th><th>Reliability</th><th>Checked</th></tr></thead>
+        <tbody id="sources"></tbody></table></div>
+      <p></p>
+      <div class="tbl"><table><thead><tr><th>Breaker</th><th>State</th><th>Failures in a row</th><th>Open until</th></tr></thead>
+        <tbody id="breakers"></tbody></table></div>
+    </section>
+    <section>
+      <h2>Found by VEDA · waiting for a person</h2>
+      <p class="muted">Gauges JPS publishes that VEDA has no mapping for. None is used until a named person approves it - and then only as
+        context on that place's card, never in the verdict (a role needs Dr Ariff).</p>
+      <div class="tbl"><table><thead><tr><th>Gauge</th><th>Proposed fit</th><th>Status</th><th>Approve as context</th></tr></thead>
+        <tbody id="found"></tbody></table></div>
+      <p id="approve-msg" role="status" aria-live="polite"></p>
+    </section>
+    <section>
+      <h2>Recent answers</h2>
+      <p class="muted">Never the question text - place, verdict and how the run went.</p>
+      <div class="tbl"><table><thead><tr><th>Run</th><th>When (MYT)</th><th>Place</th><th>Verdict</th><th>Data</th><th>Seconds</th><th>AI</th></tr></thead>
+        <tbody id="recent"></tbody></table></div>
+    </section>
+  </div>
+
+  <div id="v-run" hidden>
+    <p class="banner">The user's question is never in a prompt: only facts written by code.</p>
+    <section><h2 id="r-title"></h2><p id="r-sum"></p><p><a id="r-live">Replay this run in the live log ›</a></p></section>
+    <section><h2>Nightshift calls</h2><div class="tbl"><table><thead><tr><th>#</th><th>Agent</th><th>Asked for</th><th>Answered by</th>
+      <th>Receipt</th><th>Seconds</th><th>Result</th></tr></thead><tbody id="r-ai"></tbody></table></div></section>
+    <section><h2>Exact prompts sent to the AI</h2><div id="r-prompts"></div></section>
+    <section><h2>Sources</h2><div id="r-sources"></div></section>
+    <section><h2>World Model</h2><div class="grow" id="r-wcounts"></div>
+      <div class="tbl"><table><thead><tr><th>#</th><th>Agent</th><th>Action</th><th>What</th><th>Result</th></tr></thead>
+        <tbody id="r-world"></tbody></table></div></section>
+    <section><h2>Zetaris SQL</h2><div class="tbl"><table><thead><tr><th>#</th><th>Agent</th><th>Purpose</th><th>Rows</th><th>ms</th><th>SQL</th></tr></thead>
+      <tbody id="r-sql"></tbody></table></div></section>
+    <section><h2>Timeline</h2><div class="tbl"><table><thead><tr><th>#</th><th>s</th><th>Agent</th><th>Action</th><th>Status</th><th>Output / decision</th></tr></thead>
+      <tbody id="r-time"></tbody></table></div></section>
+  </div>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const cell = (...xs) => xs.map((x) => `<td>${x}</td>`).join("");
+const fail = (m) => { $("err").textContent = m; $("err").hidden = false; };
+async function get(url) {
+  const r = await fetch(url);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((body.error || {}).message || "HTTP " + r.status);
+  return body;
+}
+
+async function overview() {
+  $("v-overview").hidden = false;
+  const o = await get("/admin/api/overview");
+  const g = o.growth;
+  if (!g) {
+    $("grow").innerHTML = `<div>SAMPLE_MODE: each run has its own in-memory World Model, so there is no shared network to show. Run VEDA live to see it.</div>`;
+  } else {
+    const tile = (n, label) => `<div><b>${esc(n)}</b>${esc(label)}</div>`;
+    $("grow").innerHTML = tile(g.mapped, "gauges mapped by us") + tile(g.found, "found by VEDA") +
+      tile(g.waiting_near_towns, "waiting for a person, near covered towns") + tile(g.approved, "approved as context") +
+      tile(g.left_out.length, "left out (stale feeds)");
+    $("grow-next").textContent = (g.left_out.length ? "Left out: " + g.left_out.join("; ") + ". " : "") + "Next to grow: " + g.next.join("; ") + ".";
+  }
+  $("sources").innerHTML = o.sources.map((s) => `<tr>${cell(esc(s.name || s.id),
+    `<span class="${s.excluded || s.status === "stale" ? "warn" : s.status === "ok" ? "ok" : ""}">${esc(s.status)}${s.excluded ? " · excluded" : ""}</span>`,
+    esc(s.newest || "-"), esc(s.reliability ?? "-"), esc(s.checked_at || "-"))}</tr>`).join("") ||
+    `<tr><td colspan="5" class="muted">No shared World Model in SAMPLE_MODE.</td></tr>`;
+  $("breakers").innerHTML = o.breakers.map((b) => `<tr>${cell(esc(b.source),
+    `<span class="${b.state === "open" ? "bad" : "ok"}">${esc(b.state)}</span>`, esc(b.fail_count), esc(b.open_until || "-"))}</tr>`).join("") ||
+    `<tr><td colspan="4" class="muted">No shared World Model in SAMPLE_MODE.</td></tr>`;
+  $("found").innerHTML = o.discovered.map((d, i) => {
+    const fit = [d.river && "river " + d.river, d.district && "district " + d.district, d.near ? "near " + d.near : "no covered place in district",
+      d.same_river_as.length && "same river as " + d.same_river_as.join(", ")].filter(Boolean).join(", ");
+    const action = d.status === "approved"
+      ? `<span class="ok">approved by ${esc(d.approved_by)} for ${esc(d.approved_place)} (${esc(d.approved_at)})</span>`
+      : `<form class="approve" data-key="${esc(d.station_key)}"><label class="muted" for="p${i}">place</label>
+         <input id="p${i}" name="place" value="${esc(d.place_id || "")}" placeholder="pasir_mas" required>
+         <label class="muted" for="b${i}">your name</label><input id="b${i}" name="by" required autocomplete="name">
+         <button class="primary" type="submit">Approve as context</button></form>`;
+    return `<tr>${cell(`${esc(d.name)}<br><code>${esc(d.station_key)}</code>`, esc(fit), esc(d.status), action)}</tr>`;
+  }).join("") || `<tr><td colspan="4" class="muted">${o.sample_mode ? "No shared World Model in SAMPLE_MODE." : "None found yet."}</td></tr>`;
+  document.querySelectorAll("form.approve").forEach((f) => f.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const r = await fetch("/admin/api/approve", { method: "POST", headers: { "Content-Type": "application/json", "X-VEDA-Admin": "1" },
+      body: JSON.stringify({ station_key: f.dataset.key, place_id: f.place.value.trim(), by: f.by.value.trim() }) });
+    const body = await r.json().catch(() => ({}));
+    $("approve-msg").textContent = body.message || (body.error || {}).message || "HTTP " + r.status;
+    $("approve-msg").className = r.ok ? "ok" : "bad";
+    if (r.ok) overview();
+  }));
+  $("recent").innerHTML = o.recent.map((x) => `<tr>${cell(`<a href="/admin?run=${esc(x.run_id)}">${esc(x.run_id)}</a>`, esc(x.started),
+    esc(x.place), esc(x.verdict), esc(x.replay || (x.mode === "live" ? "live" : x.mode)), esc(x.seconds ?? "-"),
+    x.ai_fallbacks.length ? `<span class="warn">fallback: ${esc(x.ai_fallbacks.join("; "))}</span>` : esc(x.ai_calls + " call(s)"))}</tr>`).join("");
+}
+
+async function runDetail(id) {
+  $("v-run").hidden = false;
+  const d = await get("/admin/api/run/" + encodeURIComponent(id));
+  const s = d.run || {};
+  $("r-title").textContent = `Run ${id}`;
+  $("r-sum").textContent = `${s.started || ""} · ${s.place || "-"} · ${s.verdict || "-"} · ${s.replay || s.mode || ""} · ${s.seconds ?? "-"} s · ${s.status || ""}`;
+  $("r-live").href = "/live?run=" + encodeURIComponent(id);
+  $("r-ai").innerHTML = d.ai.map((a) => `<tr>${cell(a.step, esc(a.agent), `<code>${esc(a.requested || "-")}</code>`,
+    `<code>${esc(a.served || "-")}</code>`, esc(a.receipt || "-"), a.seconds,
+    `<span class="${a.status === "success" ? "ok" : "warn"}">${esc(a.status)}</span> ${esc(a.decision || "")}`)}</tr>`).join("") ||
+    `<tr><td colspan="7" class="muted">No AI call in this run (SAMPLE_MODE or the quick path: the answer is the card written by code).</td></tr>`;
+  $("r-prompts").innerHTML = d.ai.filter((a) => a.prompt).map((a) => `<details><summary>#${a.step} ${esc(a.agent)} → ${esc(a.served || a.requested || "")}</summary>` +
+    a.prompt.map((m) => `<p class="muted">${esc(m.role)}</p><pre>${esc(m.content)}</pre>`).join("") +
+    `<p class="muted">answer</p><pre>${esc(a.answer || "")}</pre></details>`).join("") ||
+    `<p class="muted">No prompt in this run's trace (no AI call, or a trace written before prompts were logged on 24 Oct).</p>`;
+  $("r-sources").innerHTML = `<p><b>Used:</b> ${esc(d.sources.chosen.join("; ") || "-")}</p><p><b>Left out:</b> ${esc(d.sources.skipped.join("; ") || "-")}</p>`;
+  const w = d.world_counts;
+  const tile = (n, label) => `<div><b>${esc(n)}</b>${esc(label)}</div>`;
+  $("r-wcounts").innerHTML = tile(w.events_written, "events written (readings, facts, sources)") + tile(w.other_writes, "other writes (forecast, review, run tags)") +
+    tile(w.reads, "reads") + tile(w.sources_stale.length, "sources marked stale" + (w.sources_stale.length ? ": " + w.sources_stale.join(", ") : "")) +
+    tile(w.discovered_seen, `gauges found by VEDA seen (${w.discovered_new} new)`);
+  $("r-world").innerHTML = d.world.map((x) => `<tr>${cell(x.step, esc(x.agent), esc(x.action), esc(x.what || "-"), esc(x.result || ""))}</tr>`).join("");
+  $("r-sql").innerHTML = d.sql.map((q) => `<tr>${cell(q.step, esc(q.agent), esc(q.purpose || ""), esc(q.rows ?? "-"), esc(q.ms ?? "-"), `<code>${esc(q.sql || "")}</code>`)}</tr>`).join("");
+  $("r-time").innerHTML = d.timeline.map((r) => `<tr>${cell(r.step, esc(r.t ?? ""), esc(r.agent), esc(r.action),
+    `<span class="${r.status === "success" || r.status === "approved" ? "" : "warn"}">${esc(r.status)}</span>`,
+    esc([r.output, r.decision].filter(Boolean).join(" - ")))}</tr>`).join("");
+}
+
+const run = new URLSearchParams(location.search).get("run");
+(run ? runDetail(run) : overview()).catch((e) => fail(e.message));
+</script>
+</body>
+</html>

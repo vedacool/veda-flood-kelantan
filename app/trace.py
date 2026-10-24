@@ -67,14 +67,20 @@ def summarize(value, limit=MAX_SUMMARY):
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
-def _clean(obj):
-    """Redact every string inside a details dict/list."""
+PROMPT_CAP = 20000      # details["prompt"]: the exact prompt sent to the AI is kept whole (shown on /admin)
+
+
+def _clean(obj, cap=500):
+    """Redact every string inside a details dict/list (the 'prompt' key keeps up to PROMPT_CAP characters)."""
     if isinstance(obj, dict):
-        return {k: _clean(v) for k, v in obj.items()}
+        return {k: _clean(v, PROMPT_CAP if k == "prompt" else cap) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
-        return [_clean(v) for v in obj]
+        return [_clean(v, cap) for v in obj]
     if isinstance(obj, str):
-        return summarize(obj, 500)
+        if cap == PROMPT_CAP:                       # keep the prompt's own lines; redacted, capped
+            text = redact(obj)
+            return text if len(text) <= cap else text[: cap - 3] + "..."
+        return summarize(obj, cap)
     return obj
 
 
