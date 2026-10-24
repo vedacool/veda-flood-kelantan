@@ -26,8 +26,10 @@ replay (readings reported in the news, each cited) or a **SYNTHETIC** scene (mad
 On the command line and the API, a question without a scene runs on the SYNTHETIC calm day; the web page opens
 on the Nov 2024 replay.
 
-**Covered places:** Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat (in BM or English, common spellings such as
-"Kota Baru", "Psr Mas"). Any other Kelantan place gets "not covered yet" and the nearest covered place.
+**Covered places:** offline scenes - Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat (the Home buttons); live mode
+also Kuala Krai, Tanah Merah, Dabong, Wakaf Bharu and Pasir Pekan (added 24 Oct, tentative - Dr Ariff to review their
+gauges). In BM or English, common spellings such as "Kota Baru", "Psr Mas". Any other recognised Kelantan place gets
+"not covered yet" and the nearest covered place.
 
 **Docker:**
 ```
@@ -236,8 +238,9 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   - "a PPS is open" claims and possible evacuation centres from OpenStreetMap.
 
 ## Limitations (honest list)
-- **Coverage:** four towns only (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat), read from 16 curated JPS gauges
-  including their upstream gauges (`data/stations_mapping.csv`). Other Kelantan places get "not covered yet" and the nearest covered place.
+- **Coverage:** four towns offline (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat) and nine live (+ Kuala Krai,
+  Tanah Merah, Dabong, Wakaf Bharu, Pasir Pekan - tentative), read from 16 curated JPS gauges including their upstream
+  gauges (`data/stations_mapping.csv`). Possible PPS and bridges (OpenStreetMap) are loaded for the first four only. Other Kelantan places get "not covered yet" and the nearest covered place.
 - **Roads and relief centres (OpenStreetMap):** possible PPS are buildings OSM tags as schools, masjid / surau or
   community halls, not the official APM list, and VEDA cannot know which one is open. Bridges are listed as facts only;
   no cut-off rule is approved yet (Dr Ariff, review pack I) and low ground is not assessed (no elevation data). OSM can

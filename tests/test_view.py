@@ -227,8 +227,10 @@ def test_combined_sentence_when_more_than_the_river_here_decides(views):
 def test_states_without_a_place_card():
     assert view.other_view({"plan": {"place_status": "unavailable"}})["text"]["en"].startswith("VEDA can't answer")
     nc = view.other_view({"plan": {"place_status": "not_covered", "nearest": {"name": "Rantau Panjang", "km": 125}}})
-    assert nc["text"]["en"] == ("VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now. "
+    assert nc["text"]["en"] == ("VEDA covers Kota Bharu, Pasir Mas, Rantau Panjang and Tumpat for now. "
                                 "The nearest is Rantau Panjang.") and nc["nearest"] == "Rantau Panjang"
+    nine = view.other_view({"plan": {"place_status": "not_covered", "covered": ["Dabong", "Kota Bharu", "Tumpat"]}})
+    assert nine["text"]["ms"] == "Buat masa ini VEDA meliputi Dabong, Kota Bharu dan Tumpat."   # A7: from the finder
     assert view.other_view({"plan": {"place_status": "did_you_mean", "suggestions": ["Tumpat"]}})["suggestions"] == ["Tumpat"]
     assert view.other_view({"plan": {"place_status": "found"}}) is None
 

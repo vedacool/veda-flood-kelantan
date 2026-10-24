@@ -14,7 +14,8 @@ seed_places = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(seed_places)
 
 STATIONS = {"27133", "6021065_DPMS0001", "_DMCG0215", "5521044_DKKI0014", "_DPMS0003", "_DTMH0008", "_DKBR0007",
-            "_DKBR0002", "_DTPT0002", "_DPMS0008"}
+            "_DKBR0002", "_DTPT0002", "_DPMS0008",
+            "5320038_DKKI0003", "5222052_DKKI0005", "_DMCG0001", "5020030_DGMG0016"}     # A7: the five new places
 
 
 @pytest.fixture

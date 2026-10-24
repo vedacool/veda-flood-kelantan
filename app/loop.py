@@ -154,7 +154,8 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     p = {"question_language": lang, "place": None, "place_status": res.status,
                          "place_message": res.message, "planned_by": "code",
                          "nearest": getattr(res, "nearest", None),       # the answer screen's "nearest is ..." button
-                         "suggestions": list(getattr(res, "suggestions", None) or [])}
+                         "suggestions": list(getattr(res, "suggestions", None) or []),
+                         "covered": list(getattr(res, "covered", None) or [])}       # A7: the places VEDA covers now
                     answer = {"text": emergency_first(card_mod.place_reply(res, lang), lang), "language": lang,
                               "drafted_by": "code"}
                     state = "done"

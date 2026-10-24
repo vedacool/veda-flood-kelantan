@@ -69,8 +69,7 @@ W = {
                            "if you are in danger.",
                      "ms": "Kami tidak dapat bacaan sungai terkini, jadi kami tidak akan meneka. Semak JPS Infobanjir; "
                            "hubungi 999 jika anda dalam bahaya."},
-    "covers": {"en": "VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now.",
-               "ms": "Buat masa ini VEDA meliputi Rantau Panjang, Pasir Mas, Kota Bharu dan Tumpat."},
+    "covers": {"en": "VEDA covers {places} for now.", "ms": "Buat masa ini VEDA meliputi {places}."},
     "nearest": {"en": " The nearest is {place}.", "ms": " Yang paling dekat ialah {place}."},
     "did_you_mean": {"en": "Did you mean one of these?", "ms": "Adakah maksud anda salah satu daripada ini?"},
     "down": {"en": "VEDA can't answer right now. If you are in danger call 999.",
@@ -609,6 +608,12 @@ def combined(forecast, lang):
                                           now=HEADLINE[verdict][lang], verb="raises" if len(who) == 1 else "raise")
 
 
+def _covered(plan, lang):
+    """A7: the covered places from the place finder (nine live; the four towns offline) - never a fixed list."""
+    names = sorted((plan or {}).get("covered") or ["Kota Bharu", "Pasir Mas", "Rantau Panjang", "Tumpat"])
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + W["and_word"][lang] + names[-1]
+
+
 def other_view(result):
     """The screens without a place card: place not covered (with the nearest covered place), did you mean, or VEDA
     cannot answer (its data cannot be reached)."""
@@ -622,7 +627,8 @@ def other_view(result):
     if status == "not_covered":
         near = (plan.get("nearest") or {}).get("name")
         return {"kind": "not_covered", "nearest": near,
-                "text": {lang: W["covers"][lang] + (W["nearest"][lang].format(place=near) if near else "")
+                "text": {lang: W["covers"][lang].format(places=_covered(plan, lang))
+                         + (W["nearest"][lang].format(place=near) if near else "")
                          for lang in LANGS}}
     return None
 

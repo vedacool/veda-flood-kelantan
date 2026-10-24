@@ -189,7 +189,8 @@ def build():
     data = json.loads(LINES.read_text(encoding="utf-8"))
     xy, k, height = project()
     s, w, n, e = BBOX
-    towns = [(r["name"], float(r["lat"]), float(r["lon"])) for r in rows(ROOT / "data" / "places.csv")]
+    towns = [(r["name"], float(r["lat"]), float(r["lon"])) for r in rows(ROOT / "data" / "places.csv")
+             if r["name"] in SIDE]                       # the four Home towns only (A7 added places for live mode)
     gauges = {r["station_key"]: r for r in rows(ROOT / "data" / "stations_mapping.csv", "gauge")}
     golok, kel = simplify(data["golok"], DRAW_KM), simplify(data["kelantan"], DRAW_KM)
     # Thailand: west of the Golok, from its southern end to the sea (a simplification: south of the river's source
