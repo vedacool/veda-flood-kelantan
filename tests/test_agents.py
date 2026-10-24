@@ -20,16 +20,14 @@ GOOD_PLAN = {"intent": "risk_check", "user_type": "resident", "place_text": "Ran
 
 
 def stub_llm(plan=None, answer=None, fail=False, review=None):
-    """A stand-in for nightshift.chat: returns the given plan for the plan call and the answer for the draft."""
+    """A stand-in for nightshift.chat: the explanation for the draft, a review for the Critic (`plan` is unused)."""
     calls = []
 
     def llm(lane, messages, agent, json_mode=False, **kw):
         calls.append({"lane": lane, "system": messages[0]["content"][:40]})
         if fail:
             raise nightshift.NightshiftError("stub: Nightshift down")
-        if messages[0]["content"] == coordinator.PLAN_SYSTEM:
-            data = plan
-        elif messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):   # Critic (any lane): approve unless told otherwise
+        if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):   # Critic (any lane): approve unless told otherwise
             d = review or "approve"
             data = {"decision": d, "problems": [], "fix": "", "ok": d == "approve", "reason": "stub"}
         else:                                   # draft: only the explanation (B-21) - the card is code
@@ -147,40 +145,15 @@ def test_agent_may_refresh_only_veda_wx_tables():
     assert zetaris.ddl_problem("UNCACHE TABLE veda_pg.stations")
 
 
-# -- Coordinator: plan ----------------------------------------------------------------------------------------
-def test_plan_from_model_is_checked_and_place_comes_from_gazetteer(run):
-    p = coordinator.plan("Is Rantau Panjang at risk?", llm=stub_llm(GOOD_PLAN))
-    assert p["planned_by"] == "llm" and p["place"]["place_id"] == "rantau_panjang" and p["intent"] == "risk_check"
-
-
-def test_plan_corrects_bad_model_output(run):
-    bad = {"intent": "panic", "user_type": "alien", "place_text": "Atlantis", "sources": ["twitter"],
-           "effort": "max", "language": "fr"}
-    p = coordinator.plan("Will Kota Bharu flood tonight?", llm=stub_llm(bad))
-    assert (p["intent"], p["user_type"], p["effort"], p["question_language"]) == ("risk_check", "unknown", "full", "en")
-    assert p["sources"][0] == "jps_levels" and "twitter" not in p["sources"]
-    assert p["place"]["place_id"] == "kota_bharu"                 # the model's 'Atlantis' was not trusted
-    rec = [x for x in lines(trace.current_run().path) if x["action"] == "plan"][-1]
-    assert "not allowed" in rec["decision"] and rec["details"]["fixes"]
-
-
-def test_plan_falls_back_when_nightshift_fails(run):
-    p = coordinator.plan("Is Tumpat safe?", llm=stub_llm(fail=True))
-    assert p["planned_by"] == "fallback" and p["place"]["place_id"] == "tumpat" and p["sources"] == list(
-        data_agent.SOURCES)
-    assert [x for x in lines(trace.current_run().path) if x["action"] == "plan"][-1]["status"] == "fallback"
-
-
-def test_plan_for_uncovered_place_says_so(run):
-    p = coordinator.plan("Is Gua Musang flooding?", llm=stub_llm({**GOOD_PLAN, "place_text": "Gua Musang"}))
-    assert p["place"] is None and p["place_status"] == "not_covered" and "not covered" in p["place_message"]
-
-
-def test_plan_writes_intent_tags_not_the_question_to_the_world(run):
+# -- Coordinator: the question radar -------------------------------------------------------------------------
+def test_remember_writes_intent_tags_not_the_question_to_the_world(run):
     w = WorldModel()
-    coordinator.plan("My phone is 019-8765432, is Tumpat safe?", world=w, llm=stub_llm(GOOD_PLAN))
+    p = {"intent": "risk_check", "user_type": "resident", "effort": "quick", "planned_by": "code",
+         "place": {"place_id": "tumpat"}, "place_status": "covered",
+         "question": "My phone is 019-8765432, is Tumpat safe?"}
+    coordinator.remember(w, p)
     ctx = [c for c in w.store.state["contexts"].values() if c["type"] == "run"][0]
-    assert "8765432" not in json.dumps(ctx) and ctx["attrs"]["intent"] == "risk_check"   # not a time-like digit run
+    assert "8765432" not in json.dumps(ctx) and ctx["attrs"]["intent"] == "risk_check"
 
 
 # -- Coordinator: draft ---------------------------------------------------------------------------------------
@@ -237,25 +210,6 @@ def test_loop_stops_after_plan_for_uncovered_place(offline):
                  log_dir=offline, quiet=True)
     assert r["evidence"] is None and "not covered" in r["answer"]["text"]
     assert "gather" not in [x["input_summary"] for x in lines(r["trace"]) if x["action"] == "state"]
-
-
-@pytest.mark.skipif(os.getenv("VEDA_LIVE") != "1", reason="live Nightshift + Zetaris: set VEDA_LIVE=1")
-def test_live_two_questions_two_plans(tmp_path):
-    from dotenv import load_dotenv
-    load_dotenv(trace.ROOT / ".env")
-    gazetteer.clear_cache()
-    plans = []
-    for q in ("Is Rantau Panjang at risk of flooding right now?",
-              "Mak ayah saya tinggal di Tumpat, patutkah mereka pindah malam ini?"):
-        trace.start_run(q, log_dir=tmp_path, quiet=True)
-        try:
-            plans.append(coordinator.plan(q))
-        finally:
-            trace.end_run()
-    a, b = plans
-    assert a["planned_by"] == b["planned_by"] == "llm"
-    assert (a["place"]["place_id"], b["place"]["place_id"]) == ("rantau_panjang", "tumpat")
-    assert b["question_language"] == "ms" and b["intent"] != a["intent"]
 
 
 # -- Reconciliation (B-14: reliability first, then recency) ---------------------------------------------------

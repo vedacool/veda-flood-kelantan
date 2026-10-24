@@ -42,3 +42,25 @@ def test_the_question_never_reaches_a_model(live_models_offline_data):
         for piece in ("kodQZXWV", "Siti Zubaidah", "0123456789", "Mak saya", "kena pindah malam ni"):
             assert piece not in body, piece
     assert any('FACTS' in b for b in env.bodies)                           # what IS sent: the card's key facts
+
+
+def test_no_model_planning_path_left():
+    """Audit A-P2-7 (deleted 24 Oct): the old model-planning code sent the question to the model. It must stay gone."""
+    from app import loop as loop_mod
+    from app.agents import coordinator
+    for name in ("plan", "PLAN_SYSTEM", "_validate"):
+        assert not hasattr(coordinator, name), name
+    for name in ("get_llm", "PLAN_SYSTEM"):
+        assert not hasattr(nightshift, name), name
+    assert not hasattr(loop_mod, "STATES")
+
+
+def test_cli_check_sends_a_fixed_prompt_not_typed_words(live_models_offline_data, monkeypatch):
+    env = live_models_offline_data
+    import dotenv
+    from app import trace
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **k: None)
+    start = trace.start_run
+    monkeypatch.setattr(trace, "start_run", lambda q=None, **k: start(q, log_dir=env.tmp, quiet=True))
+    assert nightshift.main(["nightshift", QUESTION]) == 0
+    assert len(env.bodies) == 1 and "kodQZXWV" not in env.bodies[0] and '{\\"ok\\": true}' in env.bodies[0]

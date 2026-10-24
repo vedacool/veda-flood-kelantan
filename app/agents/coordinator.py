@@ -1,13 +1,11 @@
-"""Coordinator (B-12): the agent that talks to the user - Nemotron on Nightshift lane `fast`.
+"""Coordinator (B-12): the agent that talks to the user. The plan is written by code (app/router.py: place from
+the gazetteer, quick or full, language); the Coordinator drafts the answer, and Nemotron 3.5 Super VL writes only a
+short explanation from the card's key facts - never from the user's question (the question is never sent to a model).
 
-    plan = coordinator.plan(question, world)            what is asked, about which place, by whom, what to fetch
     answer = coordinator.draft(question, plan, evidence)
 
-The model proposes, code decides: the place always comes from the gazetteer (never from the model), and every
-field is checked against the allowed values below - anything else is corrected and the correction is traced.
-If Nightshift fails (down, bad JSON, SAMPLE_MODE before B-18) the Coordinator falls back to a plan / answer
-written by code from the same evidence, traced as 'fallback'. The draft is checked before it is used: no number
-that is not in the evidence, it states the Forecast agent's verdict and no other (B-16), never empty.
+If Nightshift fails (down, bad JSON, SAMPLE_MODE) the answer is the card written by code, traced as 'fallback'.
+The draft is checked before it is used: no number that is not in the evidence, it states the Forecast agent's verdict and no other (B-16), never empty.
 The safety line is always added by code, not left to the model.
 """
 import json
@@ -16,16 +14,11 @@ import time
 from datetime import datetime, timezone
 
 from app import card as card_mod
-from app import gazetteer, trace
+from app import trace
 from app.adapters import nightshift
-from app.agents.data_agent import SOURCES
 from app.config import MYT
 
 AGENT = "Coordinator"
-INTENTS = ("risk_check", "evacuation", "cut_off", "other")
-USER_TYPES = ("resident", "family_far_away", "school", "unknown")
-EFFORTS = ("quick", "full")
-LANGUAGES = ("en", "ms")
 QUICK_SOURCES = ["jps_levels", "mygov_forecast"]
 MAX_TOKENS = 4096          # B-85: Super VL drafts used 1,025-2,735 tokens (23 Oct; Lightning needed 8000 and still ran dry)
 SAFETY = {
@@ -35,20 +28,6 @@ SAFETY = {
 REVISE_NOTE = ("\nThis is a REVISION: the Critic rejected previous_explanation. Fix every item in critic_problems, "
                "follow critic_fix, keep everything else that was correct.")
 VERDICT_WORDS = card_mod.VERDICT_WORDS            # EN + BM verdict words, one definition (card.py)
-
-PLAN_SYSTEM = (
-    "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. Read the user's question and "
-    "reply with ONE JSON object with these keys:\n"
-    f"intent: one of {list(INTENTS)} (risk_check = is my area at risk / what is the river doing; evacuation = should "
-    "we move / where to go; cut_off = will roads or the area be cut off; other = anything else)\n"
-    f"user_type: one of {list(USER_TYPES)} (family_far_away = asking about relatives in another place)\n"
-    "place_text: the place name exactly as the user wrote it, or \"\" if none\n"
-    f"sources: list from {list(SOURCES)} - jps_levels = river gauges, open_meteo = rain forecast, "
-    "mygov_forecast = MetMalaysia town forecast, mygov_warning = MetMalaysia warnings\n"
-    f"effort: one of {list(EFFORTS)} (quick = a simple status question; full = anything about the coming hours/days, "
-    "moving people, or safety)\n"
-    f"language: one of {list(LANGUAGES)} - the language of the question\n"
-    "reason: one short sentence explaining the plan.\nOutput only the JSON object.")
 
 DRAFT_SYSTEM = (
     "You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. VEDA already shows the user a "
@@ -80,88 +59,6 @@ DRAFT_SYSTEM = (
     "en ACT: The river at Tanah Merah is 9.80 m, 0.80 m above the Danger level and still rising, higher than the "
     "2014 flood.\n"
     "Reply with ONE JSON object: {\"explanation\": \"...\"}.")
-
-
-def _choose(value, allowed, default, field, fixes):
-    if value in allowed:
-        return value
-    fixes.append(f"{field} {value!r} not allowed -> {default}")
-    return default
-
-
-def _resolve_place(question, place_text, fixes):
-    """The gazetteer decides the place: first what the model extracted, then the whole question."""
-    first = gazetteer.resolve(place_text, agent=AGENT) if place_text else None
-    if first and first.status == "found":
-        return first
-    whole = gazetteer.resolve(question, agent=AGENT)
-    if first is None:
-        return whole
-    if whole.status == "found":
-        fixes.append(f"place_text {place_text!r} not covered -> {whole.place['name']} found in the question")
-        return whole
-    return first            # keep the "Did you mean...?" / not-covered reply for the name the user gave
-
-
-def _validate(question, raw, fixes, resolved=None):
-    """Model output -> a plan VEDA can execute. Every correction is appended to `fixes`.
-    resolved = the place the code already found (B-17 routing) - then the model's place_text is not used."""
-    raw = raw if isinstance(raw, dict) else {}
-    effort = _choose(raw.get("effort"), EFFORTS, "full", "effort", fixes)
-    asked = raw.get("sources") if isinstance(raw.get("sources"), list) else []
-    sources = [s for s in dict.fromkeys(asked) if s in SOURCES]
-    if len(sources) != len(asked):
-        fixes.append(f"dropped unknown source(s): {sorted(set(map(str, asked)) - set(sources))}")
-    if not sources:
-        sources = list(QUICK_SOURCES if effort == "quick" else SOURCES)
-        fixes.append(f"no sources -> default for {effort} effort")
-    if "jps_levels" not in sources:
-        sources.insert(0, "jps_levels")
-        fixes.append("added jps_levels: every flood answer needs the river gauges")
-    place_text = raw.get("place_text") if isinstance(raw.get("place_text"), str) else ""
-    res = resolved or _resolve_place(question, place_text.strip(), fixes)
-    return {
-        "question_language": _choose(raw.get("language"), LANGUAGES, "en", "language", fixes),
-        "intent": _choose(raw.get("intent"), INTENTS, "risk_check", "intent", fixes),
-        "user_type": _choose(raw.get("user_type"), USER_TYPES, "unknown", "user_type", fixes),
-        "effort": effort, "sources": sources,
-        "place": res.place, "place_status": res.status, "place_message": res.message,
-        "reason": str(raw.get("reason") or "")[:300],
-    }
-
-
-def plan(question, world=None, llm=None, budget_s=None, resolved=None, effort=None, language=None):
-    """Plan for one question. llm(lane, messages, agent=..., json_mode=..., ...) -> LLMResult (default: Nightshift).
-    resolved / effort / language: already decided by code (B-17 router) - the model cannot change them; any
-    difference is listed in the trace's fixes."""
-    llm = llm or nightshift.chat
-    fixes, planned_by, why = [], "llm", None
-    try:
-        r = llm(nightshift.AI_LANE, [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
-                agent=AGENT, json_mode=True, target_agent="Data & Reconciler", max_tokens=MAX_TOKENS, budget_s=budget_s)
-        raw = r.data
-    except nightshift.NightshiftError as e:
-        raw, planned_by, why = {}, "fallback", f"Nightshift unavailable ({e}) -> plan written by code"
-    p = _validate(question, raw, fixes if planned_by == "llm" else [], resolved)
-    p["planned_by"] = planned_by
-    for key, value in (("effort", effort), ("question_language", language)):
-        if value and p[key] != value:
-            if planned_by == "llm":
-                fixes.append(f"{key} {p[key]} -> {value} (decided by code)")
-            p[key] = value
-    if effort == "full" and planned_by == "llm" and len(p["sources"]) < 2:
-        p["sources"] = list(SOURCES)
-        fixes.append("full path -> every source")
-    if planned_by == "fallback":
-        p["reason"] = "Fallback plan: full effort, every source."
-    trace.step(AGENT, "plan", input_summary=question,
-               output_summary=(f"intent={p['intent']} user={p['user_type']} place={(p['place'] or {}).get('name')} "
-                               f"({p['place_status']}) effort={p['effort']} sources={','.join(p['sources'])}"),
-               status="success" if planned_by == "llm" else "fallback", target_agent="Data & Reconciler",
-               decision=why or ("; ".join(fixes) if fixes else p["reason"]), details={"plan": p, "fixes": fixes})
-    if world is not None and run_id():
-        remember(world, p)
-    return p
 
 
 def run_id():

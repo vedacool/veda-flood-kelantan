@@ -7,7 +7,7 @@ actually answered and whether Nightshift honoured the requested lane.
     r = nightshift.chat("deep", [{"role": "user", "content": "..."}], agent="Coordinator", json_mode=True)
     r.data, r.served_model, r.pinned
 
-Check from the command line:  python -m app.adapters.nightshift "Is Pasir Mas at risk?"
+Check from the command line:  python -m app.adapters.nightshift     (a fixed 'reply OK' request)
 """
 import json
 import os
@@ -347,37 +347,14 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     return result
 
 
-def get_llm(lane, agent):
-    """Meterless engine-style injected generator for a lane: generator(prompt, ...) -> {"text": ...}."""
-    lane_model(lane)  # fail fast on a bad lane
-
-    def generator(prompt, attachments=None, system_prompt=None, on_stream=None, abort_signal=None):
-        messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + \
-                   [{"role": "user", "content": prompt}]
-        text = chat(lane, messages, agent=agent).text  # text-only: attachments are not sent
-        if on_stream:
-            on_stream(text)
-        return {"text": text}
-
-    return generator
-
-
-PLAN_SYSTEM = ("You are the Coordinator of VEDA, a flood-risk assistant for Kelantan, Malaysia. "
-               "Write a short plan as one JSON object with keys: intent (risk_check | evacuation | cut_off | other), "
-               "place (string), user_type (resident | family_far_away | school | unknown), "
-               "sources (list of: jps_river_levels, open_meteo_rain, mygov_forecast, mygov_warning), "
-               "effort (quick | full), reason (one sentence). Output only the JSON object.")
-
-
 def main(argv):
-    """CLI check: send a Coordinator-style planning prompt to the AI lane (deep, Super VL) and print the plan."""
+    """CLI check of the AI lane: a fixed 'reply OK' request (never a user question) - prints the served model."""
     from dotenv import load_dotenv
     load_dotenv(trace.ROOT / ".env")
-    question = " ".join(argv[1:]) or "Is Pasir Mas at risk of flooding tomorrow?"
-    trace.start_run(question)
+    trace.start_run("Nightshift check (fixed prompt)")
     try:
-        r = chat(AI_LANE, [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": question}],
-                 agent="Coordinator", json_mode=True, target_agent="Data & Reconciler")
+        r = chat(AI_LANE, [{"role": "user", "content": 'Reply with exactly this JSON: {"ok": true}'}],
+                 agent="System", json_mode=True)
     except NightshiftError as e:
         trace.end_run("failed", str(e))
         print(f"FAILED: {trace.redact(str(e))}")

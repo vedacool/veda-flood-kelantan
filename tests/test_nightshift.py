@@ -260,15 +260,6 @@ def test_tool_calls_returned(fake):
     assert trace_lines(fake)[-1]["output_summary"] == "1 tool call(s)"
 
 
-def test_generator_form(fake):
-    fake["queue"].append(FakeResponse(200, ok_payload("engine text")))
-    seen = []
-    gen = nightshift.get_llm("deep", agent="WorldModel")
-    out = gen("prompt", system_prompt="sys", on_stream=seen.append)
-    assert out == {"text": "engine text"} and seen == ["engine text"]
-    assert fake["calls"][0]["body"]["messages"][0] == {"role": "system", "content": "sys"}
-
-
 def test_sample_mode_refuses_live_calls(fake, monkeypatch):
     monkeypatch.setenv("SAMPLE_MODE", "true")
     with pytest.raises(nightshift.NightshiftError, match="no live model calls"):
@@ -283,17 +274,16 @@ def test_missing_token(fake, monkeypatch):
 
 
 @pytest.mark.skipif(os.getenv("VEDA_LIVE") != "1", reason="live Nightshift test: set VEDA_LIVE=1")
-def test_live_planner_prompt(tmp_path):
+def test_live_fixed_check(tmp_path):
     from dotenv import load_dotenv
     load_dotenv(trace.ROOT / ".env")
-    trace.start_run("live B-03 test", log_dir=tmp_path, quiet=True)
+    trace.start_run("live B-03 test (fixed prompt)", log_dir=tmp_path, quiet=True)
     try:
-        r = nightshift.chat("fast", [{"role": "system", "content": nightshift.PLAN_SYSTEM},
-                                     {"role": "user", "content": "Is Pasir Mas at risk of flooding tomorrow?"}],
-                            agent="Coordinator", json_mode=True)
+        r = nightshift.chat(nightshift.AI_LANE, [{"role": "user", "content": 'Reply with exactly this JSON: {"ok": true}'}],
+                            agent="System", json_mode=True)
     finally:
         trace.end_run()
-    assert {"intent", "place", "sources"} <= r.data.keys()
+    assert r.data.get("ok") is True
     assert r.served_model and "nemotron" in r.served_model
 
 

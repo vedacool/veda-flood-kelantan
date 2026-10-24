@@ -193,12 +193,10 @@ def offline(monkeypatch, tmp_path):
 
 
 def scripted(reviews):
-    """Plan, then drafts that copy the Forecast verdict, and the given sequence of Critic decisions."""
+    """Drafts that copy the Forecast verdict, and the given sequence of Critic decisions."""
     calls = {"drafts": 0, "reviews": 0}
 
     def llm(lane, messages, agent, **kw):
-        if messages[0]["content"] == coordinator.PLAN_SYSTEM:
-            return SimpleNamespace(data=GOOD_PLAN, text="")
         if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):
             d = reviews[min(calls["reviews"], len(reviews) - 1)]
             calls["reviews"] += 1

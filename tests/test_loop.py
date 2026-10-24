@@ -23,8 +23,6 @@ def stub(effort="full"):
 
     def llm(lane, messages, agent, **kw):
         calls.append(lane)
-        if messages[0]["content"] == coordinator.PLAN_SYSTEM:
-            return SimpleNamespace(data={**PLAN, "effort": effort}, text="")
         if messages[0]["content"] in (critic.CRITIC_SYSTEM, critic.SMALL_SYSTEM):
             return SimpleNamespace(data={"decision": "approve", "problems": [], "fix": "", "ok": True}, text="")
         return SimpleNamespace(data={"explanation": "The river is steady for now."}, text="")

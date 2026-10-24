@@ -31,7 +31,6 @@ from app.adapters import zetaris
 from app.agents import coordinator, critic, data_agent, forecast_agent
 from app.engines.world_model import WorldModel
 
-STATES = ("plan", "gather", "forecast", "draft", "critique", "revise", "done")
 DEADLINE_S = 600
 BUDGET_S = {"quick": 30, "full": 150}    # Husaini 22 Oct night: the longest the user should wait for an answer
 REPLAY_BUDGET_S = 240                    # replay runs only (B-70, Husaini 22 Oct night) - traced as "replay budget 240 s"
