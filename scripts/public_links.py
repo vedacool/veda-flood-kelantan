@@ -21,11 +21,14 @@ LINK = re.compile(re.escape(PRIVATE) + r"(?![\w-])")
 NAME = re.compile(r"vedacool/veda(?![\w-])")          # any mention of the private repo, link or not
 # lines that must keep naming the private repo
 KEEP = ("stays **PRIVATE and untouched**", "fresh mirror of", "never the private")
+# never swept: this script (its PRIVATE constant would become the public link) and its test (the private links are
+# its inputs) - B-98
+SKIP = {"scripts/public_links.py", "tests/test_public_links.py"}
 
 
 def tracked():
     out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
-    return [ROOT / p for p in out.splitlines()]
+    return [ROOT / p for p in out.splitlines() if p not in SKIP]
 
 
 def plan(to):
