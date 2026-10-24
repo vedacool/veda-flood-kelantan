@@ -1,0 +1,62 @@
+# VEDA evidence: every test and measurement
+
+One table, newest first. Every row comes from this repo: its code, docs, recorded traces, commit messages or CI.
+**Re-verified 24 Oct** means it was run again on 24 Oct 2026 (Session B, offline, main at `586d05a` unless the row
+names another commit). **Not re-verified** means the row is copied from the named source and was not run again.
+All times are MYT (UTC+8) unless marked UTC.
+
+Kinds: **CI** = runs on every push (`.github/workflows/ci.yml`) · **live** = real Zetaris + Nightshift + Nemotron ·
+**harness** = a test script calling the model or the code directly, outside a user run · **archive replay** = the
+rules run hour by hour on archived data, no hindsight · **manual** = measured by a person.
+
+| Date | What was tested | Result | Kind | Reproduce / source | Status |
+|---|---|---|---|---|---|
+| 24 Oct ~12:15 | Offline test suite | **853 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`) | Re-verified 24 Oct |
+| 24 Oct ~12:15 | Safety scenarios | **33 of 33**; CI runs them 3 times in the Docker job (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | 33/33 re-verified 24 Oct (1 run); ×3 from commit `586d05a` message |
+| 22-24 Oct | CI on GitHub | 98 runs from 22 Oct 06:44 UTC to 24 Oct 04:06 UTC: **94 green, 4 failed** (all 4 on 22 Oct: two dependency bumps, `35960ec`, `c3f526a`) | CI | `gh run list --limit 200` | Re-verified 24 Oct |
+| 24 Oct 11:50 | History clean for the public repo (rehearsal, fresh mirror at `ae55221`) | 160 -> 160 commits (+1 map commit), authors and dates unchanged, first commit 22 Oct 02:22 UTC; history search over 220 real values: **0 unexplained**; gitleaks: **no leaks**; cleaned clone: 838 tests, `test_no_jps_readings` 6/6, evals 30/30 | manual | `SECURITY-OPS-CHECKLIST.md` (rehearsal paragraph); scripts kept outside the repo | Re-verified 24 Oct (it was this run) |
+| 24 Oct ~11:55 | Clean clone, empty `.env`, Zetaris + Nightshift not used (fresh `git clone`, new venv from `requirements.txt`, at `ae55221`) | install OK; 838 passed; evals 30/30; engine tests 8 + 9; CLI answers; `/health` 200; `POST /run` for the 6 input examples: 5 answer, **`05_broken_source.json` returns `outside_replay`** (the CLI answers it) | manual | Official self-check §4-§8; `curl -X POST localhost:8000/run -d @input_examples/0N_*.json` | Re-verified 24 Oct; the 05 gap is reported to Husaini |
+| 24 Oct 12:10 | Recorded live runs: total time per run (18 traces) | Lightning, 23 Oct 00:13 + 12:29-13:29: 83.3, 76.2, 56.5, 67.9, 67.5, 103.2, 57.2, 66.2, 83.9 s. Super VL, 22:47-23:41: 62.3, 39.7, 67.2, 121.2, 130.4, 37.5, 77.2, 22.2, 49.1 s. Served model in the traces: 18 calls Lightning, 18 calls Super VL | live (recorded) | `data/sample/live_traces/*.jsonl`, the `System · timing` line ("total X s") and `details.served_model` | Re-verified 24 Oct (read from the traces) |
+| 24 Oct 11:42 | B-88 rain rule (upstream + here) on the Nov 2024 archive rain, 18 Nov -> 2 Dec 2024 | Upstream rule first fires: Kota Bharu / Pasir Mas 22 Nov 10:00 (161 h, 4 episodes); Rantau Panjang / Tumpat 21 Nov 04:00 via Sukhirin (210 h, 3 episodes). Combined rule: Kota Bharu first 27 Nov 10:00 (72 h); others never. No lead time claimed | archive replay | `python scripts/validate_rain_rule.py` (needs live Zetaris) -> `docs/validation/b88_rain_rule.md` | Not re-verified (needs live Zetaris) |
+| 24 Oct 11:42 | B-88 rain rule on 14 ordinary days, 1-15 Oct 2024 | Kota Bharu, Pasir Mas, Tumpat: 1 hour (04 Oct 18:00, Limau Kasturi), combined never; Rantau Panjang never | archive replay | same | Not re-verified |
+| 24 Oct morning | Gauge discovery (B-71) | Live scan: **20** JPS gauges VEDA had not mapped; SAMPLE_MODE: 1 SYNTHETIC gauge | live + offline | `python -m app.discover list`; `docs/DECISIONS.md` (24 Oct, B-71(c)) | Not re-verified |
+| 24 Oct 09:46 | Accessibility (Chrome, 375 px, light + dark) | Every public text >= 4.5:1 and >= 18 px; controls named and >= 44 px; Tab order logical. PREPARE was 4.29:1 -> new verdict colours, each text >= 5.3:1, lightness ACT 0.07 < NORMAL 0.15 < grey 0.29 < PREPARE 0.40 < WATCH 0.68 | manual + CI guard | `docs/DECISIONS.md` (accessibility pass); guard: `tests/test_view.py::test_verdict_colours_have_contrast_and_differ_in_lightness` (checks >= 4.5:1 and a lightness step, not 5.3:1) | Manual part not re-verified; guard test passes in the suite |
+| 24 Oct | Screenshot live-data guard | After a first batch accidentally ran on live data (8 images deleted before any commit), the screenshot script keeps an image only if the run is labelled "Past flood replay" | manual | `docs/DECISIONS.md` (24 Oct, D screenshots). **The screenshot script is not in the repo.** The video recorder `scripts/record_demo.py` has the same guard (refuses unless `/health` says SAMPLE_MODE; drops a clip without the "Past flood replay" / "Made-up test scene" label) | Not re-verified (script not in repo) |
+| 24 Oct 09:04 | CI Docker job (build image, SAMPLE_MODE smoke test, evals ×3) | green, 30 s | CI | ci.yml `docker` job; `docs/OPEN.md` | Not re-verified (timing); job green on later PRs |
+| 23 Oct 23:41 | Critic -> Data request | SYNTHETIC silent upstream gauge, Pasir Mas: the Critic asks the Data & Reconciler for the missing upstream reading, Temangan is found, verdict recomputed **NORMAL -> WATCH**; Rantau Panjang (nothing further up the Golok): ACT with a "Missing: …" line | harness (eval) | `tests/evals/safety/critic_request_raises_verdict_ms.json`, `critic_request_nothing_found_en.json`; commit `69dc551` | Re-verified 24 Oct (both in 33/33) |
+| 23 Oct 23:31 | Privacy: the question never reaches a model | The real loop with the real Nightshift adapter (only the HTTP call replaced): no question text, name, phone or IC in any request body (draft + Critic, >= 2 bodies); the model-planning path is gone | CI | `tests/test_privacy_no_question_to_model.py` | Re-verified 24 Oct (in the suite) |
+| 23 Oct 22:47-23:07 | **Live, Super VL by name, 10 full runs** | Explanation shown **8 of 10**; Critic AI review **8 of 10**; every call served by `nvidia/nemotron-3.5-super-vl-120b-a12b`; every answer inside 150 s (22-130 s). Misses: a 71 s draft left the review too little time; an NVIDIA 500, retried, ran to the 90 s cap | live | README ("How VEDA uses Nemotron"); `docs/DECISIONS.md`; commit `7a35c42`; 8 traces in `data/sample/live_traces/` | Rates not re-verified; timings + served model re-verified from the traces |
+| 23 Oct 21:5x-22:25 | Harness, Super VL by name, 10 spaced calls each | Draft 7/10 (9-61 s, median 27 s), all 7 passed the code checks; 3 failed (2 Nightshift 45 s cuts, 1 NVIDIA 500). AI review 9/10 (4-18 s), all right; planted errors EN 1/1, BM 2/2 answered | harness | README; commit `1e3f532` (harness not published) | Not re-verified |
+| 23 Oct 18:58-21:50 | Lightning stops answering in time (W-9) | Drafts used 5,267-8,000 hidden tokens for 30-146 characters, 65-137 s, many empty; `/no_think`, a thinking flag, a 2000-token budget and deleting Nightshift memory did not help -> both AI steps moved to Super VL (B-85) | live | README (History - Lightning); `docs/DECISIONS.md` | Not re-verified |
+| 23 Oct 18:25 | History-clean dry run v3 (scratch only) | 122 -> 122 commits (+1 map); 0 unexplained of 196 real values; gitleaks no leaks; 746 tests, evals 24/24 | manual | `SECURITY-OPS-CHECKLIST.md` (dry run paragraph); commit `92d9151` | Superseded by the 24 Oct rehearsal |
+| 23 Oct 16:53 | Clean clone at `70e31c3`, Zetaris + Nightshift stopped | 698 tests, conformance 8/8, evals 20/20; CLI (bare + Nov 2024 replay in BM); `/health` and `POST /run` 200; no network call | manual | `SECURITY-OPS-CHECKLIST.md`; commit `e4fa82b` | Superseded by the 24 Oct clean clone |
+| 23 Oct (by 14:24) | Natural Critic rejections | **No natural rejection in 40 live runs** (16 + 24 Tumpat / Kota Bharu runs after the checks moved to the Critic) | live | `docs/DECISIONS.md` (B-14 Gate 1 evidence); commits `0e31981`, `9f2961d` | Not re-verified; the traces of those runs are not all published |
+| 23 Oct 12:29-13:29 | **Live, Lightning, 10 full runs** | Explanation shown **8 of 10**; Critic AI review **8 of 10** | live | README; commit `4c8cc75`; 8 traces in `data/sample/live_traces/` | Rates not re-verified; timings + served model re-verified from the traces |
+| 23 Oct | Planted-error harness (Critic) | Rejected **2 of 2** (EN contradiction "the river is now falling", BM exaggeration); no correct explanation wrongly rejected. Small facts-only Critic: 10/10 completed twice, 2/2 planted errors rejected each time | harness | README (Evaluations); commit `44047df` (harness not published) | Not re-verified |
+| 23 Oct | Lightning Critic token budget, 10 calls each | 200 tokens 0/10; 1000 tokens 5/10; 2000 tokens 10/10 | harness | README | Not re-verified |
+| 22-23 Oct | Full-evidence Critic call, live | completed in 1 of 10 live full runs (replaced by the small facts-only call) | live | README; commit `b9cfc99` | Not re-verified |
+| 22 Oct 18:38 | World Model conformance (ported Meterless checks) + engine tests | **8 passed** + **9 passed**; the conformance port was mutation-tested to fail when a rule is broken | CI | `python -m pytest tests/conformance -v`; `python -m pytest tests/test_world_model_engine.py -v`; commit `01bab86` | Re-verified 24 Oct (17 passed) |
+| 22 Oct | Nightshift cut-off | A call with no first byte is cut at about 45 s (HTTP 502 `ttfb_timeout`, 45,003 ms) | live | README; `docs/DECISIONS.md` | Not re-verified |
+| 22 Oct | Speed | Quick path about 6 s (parallel World Model queries 28 s -> 6 s; gather 0.1-1.7 s, was 35-45 s) | live | README; `docs/DECISIONS.md`; commit `795943a` | Not re-verified |
+| 22 Oct 10:34-10:50 | Platform spikes | Zetaris floor ~2.1 s per query; data.gov.my HTTP 429 on the 3rd uncached read; Nightshift 5/5 served by Super VL (~0.5-2 s); JPS page 36 stations | live | `docs/spikes.md` | Not re-verified |
+| 22-23 Oct | Audits | 22 Oct: no P0, 4 P1. 23 Oct: no P0, 10 P1 -> all 10 fixed ("GO for submission on the audit's P1 list"); the into-water gate caught 12 attack sentences and passed 12 real warnings | manual | `docs/audit/2026-10-22-audit.md`, `docs/audit/2026-10-23-audit.md` | Not re-verified |
+| 22 Oct | Dependency + secret scans | pip-audit: no known vulnerabilities in the pinned packages; gitleaks over the full history on every push | CI | ci.yml (`pip-audit`, `gitleaks-action`) | Runs in CI on every push |
+
+## Counts over time
+**Offline tests** (from commit messages and the checklist; each `N` was the full suite at that commit):
+22 Oct 15:50 153 · 16:12 171 · 16:54 208 · 17:22 217 · 18:28 252 · 18:44 273 · ~19:12 312 ·
+23 Oct audit 598 -> 633 · 16:53 698 (clean clone) · 18:25 746 (dry run) ·
+24 Oct 00:00 769 · 09:10 766 (the unused model-planning code deleted) · 09:21 777 · 09:27 785 · 09:30 788 · 09:36 795 ·
+09:42 799 · 09:47 801 · 10:14 827 · 10:23 828 · 11:15 830 · 11:28 838 · 11:57 847 · 12:06 **853** (`586d05a`).
+
+**Safety scenarios:** 22 Oct 23:52 13/13 · 23 Oct 09:03 18/18 · 13:52 20/20 (pass^3) · 17:53 23/23 · 18:25 24/24 ·
+24 Oct 00:00 25 · 09:05 25/25 ×3 in CI · 10:14 28/28 · 11:28 29/29 · 11:44 30/30 · 11:57 32/32 · 12:06 **33/33 ×3**.
+
+## Known gaps in the sources (found while writing this file)
+- `data/sample/live_traces/README.md`: for the 12:29-13:29 runs, the number in brackets after "Critic AI review" is the
+  run's **total** time (e.g. 76.2 s), not the review's time (13.9 s in that run).
+- `scripts/validate_rain_rule.py` docstring says the window is "22 Nov -> 2 Dec"; the report it wrote uses 18 Nov.
+- The planted-error and model harnesses are not published in the repo (`docs/DECISIONS.md` says so); their numbers
+  can only be checked against the commit messages and the README.
+- `input_examples/05_broken_source.json` asks at 15:00, outside the scene's 04:00-10:00 window: the CLI answers it
+  (INSUFFICIENT DATA), `POST /run` rejects it with `outside_replay`.

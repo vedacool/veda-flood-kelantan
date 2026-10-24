@@ -187,7 +187,8 @@ unmodified) and certifi (MPL-2.0).
   question.
 
 ## Evaluations (test harness - not live use)
-These are controlled tests, kept apart from the live rates above.
+These are controlled tests, kept apart from the live rates above. Every test and measurement in VEDA's history, with
+its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
