@@ -76,7 +76,13 @@ def test_share_text_never_carries_the_question(views):
         for lang in ("en", "ms"):
             text = v["share"][lang]
             assert not any(piece in text for piece in MARKER.split()), text
-            assert "999" in text and v["headline"][lang] in text
+            assert "999" in text and v["headline"][lang].upper() in text
+            # v2 share text (Cowork 24 Oct): who checked, when, from what - and a replay or test scene says so
+            assert ("Checked by VEDA · " if lang == "en" else "Disemak oleh VEDA · ") in text
+            if v.get("label"):
+                assert v["label"][lang] in text
+            if v["synthetic"]:
+                assert "SYNTHETIC" in text
 
 
 def test_labels_say_replay_or_made_up(views):
@@ -305,3 +311,30 @@ def test_demo_page_has_the_moment_chips_intro_and_peak_default():
     for key in ("before", "morning", "peak", "test_scenes", "tap_skip", "c_gather", "c_critique"):
         assert page.count(f"{key}: ") == 2, key                                      # EN and BM
     assert page.index('id="a-todo"') < page.index('id="a-sos"')                   # what to do, then the stranded button
+
+
+# -- v2 answer screen (Cowork blueprint 24 Oct) -------------------------------------------------------------------
+def test_v2_act_now_block_steps_post_and_flow(views):
+    v = views["nov2024"][1]
+    assert v["level"] == 4 and v["level_text"]["en"] == "Level 4 of 4" and v["level_text"]["ms"] == "Tahap 4 daripada 4"
+    assert v["action"]["en"] == ["Move to higher ground. Follow APM / police."]
+    assert len(v["steps"]["en"]) == 3 and v["steps"]["en"][2].endswith("Don't go back for animals or things.")
+    assert v["steps"]["en"][0].startswith("Follow APM / police instructions and go to the evacuation centre (PPS)")
+    r = v["river"]["en"]
+    assert (r["alert_m"], r["warning_m"], r["danger_m"], r["y2014_m"]) == (7.0, 8.0, 9.0, 10.84)   # the gauge's own
+    assert r["lines"][:2] == ["10.94 m now", "1.94 m above the danger mark"]
+    assert not any("hours to the danger" in x for x in r["lines"])             # already over it: no time line
+    assert [d["state"] for d in v["flow"]["en"]["dots"]] == ["rain", "none", "you"]
+    assert v["flow"]["en"]["dots"][0]["name"] == "Thailand" and v["official_link"] is None
+
+
+def test_v2_cant_confirm_and_get_ready():
+    from app import card
+    assert view.steps("INSUFFICIENT_DATA", "en") == [
+        "If water is rising around you, don't wait for us: move to higher ground.",
+        "Check the official river levels yourself.", "In danger, call 999."]
+    assert view.action_lines("INSUFFICIENT_DATA", "Pasir Mas", "ms") == ["Kami tiada bacaan sungai terkini untuk Pasir Mas."]
+    prep = view.steps("PREPARE", "en")
+    assert prep[1] == "Move the car, animals and valuables to higher ground now, while it's easy." and len(prep) == 3
+    assert view.action_lines("PREPARE", "X", "en")[1].startswith("Older people, the sick and babies")
+    assert "go to the PPS if told" in card.ADVICE["ACT"]["en"]                    # the plain-text card keeps PPS

@@ -736,6 +736,150 @@ def share_text(view, lang):
     return trace.redact("\n".join(lines))
 
 
+# -- v2 answer screen (Cowork research-led blueprint, 24 Oct) ------------------------------------------------------
+# Tentative wording - Dr Ariff reviews the action lines and the extra steps (review pack G).
+LEVEL_N = {"NORMAL": 1, "WATCH": 2, "PREPARE": 3, "ACT": 4}
+V2 = {
+    "level_of": {"en": "Level {n} of 4", "ms": "Tahap {n} daripada 4"},
+    "no_level": {"en": "No fresh river reading", "ms": "Tiada bacaan sungai terkini"},
+    "action": {
+        "NORMAL": {"en": ["Nothing to do now."], "ms": ["Tiada apa perlu dibuat sekarang."]},
+        "WATCH": {"en": ["Check again in a few hours."], "ms": ["Semak semula dalam beberapa jam."]},
+        "PREPARE": {"en": ["Pack now. Be ready to leave.",
+                           "Older people, the sick and babies: start moving to family on higher ground now."],
+                    "ms": ["Kemas barang sekarang. Bersedia untuk keluar.",
+                           "Warga emas, orang sakit dan bayi: mula berpindah ke rumah keluarga di tempat tinggi "
+                           "sekarang."]},
+        "ACT": {"en": ["Move to higher ground. Follow APM / police."],
+                "ms": ["Pindah ke tempat tinggi. Ikut arahan APM / polis."]},
+        "INSUFFICIENT_DATA": {"en": ["We have no fresh river reading for {place}."],
+                              "ms": ["Kami tiada bacaan sungai terkini untuk {place}."]},
+    },
+    "prepare_move": {"en": "Move the car, animals and valuables to higher ground now, while it's easy.",
+                     "ms": "Alihkan kereta, haiwan dan barang berharga ke tempat tinggi sekarang, selagi mudah."},
+    "act_no_return": {"en": "Don't go back for animals or things.", "ms": "Jangan patah balik untuk haiwan atau barang."},
+    "unknown_steps": {"en": ["If water is rising around you, don't wait for us: move to higher ground.",
+                             "Check the official river levels yourself.", "In danger, call 999."],
+                      "ms": ["Jika air naik di sekeliling anda, jangan tunggu kami: pindah ke tempat tinggi.",
+                             "Semak sendiri paras sungai rasmi.", "Jika dalam bahaya, hubungi 999."]},
+    "now_m": {"en": "{m} m now", "ms": "{m} m sekarang"},
+    "vs_danger": {"en": "{d} m {side} the danger mark", "ms": "{d} m {side} paras Bahaya"},
+    "rising": {"en": "↑ Rising about {r} cm an hour", "ms": "↑ Naik kira-kira {r} cm sejam"},
+    "falling": {"en": "↓ Falling about {r} cm an hour", "ms": "↓ Turun kira-kira {r} cm sejam"},
+    "eta": {"en": "About {a}-{b} hours to the danger mark at this speed",
+            "ms": "Kira-kira {a}-{b} jam lagi ke paras Bahaya pada kelajuan ini"},
+    "eta1": {"en": "About {a} hours to the danger mark at this speed",
+             "ms": "Kira-kira {a} jam lagi ke paras Bahaya pada kelajuan ini"},
+    "dot_rain": {"en": "heavy rain", "ms": "hujan lebat"}, "dot_rising": {"en": "rising", "ms": "sedang naik"},
+    "dot_high": {"en": "at {name}", "ms": "paras {name}"}, "dot_normal": {"en": "normal", "ms": "normal"},
+    "dot_none": {"en": "no fresh reading", "ms": "tiada bacaan terkini"}, "dot_you": {"en": "you", "ms": "anda"},
+    "thailand": {"en": "Thailand", "ms": "Thailand"},
+    "flow_caption": {"en": "upstream (hulu) → water flows this way → you (hilir)",
+                     "ms": "hulu → air mengalir ke arah ini → anda (hilir)"},
+    "share_level": {"en": "{dot} {place}: {word} (level {n} of 4)", "ms": "{dot} {place}: {word} (tahap {n} daripada 4)"},
+    "share_nolevel": {"en": "{dot} {place}: {word}", "ms": "{dot} {place}: {word}"},
+    "share_todo": {"en": "What to do: {a}", "ms": "Apa perlu dibuat: {a}"},
+    "checked_by": {"en": "Checked by VEDA · {when} · {source}", "ms": "Disemak oleh VEDA · {when} · {source}"},
+    "share_safety": {"en": "Not an official warning. Emergency 999 · APM 991",
+                     "ms": "Bukan amaran rasmi. Kecemasan 999 · APM 991"},
+    "src_live": {"en": "JPS river gauge", "ms": "stesen sungai JPS"},
+    "src_reported": {"en": "river level reported in the news, citing JPS", "ms": "paras sungai dilaporkan berita, memetik JPS"},
+    "src_estimated": {"en": "estimate between reported river levels", "ms": "anggaran antara paras sungai yang dilaporkan"},
+    "src_made_up": {"en": "made-up test data · SYNTHETIC", "ms": "data ujian rekaan · SYNTHETIC"},
+    "src_none": {"en": "no fresh river reading", "ms": "tiada bacaan sungai terkini"},
+}
+DOT = {"NORMAL": "🟢", "WATCH": "🟡", "PREPARE": "🟠", "ACT": "🔴", "INSUFFICIENT_DATA": "⚪"}
+JPS_URL = "https://publicinfobanjir.water.gov.my/"
+
+
+def _sentences(text):
+    return [s.strip() for s in re.split(r"(?<=\.)\s+", text) if s.strip()]
+
+
+def action_lines(verdict, place, lang):
+    return [x.format(place=place or "-") for x in V2["action"][verdict][lang]]
+
+
+def steps(verdict, lang):
+    """WHAT TO DO NOW as numbered steps: the card's advice (PPS spelled out) grouped, plus the v2 additions."""
+    if verdict == "INSUFFICIENT_DATA":
+        return list(V2["unknown_steps"][lang])
+    s = _sentences(plain_pps(card_mod.ADVICE[verdict][lang], lang))
+    if verdict == "PREPARE":           # pack · move (v2 wording) · PPS + neighbours
+        return [s[0], V2["prepare_move"][lang], " ".join(s[2:])]
+    if verdict == "ACT":               # APM / PPS · power + water · trapped + don't go back
+        return [s[0], " ".join(s[1:3]), " ".join(s[3:] + [V2["act_no_return"][lang]])]
+    return s
+
+
+def river_post(card, forecast, evidence, lang):
+    """'The river here': the gauge post (thresholds from the gauge, 2014 line only when known) and its lines. None
+    without a river reading."""
+    bar = _level_bar(card, evidence)
+    if not bar or bar.get("danger_m") is None:
+        return None
+    main = _main_gauge(evidence) or {}
+    th = main.get("thresholds") or {}
+    lines = [V2["now_m"][lang].format(m=_num(bar["level_m"]))]
+    d = (card.get("comparison") or {}).get("danger")
+    if d is not None:
+        lines.append(V2["vs_danger"][lang].format(d=_num(abs(d)), side=W["above" if d >= 0 else "below"][lang]))
+    trend, rate = _trend(card, forecast), _rate(forecast)
+    if trend in ("rising", "falling"):
+        lines.append(V2[trend][lang].format(r=_range_cm(rate["min"], rate["max"])))
+    tr = next((c for c in (forecast or {}).get("controlling", []) if c["role"] == "controlling"), {})
+    eta = (tr.get("hours_to") or {}).get("danger")
+    if eta and tr.get("projection_m") and eta.get("earliest") and eta.get("latest") and not card.get("tidal"):
+        a, b = _num(eta["earliest"]), _num(eta["latest"])
+        lines.append(V2["eta1"][lang].format(a=a) if a == b else V2["eta"][lang].format(a=a, b=b))
+    y2014 = (card.get("vs_2014") or {}).get("peak_m")
+    return {"level_m": bar["level_m"], "normal_m": th.get("normal_m"), "alert_m": bar["alert_m"],
+            "warning_m": bar["warning_m"], "danger_m": bar["danger_m"], "y2014_m": y2014, "lines": lines}
+
+
+def flow(card, forecast, lang):
+    """'Coming from upstream': up to two upstream dots (rain area / gauge) and 'you', each with its state."""
+    dots = []
+    heavy = [u for u in (card.get("rain_up") or {}).get("heavy") or [] if u["fallen"]]
+    if heavy:
+        thai = all("Thailand" in str(u["name"]) for u in heavy)
+        top = max(heavy, key=lambda u: u["past_72h_mm"] or 0)          # the wettest rain area, by place name
+        dots.append({"name": V2["thailand"][lang] if thai else str(top["name"]), "state": "rain",
+                     "text": V2["dot_rain"][lang]})
+    for u in (forecast or {}).get("upstream", []):
+        if u.get("status") == "no fresh reading":
+            state, text = "none", V2["dot_none"][lang]
+        elif u.get("band") in LEVEL:
+            state, text = "high", V2["dot_high"][lang].format(name=LEVEL[u["band"]][lang])
+        elif u.get("rising"):
+            state, text = "rising", V2["dot_rising"][lang]
+        else:
+            state, text = "normal", V2["dot_normal"][lang]
+        dots.append({"name": _place_of(u["gauge"]), "state": state, "text": text})
+    if not dots:
+        return None
+    return {"dots": dots[:2] + [{"name": card.get("place"), "state": "you", "text": V2["dot_you"][lang]}],
+            "caption": V2["flow_caption"][lang]}
+
+
+def share_v2(view, card, evidence, lang):
+    """v2 share text (WhatsApp): level, one river sentence, what to do, who checked when from what, the safety line.
+    The page adds 'Check it yourself: <link>'. Never the question or the trace."""
+    v, verdict = view, view["verdict"]
+    word = v["headline"][lang].upper()
+    head = (V2["share_level"][lang].format(dot=DOT[verdict], place=v["place"] or "-", word=word, n=LEVEL_N[verdict])
+            if verdict in LEVEL_N else V2["share_nolevel"][lang].format(dot=DOT[verdict], place=v["place"] or "-",
+                                                                       word=word))
+    river = v["line"][lang]                                 # the sentence that says why this verdict
+    kind = _source_kind(card) if card.get("gauge") else "none"
+    when = (v["label"][lang] if v.get("label") else
+            _when((evidence or {}).get("clock") or datetime.now(MYT).isoformat(), lang) or "")
+    todo = v["steps"][lang][0] if verdict == "INSUFFICIENT_DATA" else " ".join(v["action"][lang])
+    lines = [head, river, "", V2["share_todo"][lang].format(a=todo), "",
+             V2["checked_by"][lang].format(when=when, source=V2["src_" + kind][lang]), V2["share_safety"][lang]]
+    return trace.redact("\n".join(lines))
+
+
 def answer_view(result):
     """loop.run() result -> the public answer screen's data, both languages."""
     card = result.get("card") or {}
@@ -773,7 +917,17 @@ def answer_view(result):
             "emergency": bool(card.get("emergency")),
             "synthetic": bool(card.get("synthetic"))}
     view["strip"] = _both(lambda lang: _strip(answer, view["sources"][lang], lang))
-    view["share"] = _both(lambda lang: share_text(view, lang))
+    # v2 (Cowork blueprint 24 Oct): level, one action line, numbered steps, the gauge post, the upstream strip
+    view["level"] = LEVEL_N.get(verdict)
+    view["level_text"] = _both(lambda lang: V2["level_of"][lang].format(n=LEVEL_N[verdict]) if verdict in LEVEL_N
+                               else V2["no_level"][lang])
+    view["action"] = _both(lambda lang: action_lines(verdict, card.get("place"), lang))
+    view["steps"] = _both(lambda lang: steps(verdict, lang))
+    view["official_link"] = JPS_URL if verdict == "INSUFFICIENT_DATA" else None
+    view["river"] = _both(lambda lang: river_post(card, forecast, evidence, lang)) if _level_bar(card, evidence) else None
+    view["flow"] = _both(lambda lang: flow(card, forecast, lang)) if flow(card, forecast, "en") else None
+    view["line_is_river"] = set_by(forecast) == "river"
+    view["share"] = _both(lambda lang: share_v2(view, card, evidence, lang))
     return view
 
 

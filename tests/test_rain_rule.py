@@ -222,7 +222,9 @@ def test_public_screen_says_why_in_plain_words(scene):
     assert not any(c.isdigit() for c in v["rain"]["en"] + " ".join(v["rain_more"]["en"]).split("until")[0])
     assert any(x.startswith("Heavy rain upstream: Kuala Krai") for x in v["rain_detail"]["en"])
     assert "Heavy rain here: 34.7 mm in 12 h." in v["rain_detail"]["en"]
-    assert "Very heavy rain upstream" in v["share"]["en"] and "Kuala Krai" not in v["share"]["en"]
+    assert v["share"]["en"].splitlines()[:2] == ["🟠 Kota Bharu: GET READY (level 3 of 4)",
+                                                 "Heavy rain upstream is on its way, and it is raining hard here."]
+    assert "Kuala Krai" not in v["share"]["en"] and "SYNTHETIC" in v["share"]["en"]
 
 
 # -- Cowork 24 Oct: Thai-side Golok rain points, tide advice, MetMalaysia warnings (rule A) -------------------------
