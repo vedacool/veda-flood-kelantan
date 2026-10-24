@@ -251,3 +251,18 @@ def test_live_health_reports_postgres_newest_reading_and_open_breakers(monkeypat
         raise pg.PgError("cannot reach veda-pg")
     monkeypatch.setattr(pg, "connect", down)
     assert TestClient(main.app).get("/health").json()["postgres"].startswith("unreachable")
+
+
+def test_postgres_host_can_be_overridden_for_docker(monkeypatch):
+    import importlib
+    from app import config
+    monkeypatch.setenv("VEDA_PG_HOST", "host.docker.internal")
+    monkeypatch.setenv("VEDA_PG_PORT", "5544")
+    importlib.reload(config)
+    try:
+        assert (config.PG_HOST, config.PG_PORT) == ("host.docker.internal", 5544)
+    finally:
+        monkeypatch.delenv("VEDA_PG_HOST")
+        monkeypatch.delenv("VEDA_PG_PORT")
+        importlib.reload(config)
+    assert (config.PG_HOST, config.PG_PORT) == ("127.0.0.1", 5433)

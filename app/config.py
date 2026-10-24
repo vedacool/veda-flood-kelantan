@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MYT = timezone(timedelta(hours=8))   # Malaysia time, no DST - used for every human-facing time
 
-PG_HOST = "127.0.0.1"           # not "localhost": Windows tries IPv6 ::1 first and veda-pg listens on IPv4 only
-PG_PORT = 5433                       # veda-pg is published on 127.0.0.1:5433 only
+PG_HOST = os.getenv("VEDA_PG_HOST", "127.0.0.1")   # not "localhost": Windows tries IPv6 ::1 first, veda-pg is IPv4
+PG_PORT = int(os.getenv("VEDA_PG_PORT", "5433"))   # published on 127.0.0.1:5433 only; in Docker: host.docker.internal
 PG_DB = "veda"
 
 

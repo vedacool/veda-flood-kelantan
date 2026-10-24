@@ -195,7 +195,7 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 901 tests pass (24 Oct 2026), 13 skipped (they need live services).**
+- **Offline test suite (`python -m pytest -q`): 903 tests pass (24 Oct 2026), 13 skipped (they need live services).**
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 33 scenarios, 33 of 33 pass; pass^3
   (all 3 repeat runs, 24 Oct) 33 of 33, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
@@ -275,14 +275,17 @@ Live mode needs Zetaris and Meterless Nightshift running on your machine (SAMPLE
    veda-pg container (127.0.0.1 only) on the Zetaris network → roles → schema → Zetaris datasource `veda_pg` → curated
    gauges, peaks and places → Zetaris REST tables (Open-Meteo, data.gov.my) → Zetaris views → the Nov 2024 replay and
    the SYNTHETIC scenes. Each step is its own script in `scripts/` and stops with a clear message on failure.
-5. **Run in Docker against your local Zetaris and Nightshift:** inside the container `localhost` is the container
-   itself, so point the URLs at the host:
+   **Time:** the first run takes about **15 minutes** - almost all of it `load_osm.py` downloading OpenStreetMap
+   features once from Overpass (then cached in `data/cache/osm/`); a re-run takes about 2 minutes. Measured from a
+   fresh clone, 24 Oct 2026.
+5. **Run** - without Docker: `python -m app.main` (http://127.0.0.1:8000). **In Docker** against your local Zetaris,
+   Nightshift and veda-pg: inside the container `localhost` is the container itself, so point the three at the host
+   (as `-e` overrides - keep `.env` as it is for the run without Docker):
    ```
-   ZETARIS_API_URL=http://host.docker.internal:8888/api/v1.0
-   METERLESS_BASE_URL=http://host.docker.internal:8088/v1
-   docker run --rm -p 8000:8000 --env-file .env veda
+   docker build -t veda .
+   docker run --rm -p 8000:8000 --env-file .env      -e ZETARIS_API_URL=http://host.docker.internal:8888/api/v1.0      -e METERLESS_BASE_URL=http://host.docker.internal:8088/v1      -e VEDA_PG_HOST=host.docker.internal      veda
    ```
-   (Without Docker keep `localhost` / `127.0.0.1`.) Zetaris itself reaches veda-pg at `veda-pg:5432` on the Zetaris
+   `GET /health` then reports Zetaris, Nightshift, veda-pg, the newest reading's age and any open circuit breaker. Zetaris itself reaches veda-pg at `veda-pg:5432` on the Zetaris
    Docker network.
 
 ## Collecting river levels (live mode)
