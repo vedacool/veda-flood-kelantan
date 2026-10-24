@@ -1,8 +1,12 @@
 # Replay and scene data
 
 - `nov2024_anchors.csv` - the Nov 2024 past-flood replay: JPS river readings as **reported in the news**, each row with
-  its source, URL and quote (B-70). Only Sg. Golok (Rantau Panjang, Kg. Jenob) has cited readings; VEDA holds no Nov
-  2024 readings for the Sg. Kelantan towns.
+  its source, URL and quote (B-70). Cited readings: Sg. Golok at Rantau Panjang and Kg. Jenob (26-27 Nov), Sg. Golok at
+  Kuala Jambu (Tumpat's second gauge, 26 Nov, time approximate), and Sg. Kelantan at Tambatan D'Raja (Kota Bharu) and
+  Kuala Krai (29 Nov). None was found citing JPS for Jambatan Tendong (Pasir Mas), Kok Majid (Tumpat) or Jambatan
+  Guillemard, 25-29 Nov 2024; those gauges have no Nov 2024 readings. A reading is added only when the article states
+  a number in metres for a named station and cites JPS / its portal; undated articles are left out (a "3.44 m at
+  Tambatan Diraja" story turned out to be from Dec 2022).
 - `synthetic_anchors.csv` - SYNTHETIC scenes (made-up river levels, `scripts/make_synthetic_scenes.py`, seeded).
 
 ## Notes: news reports about Kota Bharu, Nov 2024 (context for the B-88 rain rule - not readings, not crossing times)
