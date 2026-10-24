@@ -101,8 +101,8 @@ def test_nemotron_and_forecast_lines_after_phase_1():
     it - so the Forecast agent proposes the base level."""
     for text in ('"Writes the explanation and reviews the answer; can send it back, and can raise the level — never '
                  'lower it — when it cites the facts.',
-                 '"Menulis penjelasan dan menyemak jawapan; boleh menolaknya, dan boleh menaikkan tahap — tidak pernah '
-                 'menurunkannya — jika memetik fakta.',
+                 '"Menulis penjelasan dan menyemak jawapan; boleh memulangkannya untuk dibetulkan, dan boleh menaikkan '
+                 'tahap — tidak pernah menurunkannya — jika memetik fakta.',
                  '"Proposes the base level - Normal for now,', '"Mencadangkan tahap asas - Normal buat masa ini,'):
         assert text in PAGE, text
     assert "Decides the level" not in PAGE and "Memutuskan tahap" not in PAGE
@@ -116,7 +116,7 @@ def test_everyday_malay_wording():
                  'download: "Muat turun log penuh (JSONL)"', "setiap pertanyaan data ada dalam log",
                  'raw: "Tunjuk data mentah"', "tidak pernah menyuruh meredah air banjir", 'speed: "Kelajuan"'):
         assert text in ms, text
-    for old in ("larian", "Larian", "jejak", "masuk ke dalam air", '"Tunjuk mentah"'):
+    for old in ("larian", "Larian", "jejak", "masuk ke dalam air", '"Tunjuk mentah"', "menolaknya"):
         assert old not in ms, old
     assert '$("p-speed").setAttribute("aria-label", t("speed"));' in PAGE
 

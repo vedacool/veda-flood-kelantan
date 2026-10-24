@@ -1,0 +1,783 @@
+{
+ "_about": "BUILT by scripts/make_scenes_data.py from the fixtures (offline run of each scene, Data & Reconciler inputs only) - do not edit by hand. Demo data: replay = river readings reported in the news citing JPS; synthetic = made up. Never live JPS readings.",
+ "scenes": [
+  {
+   "id": "rp-before",
+   "replay": "nov2024",
+   "at": "2024-11-26 18:00",
+   "town": "Rantau Panjang",
+   "kind": "replay",
+   "source_label": {
+    "en": "Based on the Kelantan flood of November 2024 · Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)",
+    "ms": "Berdasarkan banjir Kelantan November 2024 · Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)"
+   },
+   "question": {
+    "en": "Is Rantau Panjang at risk of flooding right now?",
+    "ms": "Adakah Rantau Panjang berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Golok di Rantau Panjang",
+     "station": "_DPMS0003",
+     "role": "here",
+     "level_m": 8.41,
+     "at": "2024-11-26 18:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 5.0,
+      "alert": 7.0,
+      "warning": 8.0,
+      "danger": 9.0
+     },
+     "change_1h_m": 0.01,
+     "change_3h_m": 0.04,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "5ba40dc89d99cd42"
+    },
+    {
+     "name": "Sg. Golok di Kg. Jenob",
+     "station": "_DTMH0008",
+     "role": "upstream",
+     "level_m": 25.15,
+     "at": "2024-11-26 14:30",
+     "age_minutes": 210,
+     "thresholds": {
+      "normal": 19.0,
+      "alert": 21.5,
+      "warning": 22.5,
+      "danger": 23.5
+     },
+     "change_1h_m": null,
+     "change_3h_m": null,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "5ba40dc89d99cd42"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Golok di Rantau Panjang",
+     "past_12h_mm": 36.9,
+     "past_24h_mm": 53.2,
+     "heavy": true
+    },
+    "upstream": [
+     {
+      "name": "Sg. Golok di Buke Ta (Waeng; Thailand)",
+      "past_24h_mm": 56.4,
+      "past_72h_mm": 100.3
+     },
+     {
+      "name": "Sukhirin (Narathiwat; Thailand)",
+      "past_24h_mm": 48.3,
+      "past_72h_mm": 85.8
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (210 min)",
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  },
+  {
+   "id": "rp-morning",
+   "replay": "nov2024",
+   "at": "2024-11-27 08:00",
+   "town": "Rantau Panjang",
+   "kind": "replay",
+   "source_label": {
+    "en": "Based on the Kelantan flood of November 2024 · Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)",
+    "ms": "Berdasarkan banjir Kelantan November 2024 · Bernama, 26 Nov 2024 18:21 (citing publicinfobanjir.water.gov.my / JPS)"
+   },
+   "question": {
+    "en": "Is Rantau Panjang at risk of flooding right now?",
+    "ms": "Adakah Rantau Panjang berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Golok di Rantau Panjang",
+     "station": "_DPMS0003",
+     "role": "here",
+     "level_m": 8.41,
+     "at": "2024-11-26 18:00",
+     "age_minutes": 840,
+     "thresholds": {
+      "normal": 5.0,
+      "alert": 7.0,
+      "warning": 8.0,
+      "danger": 9.0
+     },
+     "change_1h_m": 0.01,
+     "change_3h_m": 0.04,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "c76934d25d77f3b7"
+    },
+    {
+     "name": "Sg. Golok di Kg. Jenob",
+     "station": "_DTMH0008",
+     "role": "upstream",
+     "level_m": 25.15,
+     "at": "2024-11-26 14:30",
+     "age_minutes": 1050,
+     "thresholds": {
+      "normal": 19.0,
+      "alert": 21.5,
+      "warning": 22.5,
+      "danger": 23.5
+     },
+     "change_1h_m": null,
+     "change_3h_m": null,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "c76934d25d77f3b7"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Golok di Rantau Panjang",
+     "past_12h_mm": 22.5,
+     "past_24h_mm": 59.4,
+     "heavy": false
+    },
+    "upstream": [
+     {
+      "name": "Sg. Golok di Buke Ta (Waeng; Thailand)",
+      "past_24h_mm": 62.1,
+      "past_72h_mm": 120.0
+     },
+     {
+      "name": "Sukhirin (Narathiwat; Thailand)",
+      "past_24h_mm": 58.9,
+      "past_72h_mm": 98.5
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "Sg. Golok di Rantau Panjang (F1) (controlling): reading too old (840 min)",
+    "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (1050 min)",
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  },
+  {
+   "id": "rp-peak",
+   "replay": "nov2024",
+   "at": "2024-11-27 19:30",
+   "town": "Rantau Panjang",
+   "kind": "replay",
+   "source_label": {
+    "en": "Based on the Kelantan flood of November 2024 · Kosmo, 27 Nov 2024 20:19 (citing Infobanjir / JPS)",
+    "ms": "Berdasarkan banjir Kelantan November 2024 · Kosmo, 27 Nov 2024 20:19 (citing Infobanjir / JPS)"
+   },
+   "question": {
+    "en": "Is Rantau Panjang at risk of flooding right now?",
+    "ms": "Adakah Rantau Panjang berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Golok di Rantau Panjang",
+     "station": "_DPMS0003",
+     "role": "here",
+     "level_m": 10.94,
+     "at": "2024-11-27 19:30",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 5.0,
+      "alert": 7.0,
+      "warning": 8.0,
+      "danger": 9.0
+     },
+     "change_1h_m": 0.15,
+     "change_3h_m": 0.35,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "fcc308cd73f834c5"
+    },
+    {
+     "name": "Sg. Golok di Kg. Jenob",
+     "station": "_DTMH0008",
+     "role": "upstream",
+     "level_m": 25.15,
+     "at": "2024-11-26 14:30",
+     "age_minutes": 1740,
+     "thresholds": {
+      "normal": 19.0,
+      "alert": 21.5,
+      "warning": 22.5,
+      "danger": 23.5
+     },
+     "change_1h_m": null,
+     "change_3h_m": null,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "fcc308cd73f834c5"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Golok di Rantau Panjang",
+     "past_12h_mm": 35.9,
+     "past_24h_mm": 57.2,
+     "heavy": true
+    },
+    "upstream": [
+     {
+      "name": "Sg. Golok di Buke Ta (Waeng; Thailand)",
+      "past_24h_mm": 71.0,
+      "past_72h_mm": 148.2
+     },
+     {
+      "name": "Sukhirin (Narathiwat; Thailand)",
+      "past_24h_mm": 57.8,
+      "past_72h_mm": 123.4
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (1740 min)",
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  },
+  {
+   "id": "tumpat-calm",
+   "replay": "synthetic_calm",
+   "at": "2024-06-15 10:00",
+   "town": "Tumpat",
+   "kind": "synthetic",
+   "source_label": {
+    "en": "Made-up example",
+    "ms": "Contoh rekaan"
+   },
+   "question": {
+    "en": "Is Tumpat at risk of flooding right now?",
+    "ms": "Adakah Tumpat berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Kelantan di Kg. Kok Majid",
+     "station": "_DTPT0002",
+     "role": "here",
+     "level_m": 0.58,
+     "at": "2024-06-15 10:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 0.4,
+      "alert": 1.2,
+      "warning": 1.6,
+      "danger": 1.8
+     },
+     "change_1h_m": 0.0,
+     "change_3h_m": 0.0,
+     "fresh": true,
+     "tide": true,
+     "kind": "reported",
+     "query_hash": "a909da87d93d45d7"
+    },
+    {
+     "name": "Sg. Golok di Kuala Jambu",
+     "station": "_DPMS0008",
+     "role": "here",
+     "level_m": 0.81,
+     "at": "2024-06-15 10:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 0.7,
+      "alert": 2.0,
+      "warning": 2.5,
+      "danger": 3.0
+     },
+     "change_1h_m": 0.0,
+     "change_3h_m": 0.0,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "a909da87d93d45d7"
+    },
+    {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "station": "_DKBR0007",
+     "role": "upstream",
+     "level_m": 1.06,
+     "at": "2024-06-15 10:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 1.0,
+      "alert": 3.0,
+      "warning": 4.0,
+      "danger": 5.0
+     },
+     "change_1h_m": -0.01,
+     "change_3h_m": -0.04,
+     "fresh": true,
+     "tide": true,
+     "kind": "reported",
+     "query_hash": "a909da87d93d45d7"
+    }
+   ],
+   "rain": {
+    "here": null,
+    "upstream": []
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not in the plan"
+   },
+   "missing": [
+    "Open-Meteo rain: not in the plan",
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not in the plan",
+    "data.gov.my flood-warning cross-check: quick path"
+   ]
+  },
+  {
+   "id": "kb-rising",
+   "replay": "synthetic_rising",
+   "at": "2024-11-25 18:00",
+   "town": "Kota Bharu",
+   "kind": "synthetic",
+   "source_label": {
+    "en": "Made-up example",
+    "ms": "Contoh rekaan"
+   },
+   "question": {
+    "en": "Is Kota Bharu at risk of flooding right now?",
+    "ms": "Adakah Kota Bharu berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "station": "_DKBR0007",
+     "role": "here",
+     "level_m": 3.65,
+     "at": "2024-11-25 18:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 1.0,
+      "alert": 3.0,
+      "warning": 4.0,
+      "danger": 5.0
+     },
+     "change_1h_m": 0.09,
+     "change_3h_m": 0.27,
+     "fresh": true,
+     "tide": true,
+     "kind": "reported",
+     "query_hash": "a69bc530e32c0f96"
+    },
+    {
+     "name": "Sg. Kelantan di Kg. Salor",
+     "station": "_DKBR0002",
+     "role": "upstream",
+     "level_m": 9.64,
+     "at": "2024-11-25 18:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 1.0,
+      "alert": 9.0,
+      "warning": 9.8,
+      "danger": 10.6
+     },
+     "change_1h_m": 0.16,
+     "change_3h_m": 0.47,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "a69bc530e32c0f96"
+    },
+    {
+     "name": "Sg. Kelantan di Kusial",
+     "station": "_DMCG0215",
+     "role": "upstream",
+     "level_m": 14.5,
+     "at": "2024-11-25 18:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 7.0,
+      "alert": 12.0,
+      "warning": 14.0,
+      "danger": 16.0
+     },
+     "change_1h_m": 0.15,
+     "change_3h_m": 0.44,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "a69bc530e32c0f96"
+    },
+    {
+     "name": "Sg. Kelantan di Kuala Krai",
+     "station": "5521044_DKKI0014",
+     "role": "upstream",
+     "level_m": 24.25,
+     "at": "2024-11-25 18:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 17.0,
+      "alert": 20.0,
+      "warning": 22.5,
+      "danger": 25.0
+     },
+     "change_1h_m": 0.25,
+     "change_3h_m": 0.74,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "a69bc530e32c0f96"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "past_12h_mm": 23.0,
+     "past_24h_mm": 38.2,
+     "heavy": false
+    },
+    "upstream": [
+     {
+      "name": "Sg. Galas di Dabong",
+      "past_24h_mm": 20.9,
+      "past_72h_mm": 60.7
+     },
+     {
+      "name": "Sg. Lebir di Kg. Tualang",
+      "past_24h_mm": 26.8,
+      "past_72h_mm": 63.3
+     },
+     {
+      "name": "Sg. Kelantan di Kuala Krai",
+      "past_24h_mm": 20.1,
+      "past_72h_mm": 74.3
+     },
+     {
+      "name": "Sg. Kelantan di Kusial",
+      "past_24h_mm": 31.0,
+      "past_72h_mm": 54.0
+     },
+     {
+      "name": "Sg. Galas di Limau Kasturi",
+      "past_24h_mm": 28.6,
+      "past_72h_mm": 74.6
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  },
+  {
+   "id": "pm-silent-upstream",
+   "replay": "synthetic_silent_upstream",
+   "at": "2024-06-15 10:00",
+   "town": "Pasir Mas",
+   "kind": "synthetic",
+   "source_label": {
+    "en": "Made-up example",
+    "ms": "Contoh rekaan"
+   },
+   "question": {
+    "en": "Is Pasir Mas at risk of flooding right now?",
+    "ms": "Adakah Pasir Mas berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Kelantan di Jambatan Tendong",
+     "station": "27133",
+     "role": "here",
+     "level_m": 2.97,
+     "at": "2024-06-15 10:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 3.0,
+      "alert": 4.0,
+      "warning": 5.0,
+      "danger": 6.0
+     },
+     "change_1h_m": 0.0,
+     "change_3h_m": 0.01,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "843514228b56318c"
+    },
+    {
+     "name": "Sg. Kelantan di Air Mulih",
+     "station": "6021065_DPMS0001",
+     "role": "upstream",
+     "level_m": 4.59,
+     "at": "2024-06-15 04:00",
+     "age_minutes": 360,
+     "thresholds": {
+      "normal": 4.0,
+      "alert": 9.0,
+      "warning": 9.82,
+      "danger": 10.65
+     },
+     "change_1h_m": null,
+     "change_3h_m": null,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "843514228b56318c"
+    },
+    {
+     "name": "Sg. Kelantan di Kusial",
+     "station": "_DMCG0215",
+     "role": "upstream",
+     "level_m": 7.36,
+     "at": "2024-06-15 10:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 7.0,
+      "alert": 12.0,
+      "warning": 14.0,
+      "danger": 16.0
+     },
+     "change_1h_m": 0.0,
+     "change_3h_m": 0.01,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "843514228b56318c"
+    },
+    {
+     "name": "Sg. Kelantan di Kuala Krai",
+     "station": "5521044_DKKI0014",
+     "role": "upstream",
+     "level_m": 16.66,
+     "at": "2024-06-15 04:00",
+     "age_minutes": 360,
+     "thresholds": {
+      "normal": 17.0,
+      "alert": 20.0,
+      "warning": 22.5,
+      "danger": 25.0
+     },
+     "change_1h_m": null,
+     "change_3h_m": null,
+     "fresh": false,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "843514228b56318c"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "past_12h_mm": 6.8,
+     "past_24h_mm": 7.0,
+     "heavy": false
+    },
+    "upstream": [
+     {
+      "name": "Sg. Galas di Dabong",
+      "past_24h_mm": 16.4,
+      "past_72h_mm": 20.8
+     },
+     {
+      "name": "Sg. Lebir di Kg. Tualang",
+      "past_24h_mm": 18.1,
+      "past_72h_mm": 26.2
+     },
+     {
+      "name": "Sg. Kelantan di Kuala Krai",
+      "past_24h_mm": 11.7,
+      "past_72h_mm": 14.6
+     },
+     {
+      "name": "Sg. Kelantan di Kusial",
+      "past_24h_mm": 15.1,
+      "past_72h_mm": 18.7
+     },
+     {
+      "name": "Sg. Galas di Limau Kasturi",
+      "past_24h_mm": 15.4,
+      "past_72h_mm": 18.8
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "Sg. Kelantan di Air Mulih (F1) (upstream): reading too old (360 min)",
+    "Sg. Kelantan di Kuala Krai (F1) (upstream): reading too old (360 min)",
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  },
+  {
+   "id": "kb-upstream-rain",
+   "replay": "synthetic_upstream_rain",
+   "at": "2024-11-27 12:00",
+   "town": "Kota Bharu",
+   "kind": "synthetic",
+   "source_label": {
+    "en": "Made-up example",
+    "ms": "Contoh rekaan"
+   },
+   "question": {
+    "en": "Is Kota Bharu at risk of flooding right now?",
+    "ms": "Adakah Kota Bharu berisiko banjir sekarang?"
+   },
+   "gauges": [
+    {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "station": "_DKBR0007",
+     "role": "here",
+     "level_m": 0.94,
+     "at": "2024-11-27 12:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 1.0,
+      "alert": 3.0,
+      "warning": 4.0,
+      "danger": 5.0
+     },
+     "change_1h_m": 0.03,
+     "change_3h_m": 0.08,
+     "fresh": true,
+     "tide": true,
+     "kind": "reported",
+     "query_hash": "cd5e85b3d4b93aac"
+    },
+    {
+     "name": "Sg. Kelantan di Kg. Salor",
+     "station": "_DKBR0002",
+     "role": "upstream",
+     "level_m": 0.59,
+     "at": "2024-11-27 12:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 1.0,
+      "alert": 9.0,
+      "warning": 9.8,
+      "danger": 10.6
+     },
+     "change_1h_m": 0.01,
+     "change_3h_m": 0.02,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "cd5e85b3d4b93aac"
+    },
+    {
+     "name": "Sg. Kelantan di Kusial",
+     "station": "_DMCG0215",
+     "role": "upstream",
+     "level_m": 8.08,
+     "at": "2024-11-27 12:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 7.0,
+      "alert": 12.0,
+      "warning": 14.0,
+      "danger": 16.0
+     },
+     "change_1h_m": -0.01,
+     "change_3h_m": -0.02,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "cd5e85b3d4b93aac"
+    },
+    {
+     "name": "Sg. Kelantan di Kuala Krai",
+     "station": "5521044_DKKI0014",
+     "role": "upstream",
+     "level_m": 16.85,
+     "at": "2024-11-27 12:00",
+     "age_minutes": 0,
+     "thresholds": {
+      "normal": 17.0,
+      "alert": 20.0,
+      "warning": 22.5,
+      "danger": 25.0
+     },
+     "change_1h_m": 0.0,
+     "change_3h_m": 0.01,
+     "fresh": true,
+     "tide": false,
+     "kind": "reported",
+     "query_hash": "cd5e85b3d4b93aac"
+    }
+   ],
+   "rain": {
+    "here": {
+     "name": "Sg. Kelantan di Tambatan D'Raja",
+     "past_12h_mm": 34.7,
+     "past_24h_mm": 63.5,
+     "heavy": true
+    },
+    "upstream": [
+     {
+      "name": "Sg. Galas di Dabong",
+      "past_24h_mm": 37.7,
+      "past_72h_mm": 93.3
+     },
+     {
+      "name": "Sg. Lebir di Kg. Tualang",
+      "past_24h_mm": 37.0,
+      "past_72h_mm": 90.1
+     },
+     {
+      "name": "Sg. Kelantan di Kuala Krai",
+      "past_24h_mm": 60.6,
+      "past_72h_mm": 124.8
+     },
+     {
+      "name": "Sg. Kelantan di Kusial",
+      "past_24h_mm": 49.8,
+      "past_72h_mm": 103.8
+     },
+     {
+      "name": "Sg. Galas di Limau Kasturi",
+      "past_24h_mm": 31.5,
+      "past_72h_mm": 83.6
+     }
+    ]
+   },
+   "met_warnings": {
+    "status": "skipped",
+    "note": "not available in replay: data.gov.my keeps no 2024 archive"
+   },
+   "missing": [
+    "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
+    "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
+    "data.gov.my flood-warning: stale - excluded"
+   ]
+  }
+ ]
+}

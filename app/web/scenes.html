@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA - test scenes</title>
+<link rel="icon" href="data:,">
+<style>
+  /* B-91 Scenes test page: read the situation, see the data, know what to expect and why, run the scene, check
+     VEDA against the expectation. Same look as the app; text >= 16 px, tap targets >= 44 px, works at 375 px; desktop:
+     briefing left, test + result right. Demo data only (replay or made up) - never a live JPS reading. */
+  :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
+          --on-accent: #ffffff; --ok: #1e6b3a; --bad: #a3271f; --warn-text: #8a4a00; --warn-bg: #fff3df;
+          --b-normal: #cfe8d6; --b-alert: #f6d548; --b-warning: #f2933a; --b-danger: #c0392b;
+          --c-system: #5a5c62; --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
+            --on-accent: #151514; --ok: #7fd09a; --bad: #f08a80; --warn-text: #f0b45a; --warn-bg: #3a2a10;
+            --b-normal: #2f5a3b; }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+           background: var(--card); position: sticky; top: 0; z-index: 2; }
+  header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; color: var(--fg);
+                  text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+  h1 { font-size: 1.5rem; line-height: 1.25; margin: 8px 0; }
+  h2 { font-size: 1.2rem; margin: 22px 0 8px; }
+  h3 { font-size: 1.05rem; margin: 0 0 4px; }
+  p { margin: 8px 0; }
+  a { color: var(--accent); }
+  button, .btn { font: inherit; min-height: 48px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
+                 background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; display: inline-flex;
+                 align-items: center; justify-content: center; gap: 8px; }
+  button:focus-visible, .btn:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .wide { width: 100%; }
+  [aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; min-width: 48px; padding: 8px 12px; font-weight: 700; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+  .note, .sub { color: var(--muted); }
+  .sub { font-size: .9rem; }
+  [hidden] { display: none !important; }
+  .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700; }
+  .demo { display: inline-block; background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 2px 10px; font-weight: 700; }
+  .scene-list { display: grid; gap: 12px; }
+  .scene-card { display: block; text-decoration: none; color: inherit; }
+  .scene-card b { font-size: [JPS reading]rem; }
+  .question { font-size: [JPS reading]rem; font-weight: 700; border-left: 6px solid var(--accent); padding: 6px 12px; background: var(--bg); border-radius: 8px; }
+  .row { border-top: 1px solid var(--line); padding: 10px 0; }
+  .row:first-of-type { border-top: 0; }
+  .row .top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+  .row .val { font-weight: 800; }
+  .flag { color: var(--warn-text); font-weight: 700; }
+  .bar { position: relative; height: 18px; border-radius: 6px; display: flex; overflow: hidden; margin: 6px 0 2px; border: 1px solid var(--line); }
+  .bar span { height: 100%; }
+  .bar .marker { position: absolute; top: -4px; width: 4px; height: 26px; background: var(--fg); border-radius: 2px; transform: translateX(-2px); }
+  .levels { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .levels button { flex: 1 1 140px; }
+  .expect li, .checks li { margin: 0 0 12px; }
+  .expect, .checks { padding-left: 0; list-style: none; margin: 0; }
+  .why { margin: 2px 0 0; }
+  .src { color: var(--muted); font-size: .9rem; }
+  .ok { color: var(--ok); font-weight: 800; }
+  .bad { color: var(--bad); font-weight: 800; }
+  .mark { display: inline-block; min-width: 1.6em; font-size: 1.2rem; }
+  ol.progress { list-style: none; padding: 0; margin: 8px 0; max-height: 340px; overflow: auto; }
+  ol.progress li { padding: 3px 0; word-break: break-word; }
+  ol.progress li.stage { font-weight: 800; margin-top: 6px; }
+  .tag { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: 999px; background: var(--ag, var(--c-system));
+         color: #fff; font-weight: 700; font-size: .9rem; white-space: nowrap; margin-right: 6px; }
+  .verdict { font-size: 1.3rem; font-weight: 800; }
+  details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 800; font-size: [JPS reading]rem; }
+  @media (min-width: 1024px) {
+    main { max-width: 1200px; padding: 24px 32px 48px; }
+    .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+    .scene-list { grid-template-columns: 1fr 1fr; }
+    #test { position: sticky; top: 84px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/" id="home">VEDA</a>
+  <div class="seg" role="group" aria-label="Language / Bahasa">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
+  </div>
+</header>
+<main id="scenes">
+  <!-- the list -->
+  <section id="list" hidden>
+    <h1 data-t="list_title"></h1>
+    <p data-t="list_intro"></p>
+    <div class="scene-list" id="scene-list"></div>
+  </section>
+
+  <!-- one scene -->
+  <section id="one" hidden>
+    <p><a href="/scenes" id="back" data-t="back"></a></p>
+    <h1 id="s-title"></h1>
+    <p><span class="chip" id="s-source"></span></p>
+    <div class="two">
+      <details id="brief" open>
+        <summary data-t="briefing"></summary>
+        <!-- a) the story -->
+        <h2 data-t="a_title"></h2>
+        <p id="s-story"></p>
+        <p class="sub" data-t="they_type"></p>
+        <p class="question" id="s-question"></p>
+        <!-- b) the data -->
+        <h2 data-t="b_title"></h2>
+        <p><span class="demo" id="s-demo"></span></p>
+        <p class="sub" data-t="gauge_note"></p>
+        <div class="card" id="s-data"></div>
+        <!-- c) what to expect -->
+        <h2 data-t="c_title"></h2>
+        <p data-t="guess_q"></p>
+        <div class="levels" id="guess"></div>
+        <button type="button" class="wide" id="show-expect" data-t="show_expect"></button>
+        <div id="expect-box" hidden>
+          <ol class="expect" id="s-expect"></ol>
+          <p class="sub" id="s-bands"></p>
+        </div>
+      </details>
+      <div id="test">
+        <!-- d) start test -->
+        <h2 data-t="d_title"></h2>
+        <button type="button" class="primary wide" id="start" data-t="start"></button>
+        <p class="note" id="status" role="status" aria-live="polite"></p>
+        <ol class="progress" id="progress"></ol>
+        <!-- e) the check -->
+        <div id="result" hidden>
+          <h2 data-t="e_title"></h2>
+          <p><span data-t="veda_said"></span> <span class="verdict" id="r-verdict"></span></p>
+          <p><a id="r-full" data-t="full_answer"></a></p>
+          <ol class="checks" id="r-checks"></ol>
+          <p id="r-guess"></p>
+          <h3 data-t="trail_title"></h3>
+          <ol class="checks" id="r-trail"></ol>
+          <p class="note"><span data-t="nemotron"></span> <a href="/judges" id="r-judges" data-t="judges_link"></a></p>
+          <p><a class="btn wide" id="r-feedback" data-t="feedback"></a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <p class="note" data-t="footer"></p>
+</main>
+
+<script>
+"use strict";
+const UI = {
+  en: { list_title: "Test scenes", back: "‹ All scenes",
+    list_intro: "Each scene tells you the situation and shows the data. Decide what VEDA should say and why, press Start test, then check VEDA against it.",
+    open: "Open ›", briefing: "Before you start", a_title: "The situation", they_type: "They type:",
+    b_title: "What the data showed at that moment", demo_replay: "Demo data (replay of reported readings)",
+    demo_synthetic: "Demo data (made up)",
+    gauge_note: "A river level post (gauge) measures how high the river is. JPS sets lines on each one: Alert, Warning and Danger.",
+    here: "here", upstream: "upstream", at: "at", fresh: "fresh", old: "{h} old - too old to count as 'now'",
+    change: "{c1} in 1 h · {c3} in 3 h", no_change: "no change", up: "up {cm} cm", down: "down {cm} cm",
+    tide: "the tide affects this one", band: "Band: {b}", bands: { normal: "Normal", alert: "Alert", warning: "Warning", danger: "Danger" },
+    below_normal: "below the Normal line", rain_here: "Rain here", rain_up: "Rain upstream",
+    rain_here_val: "{m12} mm in 12 h · {m24} mm in 24 h", rain_up_val: "{m24} mm in 24 h · {m72} mm in 3 days",
+    heavy: "heavy", no_rain: "Rain: not read in this check", met: "MetMalaysia warnings",
+    met_skipped: "not available for this date (data.gov.my keeps no 2024 archive)", met_none: "none active",
+    met_not_read: "not read in this quick check",
+    missing: "Missing or old", c_title: "What you should expect", guess_q: "Your guess? (stays on this page only)",
+    show_expect: "Show what to expect", d_title: "Start test", start: "Start test", again: "Run again",
+    running: "VEDA is checking…", busy: "VEDA is answering another question - try again in a minute.",
+    failed: "The test could not run: {why}", e_title: "Expected vs VEDA said", veda_said: "VEDA said:",
+    full_answer: "See the full answer in VEDA ›", your_guess: "Your guess: {g} · VEDA: {v}", no_guess: "You did not guess.",
+    trail_title: "What each agent did", who: { gather: "Data & Reconciler", forecast: "Forecast", critique: "Critic", safety: "Safety gate" },
+    nemotron: "Nemotron's own judgement: live mode only.",
+    judges_link: "See the recorded live run on the For judges page ›", feedback: "Did VEDA match what you expected? Tell us", source: "Source:",
+    footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991." },
+  ms: { list_title: "Senario ujian", back: "‹ Semua senario",
+    list_intro: "Setiap senario menerangkan keadaan dan menunjukkan data. Tentukan apa yang patut VEDA katakan dan mengapa, tekan Mula ujian, kemudian semak VEDA dengannya.",
+    open: "Buka ›", briefing: "Sebelum anda mula", a_title: "Keadaannya", they_type: "Mereka menaip:",
+    b_title: "Apa yang ditunjukkan data pada masa itu", demo_replay: "Data demo (ulang tayang bacaan yang dilaporkan)",
+    demo_synthetic: "Data demo (rekaan)",
+    gauge_note: "Tiang paras sungai (tolok) mengukur ketinggian air sungai. JPS menetapkan garis pada setiap tiang: Waspada, Amaran dan Bahaya.",
+    here: "di sini", upstream: "di hulu", at: "pada", fresh: "baharu", old: "berusia {h} - terlalu lama untuk dikira 'sekarang'",
+    change: "{c1} dalam 1 jam · {c3} dalam 3 jam", no_change: "tiada perubahan", up: "naik {cm} cm", down: "turun {cm} cm",
+    tide: "dipengaruhi air pasang", band: "Tahap: {b}", bands: { normal: "Normal", alert: "Waspada", warning: "Amaran", danger: "Bahaya" },
+    below_normal: "di bawah garis Normal", rain_here: "Hujan di sini", rain_up: "Hujan di hulu",
+    rain_here_val: "{m12} mm dalam 12 jam · {m24} mm dalam 24 jam", rain_up_val: "{m24} mm dalam 24 jam · {m72} mm dalam 3 hari",
+    heavy: "lebat", no_rain: "Hujan: tidak dibaca dalam semakan ini", met: "Amaran MetMalaysia",
+    met_skipped: "tiada untuk tarikh ini (data.gov.my tidak menyimpan arkib 2024)", met_none: "tiada yang aktif",
+    met_not_read: "tidak dibaca dalam semakan pantas ini",
+    missing: "Tiada atau lama", c_title: "Apa yang patut anda jangka", guess_q: "Tekaan anda? (kekal di halaman ini sahaja)",
+    show_expect: "Tunjuk apa yang dijangka", d_title: "Mula ujian", start: "Mula ujian", again: "Jalankan semula",
+    running: "VEDA sedang menyemak…", busy: "VEDA sedang menjawab soalan lain - sila cuba lagi dalam seminit.",
+    failed: "Ujian tidak dapat dijalankan: {why}", e_title: "Dijangka vs jawapan VEDA", veda_said: "Jawapan VEDA:",
+    full_answer: "Lihat jawapan penuh dalam VEDA ›", your_guess: "Tekaan anda: {g} · VEDA: {v}", no_guess: "Anda tidak meneka.",
+    trail_title: "Apa yang dilakukan setiap ejen", who: { gather: "Ejen Data", forecast: "Ejen Ramalan", critique: "Penyemak", safety: "Semakan keselamatan" },
+    nemotron: "Penilaian Nemotron sendiri: mod langsung sahaja.",
+    judges_link: "Lihat rakaman langsung di halaman Untuk juri ›", feedback: "Adakah VEDA sepadan dengan jangkaan anda? Beritahu kami", source: "Sumber:",
+    footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991." },
+};
+const LEVELS = ["NORMAL", "WATCH", "PREPARE", "ACT", "INSUFFICIENT_DATA"];
+const TAG = { gather: "--c-data", forecast: "--c-forecast", critique: "--c-critic", safety: "--c-system" };
+const STAGE = { "Understanding the question": "plan", "Checking river gauges, rain and warnings": "gather",
+  "Working out the risk": "forecast", "Writing the answer": "draft", "Checking the answer": "critique", "Fixing the answer": "revise" };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
+let lang = new URLSearchParams(location.search).get("lang") || store.get("veda.lang") || "en";
+if (!UI[lang]) lang = "en";
+const t = (k) => UI[lang][k];
+let all = null, scene = null, guess = null, checked = null, running = false;
+const sceneId = (location.pathname.match(/^\/scenes\/([a-z0-9-]+)\/?$/) || [])[1] || null;
+
+function when(text) {                 // "2024-11-26 18:00" -> "26 Nov 2024, 6:00 pm" / "26 Nov 2024, 6:00 petang"
+  const [d, hm] = text.split(" "), [y, m, dd] = d.split("-").map(Number), [h, mi] = hm.split(":").map(Number);
+  const mon = (lang === "ms" ? "Jan Feb Mac Apr Mei Jun Jul Ogo Sep Okt Nov Dis" : "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec").split(" ");
+  const h12 = ((h + 11) % 12) + 1, part = lang === "ms" ? (h < 12 ? "pagi" : h < 19 ? "petang" : "malam") : (h < 12 ? "am" : "pm");
+  return `${dd} ${mon[m - 1]} ${y}, ${h12}:${String(mi).padStart(2, "0")} ${part}`;
+}
+const level = (code) => (all && all.levels[code] && all.levels[code][lang]) || code;
+const hours = (min) => min >= 120 ? `${(min / 60).toFixed(min % 60 ? 1 : 0)} h` : `${min} min`;
+const cm = (m) => m == null ? null : Math.round(m * 100);
+function change(c) { const v = cm(c); return v == null ? "-" : v === 0 ? t("no_change") : t(v > 0 ? "up" : "down").replace("{cm}", Math.abs(v)); }
+
+// the official band of a reading, from the gauge's own JPS lines (input data, not VEDA's verdict)
+function band(g) {
+  const th = g.thresholds, v = g.level_m;
+  if (th.danger != null && v >= th.danger) return "danger";
+  if (th.warning != null && v >= th.warning) return "warning";
+  if (th.alert != null && v >= th.alert) return "alert";
+  return "normal";
+}
+function bar(g) {
+  const th = g.thresholds;
+  if (th.alert == null || th.danger == null) return "";
+  const lo = Math.min(g.level_m, th.normal != null ? th.normal : th.alert) - (th.danger - th.alert) * 0.5;
+  const hi = Math.max(g.level_m, th.danger) + (th.danger - th.alert) * 0.5;
+  const pct = (v) => ((v - lo) / (hi - lo)) * 100;
+  const w = th.warning != null ? th.warning : (th.alert + th.danger) / 2;
+  const seg = (from, to, colour) => `<span style="width:${pct(to) - pct(from)}%;background:var(${colour})"></span>`;
+  return `<div class="bar" aria-hidden="true">${seg(lo, th.alert, "--b-normal")}${seg(th.alert, w, "--b-alert")}` +
+    `${seg(w, th.danger, "--b-warning")}${seg(th.danger, hi, "--b-danger")}<i class="marker" style="left:${pct(g.level_m)}%"></i></div>` +
+    `<div class="sub">${esc(t("bands").alert)} ${th.alert} · ${esc(t("bands").warning)} ${th.warning != null ? th.warning : "-"} · ` +
+    `${esc(t("bands").danger)} ${th.danger} m</div>`;
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll(".seg [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("home").href = "/?lang=" + lang;
+  $("back").href = "/scenes?lang=" + lang;
+  if (all) render();
+}
+
+function render() {
+  if (!sceneId) return renderList();
+  scene = all.scenes.find((s) => s.id === sceneId);
+  if (!scene) { $("list").hidden = false; return renderList(); }
+  const d = scene.data;
+  $("one").hidden = false;
+  $("s-title").textContent = `${scene.town} · ${when(scene.at)}`;
+  $("s-source").textContent = d.source_label[lang];
+  $("s-story").textContent = scene.story[lang];
+  $("s-question").textContent = `“${d.question[lang]}”`;
+  $("s-demo").textContent = t(d.kind === "replay" ? "demo_replay" : "demo_synthetic");
+  $("s-data").innerHTML = dataRows(d);
+  $("guess").replaceChildren(...LEVELS.map((code) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = level(code); b.setAttribute("aria-pressed", String(guess === code));
+    b.addEventListener("click", () => { guess = code; render(); });
+    return b;
+  }));
+  $("s-expect").innerHTML = scene.expect.map((e) =>
+    `<li><b>${esc(e.text[lang])}</b><p class="why">${esc(e.reason[lang])}</p><p class="src">${esc(t("source"))} ${esc(e.source[lang])}</p></li>`).join("");
+  $("s-bands").textContent = all.bands[lang];
+  $("start").textContent = t(checked ? "again" : "start");
+  const p = new URLSearchParams({ replay: scene.replay, at: scene.at, place: scene.town, lang });
+  $("r-full").href = "/?" + p;
+  $("r-feedback").href = "/feedback?lang=" + lang;
+  $("r-judges").href = "/judges?lang=" + lang;
+  if (checked) renderCheck();
+}
+
+function dataRows(d) {
+  const rows = [];
+  for (const g of d.gauges) {
+    const flags = [g.fresh ? "" : `<span class="flag">⚠ ${esc(t("old").replace("{h}", hours(g.age_minutes)))}</span>`,
+                   g.tide ? esc(t("tide")) : ""].filter(Boolean).join(" · ");
+    rows.push(`<div class="row"><div class="top"><h3>${esc(g.name)} <span class="sub">(${esc(t(g.role === "upstream" ? "upstream" : "here"))})</span></h3>` +
+      `<span><span class="val">${g.level_m} m</span> <span class="sub">${esc(t("at"))} ${esc(when(g.at))}</span></span></div>` +
+      bar(g) +
+      `<p class="sub">${esc(t("band").replace("{b}", t("bands")[band(g)]))} · ${esc(t("change").replace("{c1}", change(g.change_1h_m)).replace("{c3}", change(g.change_3h_m)))}` +
+      `${g.fresh ? " · " + esc(t("fresh")) : ""}</p>${flags ? `<p>${flags}</p>` : ""}</div>`);
+  }
+  const r = d.rain || {};
+  if (r.here) rows.push(`<div class="row"><div class="top"><h3>${esc(t("rain_here"))} <span class="sub">(${esc(r.here.name)})</span></h3>` +
+    `<span class="val">${esc(t("rain_here_val").replace("{m12}", r.here.past_12h_mm ?? "-").replace("{m24}", r.here.past_24h_mm ?? "-"))}` +
+    `${r.here.heavy ? " · " + esc(t("heavy")) : ""}</span></div></div>`);
+  for (const u of r.upstream || []) rows.push(`<div class="row"><div class="top"><h3>${esc(t("rain_up"))} <span class="sub">(${esc(u.name)})</span></h3>` +
+    `<span class="val">${esc(t("rain_up_val").replace("{m24}", u.past_24h_mm ?? "-").replace("{m72}", u.past_72h_mm ?? "-"))}</span></div></div>`);
+  if (!r.here && !(r.upstream || []).length) rows.push(`<div class="row"><p>${esc(t("no_rain"))}</p></div>`);
+  const met = d.met_warnings || {};
+  const metText = met.status === "skipped" ? (/archive/.test(met.note || "") ? t("met_skipped") : t("met_not_read")) : t("met_none");
+  rows.push(`<div class="row"><div class="top"><h3>${esc(t("met"))}</h3><span>${esc(metText)}</span></div></div>`);
+  const old = d.gauges.filter((g) => !g.fresh);
+  if (old.length) rows.push(`<div class="row"><h3 class="flag">⚠ ${esc(t("missing"))}</h3><p>` +
+    old.map((g) => `${esc(g.name)}: ${esc(t("old").replace("{h}", hours(g.age_minutes)))}`).join("<br>") + `</p></div>`);
+  return rows.join("");
+}
+
+// the parts of the run result the check needs - the same shape as app/scenes.py compact()
+function compact(r) {
+  const v = r.view || {}, how = r.how || {};
+  return { verdict: r.verdict,
+    sources: ((v.sources || {}).en || []).map((s) => ({ name: s.name, used: !!s.used })),
+    steps: (how.rows || []).filter((x) => ["gather", "forecast", "critique", "safety"].includes(x.key)).map((x) => ({
+      key: x.key, who: x.who, lines: (x.lines || []).slice(0, 12).map((l) => ({ action: l.action, text: (l.text || "").slice(0, 160) })) })) };
+}
+
+async function start() {
+  if (running) return;
+  running = true; checked = null;
+  $("result").hidden = true; $("progress").replaceChildren();
+  $("start").disabled = true;
+  $("status").textContent = t("running");
+  if (window.innerWidth < 1024) $("brief").open = false;           // phone: the briefing folds to a card at the top
+  const params = new URLSearchParams({ question: scene.data.question[lang], replay: scene.replay, at: scene.at, lang });
+  let result = null;
+  try {
+    const res = await fetch("/run/stream?" + params);
+    if (res.status === 429) throw new Error(t("busy"));
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let cut;
+      while ((cut = buf.indexOf("\n\n")) >= 0) {
+        const block = buf.slice(0, cut); buf = buf.slice(cut + 2);
+        const kind = (block.match(/^event: (.*)$/m) || [])[1];
+        const data = JSON.parse((block.match(/^data: (.*)$/m) || [, "null"])[1]);
+        if (kind === "step" && data && data.line) {
+          const li = document.createElement("li"), head = data.line.replace(/^> /, "").trim();
+          if (STAGE[head]) { li.className = "stage"; li.textContent = head; } else { li.textContent = data.line.trim(); li.lang = "en"; }
+          $("progress").append(li); $("progress").scrollTop = $("progress").scrollHeight;
+        }
+        if (kind === "error") throw new Error((data && data.message) || "error");
+        if (kind === "result") result = data;
+      }
+    }
+    if (!result) throw new Error("no result");
+    const c = await fetch(`/scenes/${scene.id}/check`, { method: "POST", headers: { "Content-Type": "application/json" },
+                                                          body: JSON.stringify(compact(result)) });
+    if (!c.ok) throw new Error("check HTTP " + c.status);
+    checked = await c.json();
+    $("status").textContent = "";
+    renderCheck();
+  } catch (e) {
+    $("status").textContent = t("failed").replace("{why}", e.message);
+  } finally {
+    running = false; $("start").disabled = false; $("start").textContent = t(checked ? "again" : "start");
+  }
+}
+
+function renderCheck() {
+  $("result").hidden = false;
+  $("r-verdict").textContent = checked.verdict_name[lang];
+  $("r-checks").innerHTML = scene.expect.map((e) => {
+    const row = checked.rows.find((x) => x.id === e.id) || { ok: false, said: { en: "-", ms: "-" } };
+    return `<li><span class="mark ${row.ok ? "ok" : "bad"}" aria-label="${row.ok ? "pass" : "fail"}">${row.ok ? "✓" : "✗"}</span>` +
+      `<b>${esc(e.text[lang])}</b><p class="why ${row.ok ? "" : "bad"}">${esc(row.said[lang])}</p></li>`;
+  }).join("");
+  $("r-guess").textContent = guess ? t("your_guess").replace("{g}", level(guess)).replace("{v}", checked.verdict_name[lang])
+                                   : t("no_guess");
+  $("r-trail").innerHTML = checked.trail.map((s) =>
+    `<li><span class="tag" style="--ag:var(${TAG[s.key] || "--c-system"})">${esc(t("who")[s.key] || s.who)}</span>` +
+    `<span lang="en">${s.lines.map(esc).join("<br>")}</span></li>`).join("");
+}
+
+function renderList() {
+  $("list").hidden = false;
+  $("scene-list").innerHTML = all.scenes.map((s) =>
+    `<a class="card scene-card" href="/scenes/${esc(s.id)}?lang=${lang}"><b>${esc(s.town)} · ${esc(when(s.at))}</b>` +
+    `<p><span class="chip">${esc(s.data ? s.data.source_label[lang] : "")}</span></p>` +
+    `<p>${esc(s.story[lang])}</p><span class="btn primary">${esc(t("open"))}</span></a>`).join("");
+}
+
+$("show-expect").addEventListener("click", () => { $("expect-box").hidden = false; $("show-expect").hidden = true; });
+$("start").addEventListener("click", start);
+document.querySelectorAll(".seg [data-lang]").forEach((b) => b.addEventListener("click", () => {
+  lang = b.dataset.lang; store.set("veda.lang", lang);
+  const u = new URL(location.href); u.searchParams.set("lang", lang); history.replaceState(null, "", u);
+  applyLang();
+}));
+fetch("/scenes/data.json").then((r) => r.json()).then((d) => { all = d; applyLang(); });
+applyLang();
+</script>
+</body>
+</html>

@@ -51,10 +51,12 @@ def test_banner_links_to_the_judges_page_and_is_on_it_too():
     banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
     assert '<a id="veda-demo-judges" href="/judges"' in banner and ">For judges ›</a>" in banner
     assert banner.index("veda-demo-judges") < banner.index("veda-demo-feedback")
-    assert "location ~ ^/(live|judges)?$ {" in NGINX
+    assert "location ~ ^/(live|judges|scenes(/[a-z0-9-]+)?)?$ {" in NGINX       # + the test scenes (B-91)
+    assert '<a id="veda-demo-scenes" href="/scenes"' in NGINX and ">Scenes ›</a>" in NGINX
     js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
     assert 'judges: "For judges ›"' in js and 'judges: "Untuk juri ›"' in js
     assert 'judges.href = "/judges?lang=" + l;' in js
+    assert 'scenes: "Scenes ›"' in js and 'scenes: "Senario ›"' in js and 'scenes.href = "/scenes?lang=" + l;' in js
 
 
 def test_docker_logs_rotate_and_the_proxy_has_a_process_cap():

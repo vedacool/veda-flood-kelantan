@@ -398,6 +398,13 @@ def judges_page():
     return (config.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
 
 
+@app.api_route("/scenes{tail:path}", methods=["GET", "POST"])
+async def scenes_page(tail: str, request: Request):
+    """B-91 Scenes test page: /scenes, /scenes/<id>, /scenes/data.json, POST /scenes/<id>/check (app/scenes.py)."""
+    from app import scenes
+    return await scenes.handle(tail, request)
+
+
 @app.get("/live/stream")
 async def live_stream():
     """Every trace record of whatever run is going, as it happens (a comment line every 15 s keeps it open).

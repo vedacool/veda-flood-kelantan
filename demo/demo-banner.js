@@ -5,13 +5,13 @@
 (function () {
   "use strict";
   var WORDS = {
-    en: { note: "Demo · past flood replay · not an official warning", feedback: "Feedback", judges: "For judges ›",
+    en: { note: "Demo · past flood replay · not an official warning", feedback: "Feedback", judges: "For judges ›", scenes: "Scenes ›",
           ask: "Was this clear? 1-minute feedback ›" },
-    ms: { note: "Demo · banjir lalu · bukan amaran rasmi", feedback: "Maklum balas", judges: "Untuk juri ›",
+    ms: { note: "Demo · banjir lalu · bukan amaran rasmi", feedback: "Maklum balas", judges: "Untuk juri ›", scenes: "Senario ›",
           ask: "Jelas tak? Maklum balas 1 minit ›" }
   };
   var answer = document.getElementById("s-answer");          // only the main page has answers
-  var ownLang = answer || document.getElementById("judges");  // pages that set <html lang> themselves
+  var ownLang = answer || document.getElementById("judges") || document.getElementById("scenes");  // set <html lang>
 
   function lang() {
     if (ownLang) return (document.documentElement.lang || "").indexOf("ms") === 0 ? "ms" : "en";
@@ -38,6 +38,8 @@
       if (link) { link.textContent = w.feedback; link.href = q; }
       var judges = document.getElementById("veda-demo-judges");
       if (judges) { judges.textContent = w.judges; judges.href = "/judges?lang=" + l; }
+      var scenes = document.getElementById("veda-demo-scenes");
+      if (scenes) { scenes.textContent = w.scenes; scenes.href = "/scenes?lang=" + l; }
     }
     if (ask) { ask.lang = l; ask.textContent = w.ask; ask.href = q; }
   }
