@@ -27,6 +27,8 @@ ARRIVAL_WITHIN_H = 24.0          # L3 (tentative): a known window that starts wi
 UNTIL_MM_H = 2.5                 # L5 (tentative): "rain" hour
 HEAVY_MM_H = 7.6                 # L5 (tentative): "heavy rain" hour
 HORIZON_H = 72
+SPELL_START_H = 12              # A2: the current wet spell must start within the next 12 h ...
+SPELL_GAP_H = 3                 # ... and goes on while the next wet hour is at most 3 h after the last (<= 2 dry hours)
 
 
 def _sum(hours, lo, hi):
@@ -39,6 +41,26 @@ def _r(v):
     return None if v is None else round(v, 1)
 
 
+def wet_spell(forecast, now):
+    """A2 (24 Oct evening live test: 'Heavy rain likely until at least Tue 27 Oct, 18:00', three days away, from a
+    forecast whose next 24 h held 24.7 mm). The CURRENT wet spell: the first hour >= 2.5 mm/h starting within the next
+    12 h, then on while each next wet hour comes at most 3 h after the last one (<= 2 dry hours). -> (until = its last
+    wet hour, heavy = an hour >= 7.6 mm/h inside it, ends = the forecast goes on past it), or (None, False, False)."""
+    h = timedelta(hours=1)
+    hours = sorted((t, mm) for t, mm in forecast if t <= now + HORIZON_H * h)
+    start = next((i for i, (t, mm) in enumerate(hours) if mm >= UNTIL_MM_H and t <= now + SPELL_START_H * h), None)
+    if start is None:
+        return None, False, False
+    last, heavy = hours[start][0], False
+    for t, mm in hours[start:]:
+        if t - last > SPELL_GAP_H * h:
+            break
+        if mm >= UNTIL_MM_H:
+            last = t
+        heavy = heavy or (mm >= HEAVY_MM_H and t <= last)
+    return last, heavy, bool(hours) and hours[-1][0] - last > SPELL_GAP_H * h - h
+
+
 def features(hours, now):
     """One rain point's numbers at `now` from its hourly [(aware datetime, mm)] - past only in a replay (no
     hindsight: the caller passes no hour after `now`), past + forecast live."""
@@ -46,12 +68,7 @@ def features(hours, now):
     forecast = [(t, mm) for t, mm in hours if t > now and mm is not None]
     windows = [_sum(hours, now - 12 * h + k * h, now + k * h) for k in range(13)] if forecast else [
         _sum(hours, now - 12 * h, now)]
-    until = heavy = None
-    in_horizon = [t for t, _ in forecast if t <= now + HORIZON_H * h]
-    rainy = [t for t, mm in forecast if t <= now + HORIZON_H * h and mm >= UNTIL_MM_H]
-    if rainy:
-        until = max(rainy)
-        heavy = any(mm >= HEAVY_MM_H for t, mm in forecast if t <= until)
+    until, heavy, ends = wet_spell(forecast, now)
     raw = {"past_12h_mm": _sum(hours, now - 12 * h, now), "past_24h_mm": _sum(hours, now - 24 * h, now),
            "past_72h_mm": _sum(hours, now - 72 * h, now),
            "next_12h_mm": _sum(hours, now, now + 12 * h) if forecast else None,
@@ -60,7 +77,7 @@ def features(hours, now):
     return {**{k: _r(v) for k, v in raw.items()}, "raw": raw, "has_forecast": bool(forecast),
             "until": until.isoformat() if until else None, "until_heavy": bool(heavy),
             # audit 24 Oct P3: "then easing" only when the rain stops before the forecast data ends
-            "until_ends": bool(until and until < max(in_horizon))}
+            "until_ends": ends}
 
 
 def _key(k):

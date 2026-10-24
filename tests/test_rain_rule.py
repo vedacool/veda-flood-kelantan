@@ -427,3 +427,43 @@ def test_met_warning_names_bahaya_when_buruk_is_also_active(run_ctx):
     fc = verdict(ev)
     assert fc["verdict"] == "PREPARE" and any("Bahaya" in t["reason"] for t in fc["triggers"])
     assert not any("Buruk" in t["reason"] for t in fc["triggers"])
+
+
+# -- A2 (24 Oct evening live test): "until" = the end of the CURRENT wet spell -------------------------------------
+def spell(*pairs):
+    return [(NOW + timedelta(hours=k), mm) for k, mm in pairs]
+
+
+@pytest.mark.parametrize("hours, until, heavy, ends", [
+    (spell((12, 3.0), (13, 0.0), (14, 0.0), (15, 0.0), (16, 0.0)), 12, False, True),   # starts at +12 h: counted
+    (spell((13, 3.0), (14, 9.0), (15, 0.0)), None, False, False),                     # starts at +13 h: no spell
+    (spell((1, 3.0), (2, 0.0), (3, 0.0), (4, 2.5), (5, 0.0), (6, 0.0), (7, 0.0), (8, 0.0)), 4, False, True),  # 2 dry h
+    (spell((1, 3.0), (2, 0.0), (3, 0.0), (4, 0.0), (5, 8.0), (6, 0.0), (7, 0.0), (8, 0.0)), 1, False, True),  # 3 dry h
+    (spell((1, 2.5), (2, 7.6), (3, 0.0), (4, 0.0), (5, 0.0), (6, 0.0)), 2, True, True),   # 7.6 mm/h inside = heavy
+    (spell((1, 2.5), (2, 7.5), (3, 0.0), (4, 0.0), (5, 0.0)), 2, False, True),            # 7.5: not heavy
+    (spell((1, 3.0), (2, 0.0), (3, 0.0), (4, 0.0), (5, 0.0), (30, 16.8)), 1, False, True),  # heavy LATER: not this spell
+    (spell((1, 3.0), (2, 4.0)), 2, False, False),                                         # data ends in the spell: open
+])
+def test_until_is_the_end_of_the_current_wet_spell(hours, until, heavy, ends):
+    f = rain_rule.features(hours, NOW)
+    assert f["until"] == ((NOW + timedelta(hours=until)).isoformat() if until is not None else None)
+    assert f["until_heavy"] is heavy and f["until_ends"] is ends
+
+
+def test_live_24_oct_evening_hours_give_no_until_line():
+    """Rantau Panjang's rain point read through Zetaris after the test (24 Oct ~19:20): nothing >= 2.5 mm/h until 25 Oct
+    16:00 (21 h away), heavy hours only on 26 Oct. The old rule said 'Heavy rain likely until at least' the last wet
+    hour of the whole forecast; now there is no current spell, so no "until" line."""
+    mm = [0.1, 1.8, 2.4, 2.4, 1.2, 0.1, 0.1] + [0.0] * 12 + [0.1, 0.0, 2.2, 2.7, 5.7, 5.9, 3.7, 1.9] + [0.0] * 20 \
+        + [3.5, 3.8, 5.8, 16.8, 17.4, 5.2, 2.1]
+    f = rain_rule.features([(NOW + timedelta(hours=k + 1), v) for k, v in enumerate(mm)], NOW)
+    assert f["until"] is None and not f["until_heavy"]
+
+
+def test_rain_summary_agrees_with_a_heavy_spell():
+    from app import view
+    c = {"rain_24h_mm": 12.0, "rain_up": {"heavy": [], "local_heavy": False, "until": NOW.isoformat(),
+                                           "until_heavy": True}}
+    assert view._rain_plain(c, {}, "en") == "Heavy rain expected here in the next day."
+    c["rain_up"]["until_heavy"] = False
+    assert view._rain_plain(c, {}, "en") == "Some rain expected here in the next day."

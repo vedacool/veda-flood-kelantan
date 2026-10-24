@@ -478,7 +478,8 @@ def _rain_plain(card, forecast, lang):
         heavy = (mm or 0) >= HEAVY_HERE_MM or (past is not None and r.get("local_heavy"))
         return W["rain_heavy_past" if heavy else "rain_some_past" if (mm or 0) >= 1 else "rain_none_past"][lang]
     if nxt is not None or r.get("local_heavy"):
-        heavy = (nxt or 0) >= HEAVY_HERE_MM or r.get("local_heavy")
+        # A2: the summary and the "until" line agree - a heavy spell starting now makes the summary say heavy too
+        heavy = (nxt or 0) >= HEAVY_HERE_MM or r.get("local_heavy") or (r.get("until") and r.get("until_heavy"))
         return W["rain_heavy_next" if heavy else "rain_some_next" if (nxt or 0) >= 1 else "rain_none_next"][lang]
     return None
 
