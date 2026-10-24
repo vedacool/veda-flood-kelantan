@@ -1,5 +1,13 @@
 # VEDA — Vast Earth Data Analyser
 
+> **For judges, in 2 minutes**
+> - **What it is:** VEDA tells you whether a place in Kelantan is at risk of flooding; several agents check each other's work, and every step is logged.
+> - **Try it with no keys** (offline sample mode, after `pip install -r requirements.txt`): `python -m veda ask "Is Rantau Panjang at risk of flooding?"`
+> - **Public demo:** see the submission form (its address is not kept in this repo).
+> - **How it decided:** each run's trace is `logs/trace-<run_id>.jsonl`; the web page's **How it works** (`/how-it-works`) replays recorded live runs step by step.
+> - **Meterless World Model test:** `python -m pytest tests/conformance -v` - 8/8 conformance checks pass (over 1,000 offline tests in all: `python -m pytest -q`).
+> - **Model per AI call:** every AI call's trace line names the model requested and the model that answered, with its Nightshift receipt - see [AI and Model Usage](#ai-and-model-usage).
+
 **Team Hujung Lab** (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) · GenAI Works Open Agent Hackathon 2026 ·
 Track: Solving Fragmented Intelligence · Machine-readable summary: [`metadata.json`](metadata.json)
 
