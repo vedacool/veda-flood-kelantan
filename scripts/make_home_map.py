@@ -4,6 +4,12 @@ network at run time, no map library.
     python scripts/make_home_map.py --fetch   # once: OSM rivers + coastline from Overpass -> data/map/home_map_lines.json
     python scripts/make_home_map.py           # build the SVG into app/web/index.html (between the MAP markers)
     python scripts/make_home_map.py --check   # exit 1 if index.html is not what the script makes
+    python scripts/make_home_map.py --fetch-galas   # once: add Sg. Galas (Dabong -> Kuala Krai) to the stored lines
+
+Two maps go into the page: the demo map (the four Home towns - offline / demo) and the live map (all nine places,
+shown only in live mode; extended south to Dabong on Sg. Galas). On the live map the five added places are smaller
+dots that are not tappable; Wakaf Bharu and Pasir Pekan sit 1-3 km from Kota Bharu, so they carry the numbers 1 / 2
+with a key instead of their names next to the dot.
 
 The lines (Sg. Kelantan from Kuala Krai, Sg. Golok, the coastline) come from OpenStreetMap (© OpenStreetMap
 contributors, ODbL), simplified to about 300 m and stored in data/map/home_map_lines.json, so building the SVG needs no
@@ -22,8 +28,14 @@ ROOT = Path(__file__).resolve().parent.parent
 LINES = ROOT / "data" / "map" / "home_map_lines.json"
 PAGE = ROOT / "app" / "web" / "index.html"
 START, END = "<!-- MAP START (scripts/make_home_map.py) -->", "<!-- MAP END -->"
+LIVE_START, LIVE_END = "<!-- MAP LIVE START (scripts/make_home_map.py) -->", "<!-- MAP LIVE END -->"
 USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda; one-off map sketch)"
 BBOX = (5.47, 101.80, 6.30, 102.45)           # south, west, north, east
+BBOX_LIVE = (5.33, 101.80, 6.30, 102.45)      # live: south to Dabong (Sg. Galas)
+# Live map: the five added places (not tappable). (label kind, x offset, y offset) from the dot, in map units.
+PLACES_LIVE = {"Tanah Merah": ("right", 0, 0), "Dabong": ("right", 0, 0), "Kuala Krai": ("gauge", 0, 0),
+               "Wakaf Bharu": ("num", -9, 13), "Pasir Pekan": ("num", 0, -13)}
+NUM = {"Wakaf Bharu": "1", "Pasir Pekan": "2"}
 W = 340                                         # viewBox width; the height follows the map's shape
 PAD = 6
 SIMPLIFY_KM = 0.3
@@ -36,6 +48,23 @@ SIDE = {"Rantau Panjang": ("left2", 0), "Pasir Mas": ("below", 0), "Kota Bharu":
 
 
 # -- fetch (once, network) ---------------------------------------------------------------------------------------
+def fetch_galas():
+    """Add Sg. Galas (source -> Kuala Krai) to the stored lines; the other lines are left exactly as they are."""
+    import requests
+    q = '[out:json][timeout:120];way["waterway"="river"]["name"~"Galas",i](5.25,101.85,5.6,102.3);out tags geom;'
+    r = requests.post("https://overpass-api.de/api/interpreter", data={"data": q}, timeout=180,
+                      headers={"User-Agent": USER_AGENT})
+    r.raise_for_status()
+    ways = [[(round(g["lat"], 5), round(g["lon"], 5)) for g in w.get("geometry", [])] for w in r.json()["elements"]]
+    line = max(chain(ways), key=len)
+    if line[0][0] > line[-1][0]:                  # flows north: source (south) first
+        line = line[::-1]
+    data = json.loads(LINES.read_text(encoding="utf-8"))
+    data["galas"] = [p for p in simplify(line, SIMPLIFY_KM) if p[0] >= BBOX_LIVE[0] - 0.05]
+    LINES.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    print(f"added galas: {len(data['galas'])} pts")
+
+
 def fetch():
     import requests
     s, w, n, e = BBOX
@@ -68,7 +97,7 @@ out tags geom;"""
                 line = line[::-1]
             out[key] = simplify(line, SIMPLIFY_KM)
     LINES.parent.mkdir(parents=True, exist_ok=True)
-    LINES.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    LINES.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {LINES.relative_to(ROOT)}: kelantan {len(out['kelantan'])} pts, golok {len(out['golok'])} pts, "
           f"coast {sum(len(c) for c in out['coast'])} pts")
 
@@ -120,8 +149,8 @@ def simplify(pts, tol_km):
 
 
 # -- build (offline, deterministic) ------------------------------------------------------------------------------
-def project():
-    s, w, n, e = BBOX
+def project(bbox=None):
+    s, w, n, e = bbox or BBOX
     x0, y1 = km_xy(n, w)
     x1, _ = km_xy(n, e)
     _, y0 = km_xy(s, w)
@@ -185,12 +214,16 @@ def rows(path_, key=None):
         return [r for r in csv.DictReader(f) if key is None or r.get("record_type") == key]
 
 
-def build():
+def build(live=False):
+    """The map's SVG: demo (the four Home towns) or live (nine places, south to Dabong)."""
     data = json.loads(LINES.read_text(encoding="utf-8"))
-    xy, k, height = project()
-    s, w, n, e = BBOX
-    towns = [(r["name"], float(r["lat"]), float(r["lon"])) for r in rows(ROOT / "data" / "places.csv")
-             if r["name"] in SIDE]                       # the four Home towns only (A7 added places for live mode)
+    bbox = BBOX_LIVE if live else BBOX
+    xy, k, height = project(bbox)
+    s, w, n, e = bbox
+    places = [(r["name"], float(r["lat"]), float(r["lon"])) for r in rows(ROOT / "data" / "places.csv")]
+    towns = [t for t in places if t[0] in SIDE]          # the four Home towns: big tappable dots
+    extra = [t for t in places if live and t[0] in PLACES_LIVE]
+    sfx = "-live" if live else ""
     gauges = {r["station_key"]: r for r in rows(ROOT / "data" / "stations_mapping.csv", "gauge")}
     golok, kel = simplify(data["golok"], DRAW_KM), simplify(data["kelantan"], DRAW_KM)
     # Thailand: west of the Golok, from its southern end to the sea (a simplification: south of the river's source
@@ -203,17 +236,21 @@ def build():
     coast = sorted(coast, key=lambda p: p[1])
     sea = path(coast, xy) + f" L{W} {xy(coast[-1][0], e)[1]} L{W} 0 L0 0 L0 {xy(coast[0][0], w)[1]} Z"
     sea_lbl = xy(n - 0.02, e - 0.12)
-    parts = [f'<svg viewBox="0 0 {W} {height}" class="home-map" role="group" aria-labelledby="map-title map-alt">',
-             '<title id="map-title" data-t="map_title"></title><desc id="map-alt" data-t="map_alt"></desc>',
+    parts = [f'<svg viewBox="0 0 {W} {height}" class="home-map" id="map{sfx or "-demo"}" role="group" '
+             f'aria-labelledby="map-title{sfx} map-alt{sfx}"' + (' hidden' if live else '') + '>',
+             f'<title id="map-title{sfx}" data-t="map_title"></title>'
+             f'<desc id="map-alt{sfx}" data-t="{"map_alt_live" if live else "map_alt"}"></desc>',
              f'<rect width="{W}" height="{height}" class="m-land"/>',
              f'<path d="{thai}" class="m-thai"/>',
              f'<path d="{sea}" class="m-sea"/>',
              f'<path d="{curve(golok, xy)}" class="m-border"/>']
     for line in data["coast"]:
         parts.append(f'<path d="{path(line, xy)}" class="m-coast"/>')
-    for line in (kel, golok):
+    galas = simplify(data["galas"], DRAW_KM) if live and data.get("galas") else None
+    for line in (kel, golok) + ((galas,) if galas else ()):
         parts.append(f'<path d="{curve(line, xy)}" class="m-river"/>')
-    parts.append(arrows(kel, xy, (0.2, [JPS reading], [JPS reading])) + arrows(golok, xy, ([JPS reading], [JPS reading])))   # 3 + 2, downstream
+    parts.append(arrows(kel, xy, (0.2, 0.42, 0.62)) + arrows(golok, xy, (0.3, 0.62))   # 3 + 2, downstream
+                 + (arrows(galas, xy, (0.6,)) if galas else ""))
     tx, ty = xy(6.27, 101.815)
     parts.append(f'<text x="{tx}" y="{ty}" class="m-label m-thai-label" data-t="map_thailand"></text>')
     cx, cy = xy(6.205, 101.86)                   # rain cloud inside the Thai side, above the Rantau Panjang label
@@ -224,13 +261,16 @@ def build():
     parts.append(f'<text x="{W - 8}" y="{sea_lbl[1] + 14}" class="m-label m-sea-label" text-anchor="end" '
                  f'data-t="map_sea"></text>')
     for key in UPSTREAM:
+        if live and key == UPSTREAM[0]:
+            continue                                  # live: Kuala Krai is a covered place AND its gauge (below)
         g = gauges[key]
         gx, gy = xy(float(g["lat"]), float(g["lon"]))
         place = g["jps_name"].split(" di ")[-1].replace(" (F1)", "")
         lx, anchor = gx + 10, "start"                # both labels to the right of their dots
+        up = 22 if live else 0                        # live: Kg. Jenob's labels sit higher, clear of Tanah Merah
         parts.append(f'<circle cx="{gx}" cy="{gy}" r="6" class="m-gauge"/>'
-                     f'<text x="{lx}" y="{gy - 2}" text-anchor="{anchor}" class="m-label">{place}</text>'
-                     f'<text x="{lx}" y="{gy + 19}" text-anchor="{anchor}" class="m-label m-small" '
+                     f'<text x="{lx}" y="{gy - 2 - up}" text-anchor="{anchor}" class="m-label">{place}</text>'
+                     f'<text x="{lx}" y="{gy + 19 - up}" text-anchor="{anchor}" class="m-label m-small" '
                      f'data-t="map_gauge"></text>')
     for name, lat, lon in towns:
         x, y = xy(lat, lon)
@@ -246,7 +286,8 @@ def build():
             wl = max(len(first), len(second)) * 11.6
             label = (f'<text x="{x + 12}" y="{y - 3}" class="m-label m-town-label">{first}'
                      f'<tspan x="{x + 12}" dy="21">{second}</tspan></text>')
-            box = (x - 16, y - 28, wl + 32, 56)
+            # live: Pasir Pekan's dot is 14 units west of Kota Bharu - the target starts at Kota Bharu's own dot
+            box = (x - 8, y - 28, wl + 24, 56) if live else (x - 16, y - 28, wl + 32, 56)
         elif side == "left":
             lx, ly, anchor, box = x - 12, y + 7, "end", (x - 16 - wl, y - 28, wl + 32, 56)
         elif side == "right":
@@ -263,11 +304,29 @@ def build():
         parts.append(f'<g class="m-town" role="button" tabindex="0" data-town="{name}">'
                      f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh}" rx="10" class="m-hit"/>'
                      f'<circle cx="{x}" cy="{y}" r="8" class="m-dot"/>{label}</g>')
+    for name, lat, lon in extra:                      # live: the five added places - smaller, not tappable
+        x, y = xy(lat, lon)
+        kind, dx, dy = PLACES_LIVE[name]
+        parts.append(f'<g class="m-place" data-place="{name}"><circle cx="{x}" cy="{y}" r="5" class="m-place-dot"/>')
+        if kind == "right":
+            parts.append(f'<text x="{x + 10}" y="{y + 6}" class="m-label m-place-label">{name}</text>')
+        elif kind == "gauge":                         # Kuala Krai: the town and its gauge are the same spot
+            parts.append(f'<text x="{x + 10}" y="{y - 2}" class="m-label m-place-label">{name}</text>'
+                         f'<text x="{x + 10}" y="{y + 19}" class="m-label m-small" data-t="map_gauge"></text>')
+        else:                                         # Wakaf Bharu 1, Pasir Pekan 2 (names in the key)
+            parts.append(f'<text x="{round(x + dx, 1)}" y="{round(y + dy + 6, 1)}" text-anchor="middle" '
+                         f'class="m-label m-num">{NUM[name]}</text>')
+        parts.append("</g>")
+    if extra:                                         # the key for the numbered places (bottom right)
+        kx, ky = W - 128, height - 50
+        parts.append(f'<g class="m-key">' + "".join(
+            f'<text x="{kx}" y="{ky + i * 21}" class="m-label m-small"><tspan class="m-num">{NUM[nm]}</tspan> {nm}</text>'
+            for i, nm in enumerate(("Wakaf Bharu", "Pasir Pekan"))) + "</g>")
     # north arrow + 20 km scale (bottom left, an empty corner)
-    ax, ay = 26, height - 74
+    ax, ay = (26, 330) if live else (26, height - 74)       # live: Dabong takes the bottom-left corner
     parts.append(f'<g transform="translate({ax} {ay})" class="m-north"><path d="M0 -16 L7 6 L0 1 L-7 6 Z"/>'
                  f'<text x="0" y="24" text-anchor="middle" class="m-label m-small">N</text></g>')
-    sx, sy, sl = 14, height - 18, 20 * k
+    sx, sy, sl = 14, (386 if live else height - 18), 20 * k
     parts.append(f'<g class="m-scale"><path d="M{round(sx, 1)} {sy} h{round(sl, 1)} M{round(sx, 1)} {sy - 5} v10 '
                  f'M{round(sx + sl, 1)} {sy - 5} v10"/><text x="{round(sx + sl / 2, 1)}" y="{sy - 9}" '
                  f'text-anchor="middle" class="m-label m-small">20 km</text></g>')
@@ -275,20 +334,27 @@ def build():
     return "\n".join(parts)
 
 
-def page_with(svg):
+def page_with(svg, live_svg=None):
     page = PAGE.read_text(encoding="utf-8")
     a, b = page.index(START) + len(START), page.index(END)
-    return page[:a] + "\n" + svg + "\n" + page[b:]
+    page = page[:a] + "\n" + svg + "\n" + page[b:]
+    if live_svg is not None and LIVE_START in page:
+        a, b = page.index(LIVE_START) + len(LIVE_START), page.index(LIVE_END)
+        page = page[:a] + "\n" + live_svg + "\n" + page[b:]
+    return page
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="VEDA Home sketch map")
     ap.add_argument("--fetch", action="store_true", help="fetch the OSM lines once (network)")
     ap.add_argument("--check", action="store_true", help="exit 1 if index.html differs from a fresh build")
+    ap.add_argument("--fetch-galas", action="store_true", help="add Sg. Galas to the stored lines (network)")
     args = ap.parse_args(argv)
     if args.fetch:
         fetch()
-    new = page_with(build())
+    if args.fetch_galas:
+        fetch_galas()
+    new = page_with(build(), build(live=True))
     if args.check:
         same = new == PAGE.read_text(encoding="utf-8")
         print("map up to date" if same else "map differs - run python scripts/make_home_map.py")
