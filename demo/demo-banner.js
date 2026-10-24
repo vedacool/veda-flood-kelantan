@@ -1,50 +1,29 @@
 // VEDA public demo: the proxy adds this to VEDA's pages (demo/nginx.conf). It never changes the app's own code.
-// - the demo banner follows the page's language (EN | BM): the main page and /judges set <html lang>, /live keeps
-//   "veda.lang"; its links: "For judges" (/judges, B-90) and the feedback form
-// - under each answer: a link to the feedback form, in the same language
+// Under each answer: a link to the feedback form, in the page's language (<html lang>, set by the page).
+// The demo strip, top bar and footer come from the app's shared frame (B-96, app/frame.py) - not from here.
 (function () {
   "use strict";
   var WORDS = {
-    en: { note: "Demo · past flood replay · not an official warning", feedback: "Feedback", judges: "For judges ›", scenes: "Scenes ›",
-          ask: "Was this clear? 1-minute feedback ›" },
-    ms: { note: "Demo · banjir lalu · bukan amaran rasmi", feedback: "Maklum balas", judges: "Untuk juri ›", scenes: "Senario ›",
-          ask: "Jelas tak? Maklum balas 1 minit ›" }
+    en: { ask: "Was this clear? 1-minute feedback ›" },
+    ms: { ask: "Jelas tak? Maklum balas 1 minit ›" }
   };
   var answer = document.getElementById("s-answer");          // only the main page has answers
-  var ownLang = answer || document.getElementById("judges") || document.getElementById("scenes");  // set <html lang>
+  if (!answer) return;
 
-  function lang() {
-    if (ownLang) return (document.documentElement.lang || "").indexOf("ms") === 0 ? "ms" : "en";
-    try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; }
-  }
+  function lang() { return (document.documentElement.lang || "").indexOf("ms") === 0 ? "ms" : "en"; }
 
-  var ask = null;
-  if (answer) {
-    ask = document.createElement("a");
-    ask.id = "veda-demo-ask";
-    ask.style.cssText = "display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:12px;" +
-      "color:inherit;text-decoration:underline";
-    var again = document.getElementById("a-again");
-    if (again && again.parentNode === answer) answer.insertBefore(ask, again); else answer.appendChild(ask);
-  }
+  var ask = document.createElement("a");
+  ask.id = "veda-demo-ask";
+  ask.style.cssText = "display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:12px;" +
+    "color:inherit;text-decoration:underline";
+  var again = document.getElementById("a-again");
+  if (again && again.parentNode === answer) answer.insertBefore(ask, again); else answer.appendChild(ask);
 
   function apply() {
-    var l = lang(), w = WORDS[l], q = l === "ms" ? "/feedback?lang=ms" : "/feedback?lang=en";
-    var banner = document.getElementById("veda-demo-banner");
-    if (banner) {
-      banner.lang = l;
-      banner.querySelector("span").textContent = w.note;
-      var link = document.getElementById("veda-demo-feedback");
-      if (link) { link.textContent = w.feedback; link.href = q; }
-      var judges = document.getElementById("veda-demo-judges");
-      if (judges) { judges.textContent = w.judges; judges.href = "/judges?lang=" + l; }
-      var scenes = document.getElementById("veda-demo-scenes");
-      if (scenes) { scenes.textContent = w.scenes; scenes.href = "/scenes?lang=" + l; }
-    }
-    if (ask) { ask.lang = l; ask.textContent = w.ask; ask.href = q; }
+    var l = lang();
+    ask.lang = l; ask.textContent = WORDS[l].ask; ask.href = "/feedback?lang=" + l;
   }
 
   apply();
   new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
-  window.addEventListener("storage", function (e) { if (e.key === "veda.lang") apply(); });
 })();

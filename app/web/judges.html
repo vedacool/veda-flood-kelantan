@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VEDA - for judges</title>
+<title>VEDA - how it works</title>
 <link rel="icon" href="data:,">
 <style>
-  /* B-90 "For judges": how VEDA works, and real recorded live runs replayed step by step. Same look as the app
-     (text >= 18 px, works at 375 px and 1440 px), EN + BM, nothing loaded from outside. Only the published,
+  /* B-96 /how-it-works (was B-90 /judges; Cowork wireframes v3): "How VEDA decides" in five parts - the agents, a real
+     recorded live run replayed step by step, what we measured, the sponsors, the API. No filled buttons; labels never
+     look tappable. Text >= 18 px, works at 375 px and 1440 px, EN + BM, nothing loaded from outside. Only the published,
      redacted recorded traces are shown (data/sample/live_traces via /trace/recorded) - never live JPS readings. */
   :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
           --on-accent: #ffffff; --warn-text: #8a4a00; --warn-bg: #fff3df; --req-bg: #e6f0f8; --ai-bg: #eef4e2;
@@ -21,10 +22,6 @@
   * { box-sizing: border-box; }
   html { font-size: 18px; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line);
-           background: var(--card); position: sticky; top: 0; z-index: 2; }
-  header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; color: var(--fg);
-                  text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
   main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
   h1 { font-size: 1.6rem; line-height: 1.25; margin: 8px 0 8px; }
   h2 { font-size: 1.3rem; margin: 28px 0 8px; }
@@ -35,10 +32,12 @@
                  background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; display: inline-flex;
                  align-items: center; justify-content: center; gap: 8px; }
   button:focus-visible, .btn:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
-  [aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; min-width: 48px; padding: 8px 12px; font-weight: 700; }
+  #p-speed { display: inline-flex; }
+  #p-speed button { border: 0; background: none; min-width: 48px; padding: 8px 10px; color: var(--muted); }
+  #p-speed button[aria-pressed="true"] { color: var(--fg); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+  .toc { margin: 8px 0 0; padding-left: 1.4em; }
+  .toc a { min-height: 44px; display: inline-flex; align-items: center; }
+  .lines p { margin: 6px 0; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
   .note { color: var(--muted); }
   [hidden] { display: none !important; }
@@ -54,9 +53,7 @@
   .decides { list-style: none; padding: 0; margin: 0; }
   .decides li { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .decides li:last-child { border-bottom: 0; }
-  .decides .tag { white-space: normal; }
-  .tag { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: 999px; background: var(--ag, var(--c-system));
-         color: #fff; font-weight: 700; font-size: 1rem; white-space: nowrap; margin-right: 6px; }
+  .tag { font-weight: 800; margin-right: 6px; }          /* a label, plain bold text - never looks tappable */
   .runs { display: grid; gap: 10px; }
   .run { width: 100%; text-align: left; flex-direction: column; align-items: flex-start; gap: 2px; }
   .run small { color: var(--muted); font-size: 1rem; font-weight: 400; }
@@ -94,22 +91,21 @@
 </style>
 </head>
 <body>
-<header>
-  <a class="brand" href="/" id="home">VEDA</a>
-  <div class="seg" role="group" aria-label="Language / Bahasa">
-    <button type="button" data-lang="en" aria-pressed="true">EN</button>
-    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
-  </div>
-</header>
+<!--VEDA:TOP-->
 <main id="judges">
   <h1 data-t="title"></h1>
-  <p data-t="intro"></p>
+  <ol class="toc">
+    <li><a href="#agents" data-t="toc_agents"></a></li>
+    <li><a href="#live" data-t="toc_live"></a></li>
+    <li><a href="#measured" data-t="toc_measured"></a></li>
+    <li><a href="#built" data-t="toc_built"></a></li>
+    <li><a href="#api" data-t="toc_api"></a></li>
+  </ol>
 
-  <!-- a. VEDA in one minute -->
-  <h2 data-t="one_minute"></h2>
+  <!-- 1. the agents -->
+  <h2 id="agents" data-t="toc_agents"></h2>
   <div class="one-minute">
-    <svg class="diagram" viewBox="0 0 360 420" role="img" aria-labelledby="d-title d-desc">
-      <title id="d-title" data-t="d_title"></title><desc id="d-desc" data-t="d_desc"></desc>
+    <svg class="diagram" viewBox="0 0 360 420" role="img" aria-labelledby="d-title d-desc">      <title id="d-title" data-t="d_title"></title><desc id="d-desc" data-t="d_desc"></desc>
       <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
         <path d="M0 0 10 5 0 10z"/></marker></defs>
       <!-- the flow: question -> four agents -> safety gate -> answer -->
@@ -139,11 +135,16 @@
       <rect class="box" x="8" y="362" width="344" height="50" rx="10" stroke-dasharray="6 5"/>
       <text x="180" y="393" text-anchor="middle" data-t="d_memory"></text>
     </svg>
-    <ul class="decides" id="decides"></ul>
+    <div class="lines">
+      <p data-t="floor"></p>
+      <p data-t="memory"></p>
+      <h3 data-t="decides_title"></h3>
+      <ul class="decides" id="decides"></ul>
+    </div>
   </div>
 
-  <!-- b. Watch a real live run -->
-  <h2 data-t="watch"></h2>
+  <!-- 2. a real live run -->
+  <h2 id="live" data-t="watch"></h2>
   <p data-t="watch_intro"></p>
   <div class="runs" id="featured"></div>
   <details class="card" id="all-box"><summary data-t="all_runs"></summary><div class="runs" id="all"></div></details>
@@ -152,8 +153,8 @@
     <h3 id="p-label"></h3>
     <p id="p-question"></p>
     <div class="controls">
-      <button type="button" class="primary" id="p-play"></button>
-      <div class="seg" role="group" id="p-speed">
+      <button type="button" id="p-play"></button>
+      <div role="group" id="p-speed">
         <button type="button" data-speed="1" aria-pressed="true">1×</button>
         <button type="button" data-speed="4" aria-pressed="false">4×</button>
       </div>
@@ -165,8 +166,27 @@
     <p class="note" id="p-redaction" lang="en"></p>
   </div>
 
+  <!-- 3. what we measured -->
+  <h2 id="measured" data-t="toc_measured"></h2>
+  <div class="lines">
+    <p data-t="m_ai"></p>
+    <p data-t="m_slow"></p>
+    <p data-t="m_tests"></p>
+    <p><a href="https://github.com/vedacool/veda/blob/main/docs/EVIDENCE.md" target="_blank" rel="noopener" data-t="l_evidence"></a></p>
+  </div>
+
+  <!-- 4. the sponsors -->
+  <h2 id="built" data-t="toc_built"></h2>
+  <div class="lines">
+    <p data-t="b_zetaris"></p>
+    <p data-t="b_meterless"></p>
+    <p data-t="b_nvidia"></p>
+    <p><a id="l-repo" href="https://github.com/vedacool/veda" target="_blank" rel="noopener" data-t="l_repo"></a> ·
+      <a href="https://github.com/vedacool/veda/blob/main/README.md#how-it-works" target="_blank" rel="noopener" data-t="l_how"></a></p>
+  </div>
+
   <!-- try the API: the address is this page's own origin (the demo serves this page), never hard-coded -->
-  <h2 data-t="api_title"></h2>
+  <h2 id="api" data-t="api_title"></h2>
   <div class="card api">
     <p data-t="api_intro"></p>
     <pre lang="en"><code id="api-curl"></code></pre>
@@ -177,15 +197,6 @@
     <pre lang="en"><code>python -m veda ask "Is Tumpat safe tonight?"</code></pre>
   </div>
 
-  <!-- d. links -->
-  <h2 data-t="more"></h2>
-  <ul class="links">
-    <li><a id="l-repo" href="https://github.com/vedacool/veda" target="_blank" rel="noopener" data-t="l_repo"></a></li>
-    <li><a href="https://github.com/vedacool/veda/blob/main/docs/EVIDENCE.md" target="_blank" rel="noopener" data-t="l_evidence"></a></li>
-    <li><a href="https://github.com/vedacool/veda/blob/main/README.md#how-it-works" target="_blank" rel="noopener" data-t="l_how"></a></li>
-    <li><a href="/" data-t="l_try"></a></li>
-  </ul>
-  <p class="note" data-t="footer"></p>
 </main>
 
 <script>
@@ -193,8 +204,12 @@
 // The repo's address: scripts/public_links.py rewrites it to the public repo on publishing day (B-77).
 const REPO = "https://github.com/vedacool/veda";
 const UI = {
-  en: { title: "For judges", intro: "How VEDA works in one minute, and real recorded live runs replayed step by step - every agent, every data query and every AI call, as it happened.",
-    one_minute: "VEDA in one minute", d_title: "How VEDA answers a question",
+  en: { title: "How VEDA decides",
+    toc_agents: "The agents", toc_live: "Watch a real live run", toc_measured: "What we measured",
+    toc_built: "Built on Zetaris, Meterless and NVIDIA", toc_api: "Try the API",
+    floor: "The rules set a safe floor: the Forecast agent's level comes from rules a person can read, on the official JPS lines. Nemotron can only raise it, and only when it cites the facts.",
+    memory: "The World Model is the agents' shared memory: every fact with its source and time, and the health of each source.",
+    decides_title: "What each one decides", d_title: "How VEDA answers a question",
     d_desc: "A question goes to the Coordinator, then the Data & Reconciler, the Forecast agent and the Critic, then the safety gate. The Data & Reconciler and the Critic read data through Zetaris; the Coordinator and the Critic call Nemotron through Meterless Nightshift; all share the Meterless World Model.",
     d_question: "Your question", d_gate: "Safety gate", d_memory: "World Model: shared memory",
     ag_coordinator: "Coordinator", ag_data: "Data & Reconciler", ag_forecast: "Forecast", ag_critic: "Critic", ag_system: "System",
@@ -204,8 +219,6 @@ const UI = {
       ["forecast", "Forecast", "Proposes the base level - Normal for now, Keep watching, Get ready, Act now or Can't confirm right now - with rules a person can read: the river, the upstream gauges, rain upstream and in town, MetMalaysia warnings."],
       ["critic", "Critic", "Decides whether the answer may go out: re-checks the facts in Zetaris, can ask the Data & Reconciler for a missing upstream reading, and has Nemotron check the explanation against the facts."],
       ["nemotron", "Nemotron (via Meterless Nightshift)", "Writes the explanation and reviews the answer; can send it back, and can raise the level — never lower it — when it cites the facts. Every call names the model that actually answered."],
-      ["system", "Zetaris", "The one data layer: every agent reads data only through it, and every query is in the trace."],
-      ["system", "Meterless World Model", "The agents' shared memory: every fact with its source and time, and the health of each source."],
       ["system", "Safety gate", "The last check on every answer: never \"Normal\" on missing data, never \"go into the water\", always the disclaimer and 999 / 991."]],
     watch: "Watch a real live run",
     watch_intro: "These are real runs recorded live on 23-24 Oct 2026 (Zetaris + Nemotron through Nightshift). JPS river readings are redacted - they are not redistributed, per the organisers' ruling - so you will see \"[JPS reading — not redistributed]\" in their place. Pick one to replay it here.",
@@ -222,12 +235,21 @@ const UI = {
     nemo_ok: "Nemotron answered · {model} · receipt {receipt} · {s} s", nemo_fail: "No answer from the model ({why}) - VEDA carries on",
     api_title: "Try the API", api_intro: "Ask VEDA from your own code - the same agents as this page. Copy and run:",
     copy: "Copy", copied: "Copied", api_docs: "Full API docs:", api_cli: "From a clone, no keys:",
-    more: "More", l_repo: "The code on GitHub", l_evidence: "Every test and measurement (docs/EVIDENCE.md)",
-    l_how: "How VEDA decides (README: How it works)", l_try: "Try VEDA yourself",
-    footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
+    m_ai: "Nemotron's own judgement on the 9 live runs of 24 Oct night: it ran in 6 of 9, agreed with the rules 6 times and raised the level 0 times. It can never lower the level.",
+    m_slow: "When the AI was slow (run 223209, 24 Oct 22:32), the explanation timed out and the facts-only check took over: the answer still went out, checked.",
+    m_tests: "1061 tests pass and 41 of 41 safety evals pass, offline from the committed data (24 Oct).",
+    l_evidence: "Every test and measurement (docs/EVIDENCE.md)",
+    b_zetaris: "Zetaris: the one data layer. Every agent reads river levels, rain and warnings only through it, and every data query is in the log.",
+    b_meterless: "Meterless: Nightshift carries every AI call and gives each one a receipt; the World Model is the agents' shared memory.",
+    b_nvidia: "NVIDIA: Nemotron 3.5 Super writes the explanation and reviews each full answer; every call names the model that really answered.",
+    l_repo: "The code on GitHub", l_how: "README: How it works",
     load_fail: "Could not load the recorded runs." },
-  ms: { title: "Untuk juri", intro: "Cara VEDA berfungsi dalam satu minit, dan rakaman sebenar secara langsung dimainkan semula langkah demi langkah - setiap ejen, setiap pertanyaan data dan setiap panggilan AI, seperti yang berlaku.",
-    one_minute: "VEDA dalam satu minit", d_title: "Cara VEDA menjawab soalan",
+  ms: { title: "Cara VEDA membuat keputusan",
+    toc_agents: "Ejen-ejen", toc_live: "Tonton rakaman langsung sebenar", toc_measured: "Apa yang kami ukur",
+    toc_built: "Dibina atas Zetaris, Meterless dan NVIDIA", toc_api: "Cuba API",
+    floor: "Peraturan menetapkan paras minimum yang selamat: tahap Ejen Ramalan datang daripada peraturan yang boleh dibaca, berdasarkan garis rasmi JPS. Nemotron hanya boleh menaikkannya, dan hanya jika memetik fakta.",
+    memory: "World Model ialah memori bersama ejen: setiap fakta dengan sumber dan masanya, serta keadaan setiap sumber.",
+    decides_title: "Apa yang diputuskan oleh setiap satu", d_title: "Cara VEDA menjawab soalan",
     d_desc: "Soalan pergi kepada Penyelaras, kemudian Ejen Data, Ejen Ramalan dan Penyemak, kemudian semakan keselamatan. Ejen Data dan Penyemak membaca data melalui Zetaris; Penyelaras dan Penyemak memanggil Nemotron melalui Meterless Nightshift; semuanya berkongsi Meterless World Model.",
     d_question: "Soalan anda", d_gate: "Semakan keselamatan", d_memory: "World Model: memori bersama",
     ag_coordinator: "Penyelaras", ag_data: "Ejen Data", ag_forecast: "Ejen Ramalan", ag_critic: "Penyemak", ag_system: "Sistem",
@@ -237,8 +259,6 @@ const UI = {
       ["forecast", "Ejen Ramalan", "Mencadangkan tahap asas - Normal buat masa ini, Terus berjaga-jaga, Bersedia, Bertindak sekarang atau Tidak dapat disahkan sekarang - dengan peraturan yang boleh dibaca: sungai, tolok di hulu, hujan di hulu dan di bandar, amaran MetMalaysia."],
       ["critic", "Penyemak", "Memutuskan sama ada jawapan boleh dihantar: menyemak semula fakta dalam Zetaris, boleh meminta Ejen Data mencari bacaan hulu yang tiada, dan meminta Nemotron menyemak penjelasan dengan fakta."],
       ["nemotron", "Nemotron (melalui Meterless Nightshift)", "Menulis penjelasan dan menyemak jawapan; boleh memulangkannya untuk dibetulkan, dan boleh menaikkan tahap — tidak pernah menurunkannya — jika memetik fakta. Setiap panggilan menyatakan model yang sebenarnya menjawab."],
-      ["system", "Zetaris", "Satu-satunya lapisan data: setiap ejen membaca data hanya melaluinya, dan setiap pertanyaan data ada dalam log."],
-      ["system", "Meterless World Model", "Memori bersama ejen: setiap fakta dengan sumber dan masanya, serta keadaan setiap sumber."],
       ["system", "Semakan keselamatan", "Semakan terakhir bagi setiap jawapan: tidak pernah \"Normal\" jika data tiada, tidak pernah menyuruh meredah air banjir, sentiasa ada penafian dan 999 / 991."]],
     watch: "Tonton rakaman langsung sebenar",
     watch_intro: "Ini rakaman sebenar secara langsung pada 23-24 Okt 2026 (Zetaris + Nemotron melalui Nightshift). Bacaan sungai JPS disunting - tidak diedarkan semula, mengikut keputusan penganjur - jadi anda akan melihat \"[JPS reading — not redistributed]\" di tempatnya. Pilih satu untuk dimainkan semula di sini.",
@@ -255,9 +275,14 @@ const UI = {
     nemo_ok: "Nemotron menjawab · {model} · resit {receipt} · {s} s", nemo_fail: "Tiada jawapan daripada model ({why}) - VEDA meneruskan",
     api_title: "Cuba API", api_intro: "Tanya VEDA daripada kod anda sendiri - ejen yang sama seperti halaman ini. Salin dan jalankan:",
     copy: "Salin", copied: "Disalin", api_docs: "Dokumentasi API penuh:", api_cli: "Daripada klon, tanpa kunci:",
-    more: "Lagi", l_repo: "Kod di GitHub", l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
-    l_how: "Cara VEDA membuat keputusan (README: How it works)", l_try: "Cuba VEDA sendiri",
-    footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
+    m_ai: "Penilaian Nemotron sendiri pada 9 rakaman langsung malam 24 Okt: ia berjalan dalam 6 daripada 9, bersetuju dengan peraturan 6 kali dan menaikkan tahap 0 kali. Ia tidak boleh menurunkan tahap.",
+    m_slow: "Apabila AI lambat (rakaman 223209, 24 Okt 22:32), penjelasan tamat masa dan semakan fakta sahaja mengambil alih: jawapan tetap dihantar, sudah disemak.",
+    m_tests: "1061 ujian lulus dan 41 daripada 41 ujian keselamatan lulus, di luar talian daripada data yang disimpan (24 Okt).",
+    l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
+    b_zetaris: "Zetaris: satu-satunya lapisan data. Setiap ejen membaca paras sungai, hujan dan amaran hanya melaluinya, dan setiap pertanyaan data ada dalam log.",
+    b_meterless: "Meterless: Nightshift membawa setiap panggilan AI dan memberi setiap satu resit; World Model ialah memori bersama ejen.",
+    b_nvidia: "NVIDIA: Nemotron 3.5 Super menulis penjelasan dan menyemak setiap jawapan penuh; setiap panggilan menyatakan model yang sebenarnya menjawab.",
+    l_repo: "Kod di GitHub", l_how: "README: How it works",
     load_fail: "Rakaman tidak dapat dimuatkan." },
 };
 const FEATURED = { "201011-ef66": "why_2010", "234156-dd79": "why_2341", "225213-cac7": "why_2252" };
@@ -280,8 +305,7 @@ let runs = [], current = null, timer = null, shown = 0, speed = 1, playing = fal
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  document.querySelectorAll(".seg [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
-  $("home").href = "/?lang=" + lang;
+  if (window.vedaFrameLang) window.vedaFrameLang(lang);              // the shared frame's words (top bar, strip, footer)
   $("p-speed").setAttribute("aria-label", t("speed"));
   $("decides").innerHTML = t("decides").map(([who, name, what]) =>
     `<li><span class="tag" style="--ag:var(--c-${who})">${esc(name)}</span> ${esc(what)}</li>`).join("");
@@ -415,11 +439,13 @@ document.querySelectorAll("#p-speed button").forEach((b) => b.addEventListener("
   document.querySelectorAll("#p-speed button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   if (playing) { clearTimeout(timer); next(); } else updateStatus();
 }));
-document.querySelectorAll(".seg [data-lang]").forEach((b) => b.addEventListener("click", () => {
-  lang = b.dataset.lang; store.set("veda.lang", lang);
+function setLang(l) {                 // the frame's EN | BM switches this page in place (no reload)
+  lang = l; store.set("veda.lang", lang);
   const u = new URL(location.href); u.searchParams.set("lang", lang); history.replaceState(null, "", u);
   applyLang();
-}));
+}
+window.vedaSetLang = setLang;          // set before /frame.js runs, so the frame leaves the buttons to this page
+document.querySelectorAll(".vf-lang [data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
 
 fetch("/trace/recorded").then((r) => r.ok ? r.json() : Promise.reject()).then((list) => { runs = list; renderRuns(); })
   .catch(() => { $("featured").textContent = t("load_fail"); });
@@ -433,5 +459,6 @@ $("api-copy").addEventListener("click", () => {
 });
 applyLang();
 </script>
+<!--VEDA:FOOT-->
 </body>
 </html>

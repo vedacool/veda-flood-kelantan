@@ -148,3 +148,25 @@ def test_try_the_api_box_uses_this_pages_own_address():
                  'api_docs: "Dokumentasi API penuh:"', 'api_cli: "From a clone, no keys:"',
                  'api_cli: "Daripada klon, tanpa kunci:"'):
         assert text in PAGE, text
+
+
+def test_how_it_works_has_the_five_parts_and_the_frame(client, monkeypatch):
+    """B-96 (Cowork wireframes v3): /how-it-works = "How VEDA decides", a 5-item contents list (the agents, a real live
+    run with id="live", what we measured, the sponsors, the API), no filled buttons, labels never look tappable, in
+    the shared frame; /judges answers 301 to it."""
+    for anchor in ("agents", "live", "measured", "built", "api"):
+        assert f'<li><a href="#{anchor}"' in PAGE and f'id="{anchor}"' in PAGE, anchor
+    for text in ('title: "How VEDA decides"', 'title: "Cara VEDA membuat keputusan"',
+                 "Nemotron can only raise it, and only when it cites the facts.",
+                 "it ran in 6 of 9, agreed with the rules 6 times and raised the level 0 times",
+                 "When the AI was slow (run 223209, 24 Oct 22:32), the explanation timed out and the facts-only check took over",
+                 'b_zetaris: "Zetaris:', 'b_meterless: "Meterless:', 'b_nvidia: "NVIDIA:'):
+        assert text in PAGE, text
+    assert 'class="primary"' not in PAGE and "border-radius: 999px" not in PAGE        # no filled buttons, no pills
+    assert "<header>" not in PAGE and PAGE.index("<!--VEDA:TOP-->") < PAGE.index("<main")
+    assert PAGE.index("window.vedaSetLang = setLang;") < PAGE.index("<!--VEDA:FOOT-->")
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    html = client.get("/how-it-works").text
+    assert html.count('class="vf-top"') == 1 and html.count('class="vf-foot"') == 1 and "<!--VEDA:" not in html
+    assert re.search(r'href="/how-it-works"[^>]*aria-current="page"', html)
+    assert html.count('href="/"') == 1                                           # VEDA's home: the top bar only

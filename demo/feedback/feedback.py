@@ -10,6 +10,10 @@ optional and quoted only if its box is ticked (unticked by default). Answers app
 
 Abuse: control characters are dropped, one answer is at most MAX_RECORD bytes, a form sent from another website is
 refused, and the CSV export defuses cells a spreadsheet would run as a formula.
+
+Frame (B-96): the page wears VEDA's shared top bar, demo strip and footer - app/frame.py, the same file the app uses
+(standard library only; the image copies it with app/config.py, see Dockerfile). /frame.css and /frame.js come from
+VEDA through the proxy.
 """
 import argparse
 import csv
@@ -22,7 +26,14 @@ import sys
 import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
+
+for _root in (Path(__file__).resolve().parent, Path(__file__).resolve().parents[2]):    # the image, or the repo
+    if (_root / "app" / "frame.py").is_file():
+        sys.path.insert(0, str(_root))
+        break
+from app import frame  # noqa: E402 - VEDA's shared frame
 
 FILE = os.environ.get("FEEDBACK_FILE", "/data/answers.jsonl")
 MAX_BODY = 8 * 1024                     # a filled-in form is well under 4 KB
@@ -53,7 +64,7 @@ T = {
            "why": "Why?", "q5": "How easy was it?", "hard": "1 = hard", "easy": "5 = easy",
            "q6": "One thing VEDA should add?", "q7": "Age range (optional)", "skip": "Prefer not to say",
            "q8": "First name (optional)", "quote": "OK to quote my first name and answer in VEDA's presentation",
-           "send": "Send", "back": "Back to VEDA", "thanks": "Thank you!",
+           "send": "Send", "thanks": "Thank you!",
            "thanks_body": "Your answer is saved. It helps us make VEDA clearer for families in Kelantan.",
            "empty": "Please answer at least one question.", "full": "Sorry, the feedback box is full.",
            "too_long": "That was too long - please shorten it.",
@@ -68,7 +79,7 @@ T = {
            "easy": "5 = mudah", "q6": "Satu perkara yang VEDA patut tambah?", "q7": "Lingkungan umur (pilihan)",
            "skip": "Tidak mahu nyatakan", "q8": "Nama pertama (pilihan)",
            "quote": "Saya benarkan nama pertama dan jawapan saya dipetik dalam pembentangan VEDA",
-           "send": "Hantar", "back": "Kembali ke VEDA", "thanks": "Terima kasih!",
+           "send": "Hantar", "thanks": "Terima kasih!",
            "thanks_body": "Jawapan anda telah disimpan. Ia membantu kami menjadikan VEDA lebih jelas untuk keluarga "
            "di Kelantan.", "empty": "Sila jawab sekurang-kurangnya satu soalan.",
            "full": "Maaf, peti maklum balas sudah penuh.", "too_long": "Terlalu panjang - sila pendekkan.",
@@ -80,11 +91,8 @@ CSS = """:root{--bg:#f6f5f1;--fg:#1c1c1a;--muted:#55554f;--card:#fff;--line:#d6d
 --danger:#b3261e}@media (prefers-color-scheme:dark){:root{--bg:#151514;--fg:#eeeeea;--muted:#b0b0a9;--card:#212120;
 --line:#3b3b38;--accent:#82b8de;--on-accent:#151514;--danger:#f08a80}}*{box-sizing:border-box}html{font-size:18px}
 body{margin:0;background:var(--bg);color:var(--fg);font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card)}
-header b{font-size:1.3rem;letter-spacing:.04em;margin-right:auto}main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
-h1{font-size:1.45rem;margin:8px 0 12px}.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.seg a{min-width:48px;min-height:44px;padding:8px 12px;font-weight:700;text-align:center;color:var(--fg);text-decoration:none}
-.seg a[aria-current]{background:var(--accent);color:var(--on-accent)}fieldset{border:1px solid var(--line);border-radius:14px;
+main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:1.45rem;margin:8px 0 12px}fieldset{border:1px solid var(--line);border-radius:14px;
 background:var(--card);margin:12px 0;padding:12px 16px}legend{font-weight:700;padding:0 4px}
 label.opt{display:flex;align-items:center;gap:12px;min-height:44px;min-width:44px;padding:4px 0;cursor:pointer}
 input[type=radio],input[type=checkbox]{flex:none;width:28px;height:28px;margin:0;accent-color:var(--accent)}
@@ -94,8 +102,7 @@ textarea,input[type=text]{font:inherit;width:100%;min-height:48px;padding:10px 1
 border-radius:12px;background:var(--card);color:var(--fg)}textarea{min-height:88px}.row{display:flex;flex-wrap:wrap;gap:4px 16px}
 .note{color:var(--muted)}button,.btn{font:inherit;min-height:48px;width:100%;padding:10px 16px;border-radius:12px;
 border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);font-weight:700;display:inline-flex;
-align-items:center;justify-content:center;text-decoration:none;margin-top:8px}.btn.plain{background:var(--card);
-color:var(--fg);border-color:var(--line)}.err{border-left:6px solid var(--danger);padding:8px 12px;background:var(--card)}
+align-items:center;justify-content:center;text-decoration:none;margin-top:8px}.err{border-left:6px solid var(--danger);padding:8px 12px;background:var(--card)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}"""
 
 
@@ -107,15 +114,12 @@ def lang_of(query, accept):
 
 
 def page(lang, title, body):
-    t = T[lang]
-    current = ' aria-current="true"'
-    seg = "".join(f'<a href="?lang={code}" lang="{code}"{current if code == lang else ""}>{name}</a>'
-                  for code, name in (("en", "EN"), ("ms", "BM")))
+    """One page in VEDA's shared frame (public demo: the strip and the Feedback link). The frame's EN | BM reloads
+    the page with ?lang= (/frame.js)."""
     return (f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" '
             f'content="width=device-width, initial-scale=1"><title>{html.escape(title)} - VEDA</title>'
-            f'<link rel="icon" href="data:,"><style>{CSS}</style></head><body><header><b>VEDA</b>'
-            f'<nav class="seg" aria-label="Language / Bahasa">{seg}</nav></header>'
-            f'<main>{body}</main></body></html>').replace("{back}", html.escape(t["back"]))
+            f'<link rel="icon" href="data:,"><style>{CSS}</style></head><body>{frame.top("feedback", demo=True)}'
+            f'<main>{body}</main>{frame.foot(public_demo=True)}</body></html>')
 
 
 def form_page(lang, error=""):
@@ -149,14 +153,13 @@ def form_page(lang, error=""):
             f'<fieldset><legend><label for="q8">8. {t["q8"]}</label></legend>'
             f'<input type="text" id="q8" name="first_name" maxlength="{MAX_NAME}" autocomplete="off">'
             f'<label class="opt"><input type="checkbox" name="quote_ok" value="yes"> {t["quote"]}</label></fieldset>'
-            f'<p class="note">{t["privacy"]}</p><button type="submit">{t["send"]}</button>'
-            f'<a class="btn plain" href="/">{{back}}</a></form>')
+            f'<p class="note">{t["privacy"]}</p><button type="submit">{t["send"]}</button></form>')
     return page(lang, t["title"], body)
 
 
 def thanks_page(lang):
     t = T[lang]
-    return page(lang, t["thanks"], f'<h1>{t["thanks"]}</h1><p>{t["thanks_body"]}</p><a class="btn" href="/">{{back}}</a>')
+    return page(lang, t["thanks"], f'<h1>{t["thanks"]}</h1><p>{t["thanks_body"]}</p>')   # back: VEDA in the top bar
 
 
 def clean_text(s, limit):

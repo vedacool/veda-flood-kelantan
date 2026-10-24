@@ -35,7 +35,7 @@ services:
 
   feedback:
     profiles: [demo]
-    build: { context: feedback }
+    build: { context: .., dockerfile: demo/feedback/Dockerfile }   # repo root: it copies app/frame.py (B-96)
     image: veda-feedback:demo
     read_only: true
     volumes: [feedback:/data]

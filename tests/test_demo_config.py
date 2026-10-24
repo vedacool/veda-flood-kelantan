@@ -1,4 +1,5 @@
 """The public demo's safety settings stay in place (demo/compose.yaml, demo/nginx.conf). Text checks: no Docker needed."""
+import importlib.util
 import re
 from pathlib import Path
 
@@ -49,32 +50,32 @@ def test_open_streams_are_capped_per_visitor_and_in_all():
         assert "limit_conn streams_per_visitor 3;" in block and "limit_conn streams_all 10;" in block
 
 
-def test_banner_is_one_line_in_the_page_language_with_a_feedback_link():
-    """Cowork 24 Oct: one small line (not bold), EN|BM following the page; Feedback / Maklum balas at the right;
-    "Was this clear?" under each answer. Added by the proxy (demo/demo-banner.js) - the app is not changed."""
-    banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
-    assert "Demo · past flood replay · not an official warning" in banner and "font:400 16px" in banner
-    assert 'id="veda-demo-banner"' in banner and 'href="/feedback"' in banner and "<br>" not in banner
+def test_the_demo_strip_comes_from_the_app_not_the_proxy():
+    """B-96: the shared frame (app/frame.py) carries the demo strip, top bar and footer; the proxy no longer adds a
+    banner (it would show twice). It still adds demo-banner.js: "Was this clear?" under each answer, EN | BM."""
+    assert "sub_filter '<body>'" not in NGINX and "veda-demo-banner" not in NGINX
     assert "sub_filter '</body>' '<script src=\"/demo-banner.js\"></script></body>';" in NGINX
+    assert "location ~ ^/(live|judges|how-it-works|scenes(/[a-z0-9-]+)?)?$ {" in NGINX
     js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
-    for words in ('"Demo · past flood replay · not an official warning"', 'feedback: "Feedback"',
-                  '"Was this clear? 1-minute feedback ›"', '"Demo · banjir lalu · bukan amaran rasmi"',
-                  'feedback: "Maklum balas"', '"Jelas tak? Maklum balas 1 minit ›"'):
-        assert words in js
+    assert '"Was this clear? 1-minute feedback ›"' in js and '"Jelas tak? Maklum balas 1 minit ›"' in js
+    assert 'ask.href = "/feedback?lang=" + l;' in js and "veda-demo-banner" not in js
     assert "COPY demo-banner.js /etc/nginx/demo/demo-banner.js" in (DEMO / "proxy.Dockerfile").read_text(encoding="utf-8")
+    sh = (DEMO / "setup_wyse.sh").read_text(encoding="utf-8")
+    assert "vf-strip" in sh and "veda-demo-banner" not in sh
 
 
-def test_banner_links_to_the_judges_page_and_is_on_it_too():
-    """B-90: "For judges ›" / "Untuk juri ›" in the banner; /judges gets the banner like the home page and /live."""
-    banner = NGINX.split("sub_filter '<body>' '", 1)[1].split("';", 1)[0]
-    assert '<a id="veda-demo-judges" href="/judges"' in banner and ">For judges ›</a>" in banner
-    assert banner.index("veda-demo-judges") < banner.index("veda-demo-feedback")
-    assert "location ~ ^/(live|judges|scenes(/[a-z0-9-]+)?)?$ {" in NGINX       # + the test scenes (B-91)
-    assert '<a id="veda-demo-scenes" href="/scenes"' in NGINX and ">Scenes ›</a>" in NGINX
-    js = (DEMO / "demo-banner.js").read_text(encoding="utf-8")
-    assert 'judges: "For judges ›"' in js and 'judges: "Untuk juri ›"' in js
-    assert 'judges.href = "/judges?lang=" + l;' in js
-    assert 'scenes: "Scenes ›"' in js and 'scenes: "Senario ›"' in js and 'scenes.href = "/scenes?lang=" + l;' in js
+def test_the_feedback_page_wears_the_shared_frame():
+    """B-96: the feedback service builds from the repo root and copies app/frame.py + app/config.py (standard
+    library only); its pages carry the top bar, the demo strip and the footer - and no second link to VEDA's home."""
+    docker = (DEMO / "feedback" / "Dockerfile").read_text(encoding="utf-8")
+    assert "COPY app/__init__.py app/config.py app/frame.py app/" in docker
+    assert "build: { context: .., dockerfile: demo/feedback/Dockerfile }" in COMPOSE
+    spec = importlib.util.spec_from_file_location("feedback_frame", DEMO / "feedback" / "feedback.py")
+    fb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fb)
+    for html in (fb.form_page("en"), fb.thanks_page("ms")):
+        assert html.count('class="vf-top"') == 1 and 'class="vf-strip"' in html and html.count('class="vf-foot"') == 1
+        assert html.count('href="/"') == 1                                      # VEDA in the top bar only
 
 
 def test_docker_logs_rotate_and_the_proxy_has_a_process_cap():
