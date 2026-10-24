@@ -127,11 +127,30 @@ def news_values(scene, gauge):
     return out
 
 
+def station_lines():
+    """The official JPS lines VEDA holds for each gauge (data/stations_mapping.csv) -> {station: {field: m}}."""
+    path = ROOT / "data" / "stations_mapping.csv"
+    num = lambda v: float(v) if v else None                                          # noqa: E731
+    return {r["station_key"]: {k: num(r[f"jps_{k}_m"]) for k in ("alert", "warning", "danger")}
+            for r in csv.DictReader(path.open(encoding="utf-8")) if r["record_type"] == "gauge"}
+
+
 def tagged(scene, data):
-    """The scene's data with each gauge row's news values marked (rain: Open-Meteo archive; the rest: demo data)."""
+    """Each gauge row with where its values come from (Cowork B-91c): `news` = the values the cited article states;
+    `lines` = the other JPS lines, from the station list (only when they equal data/stations_mapping.csv);
+    `demo` = the row also has generated values (a trend, or a reading no article states). Rain: Open-Meteo archive."""
     if not data:
         return data
-    return {**data, "gauges": [{**g, "news": news_values(scene, g)} for g in data["gauges"]]}
+    official, out = station_lines(), []
+    for g in data["gauges"]:
+        news = news_values(scene, g)
+        in_news = {n["field"] for n in news}
+        lines = [{"field": k, "value": v} for k, v in g["thresholds"].items()
+                 if k != "normal" and v is not None and k not in in_news
+                 and (official.get(g["station"]) or {}).get(k) == v]
+        demo = "level" not in in_news or g["change_1h_m"] is not None or g["change_3h_m"] is not None
+        out.append({**g, "news": news, "lines": lines, "demo": demo})
+    return {**data, "gauges": out}
 
 
 # ---------- checking the expectations against the REAL run output ----------

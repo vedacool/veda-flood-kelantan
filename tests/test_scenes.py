@@ -220,3 +220,39 @@ def test_review_texts_and_banned_malay_words():
     judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
     for name in ("Penyemak", "Ejen Data", "Ejen Ramalan", "Semakan keselamatan"):     # the same BM names as /judges
         assert f'"{name}"' in judges and name in PAGE
+
+
+def test_each_value_is_tagged_with_its_real_origin():
+    """Cowork B-91c: News report = the article states it; JPS station list = an official line from
+    data/stations_mapping.csv that the article does not state; Demo data = generated (trends, made-up readings)."""
+    official = scenes.station_lines()
+    c = TestClient(main.app)
+    for s in c.get("/scenes/data.json").json()["scenes"]:
+        for g in s["data"]["gauges"]:
+            news = {n["field"] for n in g["news"]}
+            lines = {n["field"]: n["value"] for n in g["lines"]}
+            for k in ("alert", "warning", "danger"):              # every shown line has exactly one origin
+                if g["thresholds"][k] is not None:
+                    assert (k in news) != (k in lines), (s["id"], g["name"], k)
+            for k, v in lines.items():
+                assert official[g["station"]][k] == v, (s["id"], g["name"], k)
+            if s["data"]["kind"] == "replay":
+                assert "level" in news, (s["id"], g["name"])       # every replay reading shown is a reported one
+            else:
+                assert not news and g["demo"], (s["id"], g["name"])  # made-up scenes: nothing is news
+            trends = g["change_1h_m"] is not None or g["change_3h_m"] is not None
+            assert g["demo"] == ("level" not in news or trends), (s["id"], g["name"])
+    assert 'src_jps: "JPS station list"' in PAGE and 'src_jps: "Senarai stesen JPS"' in PAGE
+
+
+def test_the_kosmo_2014_sentence_is_tagged_and_1_94_is_never_shown():
+    peak = next(s for s in scenes.expected()["scenes"] if s["id"] == "rp-peak")
+    en = "Kosmo reported that the river had passed its level in the 2014 flood (10.52 m)."
+    ms = "Kosmo melaporkan paras sungai telah melepasi paras banjir 2014 (10.52 m)."
+    assert peak["story"]["en"].startswith("Wednesday 27 November 2024, 7:30 pm. " + en)
+    assert peak["story"]["ms"].startswith("Rabu, 27 November 2024, 7:30 malam. " + ms)
+    (n,) = peak["story_news"]
+    assert n["text"] == {"en": en, "ms": ms} and "kosmo.com.my/2024/11/27/" in n["url"]
+    assert n["url"] in {a["url"] for a in peak["news"]}                      # the same Kosmo article
+    for text in (scenes.EXPECTED.read_text(encoding="utf-8"), scenes.DATA.read_text(encoding="utf-8"), PAGE):
+        assert "1.94" not in text

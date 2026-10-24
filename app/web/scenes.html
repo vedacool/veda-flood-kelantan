@@ -178,7 +178,7 @@ const UI = {
     full_answer: "See the full answer in VEDA ›", your_guess: "Your guess: {g} · VEDA: {v}", no_guess: "You did not guess.",
     trail_title: "What each agent did", who: { gather: "Data & Reconciler", forecast: "Forecast", critique: "Critic", safety: "Safety gate" },
     nemotron: "Nemotron's own judgement: live mode only.",
-    src_news: "News report", src_demo: "Demo data", src_rest: "(the other values in this row)",
+    src_news: "News report", src_demo: "Demo data", src_rest: "(the other values in this row)", src_jps: "JPS station list",
     src_om: "Open-Meteo archive", src_gov: "data.gov.my",
     field_level: "reading {v} m", field_alert: "Alert line {v} m", field_warning: "Warning line {v} m",
     field_danger: "Danger line {v} m",
@@ -206,7 +206,7 @@ const UI = {
     full_answer: "Lihat jawapan penuh dalam VEDA ›", your_guess: "Tekaan anda: {g} · VEDA: {v}", no_guess: "Anda tidak meneka.",
     trail_title: "Apa yang dilakukan setiap ejen", who: { gather: "Ejen Data", forecast: "Ejen Ramalan", critique: "Penyemak", safety: "Semakan keselamatan" },
     nemotron: "Penilaian Nemotron sendiri: mod langsung sahaja.",
-    src_news: "Laporan berita", src_demo: "Data demo", src_rest: "(nilai lain dalam baris ini)",
+    src_news: "Laporan berita", src_demo: "Data demo", src_rest: "(nilai lain dalam baris ini)", src_jps: "Senarai stesen JPS",
     src_om: "Arkib Open-Meteo", src_gov: "data.gov.my",
     field_level: "bacaan {v} m", field_alert: "garis Waspada {v} m", field_warning: "garis Amaran {v} m",
     field_danger: "garis Bahaya {v} m",
@@ -280,7 +280,13 @@ function render() {
   $("s-title").textContent = `${scene.town} · ${when(scene.at)}`;
   $("s-source").textContent = d.source_label[lang];
   $("s-people").hidden = d.kind !== "replay";                     // the "Based on" scenes: what is real, what is not
-  $("s-story").textContent = scene.story[lang];
+  // a sentence of the story that a news report states gets its source tag, linked (B-91c)
+  let story = esc(scene.story[lang]);
+  for (const n of scene.story_news || []) {
+    story = story.replace(esc(n.text[lang]), `${esc(n.text[lang])} ${srcTag("src_news")}` +
+      `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.source[lang])}</a>`);
+  }
+  $("s-story").innerHTML = story;
   $("s-question").textContent = `“${d.question[lang]}”`;
   $("s-demo").textContent = t(d.kind === "replay" ? "demo_replay" : "demo_synthetic");
   $("s-data").innerHTML = dataRows(d);
@@ -310,7 +316,9 @@ function gaugeSources(g) {
   const parts = Object.entries(byArticle).map(([url, a]) => `<p class="srcs">${srcTag("src_news")} ` +
     `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(a.source[lang])}</a>: ` +
     a.items.map((n) => esc(t("field_" + n.field).replace("{v}", n.value))).join(", ") + `</p>`);
-  parts.push(`<p class="srcs">${srcTag("src_demo")}${news.length ? " " + esc(t("src_rest")) : ""}</p>`);
+  if ((g.lines || []).length) parts.push(`<p class="srcs">${srcTag("src_jps")} ` +       // official lines, data/stations_mapping.csv
+    g.lines.map((n) => esc(t("field_" + n.field).replace("{v}", n.value))).join(", ") + `</p>`);
+  if (g.demo) parts.push(`<p class="srcs">${srcTag("src_demo")} ${esc(t("src_rest"))}</p>`);   // trends, made-up readings
   return parts.join("");
 }
 function dataRows(d) {
