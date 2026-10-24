@@ -80,7 +80,7 @@ def test_every_served_recorded_run_is_redacted(client):
 def test_featured_runs_exist_and_are_labelled_as_recorded():
     for key in re.findall(r'"(\d{6}-[0-9a-f]{4})": "why_', PAGE):
         assert any(key in f.name for f in TRACES.glob("*.jsonl")), key
-    assert 'label: "Recorded live run · {when} MYT"' in PAGE and 'label: "Larian langsung dirakam · {when} MYT"' in PAGE
+    assert 'label: "Recorded live run · {when} MYT"' in PAGE and 'label: "Rakaman langsung · {when} MYT"' in PAGE
 
 
 def test_the_live_critic_data_request_run_is_published_redacted_and_featured_first(client):
@@ -93,8 +93,32 @@ def test_the_live_critic_data_request_run_is_published_redacted_and_featured_fir
     assert "critic.request" in actions and "data.request" in actions and "verdict.recomputed" in actions
     assert all(r.get("mode") == "live" for r in body["records"] if r["action"] == "run_start")
     assert "not seen live" not in PAGE and "no_request" not in PAGE
-    assert ('"Writes the explanation and reviews the answer; can send it back.' in PAGE
-            and '"Menulis penjelasan dan menyemak jawapan; boleh menolaknya.' in PAGE and "Decides nothing" not in PAGE)
+    assert "Decides nothing" not in PAGE
+
+
+def test_nemotron_and_forecast_lines_after_phase_1():
+    """Main's Part 7 Phase 1 (943441f): the Critic's Nemotron review can raise the level (cited facts), never lower
+    it - so the Forecast agent proposes the base level."""
+    for text in ('"Writes the explanation and reviews the answer; can send it back, and can raise the level — never '
+                 'lower it — when it cites the facts.',
+                 '"Menulis penjelasan dan menyemak jawapan; boleh menolaknya, dan boleh menaikkan tahap — tidak pernah '
+                 'menurunkannya — jika memetik fakta.',
+                 '"Proposes the base level - Normal for now,', '"Mencadangkan tahap asas - Normal buat masa ini,'):
+        assert text in PAGE, text
+    assert "Decides the level" not in PAGE and "Memutuskan tahap" not in PAGE
+
+
+def test_everyday_malay_wording():
+    """Cowork 24 Oct: 'rakaman' (not 'larian'), 'log' (not 'jejak'), 'data mentah', no 'masuk ke dalam air'."""
+    ms = PAGE.split("\n  ms: {", 1)[1].split("\n};", 1)[0]
+    for text in ('watch: "Tonton rakaman langsung sebenar"', 'all_runs: "Semua {n} rakaman langsung"',
+                 'why_2010: "Rakaman langsung, 24 Okt 20:10:', "rakaman mengambil masa {end} s",
+                 'download: "Muat turun log penuh (JSONL)"', "setiap pertanyaan data ada dalam log",
+                 'raw: "Tunjuk data mentah"', "tidak pernah menyuruh meredah air banjir", 'speed: "Kelajuan"'):
+        assert text in ms, text
+    for old in ("larian", "Larian", "jejak", "masuk ke dalam air", '"Tunjuk mentah"'):
+        assert old not in ms, old
+    assert '$("p-speed").setAttribute("aria-label", t("speed"));' in PAGE
 
 
 def test_english_and_malay_have_the_same_words():

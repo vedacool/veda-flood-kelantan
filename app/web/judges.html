@@ -150,7 +150,7 @@
     <p id="p-question"></p>
     <div class="controls">
       <button type="button" class="primary" id="p-play"></button>
-      <div class="seg" role="group" id="p-speed" aria-label="Speed">
+      <div class="seg" role="group" id="p-speed">
         <button type="button" data-speed="1" aria-pressed="true">1×</button>
         <button type="button" data-speed="4" aria-pressed="false">4×</button>
       </div>
@@ -186,9 +186,9 @@ const UI = {
     decides: [
       ["coordinator", "Coordinator", "Decides the path: a quick answer or a full check. Builds the answer card in code; the model only adds a 1-2 sentence explanation."],
       ["data", "Data & Reconciler", "Decides which sources to trust: reads every source through Zetaris, leaves out stale or broken ones and says why."],
-      ["forecast", "Forecast", "Decides the level - Normal for now, Keep watching, Get ready, Act now or Can't confirm right now - with rules a person can read: the river, the upstream gauges, rain upstream and in town, MetMalaysia warnings."],
+      ["forecast", "Forecast", "Proposes the base level - Normal for now, Keep watching, Get ready, Act now or Can't confirm right now - with rules a person can read: the river, the upstream gauges, rain upstream and in town, MetMalaysia warnings."],
       ["critic", "Critic", "Decides whether the answer may go out: re-checks the facts in Zetaris, can ask the Data & Reconciler for a missing upstream reading, and has Nemotron check the explanation against the facts."],
-      ["nemotron", "Nemotron (via Meterless Nightshift)", "Writes the explanation and reviews the answer; can send it back. Every call names the model that actually answered."],
+      ["nemotron", "Nemotron (via Meterless Nightshift)", "Writes the explanation and reviews the answer; can send it back, and can raise the level — never lower it — when it cites the facts. Every call names the model that actually answered."],
       ["system", "Zetaris", "The one data layer: every agent reads data only through it, and every query is in the trace."],
       ["system", "Meterless World Model", "The agents' shared memory: every fact with its source and time, and the health of each source."],
       ["system", "Safety gate", "The last check on every answer: never \"Normal\" on missing data, never \"go into the water\", always the disclaimer and 999 / 991."]],
@@ -198,7 +198,7 @@ const UI = {
     why_2010: "Live run, 24 Oct 20:10: the Critic finds a stale upstream reading and asks the Data agent for another gauge",
     why_2341: "Rantau Panjang, question in BM · Keep watching · the newest: shows which sources were used and left out",
     why_2252: "Kota Bharu · the Critic's AI review failed twice (NVIDIA error), was retried and approved - failure handled in the open",
-    play: "Play", pause: "Pause", replay: "Play again", show_all: "Show all steps",
+    speed: "Speed", play: "Play", pause: "Pause", replay: "Play again", show_all: "Show all steps",
     waiting_ai: "waiting for Nemotron to answer…",
     status: "{n} of {total} steps · {t} s of {end} s (real time {speed})", done: "All {total} steps · the run took {end} s",
     download: "Download the full trace (JSONL)", file: "Open the published file on GitHub", raw: "Show raw",
@@ -209,7 +209,7 @@ const UI = {
     l_how: "How VEDA decides (README: How it works)", l_try: "Try VEDA yourself",
     footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
     load_fail: "Could not load the recorded runs." },
-  ms: { title: "Untuk juri", intro: "Cara VEDA berfungsi dalam satu minit, dan larian sebenar yang dirakam secara langsung dimainkan semula langkah demi langkah - setiap ejen, setiap pertanyaan data dan setiap panggilan AI, seperti yang berlaku.",
+  ms: { title: "Untuk juri", intro: "Cara VEDA berfungsi dalam satu minit, dan rakaman sebenar secara langsung dimainkan semula langkah demi langkah - setiap ejen, setiap pertanyaan data dan setiap panggilan AI, seperti yang berlaku.",
     one_minute: "VEDA dalam satu minit", d_title: "Cara VEDA menjawab soalan",
     d_desc: "Soalan pergi kepada Penyelaras, kemudian Ejen Data, Ejen Ramalan dan Penyemak, kemudian semakan keselamatan. Ejen Data dan Penyemak membaca data melalui Zetaris; Penyelaras dan Penyemak memanggil Nemotron melalui Meterless Nightshift; semuanya berkongsi Meterless World Model.",
     d_question: "Soalan anda", d_gate: "Semakan keselamatan", d_memory: "World Model: memori bersama",
@@ -217,29 +217,29 @@ const UI = {
     decides: [
       ["coordinator", "Penyelaras", "Memutuskan laluan: jawapan pantas atau semakan penuh. Membina kad jawapan dengan kod; model hanya menambah penjelasan 1-2 ayat."],
       ["data", "Ejen Data", "Memutuskan sumber mana yang boleh dipercayai: membaca setiap sumber melalui Zetaris, mengetepikan yang lapuk atau rosak dan menyatakan sebabnya."],
-      ["forecast", "Ejen Ramalan", "Memutuskan tahap - Normal buat masa ini, Terus berjaga-jaga, Bersedia, Bertindak sekarang atau Tidak dapat disahkan sekarang - dengan peraturan yang boleh dibaca: sungai, tolok di hulu, hujan di hulu dan di bandar, amaran MetMalaysia."],
+      ["forecast", "Ejen Ramalan", "Mencadangkan tahap asas - Normal buat masa ini, Terus berjaga-jaga, Bersedia, Bertindak sekarang atau Tidak dapat disahkan sekarang - dengan peraturan yang boleh dibaca: sungai, tolok di hulu, hujan di hulu dan di bandar, amaran MetMalaysia."],
       ["critic", "Penyemak", "Memutuskan sama ada jawapan boleh dihantar: menyemak semula fakta dalam Zetaris, boleh meminta Ejen Data mencari bacaan hulu yang tiada, dan meminta Nemotron menyemak penjelasan dengan fakta."],
-      ["nemotron", "Nemotron (melalui Meterless Nightshift)", "Menulis penjelasan dan menyemak jawapan; boleh menolaknya. Setiap panggilan menyatakan model yang sebenarnya menjawab."],
-      ["system", "Zetaris", "Satu-satunya lapisan data: setiap ejen membaca data hanya melaluinya, dan setiap pertanyaan ada dalam jejak."],
+      ["nemotron", "Nemotron (melalui Meterless Nightshift)", "Menulis penjelasan dan menyemak jawapan; boleh menolaknya, dan boleh menaikkan tahap — tidak pernah menurunkannya — jika memetik fakta. Setiap panggilan menyatakan model yang sebenarnya menjawab."],
+      ["system", "Zetaris", "Satu-satunya lapisan data: setiap ejen membaca data hanya melaluinya, dan setiap pertanyaan data ada dalam log."],
       ["system", "Meterless World Model", "Memori bersama ejen: setiap fakta dengan sumber dan masanya, serta keadaan setiap sumber."],
-      ["system", "Semakan keselamatan", "Semakan terakhir bagi setiap jawapan: tidak pernah \"Normal\" jika data tiada, tidak pernah \"masuk ke dalam air\", sentiasa ada penafian dan 999 / 991."]],
-    watch: "Tonton larian langsung sebenar",
-    watch_intro: "Ini larian sebenar yang dirakam secara langsung pada 23-24 Okt 2026 (Zetaris + Nemotron melalui Nightshift). Bacaan sungai JPS disunting - tidak diedarkan semula, mengikut keputusan penganjur - jadi anda akan melihat \"[JPS reading — not redistributed]\" di tempatnya. Pilih satu untuk dimainkan semula di sini.",
-    all_runs: "Semua {n} larian langsung yang dirakam", label: "Larian langsung dirakam · {when} MYT",
-    why_2010: "Larian langsung, 24 Okt 20:10: Penyemak mendapati bacaan hulu yang lapuk dan meminta Ejen Data mencari tolok lain",
+      ["system", "Semakan keselamatan", "Semakan terakhir bagi setiap jawapan: tidak pernah \"Normal\" jika data tiada, tidak pernah menyuruh meredah air banjir, sentiasa ada penafian dan 999 / 991."]],
+    watch: "Tonton rakaman langsung sebenar",
+    watch_intro: "Ini rakaman sebenar secara langsung pada 23-24 Okt 2026 (Zetaris + Nemotron melalui Nightshift). Bacaan sungai JPS disunting - tidak diedarkan semula, mengikut keputusan penganjur - jadi anda akan melihat \"[JPS reading — not redistributed]\" di tempatnya. Pilih satu untuk dimainkan semula di sini.",
+    all_runs: "Semua {n} rakaman langsung", label: "Rakaman langsung · {when} MYT",
+    why_2010: "Rakaman langsung, 24 Okt 20:10: Penyemak mendapati bacaan hulu yang lapuk dan meminta Ejen Data mencari tolok lain",
     why_2341: "Rantau Panjang, soalan dalam BM · Terus berjaga-jaga · yang terbaru: menunjukkan sumber yang digunakan dan diketepikan",
     why_2252: "Kota Bharu · semakan AI Penyemak gagal dua kali (ralat NVIDIA), dicuba semula dan diluluskan - kegagalan ditangani secara terbuka",
-    play: "Main", pause: "Jeda", replay: "Main semula", show_all: "Tunjuk semua langkah",
+    speed: "Kelajuan", play: "Main", pause: "Jeda", replay: "Main semula", show_all: "Tunjuk semua langkah",
     waiting_ai: "menunggu jawapan Nemotron…",
-    status: "{n} daripada {total} langkah · {t} s daripada {end} s (masa sebenar {speed})", done: "Semua {total} langkah · larian mengambil masa {end} s",
-    download: "Muat turun jejak penuh (JSONL)", file: "Buka fail yang diterbitkan di GitHub", raw: "Tunjuk mentah",
+    status: "{n} daripada {total} langkah · {t} s daripada {end} s (masa sebenar {speed})", done: "Semua {total} langkah · rakaman mengambil masa {end} s",
+    download: "Muat turun log penuh (JSONL)", file: "Buka fail yang diterbitkan di GitHub", raw: "Tunjuk data mentah",
     asked: "Soalan yang ditanya:", step_names: { plan: "Memahami soalan", gather: "Menyemak tolok sungai, hujan dan amaran",
       forecast: "Menilai risiko", draft: "Menulis jawapan", critique: "Menyemak jawapan", revise: "Membetulkan jawapan" },
     nemo_ok: "Nemotron menjawab · {model} · resit {receipt} · {s} s", nemo_fail: "Tiada jawapan daripada model ({why}) - VEDA meneruskan",
     more: "Lagi", l_repo: "Kod di GitHub", l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
     l_how: "Cara VEDA membuat keputusan (README: How it works)", l_try: "Cuba VEDA sendiri",
     footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
-    load_fail: "Larian yang dirakam tidak dapat dimuatkan." },
+    load_fail: "Rakaman tidak dapat dimuatkan." },
 };
 const FEATURED = { "201011-ef66": "why_2010", "234156-dd79": "why_2341", "225213-cac7": "why_2252" };
 const COLOUR = { "System": "--c-system", "Coordinator": "--c-coordinator", "Data & Reconciler": "--c-data",
@@ -263,6 +263,7 @@ function applyLang() {
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll(".seg [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   $("home").href = "/?lang=" + lang;
+  $("p-speed").setAttribute("aria-label", t("speed"));
   $("decides").innerHTML = t("decides").map(([who, name, what]) =>
     `<li><span class="tag" style="--ag:var(--c-${who})">${esc(name)}</span> ${esc(what)}</li>`).join("");
   renderRuns();
