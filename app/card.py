@@ -146,10 +146,13 @@ T = {  # fixed wording, BM + EN
                 "ms": "Tiada bacaan terkini dari {gauges}; VEDA mencari stesen hulu lain di sungai yang sama, tiada "
                       "ditemui"},
     # B-73 (Husaini 23 Oct): OpenStreetMap lines - possible PPS are never official or open; bridges are facts only
-    "pps": {"en": "Possible PPS — not an official list, confirm with APM / the village head: {items}",
-            "ms": "Kemungkinan PPS — bukan senarai rasmi, sahkan dengan APM / ketua kampung: {items}"},
-    "pps_none": {"en": "Possible PPS: none named in OpenStreetMap within 10 km — ask APM / the village head",
-                 "ms": "Kemungkinan PPS: tiada yang bernama dalam OpenStreetMap dalam 10 km — tanya APM / ketua kampung"},
+    "pps": {"en": "Possible evacuation centres (PPS) — not an official list, confirm with APM / the village head: "
+                  "{items}",
+            "ms": "Kemungkinan pusat pemindahan (PPS) — bukan senarai rasmi, sahkan dengan APM / ketua kampung: {items}"},
+    "pps_none": {"en": "Possible evacuation centres (PPS): none named in OpenStreetMap within 10 km — ask APM / the "
+                       "village head",
+                 "ms": "Kemungkinan pusat pemindahan (PPS): tiada yang bernama dalam OpenStreetMap dalam 10 km — tanya "
+                       "APM / ketua kampung"},
     "bridge": {"en": "{name} crosses {river} ({km} km); river level there: {level}",
                "ms": "{name} merentasi {river} ({km} km); paras sungai di situ: {level}"},
     "bridge_on": {"en": "Bridge on {road}", "ms": "Jambatan di {road}"},

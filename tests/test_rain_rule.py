@@ -215,8 +215,14 @@ def test_public_screen_says_why_in_plain_words(scene):
     assert v["headline"]["en"] == "Get ready" and v["why"]["en"].startswith(
         "Heavy rain upstream (Kuala Krai) may reach here in 9-17 hours while it is also raining heavily here")
     assert "hujan lebat di hulu yang sampai ketika hujan lebat di sini" in v["combined"]["ms"]
-    assert v["upstream"]["en"][0].startswith("Heavy rain upstream: Kuala Krai") and "rain upstream" in v["strip"]["en"]
-    assert "Heavy rain here: 34.7 mm in 12 h." in v["rain_more"]["en"] and "Heavy rain upstream" in v["share"]["en"]
+    # Cowork 24 Oct (demo UI round): plain rows on the screen, the numbers in Details
+    assert v["upstream"]["en"][0] == ("Very heavy rain upstream over the last 3 days. That water flows down towards "
+                                      "here. It may reach here in about 9 to 17 hours.")
+    assert v["rain"]["en"] == "Heavy rain here in the last day." and v["strip"]["en"] == "✓ Checked twice, using 6 sources"
+    assert not any(c.isdigit() for c in v["rain"]["en"] + " ".join(v["rain_more"]["en"]).split("until")[0])
+    assert any(x.startswith("Heavy rain upstream: Kuala Krai") for x in v["rain_detail"]["en"])
+    assert "Heavy rain here: 34.7 mm in 12 h." in v["rain_detail"]["en"]
+    assert "Very heavy rain upstream" in v["share"]["en"] and "Kuala Krai" not in v["share"]["en"]
 
 
 # -- Cowork 24 Oct: Thai-side Golok rain points, tide advice, MetMalaysia warnings (rule A) -------------------------

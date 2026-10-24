@@ -27,8 +27,8 @@ def build(intent, osm=None, verdict="WATCH", base=SHORT):
     return card.build({"place": {"name": "Rantau Panjang"}, "intent": intent}, ev, forecast(verdict=verdict))
 
 
-@pytest.mark.parametrize("lang,label", [("en", "Possible PPS — not an official list, confirm with APM / the village head"),
-                                        ("ms", "Kemungkinan PPS — bukan senarai rasmi, sahkan dengan APM / ketua kampung")])
+@pytest.mark.parametrize("lang,label", [("en", "Possible evacuation centres (PPS) — not an official list, confirm with APM / the village head"),
+                                        ("ms", "Kemungkinan pusat pemindahan (PPS) — bukan senarai rasmi, sahkan dengan APM / ketua kampung")])
 def test_evacuation_question_lists_possible_pps_with_the_label(lang, label):
     text = card.render(build("evacuation"), lang)
     line = next(l for l in text.split("\n") if l.startswith(label))
@@ -58,7 +58,7 @@ def test_bridge_without_a_gauge_on_its_river_says_so():
 
 def test_nothing_found_and_unreadable_table_are_said_plainly():
     none = build("evacuation", {"status": "ok", "pps": [], "bridges": [], "loaded_at": None})
-    assert "Possible PPS: none named in OpenStreetMap within 10 km" in card.render(none, "en")
+    assert "Possible evacuation centres (PPS): none named in OpenStreetMap within 10 km" in card.render(none, "en")
     failed = build("cut_off", {"status": "failed", "pps": [], "bridges": [], "loaded_at": None})
     text = card.render(failed, "ms")
     assert "Tidak disemak: OpenStreetMap (tidak dapat dibaca)." in text and "ODbL" not in text
@@ -86,7 +86,7 @@ def test_osm_lines_sit_outside_the_cap_and_other_lines_still_fit():
 
 def test_key_facts_carry_the_label_and_the_bridge_facts():
     f = card.key_facts(build("evacuation"), lang="ms")
-    assert f["possible_pps"]["note"].startswith("Kemungkinan PPS — bukan senarai rasmi")
+    assert f["possible_pps"]["note"].startswith("Kemungkinan pusat pemindahan (PPS) — bukan senarai rasmi")
     b = card.key_facts(build("cut_off"), lang="en")["bridges"]
     assert b[0].startswith("Jambatan Contoh crosses Sg. Golok") and b[-1] == "VEDA does not know yet which areas are low-lying"
 

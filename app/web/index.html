@@ -56,13 +56,31 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
   .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700;
           color: var(--muted); }
+  /* the replay moment (demo) */
+  .intro { font-size: 1.05rem; margin: 0 0 12px; }
+  .moment-label { font-weight: 700; margin: 0 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+  .chips button { min-height: 44px; padding: 6px 12px; border-radius: 999px; font-size: 1rem; flex-direction: column;
+                  line-height: 1.2; }
+  .chips button small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+  .chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+                                       font-weight: 700; }
+  .chips button[aria-pressed="true"] small { color: var(--on-accent); }
+  .sheet { display: grid; gap: 8px; margin: -6px 0 14px; padding: 10px; border: 1px solid var(--line);
+           border-radius: 14px; background: var(--card); }
+  .sheet button { justify-content: flex-start; text-align: left; }
+  .sheet button[aria-pressed="true"] { border: 2px solid var(--accent); font-weight: 700; }
   /* waiting */
+  .checking { display: block; width: 100%; text-align: left; font-weight: 400; }
+  .checking ul { list-style: none; padding: 0; margin: 0 0 6px; }
+  .checking li { padding: 4px 0; font-size: 1.1rem; }
+  .checking li.done::before { content: "✓ "; font-weight: 800; }
   .status { font-size: 1.15rem; font-weight: 700; min-height: 3em; }
   .bar { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
   .bar > div { height: 100%; width: 3%; background: var(--accent); transition: width .6s ease; }
   .tip { border-left: 6px solid var(--accent); }
   .tip.warn { border-left-color: var(--v-prepare); }
-  .linkish { background: none; border: 0; color: var(--accent); padding: 0; min-height: 44px; font-weight: 700; }
+  .linkish { background: none; border: 0; color: var(--accent); padding: 0 4px; min-height: 44px; min-width: 44px; font-weight: 700; }
   #log { list-style: none; padding: 0; margin: 8px 0 0; font: 1rem/1.4 ui-monospace, Consolas, monospace; }
   #log li { padding: 4px 0; border-bottom: 1px dashed var(--line); word-break: break-word; }
   /* answer */
@@ -127,6 +145,13 @@
 <!-- 1. Home -->
 <section id="s-home">
   <h1 data-t="home_title"></h1>
+  <!-- Cowork 24 Oct (demo UI round): in the demo, the moment of the replay is visible and easy to change -->
+  <div id="moment" hidden>
+    <p class="intro" id="intro"></p>
+    <p class="moment-label" id="moment-label" data-t="change_moment"></p>
+    <div class="chips" id="chips" role="group" aria-labelledby="moment-label"></div>
+    <div class="sheet" id="scenes" hidden></div>
+  </div>
   <div class="towns" id="towns"></div>
   <form id="ask">
     <label for="q" data-t="or_type"></label>
@@ -147,10 +172,7 @@
        <a href="https://open-meteo.com/">Open-Meteo</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) ·
        © OpenStreetMap contributors (ODbL)</p>
     <p data-t="credits_replay"></p>
-    <div id="demo-box" hidden><!-- shown with ?demo=1, a ?replay= link, or offline (SAMPLE_MODE) -->
-      <button class="linkish" type="button" id="demo-link" aria-expanded="false" aria-controls="demo-pick" data-t="demo_data"></button>
-      <div id="demo-pick" hidden><label for="mode" data-t="data_label"></label><select id="mode"></select></div>
-    </div>
+    <select id="mode" hidden aria-hidden="true" tabindex="-1"></select><!-- the chosen data; set by the moment chips -->
   </footer>
 </section>
 
@@ -160,19 +182,23 @@
   <p class="status" id="w-status" role="status" aria-live="polite"></p>
   <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="w-bar-box"><div id="w-bar"></div></div>
   <div class="card tip" id="w-tip"></div>
+  <!-- Cowork 24 Oct: a short "checking" step - the run's real steps in plain words, 2-4 s, tap to skip -->
+  <button type="button" class="card checking" id="w-check" hidden aria-describedby="w-skip-note">
+    <ul id="w-check-list"></ul><span class="sub" id="w-skip-note" data-t="tap_skip"></span></button>
   <button class="linkish" type="button" id="w-more" aria-expanded="false" data-t="see_doing"></button>
   <ol id="log" hidden></ol>
 </section>
 
 <!-- 3. Answer -->
 <section id="s-answer" hidden>
-  <p id="a-label" hidden><span class="chip" id="a-label-text"></span></p>
+  <p id="a-label" hidden><span class="chip" id="a-label-text"></span>
+    <button type="button" class="linkish" id="a-change" data-t="change" hidden></button></p>
   <p class="place" id="a-place"></p>
   <div class="badge" id="a-badge" role="img"></div>
   <p class="oneline" id="a-line"></p>
   <p class="calm" id="a-note" hidden></p>
-  <button type="button" class="sos" id="a-sos" data-t="sos" hidden></button>
   <div class="card todo"><h2 data-t="todo"></h2><p id="a-todo" style="margin:0"></p></div>
+  <button type="button" class="sos" id="a-sos" data-t="sos" hidden></button>
   <div class="card rows" id="a-rows"></div>
   <div class="actions">
     <button type="button" id="a-share" class="primary" data-t="share"></button>
@@ -186,6 +212,7 @@
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
       <p class="note" data-t="expl_note"></p></div>
     <div class="card" id="a-water-box"><h2 data-t="water_detail"></h2><ul class="sources" id="a-water"></ul></div>
+    <div class="card" id="a-rain-box"><h2 data-t="rain_detail"></h2><ul class="sources" id="a-rain"></ul></div>
     <div class="card"><h2 data-t="sources"></h2><ul class="sources" id="a-sources"></ul></div>
     <button class="linkish" type="button" id="a-how" data-t="how_link"></button>
   </div>
@@ -239,8 +266,8 @@ const UI = {
   en: {
     home_title: "Is my area at risk of flooding?", or_type: "Or type a question", ask: "Ask",
     privacy: "Please don't type names, IC, phone numbers or addresses. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked.",
-    sos: "I'm stranded / in danger", data_label: "Data",
-    privacy_short: "Your question stays private ·", more: "more ›", less: "less ‹", demo_data: "Demo data",
+    sos: "I'm stranded / in danger", 
+    privacy_short: "Your question stays private ·", more: "more ›", less: "less ‹",
     water_detail: "Water in detail",
     footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.",
     credits_lead: "River levels: Jabatan Pengairan dan Saliran (JPS) Malaysia, read live on this machine and used for non-commercial public-safety research. Also:",
@@ -263,7 +290,7 @@ const UI = {
     tips: ["Keep a charged phone and a power bank ready during the monsoon.",
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
-           "Know where your nearest relief centre (PPS) is - ask the village head."],
+           "Know where your nearest evacuation centre (PPS) is - ask the village head."],
     check_town: "Check {town}",
     how_link: "See how VEDA worked this out ›", how_title: "How VEDA worked this out",
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
@@ -273,12 +300,19 @@ const UI = {
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
     level_now: "Now", alert: "Alert", warning: "Warning", danger: "Danger", m: "m",
+    // Cowork 24 Oct (demo UI round)
+    intro: "Replay of the November 2024 Kelantan flood. Tap a town to see what VEDA would have told a family that evening.",
+    change_moment: "Change moment", change: "Change", test_scenes: "Test scenes ›", hide_scenes: "Hide test scenes",
+    before: "Before", morning: "Morning", peak: "Peak", replay_short: "Replay", madeup_scene: "Made-up test scene",
+    rain_detail: "Rain and upstream in detail", tap_skip: "Tap to skip",
+    c_gather: "Reading river and rain…", c_upstream: "Checking rain upstream…", c_forecast: "Working out the risk…",
+    c_draft: "Writing the answer…", c_critique: "Double-checking…",
   },
   ms: {
     home_title: "Adakah kawasan saya berisiko banjir?", or_type: "Atau taip soalan", ask: "Tanya",
     privacy: "Mohon jangan taip nama, IC, nombor telefon atau alamat. Soalan anda tidak dihantar kepada mana-mana model AI; ia kekal di komputer ini dalam fail log VEDA, dengan nombor telefon dan IC disembunyikan.",
-    sos: "Saya terkandas / dalam bahaya", data_label: "Data",
-    privacy_short: "Soalan anda kekal peribadi ·", more: "lagi ›", less: "kurang ‹", demo_data: "Data demo",
+    sos: "Saya terkandas / dalam bahaya", 
+    privacy_short: "Soalan anda kekal peribadi ·", more: "lagi ›", less: "kurang ‹",
     water_detail: "Butiran paras air",
     footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991.",
     credits_lead: "Paras sungai: Jabatan Pengairan dan Saliran (JPS) Malaysia, dibaca secara langsung di komputer ini dan digunakan untuk penyelidikan keselamatan awam bukan komersial. Juga:",
@@ -301,7 +335,7 @@ const UI = {
     tips: ["Sediakan telefon yang dicas dan power bank sepanjang musim tengkujuh.",
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
-           "Ketahui PPS (pusat pemindahan) terdekat - tanya ketua kampung."],
+           "Ketahui pusat pemindahan (PPS) terdekat - tanya ketua kampung."],
     check_town: "Semak {town}",
     how_link: "Lihat bagaimana VEDA mendapat jawapan ini ›", how_title: "Bagaimana VEDA mendapat jawapan ini",
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
@@ -311,14 +345,23 @@ const UI = {
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
     level_now: "Kini", alert: "Waspada", warning: "Amaran", danger: "Bahaya", m: "m",
+    intro: "Ulang tayang banjir Kelantan November 2024. Tekan nama bandar untuk lihat apa yang VEDA akan beritahu keluarga pada petang itu.",
+    change_moment: "Tukar masa", change: "Tukar", test_scenes: "Senario ujian ›", hide_scenes: "Sembunyikan senario ujian",
+    before: "Sebelum", morning: "Pagi", peak: "Puncak", replay_short: "Ulang tayang", madeup_scene: "Senario ujian rekaan",
+    rain_detail: "Butiran hujan dan hulu", tap_skip: "Tekan untuk langkau",
+    c_gather: "Membaca paras sungai dan hujan…", c_upstream: "Menyemak hujan di hulu…", c_forecast: "Menilai risiko…",
+    c_draft: "Menulis jawapan…", c_critique: "Menyemak semula…",
   },
 };
 const TOWNS = ["Pasir Mas", "Rantau Panjang", "Kota Bharu", "Tumpat"];
 const DATA = [  // value = replay|at ; the live choice is removed when VEDA runs offline (SAMPLE_MODE)
   { v: "", k: "live" },
-  { v: "nov2024|2024-11-26 18:00", k: "past", when: "26 Nov 2024, 18:00" },
-  { v: "nov2024|2024-11-27 08:00", k: "past", when: "27 Nov 2024, 08:00" },
-  { v: "nov2024|2024-11-27 19:30", k: "past", when: "27 Nov 2024, 19:30" },
+  { v: "nov2024|2024-11-26 18:00", k: "past", when: "26 Nov 2024, 18:00", chip: "before",
+    at: { en: "26 Nov 6 pm", ms: "26 Nov 6 petang" }, full: { en: "26 Nov 2024, 6 pm", ms: "26 Nov 2024, 6 petang" } },
+  { v: "nov2024|2024-11-27 08:00", k: "past", when: "27 Nov 2024, 08:00", chip: "morning",
+    at: { en: "27 Nov 8 am", ms: "27 Nov 8 pagi" }, full: { en: "27 Nov 2024, 8 am", ms: "27 Nov 2024, 8 pagi" } },
+  { v: "nov2024|2024-11-27 19:30", k: "past", when: "27 Nov 2024, 19:30", chip: "peak",
+    at: { en: "27 Nov 7:30 pm", ms: "27 Nov 7.30 malam" }, full: { en: "27 Nov 2024, 7:30 pm", ms: "27 Nov 2024, 7.30 malam" } },
   { v: "synthetic_rising|2024-11-25 18:00", k: "madeup", what: { en: "rising river", ms: "sungai naik" } },
   { v: "synthetic_calm|2024-06-15 10:00", k: "madeup", what: { en: "calm day", ms: "hari tenang" } },
   { v: "synthetic_silent_upstream|2024-06-15 10:00", k: "madeup", what: { en: "no reading upstream", ms: "tiada bacaan di hulu" } },
@@ -333,7 +376,8 @@ const ICON = {  // simple shapes so the verdict never relies on colour alone
 };
 const STAGES = ["plan", "gather", "forecast", "draft", "critique", "revise"];
 
-let lang = "en", words = null, result = null, sampleMode = false, lastQuestion = "", speaking = false;
+let lang = "en", words = null, result = null, sampleMode = false, lastQuestion = "", speaking = false, askedMode = null;
+let skipCheck = null;
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
 const t = (key) => UI[lang][key];
@@ -370,6 +414,7 @@ function applyLang() {
     return o;
   }));
   if ([...$("mode").options].some((o) => o.value === keep)) $("mode").value = keep;
+  renderMoment();
   $("w-more").textContent = $("log").hidden ? t("see_doing") : t("hide_doing");
   if (words) renderSos();
   if (result) renderAnswer();
@@ -378,6 +423,39 @@ function applyLang() {
 }
 
 function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang(); }
+
+// ---------- 1b. The replay moment (demo): Before · Morning · Peak · Test scenes › ----------
+const PEAK = "nov2024|2024-11-27 19:30";
+function pick(v) { $("mode").value = v; renderMoment(); }
+function renderMoment() {
+  const cur = $("mode").value;
+  const d = DATA.find((x) => x.v === cur) || {};
+  $("intro").textContent = t("intro");
+  $("intro").hidden = d.k !== "past";
+  const chip = (label, sub, pressed, onClick, extra) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(pressed));
+    b.innerHTML = esc(label) + (sub ? `<small>${esc(sub)}</small>` : "");
+    if (extra) b.setAttribute("aria-expanded", extra);
+    b.addEventListener("click", onClick);
+    return b;
+  };
+  const scenesOpen = !$("scenes").hidden;
+  const inScenes = d.k === "madeup" || d.k === "live";
+  $("chips").replaceChildren(...DATA.filter((x) => x.chip).map((x) => chip(t(x.chip), x.at[lang], x.v === cur, () => pick(x.v))),
+    chip(scenesOpen ? t("hide_scenes") : t("test_scenes"), "", inScenes, () => { $("scenes").hidden = !$("scenes").hidden; renderMoment(); },
+         String(scenesOpen)));
+  $("chips").lastChild.setAttribute("aria-controls", "scenes");
+  $("scenes").replaceChildren(...DATA.filter((x) => (x.k === "madeup" || (x.k === "live" && !sampleMode))).map((x) =>
+    chip(x.k === "live" ? t("live") : `${t("madeup")} · ${x.what[lang]}`, "", x.v === cur, () => pick(x.v))));
+}
+function momentLabel() {   // the answer screen's "Replay · 27 Nov 2024, 7:30 pm · Change", from the moment asked about
+  const d = DATA.find((x) => x.v === askedMode) || {};
+  if (d.k === "past" && d.full) return `${t("replay_short")} · ${d.full[lang]}`;
+  if (d.k === "madeup") return `${t("madeup_scene")} · ${d.what[lang]}`;
+  return null;
+}
 
 // ---------- 2. Waiting ----------
 let stageIdx = -1, tipTimer = null, tipIdx = 0, warned = false;
@@ -408,10 +486,40 @@ function addLog(text) {
   $("log").append(li);
 }
 
+// Cowork 24 Oct: the run's real steps in plain words (only steps that happened), shown after a fast run
+const CHECK_OF = { gather: "c_gather", "rain.upstream": "c_upstream", forecast: "c_forecast", draft: "c_draft",
+                   critique: "c_critique" };
+function checking(keys) {
+  return new Promise((done) => {
+    if (!keys.length) { done(); return; }
+    const each = Math.max(500, Math.min(1000, 3000 / keys.length));       // 2-4 s in all
+    $("w-tip").hidden = true; $("w-more").hidden = true; $("log").hidden = true;
+    $("w-check").hidden = false;
+    $("w-check-list").replaceChildren(...keys.map((k) => { const li = document.createElement("li"); li.textContent = t(k); li.hidden = true; return li; }));
+    const items = [...$("w-check-list").children];
+    let i = 0, timer = null;
+    const finish = () => { clearTimeout(timer); skipCheck = null; done(); };
+    const next = () => {
+      if (i > 0) items[i - 1].classList.add("done");
+      if (i >= items.length) { timer = setTimeout(finish, 400); return; }
+      items[i].hidden = false;
+      $("w-status").textContent = t(keys[i]);
+      i += 1;
+      timer = setTimeout(next, each);
+    };
+    skipCheck = finish;
+    next();
+  });
+}
+
 async function ask(question, town) {
-  lastQuestion = question;
+  await ready;                                  // the demo's moment is set before the first run
+  lastQuestion = question; askedMode = $("mode").value;
   result = null; stageIdx = -1; warned = false; tipIdx = Math.floor(Math.random() * 4);
   show("s-wait");
+  $("w-check").hidden = true; $("w-tip").hidden = false; $("w-more").hidden = false;
+  $("w-more").setAttribute("aria-expanded", "false"); $("w-more").textContent = t("see_doing");
+  const seen = [], started = performance.now();
   $("w-place").textContent = town || "";
   $("w-status").textContent = t("s_start");
   $("w-bar").style.width = "3%";
@@ -450,6 +558,8 @@ async function ask(question, town) {
         if (kind === "step") {
           addLog(data.line);
           if (data.action === "state") setStage(stageFromLine(data.line));
+          const key = CHECK_OF[data.action === "state" ? stageFromLine(data.line) : data.action];
+          if (key && !seen.includes(key)) seen.push(key);
         }
         if (kind === "warning" && data.headings && data.headings.length) {
           warned = true;
@@ -462,6 +572,8 @@ async function ask(question, town) {
     }
     if (!result) throw new Down();
     bump(100);
+    clearInterval(tipTimer);
+    if (performance.now() - started < 4000) await checking(seen);    // a fast (offline) run: show what it checked
     $("w-status").textContent = t("s_done");
     renderAnswer();
     show("s-answer");
@@ -532,7 +644,9 @@ function renderAnswer() {
   $("a-combined").hidden = !v.combined;
   if (v.combined) $("a-combined").textContent = v.combined[lang];
   $("a-label").hidden = !v.label;
-  if (v.label) $("a-label-text").textContent = v.label[lang];
+  const moment = v.label && momentLabel();      // Cowork 24 Oct: "Replay · 27 Nov 2024, 7:30 pm · Change"
+  if (v.label) $("a-label-text").textContent = moment || v.label[lang];
+  $("a-change").hidden = !moment || $("moment").hidden;
   $("a-place").textContent = v.place || "";
   $("a-badge").className = "badge v-" + v.verdict;
   $("a-badge").setAttribute("aria-label", v.headline[lang]);
@@ -543,6 +657,9 @@ function renderAnswer() {
   if (v.water) rows += rowHtml(t("water"), v.water[lang].main, "");           // one plain sentence; numbers in Details
   $("a-water-box").hidden = !v.water;
   if (v.water) $("a-water").innerHTML = v.water[lang].detail.map((x) => `<li>${esc(x)}</li>`).join("");
+  const rainDetail = (v.rain_detail && v.rain_detail[lang]) || [];     // the numbers behind the plain rows
+  $("a-rain-box").hidden = !rainDetail.length;
+  $("a-rain").innerHTML = rainDetail.map((x) => `<li>${esc(x)}</li>`).join("");
   if (v.upstream[lang].length) rows += rowHtml(t("upstream"), v.upstream[lang][0], v.upstream[lang].slice(1).join(" "));
   const more = (v.rain_more && v.rain_more[lang]) || [];      // B-88: heavy rain here, until when, small rivers, Thailand
   rows += rowHtml(t("rain"), v.rain ? v.rain[lang] : (more[0] || t("no_rain")), (v.rain ? more : more.slice(1)).join(" "));
@@ -624,7 +741,16 @@ function toggle(btn, box, open, closed) {
   btn.textContent = t(box.hidden ? closed : open);
 }
 $("priv-more").addEventListener("click", () => toggle($("priv-more"), $("privacy"), "less", "more"));
-$("demo-link").addEventListener("click", () => toggle($("demo-link"), $("demo-pick"), "demo_data", "demo_data"));
+$("a-change").addEventListener("click", () => {
+  stopSpeaking(); show("s-home");
+  const pastNow = (DATA.find((d) => d.v === $("mode").value) || {}).k === "past";
+  $("scenes").hidden = pastNow;                          // a test scene was chosen: show the scene list open
+  renderMoment();
+  $("moment").scrollIntoView();
+  const pressed = document.querySelector("#chips [aria-pressed='true'], #scenes [aria-pressed='true']");
+  if (pressed) pressed.focus();
+});
+$("w-check").addEventListener("click", () => { if (skipCheck) skipCheck(); });
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
   $("log").hidden = !$("log").hidden;
@@ -661,12 +787,15 @@ applyLang();
 // ran on live data although the link asked for a past flood); applyLang keeps the choice when /health re-renders it
 const want = params.get("replay") ? `${params.get("replay")}|${params.get("at") || ""}` : null;
 if (want && [...$("mode").options].some((o) => o.value === want)) $("mode").value = want;
-// Cowork 24 Oct: the data / scene picker is for demos only - ?demo=1, a ?replay= link, or offline (SAMPLE_MODE)
-const demo = () => { $("demo-box").hidden = !(params.get("demo") === "1" || want || sampleMode); };
+// Cowork 24 Oct: the moment chips are for demos only - ?demo=1, a ?replay= link, or offline (SAMPLE_MODE)
+const demo = () => { $("moment").hidden = !(params.get("demo") === "1" || want || sampleMode); renderMoment(); };
 demo();
 fetch("/ui/words").then((r) => r.json()).then((w) => { words = w; renderSos(); }).catch(() => {});
-fetch("/health").then((r) => r.json()).then((h) => {
+// a tap waits for /health (offline it answers at once): the demo's first answer is then on the chosen moment
+const ready = fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
+  // Cowork 24 Oct: the offline demo opens on the Nov 2024 flood at its peak, not on a made-up calm day
+  if (sampleMode && !want) $("mode").value = PEAK;
   applyLang();
   demo();
 }).catch(() => {});

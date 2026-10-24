@@ -81,8 +81,8 @@ def test_share_text_never_carries_the_question(views):
 
 def test_labels_say_replay_or_made_up(views):
     assert views["nov2024"][1]["label"]["en"].startswith("Past flood replay")
-    assert views["nov2024"][1]["strip"]["en"] == ("✓ Double-checked · combined from 3 sources: river here, rain,"
-                                                  " rain upstream · 2 left out")
+    assert views["nov2024"][1]["strip"]["en"] == "✓ Checked twice, using 3 sources"    # Cowork 24 Oct: which, in Details
+    assert views["nov2024"][1]["strip"]["ms"] == "✓ Disemak dua kali, menggunakan 3 sumber"
     assert "(reading reported in the news)" in views["nov2024"][1]["water"]["en"]["detail"][0]
     for key in ("synthetic_calm", "synthetic_rising", "synthetic_silent_upstream"):
         v = views[key][1]
@@ -110,8 +110,13 @@ def test_act_replay_rows(views):
         "3.94 m above the alert level (7 m)", "1.94 m above the danger level (9 m)"]
     assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras Bahaya."
     assert v["combined"] is None                      # the river here alone already says Act now
-    assert v["upstream"]["en"][0].startswith("Heavy rain upstream: Buke Ta (Waeng; Thailand)")      # Thai-side rain
-    assert v["upstream"]["en"][1] == "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."
+    assert v["upstream"]["en"] == [                      # Cowork 24 Oct: plain words, no gauge names or mm
+        "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here.",
+        "We have no fresh river reading upstream, so we can't see exactly what is coming."]
+    assert v["rain"]["en"] == "Heavy rain here in the last day."
+    assert v["rain_detail"]["en"][0].startswith("Heavy rain upstream: Buke Ta (Waeng; Thailand)")     # numbers: Details
+    assert "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming." in v["rain_detail"]["en"]
+    assert "evacuation centre (PPS)" in v["todo"]["en"] and "pusat pemindahan (PPS)" in v["todo"]["ms"]
     assert v["why"]["en"] == "The river is at or above the danger level."
     out = [s for s in v["sources"]["en"] if not s["used"]]
     assert any(s["note"] == "left out: reading too old (29 h ago)" for s in out)
@@ -196,8 +201,7 @@ def test_strip_counts_used_and_left_out_from_the_run(views):
     v = views["synthetic_silent_upstream"][1]
     used = [s for s in v["sources"]["en"] if s["used"]]
     dropped = [s for s in v["sources"]["en"] if s["left_out"]]
-    assert v["strip"]["en"].startswith(f"✓ Double-checked · combined from {len(used)} sources: river here, river upstream")
-    assert v["strip"]["en"].endswith(f" · {len(dropped)} left out")
+    assert v["strip"]["en"] == f"✓ Checked twice, using {len(used)} sources" and dropped    # left out: in Details
     assert any(s["note"].startswith("not used: ") for s in v["sources"]["en"])       # not asked for != left out
 
 
@@ -274,3 +278,30 @@ def test_water_row_is_one_plain_sentence(views):
     assert view._water_plain(card, fc, "en") == "Calm, below the alert mark."
     card["comparison"] = {"alert": 0.3, "danger": -0.7}
     assert view._water_plain(card, fc, "en") == "Steady. Over the alert mark, 0.7 m under the danger mark."
+
+
+# -- Cowork 24 Oct demo UI round ----------------------------------------------------------------------------------
+def test_pps_reads_evacuation_centre_on_screens_but_the_card_keeps_pps():
+    from app import card
+    assert view.plain_pps(card.ADVICE["ACT"]["en"], "en").startswith(
+        "Follow APM / police instructions and go to the evacuation centre (PPS) if told.")
+    assert "pusat pemindahan (PPS) terdekat - tanya ketua kampung / JKKK." in view.plain_pps(card.ADVICE["PREPARE"]["ms"], "ms")
+    assert "go to the PPS if told" in card.ADVICE["ACT"]["en"]                      # the length-capped card text
+    assert view.words()["emergency"]["steps"]["en"][0].endswith("evacuation centre (PPS) if told.")
+
+
+def test_strip_is_short_and_says_one_source_singular():
+    rows = [{"kind": "river", "used": True, "left_out": False}, {"kind": "rain", "used": False, "left_out": True}]
+    assert view._strip({"approved": True}, rows, "en") == "✓ Checked twice, using 1 source"
+    assert view._strip({"approved": False}, rows * 2, "ms") == "✓ Disemak, menggunakan 2 sumber"
+
+
+def test_demo_page_has_the_moment_chips_intro_and_peak_default():
+    from app import trace
+    page = (trace.ROOT / "app" / "web" / "index.html").read_text(encoding="utf-8")
+    assert 'const PEAK = "nov2024|2024-11-27 19:30"' in page and "if (sampleMode && !want) $(\"mode\").value = PEAK;" in page
+    assert "Replay of the November 2024 Kelantan flood. Tap a town to see what VEDA would have told a family that evening." in page
+    assert "Ulang tayang banjir Kelantan November 2024. Tekan nama bandar untuk lihat apa yang VEDA akan beritahu keluarga pada petang itu." in page
+    for key in ("before", "morning", "peak", "test_scenes", "tap_skip", "c_gather", "c_critique"):
+        assert page.count(f"{key}: ") == 2, key                                      # EN and BM
+    assert page.index('id="a-todo"') < page.index('id="a-sos"')                   # what to do, then the stranded button

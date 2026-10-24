@@ -86,6 +86,40 @@ W = {
                       "ms": "hujan lebat di hulu yang sampai ketika hujan lebat di sini"},
     "and_word": {"en": " and ", "ms": " dan "},
     "from_none": {"en": "no fresh river reading", "ms": "tiada bacaan sungai terkini"},
+    # Cowork 24 Oct (demo UI round): the Upstream and Rain rows in plain words - no gauge names, no mm, no
+    # "arrival time not known" on the screen; the numbers are in Details ("Rain and upstream in detail")
+    "up_thai": {"en": "Very heavy rain across the border in Thailand over the last 3 days. That water flows down "
+                      "towards here.",
+                "ms": "Hujan sangat lebat di seberang sempadan di Thailand dalam 3 hari lalu. Air itu mengalir turun ke "
+                      "arah sini."},
+    "up_rain": {"en": "Very heavy rain upstream over the last 3 days. That water flows down towards here.",
+                "ms": "Hujan sangat lebat di hulu dalam 3 hari lalu. Air itu mengalir turun ke arah sini."},
+    "up_rain_fc": {"en": "Very heavy rain is forecast upstream. That water would flow down towards here.",
+                   "ms": "Hujan sangat lebat dijangka di hulu. Air itu akan mengalir turun ke arah sini."},
+    "up_when": {"en": " It may reach here in about {a} to {b} hours.",
+                "ms": " Ia mungkin sampai ke sini dalam kira-kira {a} hingga {b} jam."},
+    "up_thai_some": {"en": "Some rain across the border in Thailand over the last 3 days.",
+                     "ms": "Ada hujan di seberang sempadan di Thailand dalam 3 hari lalu."},
+    "up_none_plain": {"en": "We have no fresh river reading upstream, so we can't see exactly what is coming.",
+                      "ms": "Kami tiada bacaan sungai terkini di hulu, jadi kami tidak dapat melihat dengan tepat apa "
+                            "yang akan sampai."},
+    "up_level_plain": {"en": "The river upstream is at the {name} level", "ms": "Sungai di hulu berada pada paras {name}"},
+    "up_and_rising": {"en": ", and rising", "ms": ", dan sedang naik"},
+    "up_normal_plain": {"en": "The river upstream is normal.", "ms": "Sungai di hulu normal."},
+    "up_rising_plain": {"en": "The river upstream is rising.", "ms": "Sungai di hulu sedang naik."},
+    "rain_heavy_past": {"en": "Heavy rain here in the last day.", "ms": "Hujan lebat di sini dalam sehari lalu."},
+    "rain_some_past": {"en": "Some rain here in the last day.", "ms": "Ada hujan di sini dalam sehari lalu."},
+    "rain_none_past": {"en": "Little or no rain here in the last day.",
+                       "ms": "Sedikit atau tiada hujan di sini dalam sehari lalu."},
+    "rain_heavy_next": {"en": "Heavy rain expected here in the next day.",
+                        "ms": "Hujan lebat dijangka di sini dalam sehari akan datang."},
+    "rain_some_next": {"en": "Some rain expected here in the next day.",
+                       "ms": "Ada hujan dijangka di sini dalam sehari akan datang."},
+    "rain_none_next": {"en": "Little or no rain expected here in the next day.",
+                       "ms": "Sedikit atau tiada hujan dijangka di sini dalam sehari akan datang."},
+    "checked_using": {"en": "{tick}, using {n} sources", "ms": "{tick}, menggunakan {n} sumber"},
+    "checked_using_1": {"en": "{tick}, using 1 source", "ms": "{tick}, menggunakan 1 sumber"},
+    "checked2_plain": {"en": "Checked twice", "ms": "Disemak dua kali"},
     "label_replay": {"en": "Past flood replay · {when}", "ms": "Ulang tayang banjir lalu · {when}"},
     "label_synthetic": {"en": "Made-up test scene · {when}", "ms": "Senario ujian rekaan · {when}"},
     "used": {"en": "used", "ms": "digunakan"},
@@ -385,6 +419,79 @@ def _upstream(forecast, lang):
     return rows
 
 
+# Cowork 24 Oct (demo UI round): on the screens "PPS" reads "evacuation centre (PPS)". The card text keeps the short
+# form (its ~750 character cap; the Critic checks that text) - the screens, share text and Emergency steps expand it.
+PLAIN_PPS = {"en": ((r"\bnearest PPS \((ask [^)]*)\)", r"nearest evacuation centre (PPS) - \1"),
+                    (r"\bthe PPS\b", "the evacuation centre (PPS)")),
+             "ms": ((r"\bPPS terdekat \((tanya [^)]*)\)", r"pusat pemindahan (PPS) terdekat - \1"),
+                    (r"\bke PPS\b", "ke pusat pemindahan (PPS)"))}
+
+
+def plain_pps(text, lang):
+    for pattern, repl in PLAIN_PPS[lang]:
+        text = re.sub(pattern, repl, text)
+    return text
+
+
+HEAVY_HERE_MM = 30.0     # the words "heavy rain here" = the rain rule's local threshold (L2, tentative)
+
+
+def _upstream_plain(card, forecast, lang):
+    """Cowork 24 Oct: the Upstream row in plain words. Rain upstream first (the heavy rain behind a raised verdict),
+    then the river upstream; Thai-side rain says 'across the border in Thailand'. Numbers stay in Details."""
+    out = []
+    r = card.get("rain_up") or {}
+    heavy = r.get("heavy") or []
+    fallen = [u for u in heavy if u["fallen"]]
+    if fallen:
+        text = W["up_thai" if all("Thailand" in str(u["name"]) for u in fallen) else "up_rain"][lang]
+        known = [u["window"] for u in fallen if u.get("window")]
+        if known:
+            w = min(known, key=lambda w: w["min"])
+            text += W["up_when"][lang].format(a=_num(w["min"]), b=_num(w["max"]))
+        out.append(text)
+    elif heavy:
+        out.append(W["up_rain_fc"][lang])
+    elif r.get("thai"):
+        out.append(W["up_thai_some"][lang])
+    ups = (forecast or {}).get("upstream", [])
+    if any(u.get("status") == "no fresh reading" for u in ups):
+        out.append(W["up_none_plain"][lang])
+    read = [u for u in ups if u.get("status") != "no fresh reading"]
+    high = [u for u in read if u.get("band") in LEVEL]
+    if high:
+        u = max(high, key=lambda u: list(LEVEL).index(u["band"]))
+        out.append(W["up_level_plain"][lang].format(name=LEVEL[u["band"]][lang])
+                   + (W["up_and_rising"][lang] if any(x.get("rising") for x in high) else "") + ".")
+    elif read:
+        out.append(W["up_rising_plain" if any(u.get("rising") for u in read) else "up_normal_plain"][lang])
+    return out
+
+
+def _rain_plain(card, forecast, lang):
+    """Cowork 24 Oct: the Rain row's sentence - heavy / some / little rain, past day (replay) or next day (live)."""
+    r = card.get("rain_up") or {}
+    local = ((forecast or {}).get("rain_upstream") or {}).get("local") or {}
+    past, nxt = card.get("rain_past_24h_mm"), card.get("rain_24h_mm")
+    if past is not None or (local.get("past_12h_mm") or 0) >= HEAVY_HERE_MM:
+        mm = past if past is not None else local.get("past_12h_mm")
+        heavy = (mm or 0) >= HEAVY_HERE_MM or (past is not None and r.get("local_heavy"))
+        return W["rain_heavy_past" if heavy else "rain_some_past" if (mm or 0) >= 1 else "rain_none_past"][lang]
+    if nxt is not None or r.get("local_heavy"):
+        heavy = (nxt or 0) >= HEAVY_HERE_MM or r.get("local_heavy")
+        return W["rain_heavy_next" if heavy else "rain_some_next" if (nxt or 0) >= 1 else "rain_none_next"][lang]
+    return None
+
+
+def _rain_detail(card, forecast, lang):
+    """The numbers behind the plain rows (Details): rain upstream per point, the river upstream per gauge, rain here."""
+    out = _rain_text(card, lang, ("rain_up",)) + _upstream(forecast, lang)
+    rain = _rain(card, lang)
+    if rain:
+        out.append(card_mod.months_ms(rain) if lang == "ms" else rain)
+    return out + _rain_text(card, lang, ("rain_here", "thailand"))
+
+
 def _rain(card, lang):
     if card.get("rain_24h_mm") is not None:
         return W["rain_next"][lang].format(mm=_num(card["rain_24h_mm"]))
@@ -523,14 +630,13 @@ def _source_kind(card):
 
 
 def _strip(answer, rows, lang):
-    """Cowork 24 Oct: '✓ Double-checked · combined from N sources: river here, river upstream, rain · 1 left out'."""
-    tick = W["checked2" if answer.get("approved") else "checked1"][lang]
+    """Cowork 24 Oct (demo UI round): '✓ Checked twice, using 3 sources' - which sources, and what was left out and
+    why, are in Details."""
+    tick = W["checked2_plain" if answer.get("approved") else "checked1"][lang]
     used = [r for r in rows if r["used"]]
-    kinds = list(dict.fromkeys(KIND[r["kind"]][lang] for r in used))
-    text = f"✓ {tick} · " + (W["combined"][lang].format(n=len(used), kinds=", ".join(kinds)) if used
-                             else W["from_none"][lang])
-    out = sum(1 for r in rows if r["left_out"])
-    return text + (f" · {W['n_left_out'][lang].format(n=out)}" if out else "")
+    if not used:
+        return f"✓ {tick} · {W['from_none'][lang]}"
+    return "✓ " + W["checked_using_1" if len(used) == 1 else "checked_using"][lang].format(tick=tick, n=len(used))
 
 
 def _label(evidence, lang):
@@ -624,7 +730,7 @@ def share_text(view, lang):
     lines.append(v["line"][lang])
     if v.get("water"):
         lines.append(v["water"][lang]["main"])
-    lines += v.get("rain_share", {}).get(lang, [])                  # B-88: the rain lines behind the verdict
+    lines += v.get("rain_share", {}).get(lang, [])                  # B-88: the rain behind the verdict, plain
     lines.append(v["strip"][lang])
     lines.append(SAFETY[lang])
     return trace.redact("\n".join(lines))
@@ -643,13 +749,18 @@ def answer_view(result):
     view = {"verdict": verdict, "place": card.get("place"), "headline": HEADLINE[verdict],
             "label": _both(lambda lang: _label(evidence, lang)) if _label(evidence, "en") else None,
             "line": _both(lambda lang: _line(card, forecast, lang)),
-            "todo": dict(card["action"]),
+            "todo": {lang: plain_pps(card["action"][lang], lang) for lang in LANGS},
             "water": (_both(lambda lang: _water(card, forecast, evidence, lang)) if card.get("gauge") else
                       _both(lambda lang: _water_missing(evidence, plan, lang)) if card.get("no_river") else None),
-            "upstream": _both(lambda lang: _rain_text(card, lang, ("rain_up",)) + _upstream(forecast, lang)),
-            "rain": _both(lambda lang: _rain(card, lang)) if _rain(card, "en") else None,
-            "rain_more": _both(lambda lang: _rain_text(card, lang, ("rain_here", "until", "small_rivers", "thailand"))),
-            "rain_share": _both(lambda lang: _rain_text(card, lang, ("rain_up", "rain_here", "until"))),
+            "upstream": _both(lambda lang: _upstream_plain(card, forecast, lang)),
+            "rain": _both(lambda lang: _rain_plain(card, forecast, lang)) if _rain_plain(card, forecast, "en") else None,
+            "rain_more": _both(lambda lang: _rain_text(card, lang, ("small_rivers", "until"))
+                               + (_rain_text(card, lang, ("thailand",)) if (card.get("rain_up") or {}).get("golok")
+                                  else [])),
+            "rain_detail": _both(lambda lang: _rain_detail(card, forecast, lang)),
+            "rain_share": _both(lambda lang: [x for x in _upstream_plain(card, forecast, lang)[:1]
+                                              + [_rain_plain(card, forecast, lang)] if x]
+                                + _rain_text(card, lang, ("until",))),
             "todo_more": _both(lambda lang: _rain_text(card, lang, ("tide", "thunder"))),   # Cowork 24 Oct advice
             "why": _both(lambda lang: why(forecast, lang)),
             "combined": _both(lambda lang: combined(forecast, lang)) if combined(forecast, "en") else None,
@@ -752,7 +863,7 @@ def how_it_worked(trace_path):
 
 def words():
     """Fixed wording for screens that call no engine: headlines, the emergency steps, the disclaimer."""
-    steps = {lang: [s.strip().rstrip(".") + "." for s in re.split(r"(?<=\.)\s+", card_mod.ADVICE["ACT"][lang]) if s.strip()]
+    steps = {lang: [s.strip().rstrip(".") + "." for s in re.split(r"(?<=\.)\s+", plain_pps(card_mod.ADVICE["ACT"][lang], lang)) if s.strip()]
              for lang in LANGS}
     return {"headline": HEADLINE, "emergency": {"title": EMERGENCY["title"], "steps": steps},
             "safety": dict(SAFETY)}

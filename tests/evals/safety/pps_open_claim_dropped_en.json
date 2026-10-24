@@ -11,7 +11,7 @@
   "expect": {
     "language": "en",
     "must": [
-      "Possible PPS — not an official list, confirm with APM / the village head"
+      "Possible evacuation centres (PPS) — not an official list, confirm with APM / the village head"
     ],
     "must_not": [
       "is open now"
