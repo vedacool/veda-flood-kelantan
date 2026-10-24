@@ -236,9 +236,50 @@ def health():
         status["nightshift"] = "ok" if requests.get(f"{base}/healthz", timeout=5).ok else "error"
     except requests.RequestException as e:
         status["nightshift"] = f"unreachable ({type(e).__name__})"
-    if status["zetaris"] != "ok" or status["nightshift"] != "ok":
+    status.update(_store_health())                    # A-P2-5: Postgres, the newest reading's age, open breakers
+    if (status["zetaris"] != "ok" or status["nightshift"] != "ok" or status["postgres"] != "ok"
+            or status["newest_reading"] == "stale" or status["open_breakers"]):
         status["status"] = "degraded"
     return status
+
+
+NEWEST_STALE_MIN = 180      # the JPS 'aging' limit (data_agent.FRESHNESS): older than this -> the collector is behind
+
+
+def _store_health():
+    """A-P2-5 (live only): veda-pg reachable + the newest river reading's age (the JPS collector is running), and the
+    circuit breakers that are open now. Reads only; the breakers are skipped while a run holds the World Model."""
+    from datetime import timezone
+    from app.adapters import pg
+    from app.agents import data_agent
+    from app.engines.world_model import WorldModel
+    out = {"postgres": "ok", "newest_reading_age_min": None, "newest_reading": "unknown", "open_breakers": []}
+    try:
+        with pg.connect() as conn:
+            newest = conn.execute("SELECT max(observed_at) FROM river_levels").fetchone()[0]
+        if newest is not None:
+            age = int((datetime.now(timezone.utc) - newest).total_seconds() // 60)
+            out["newest_reading_age_min"] = age
+            out["newest_reading"] = "fresh" if age <= NEWEST_STALE_MIN else "stale"
+    except Exception as e:                            # noqa: BLE001 - reported, never a 500
+        out["postgres"] = f"unreachable ({type(e).__name__})"
+    if not _busy.acquire(blocking=False):
+        out["open_breakers"], out["breakers"] = [], "skipped (a run is going)"
+        return out
+    try:
+        from app.loop import WORLD_PATH
+        world = WorldModel(storage=WORLD_PATH)
+        try:
+            now = datetime.now(timezone.utc)
+            out["open_breakers"] = [k for k in ("jps_levels", "open_meteo", "data_gov_my")
+                                    if (lambda u: u is not None and now < u)(data_agent._breaker_state(world, k)[1])]
+        finally:
+            world.store.close()
+    except Exception as e:                            # noqa: BLE001
+        out["breakers"] = f"not read ({type(e).__name__})"
+    finally:
+        _busy.release()
+    return out
 
 
 @app.post("/run")

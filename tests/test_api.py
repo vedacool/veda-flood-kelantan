@@ -216,3 +216,38 @@ def test_a_link_on_another_site_cannot_start_a_run(client):
     assert client.get(q, headers={"Origin": "https://evil.example"}).status_code == 403
     ok = client.get(q, headers={"Sec-Fetch-Site": "same-origin"})
     assert ok.status_code == 200 and "event: result" in ok.text                        # the page's own request
+
+
+def test_live_health_reports_postgres_newest_reading_and_open_breakers(monkeypatch):
+    """A-P2-5: live /health also checks veda-pg, the newest reading's age and the open circuit breakers."""
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+    from app.adapters import pg, zetaris
+    from app.agents import data_agent
+    import app.engines.world_model as wm
+    monkeypatch.setenv("SAMPLE_MODE", "false")
+    monkeypatch.setattr(zetaris, "_post", lambda *a, **k: SimpleNamespace(ok=True))
+    monkeypatch.setattr(main.requests, "get", lambda *a, **k: SimpleNamespace(ok=True))
+    newest = datetime.now(timezone.utc) - timedelta(minutes=400)
+
+    class Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def execute(self, sql):
+            return SimpleNamespace(fetchone=lambda: (newest,))
+    monkeypatch.setattr(pg, "connect", lambda *a, **k: Conn())
+    monkeypatch.setattr(wm, "WorldModel", lambda **k: SimpleNamespace(store=SimpleNamespace(close=lambda: None)))
+    until = datetime.now(timezone.utc) + timedelta(minutes=10)
+    monkeypatch.setattr(data_agent, "_breaker_state", lambda w, k: (3, until) if k == "open_meteo" else (0, None))
+    h = TestClient(main.app).get("/health").json()
+    assert h["postgres"] == "ok" and h["newest_reading_age_min"] == 400 and h["newest_reading"] == "stale"
+    assert h["open_breakers"] == ["open_meteo"] and h["status"] == "degraded"
+
+    def down(*a, **k):
+        raise pg.PgError("cannot reach veda-pg")
+    monkeypatch.setattr(pg, "connect", down)
+    assert TestClient(main.app).get("/health").json()["postgres"].startswith("unreachable")
