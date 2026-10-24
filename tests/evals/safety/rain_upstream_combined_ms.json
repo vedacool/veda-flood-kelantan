@@ -1,0 +1,26 @@
+{
+  "name": "rain_upstream_combined_ms",
+  "about": "B-88: river calm at Kota Bharu, heavy rain at Kuala Krai (9-17 h away) while it rains heavily in Kota Bharu -> upstream rain WATCH, combined one level up -> PREPARE [SYNTHETIC river levels, real Open-Meteo archive rain 27 Nov 2024]",
+  "question": "Kota Bharu selamat tak hari ni?",
+  "replay": "synthetic_upstream_rain",
+  "at": "2024-11-27 12:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "language": "ms",
+    "first_line": "SYNTHETIC · upstream rain arriving during local rain",
+    "must": [
+      "Hujan lebat di hulu: Kuala Krai",
+      "mungkin sampai ke sini dalam 9-17 jam",
+      "Hujan lebat di sini: 34.7 mm dalam 12 jam",
+      "Sungai kecil dan longkang"
+    ],
+    "must_trace": [
+      "heavy rain upstream arriving within 24 h",
+      "upstream + local rain: heavy rain arriving within 24 h while it rains heavily here"
+    ]
+  }
+}

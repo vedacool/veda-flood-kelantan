@@ -72,13 +72,17 @@ PURPOSES = {}          # sql -> trace purpose, filled below
 FETCH_BUDGET_S = 40      # one parallel query, all tries included (audit 23 Oct: was up to 3 x 30 s + waits each)
 
 
+LIMITS = {}             # sql -> row limit when a query returns more than run_sql's default 1000 rows
+
+
 def fetch_all(sqls, agent, workers=10, optional=(), budget_s=FETCH_BUDGET_S):
     """Run independent read-only queries at the same time (B-17: ~28 s one by one -> ~6 s together).
     Returns {sql: SqlResult}. A failed query in `optional` maps to None (its run_sql trace line says why);
     any other failure raises its ZetarisError. budget_s caps each query's total time (all tries)."""
     def run_one(q):
         try:
-            return zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch"), budget_s=budget_s)
+            return zetaris.run_sql(q, agent=agent, purpose=PURPOSES.get(q, "world: parallel fetch"), budget_s=budget_s,
+                                   limit=LIMITS.get(q, 1000))
         except zetaris.ZetarisError as e:
             if q in optional:
                 return None
@@ -359,6 +363,72 @@ def ingest_replay(world, agent, run_id, sqls, at, check=None, results=None):
         world.assert_fact(place_id(pl["place_id"]), "rain_mm", value, confidence=0.7, source=rsrc)
     return {"gauges": n, "places": len(by_loc), "unhealthy": unhealthy}
 
+# -- B-88: hourly rain at every rain point -> the upstream + local rain picture per place (app/rain_rule.py) ---------
+_HOURS = ("COALESCE(r.location_id, 0) AS location_id, t AS hour_myt, CAST(r.hourly.precipitation[i] AS DOUBLE) AS rain_mm")
+RAIN_HOURS_SQL = (                                       # live: 72 h back + 72 h ahead (Open-Meteo hours are MYT)
+    "WITH clock AS (SELECT from_utc_timestamp(current_timestamp(), 'Asia/Kuala_Lumpur') AS now_myt), "
+    f"hours AS (SELECT {_HOURS}, to_timestamp(t, \"yyyy-MM-dd'T'HH:mm\") AS ts_myt FROM veda_wx.om_rain r "
+    "LATERAL VIEW posexplode(r.hourly.time) h AS i, t) "
+    "SELECT p.location_id, p.point_key, p.station_key, p.name, h.hour_myt, h.rain_mm FROM hours h CROSS JOIN clock c "
+    "JOIN veda_pg.rain_points p ON p.location_id = h.location_id "
+    "WHERE h.ts_myt > c.now_myt - INTERVAL 72 HOURS AND h.ts_myt <= c.now_myt + INTERVAL 72 HOURS")
+LIMITS[RAIN_HOURS_SQL] = 2000
+
+
+def rain_hours_replay_sql(scenario, at):
+    """A scene's archive hours at every rain point, the 72 h up to the replay time - nothing later (no hindsight)."""
+    if not SCENARIO.match(scenario or ""):
+        raise ValueError(f"bad replay scenario name {scenario!r}")
+    myt = at.astimezone(config.MYT)
+    hour = lambda d: d.strftime("%Y-%m-%dT%H:%M")        # noqa: E731
+    sql = (f"WITH hours AS (SELECT {_HOURS} FROM veda_wx.{rain_table(scenario)} r "
+           "LATERAL VIEW posexplode(r.hourly.time) h AS i, t) "
+           "SELECT p.location_id, p.point_key, p.station_key, p.name, h.hour_myt, h.rain_mm FROM hours h "
+           "JOIN veda_pg.rain_points p ON p.location_id = h.location_id "
+           f"WHERE h.hour_myt > '{hour(myt - timedelta(hours=72))}' AND h.hour_myt <= '{hour(myt)}'")
+    PURPOSES[sql] = f"replay {scenario}: archive rain per hour at every rain point, up to the replay time"
+    return sql
+
+
+def ingest_rain_hours(world, agent, run_id, sql, now, results=None, archive=False):
+    """B-88: the upstream + local rain picture for every covered place -> fact 'rain_upstream' on the place (with
+    the query's provenance). None when the hours could not be read (the rule then does not run; never raises)."""
+    from app import rain_rule
+    res = (results or {}).get(sql) if results is not None and sql in results else None
+    if res is None:
+        return None
+    rows, qh = _sql(sql, agent, PURPOSES.get(sql), results)
+    links, _ = _sql(LINKS_SQL, agent, "world: gauge links", results)
+    places, _ = _sql(PLACES_SQL, agent, "world: places and their gauges", results)
+    stations, _ = _sql(STATIONS_SQL, agent, "world: curated gauges", results)
+    rivers = {str(s["station_key"]): str(s.get("river") or "") for s in stations}
+    hours, meta, key_of = {}, {}, {}
+    for r in rows:
+        t = datetime.strptime(str(r["hour_myt"]), "%Y-%m-%dT%H:%M").replace(tzinfo=config.MYT)
+        hours.setdefault(r["point_key"], []).append((t, r["rain_mm"]))
+        meta[r["point_key"]] = {"name": r["name"], "station_key": r["station_key"]}
+        key_of[int(r["location_id"])] = r["point_key"]
+    if archive:                                           # a scene: never an hour after the replay time
+        hours = {k: [(t, mm) for t, mm in hs if t <= now] for k, hs in hours.items()}
+    points = {k: {**meta[k], "features": rain_rule.features(hs, now)} for k, hs in hours.items()}
+    towns = {}
+    for r in places:
+        town = towns.setdefault(r["place_id"], {"controlling": [], "rain_point": key_of.get(int(r["rain_location_id"]))})
+        if r["role"] in ("controlling", "controlling_secondary"):
+            town["controlling"].append((r["role"] != "controlling", str(r["station_key"])))
+    at = now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    for pid, t in towns.items():
+        controlling = [k for _, k in sorted(t["controlling"])]
+        value = rain_rule.assess(controlling, t["rain_point"], points, links,
+                                 golok=any("Golok" in rivers.get(k, "") for k in controlling))
+        value["archive"] = archive
+        world.assert_fact(place_id(pid), "rain_upstream", value, confidence=0.6,
+                          source=_src(at, qh, "veda_wx.om_rain_*" if archive else "veda_wx.om_rain", agent, run_id,
+                                      "open_meteo_archive" if archive else "open_meteo"))
+    return {"points": len(points), "places": len(towns)}
+
+
+PURPOSES[RAIN_HOURS_SQL] = "world: rain per hour at every rain point (72 h back, 72 h ahead)"
 NETWORK_SQL = [STATIONS_SQL, LINKS_SQL, PLACES_SQL, PEAKS_SQL]
 READINGS_SQL = [READING_TIMES_SQL, GAUGE_STATUS_SQL, RAIN_WINDOW_SQL, PLACE_INPUTS_SQL]
 PURPOSES.update({

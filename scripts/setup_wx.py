@@ -90,7 +90,10 @@ def open_meteo_url(points):
 # B-70 flood replays: the REAL hourly rain at the same points from the Open-Meteo archive (ERA5). The replay cuts it
 # at the replay time, so no rain that fell later is ever used (Husaini 22 Oct night: hourly, not daily totals).
 REPLAYS = {"om_rain_nov2024": ("2024-11-15", "2024-12-02"),
-           "om_rain_jun2024": ("2024-06-07", "2024-06-16")}      # B-75: the SYNTHETIC calm day's real rain
+           "om_rain_jun2024": ("2024-06-07", "2024-06-16"),      # B-75: the SYNTHETIC calm day's real rain
+           # B-88 validation (Cowork 24 Oct): 14 days of ordinary early-monsoon rain, chosen before any result -
+           # how often would the upstream + local rain rule fire when nothing floods? (+3 days before, for 72 h sums)
+           "om_rain_oct2024": ("2024-09-28", "2024-10-14")}
 
 
 def archive_url(points, start, end):
@@ -156,6 +159,8 @@ SMOKE = {
                     "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s"),
     "om_rain_nov2024": ("SELECT COALESCE(location_id, 0) AS location_id, size(hourly.time) AS hours, "
                         "hourly.time[0] AS first_hour FROM veda_wx.om_rain_nov2024 ORDER BY 1"),
+    "om_rain_oct2024": ("SELECT COALESCE(location_id, 0) AS location_id, size(hourly.time) AS hours, "
+                        "hourly.time[0] AS first_hour FROM veda_wx.om_rain_oct2024 ORDER BY 1"),
 }
 
 

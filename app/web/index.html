@@ -311,6 +311,7 @@ const DATA = [  // value = replay|at ; the live choice is removed when VEDA runs
   { v: "synthetic_rising|2024-11-25 18:00", k: "madeup", what: { en: "rising river", ms: "sungai naik" } },
   { v: "synthetic_calm|2024-06-15 10:00", k: "madeup", what: { en: "calm day", ms: "hari tenang" } },
   { v: "synthetic_silent_upstream|2024-06-15 10:00", k: "madeup", what: { en: "no reading upstream", ms: "tiada bacaan di hulu" } },
+  { v: "synthetic_upstream_rain|2024-11-27 12:00", k: "madeup", what: { en: "rain upstream + here", ms: "hujan di hulu + di sini" } },
 ];
 const ICON = {  // simple shapes so the verdict never relies on colour alone
   NORMAL: '<path d="M20 2a18 18 0 1 0 0 36 18 18 0 0 0 0-36zm-3 26-8-8 3-3 5 5 11-11 3 3z" fill="currentColor"/>',
@@ -524,7 +525,8 @@ function renderAnswer() {
   let rows = "";
   if (v.water) rows += rowHtml(t("water"), v.water[lang].main, v.water[lang].compare);
   if (v.upstream[lang].length) rows += rowHtml(t("upstream"), v.upstream[lang][0], v.upstream[lang].slice(1).join(" "));
-  rows += rowHtml(t("rain"), v.rain ? v.rain[lang] : t("no_rain"), "");
+  const more = (v.rain_more && v.rain_more[lang]) || [];      // B-88: heavy rain here, until when, small rivers, Thailand
+  rows += rowHtml(t("rain"), v.rain ? v.rain[lang] : (more[0] || t("no_rain")), (v.rain ? more : more.slice(1)).join(" "));
   $("a-rows").innerHTML = rows;
   const open = !$("a-details").hidden;
   $("a-strip").innerHTML = `<span>${esc(v.strip[lang])}</span><span>${esc(open ? t("hide_details") : t("details"))}</span>`;

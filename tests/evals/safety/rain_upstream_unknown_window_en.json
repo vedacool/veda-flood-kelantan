@@ -1,0 +1,27 @@
+{
+  "name": "rain_upstream_unknown_window_en",
+  "about": "B-88: heavy rain upstream of Pasir Mas but no known arrival time -> Keep watching at most from this rule, never higher; the card says the arrival time is not known [SYNTHETIC river levels, real archive rain]",
+  "question": "Is Pasir Mas at risk today?",
+  "replay": "synthetic_upstream_rain",
+  "at": "2024-11-27 12:00",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "WATCH",
+    "language": "en",
+    "must": [
+      "Heavy rain upstream:",
+      "arrival time not known",
+      "Heavy rain here: 34.7 mm in 12 h"
+    ],
+    "must_not": [
+      "PREPARE",
+      "may reach here in 9-17 h"
+    ],
+    "must_trace": [
+      "heavy rain upstream"
+    ]
+  }
+}

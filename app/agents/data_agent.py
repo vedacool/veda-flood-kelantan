@@ -68,9 +68,11 @@ JPS_CORE = set(READINGS_SQL[:2])                       # gauge reading times + g
 # own (veda_ingest.PLACE_RAIN_SQL) - which also tells whose failure it was (record_sources).
 BREAKER_OF = {READINGS_SQL[0]: "jps_levels", READINGS_SQL[1]: "jps_levels",
               READINGS_SQL[2]: "open_meteo", READINGS_SQL[3]: "data_gov_my",
-              WARNING_SQL: "data_gov_my", FLOOD_WARNING_SQL: "data_gov_my"}
+              WARNING_SQL: "data_gov_my", FLOOD_WARNING_SQL: "data_gov_my",
+              veda_ingest.RAIN_HOURS_SQL: "open_meteo"}           # B-88: hourly rain at every rain point
 BREAKER_OF_TABLE = {"open_meteo": "open_meteo", "mygov_forecast": "data_gov_my"}    # REFRESHABLE key -> breaker
-OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL, OSM_SQL}
+OPTIONAL_SQL = {FLOOD_WARNING_SQL, WARNING_SQL, CLOCK_SQL, READINGS_SQL[2], READINGS_SQL[3], MIN_7D_SQL, OSM_SQL,
+                veda_ingest.RAIN_HOURS_SQL}
 FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / wind / cyclone notices don't count
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
@@ -575,9 +577,11 @@ def prefetch(world, now=None, replay=None):
     if not replay and not refresh:
         notes.append("Forecast tables not refreshed: Zetaris failed repeatedly (circuit open).")
     rsql = replay_sqls(replay, now) if replay else None
-    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL, OSM_SQL, DISCOVER_SQL] if replay else
-            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL, OSM_SQL, DISCOVER_SQL]
-            + ([] if now else [CLOCK_SQL]))
+    rain_hours_sql = veda_ingest.rain_hours_replay_sql(replay, now) if replay else veda_ingest.RAIN_HOURS_SQL
+    sqls = (NETWORK_SQL + [rsql["levels"], rsql["rain"], FLOOD_WARNING_SQL, OSM_SQL, DISCOVER_SQL, rain_hours_sql]
+            if replay else
+            NETWORK_SQL + READINGS_SQL + [FLOOD_WARNING_SQL, WARNING_SQL, MIN_7D_SQL, OSM_SQL, DISCOVER_SQL,
+                                          rain_hours_sql] + ([] if now else [CLOCK_SQL]))
     skipped = set() if replay else {q for q in sqls if q in BREAKER_OF and circuit_open(world, BREAKER_OF[q], wall)}
     if not replay and FLOOD_WARNING_SQL in sqls and FLOOD_WARNING_SQL not in skipped and remembered(world, "mygov_flood",
                                                                                                     wall):
@@ -591,7 +595,8 @@ def prefetch(world, now=None, replay=None):
                    decision="Circuit breaker open -> no gauge data this run; the answer must say so")
         return {"error": e, "clock": now or wall, "notes": notes}
     try:
-        results = fetch_all([q for q in sqls if q not in skipped], AGENT, optional=OPTIONAL_SQL)
+        results = fetch_all([q for q in sqls if q not in skipped], AGENT,   # B-88: no hourly rain -> rain rule skipped
+                            optional=OPTIONAL_SQL | {rain_hours_sql})
         results.update({q: None for q in skipped})
         clock = now or _clock(results[CLOCK_SQL])    # after any refresh, so a just-refreshed forecast is 0 min old
         net = build_network(world, AGENT, run_id, results=results)
@@ -601,6 +606,8 @@ def prefetch(world, now=None, replay=None):
                                   rain_alone=not _is_open(world, "open_meteo", wall)))
         if not replay:
             record_sources(world, sqls, skipped, results, counts.get("rain"), wall, run_id)
+        counts["rain_hours"] = veda_ingest.ingest_rain_hours(world, AGENT, run_id, rain_hours_sql, clock,
+                                                            results=results, archive=bool(replay))
     except zetaris.ZetarisError as e:
         if not replay:
             record_call(world, "jps_levels", False, wall, run_id, f"{e.kind}: {e}")
@@ -866,6 +873,27 @@ def sources_selected(plan, ctx, sources, cross, osm):
     return {"chosen": chosen, "skipped": skipped}
 
 
+def trace_rain_upstream(ru, place):
+    """B-88: one line for the live log - the rain upstream (and when it may arrive) and the rain here."""
+    heavy = [u for u in ru["upstream"] if u["point"] in ru["heavy_upstream"]]
+    parts = [f"{u['name']}: {u['past_72h_mm']} mm in 72 h, {u['past_24h_mm']} mm in 24 h"
+             + (f", forecast {u['next_24h_mm']} mm next 24 h" if u.get("next_24h_mm") is not None else "")
+             + (f", may reach here in {u['window']['min']:g}-{u['window']['max']:g} h" if u["window"]
+                else ", arrival time not known") for u in heavy]
+    local = ru.get("local") or {}
+    trace.step(AGENT, "rain.upstream", input_summary=place, target_agent="Forecast", source="world_model",
+               output_summary=(("heavy rain upstream - " + "; ".join(parts)) if heavy else
+                               f"no heavy rain at {len(ru['upstream'])} upstream rain point(s)"
+                               if ru["upstream"] else "no upstream rain point for this river")
+                              + (f" | here: {local.get('max_12h_mm')} mm in 12 h"
+                                 + (" (heavy)" if local.get("heavy") else "") if local else ""),
+               decision=("upstream + local rain: heavy rain arriving within 24 h while it rains heavily here"
+                         if ru["combined"] else "heavy rain upstream" if heavy else "no upstream rain trigger")
+                        + ("; Sg. Golok upstream is in Thailand - not checked" if ru.get("golok") else ""),
+               details={"heavy_upstream": ru["heavy_upstream"], "arriving_24h": ru["arriving_24h"],
+                        "combined": ru["combined"], "local": local, "rules": ru.get("rules")})
+
+
 def gather(plan, world, now=None, pre=None):
     """Evidence for plan['place'] from the sources the plan asks for. pre = prefetch() result (run during
     planning); without it the prefetch runs here. A quick plan skips the cross-check and reconciliation.
@@ -891,9 +919,11 @@ def gather(plan, world, now=None, pre=None):
                output_summary=f"{ctx['items']} item(s); missing: {', '.join(ctx['trace'].get('missing', [])) or '-'}",
                source="world_model", decision=ctx["trace"]["strategy"])
 
-    for key, field in (("open_meteo", "rain"), ("mygov_forecast", "met_forecast")):
+    for key, field in (("open_meteo", "rain"), ("open_meteo", "rain_upstream"), ("mygov_forecast", "met_forecast")):
         if key not in wanted and ctx.get(field) is not None:
             ctx[field] = None           # evidence holds only what the plan asked for
+    if ctx.get("rain_upstream"):
+        trace_rain_upstream(ctx["rain_upstream"], ctx["place"].get("name"))
     for g in ctx.get("gauges", []) + ctx.get("sentinels", []):
         g["freshness"] = freshness("jps_levels", g["age_minutes"])
     healing = heal(ctx, world, clock) if ctx.get("found") else []

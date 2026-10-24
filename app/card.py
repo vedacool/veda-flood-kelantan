@@ -73,6 +73,19 @@ T = {  # fixed wording, BM + EN
     "conf_label": {"high": {"en": "high", "ms": "tinggi"}, "medium": {"en": "medium", "ms": "sederhana"},
                    "low": {"en": "low", "ms": "rendah"}},
     "upstream": {"en": "Upstream", "ms": "Hulu"},
+    # B-88 (tentative wording + numbers, review pack L)
+    "rain_up": {"en": "Heavy rain upstream: {items}", "ms": "Hujan lebat di hulu: {items}"},
+    "rain_up_item": {"en": "{name} {mm72} mm in 3 days ({mm24} mm in 24 h)",
+                     "ms": "{name} {mm72} mm dalam 3 hari ({mm24} mm dalam 24 jam)"},
+    "rain_up_fc_item": {"en": "{name} {mm} mm forecast in 24 h", "ms": "{name} {mm} mm dijangka dalam 24 jam"},
+    "arrival_unknown": {"en": "arrival time not known", "ms": "masa sampai tidak diketahui"},
+    "rain_here": {"en": "Heavy rain here: {mm} mm in 12 h", "ms": "Hujan lebat di sini: {mm} mm dalam 12 jam"},
+    "small_rivers": {"en": "Small rivers and drains can rise fast in heavy rain - keep away from them",
+                     "ms": "Sungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - jauhi kawasan itu"},
+    "thailand": {"en": "Rain upstream in Thailand is not checked yet", "ms": "Hujan di hulu di Thailand belum disemak"},
+    "until": {"en": "Rain likely until about {t}, then easing", "ms": "Hujan dijangka hingga kira-kira {t}, kemudian reda"},
+    "until_heavy": {"en": "Heavy rain likely until about {t}, then easing",
+                    "ms": "Hujan lebat dijangka hingga kira-kira {t}, kemudian reda"},
     "may_reach": {"en": "may reach here in {a}-{b} h", "ms": "mungkin sampai ke sini dalam {a}-{b} jam"},
     "rising": {"en": "rising", "ms": "sedang naik"},
     "warning": {"en": "MetMalaysia warning", "ms": "Amaran MetMalaysia"},
@@ -274,6 +287,7 @@ def build(plan, evidence, forecast):
                        "bridges": osm["bridges"][:BRIDGES_SHOWN] if intent == "cut_off" else None}
         if osm["status"] == "ok":
             card["sources"].append(("osm", None))
+    card["rain_up"] = rain_up(fc.get("rain_upstream"))
     rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
     card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
                           | {"rain" for r in rules if r.startswith("rain")})
@@ -289,6 +303,66 @@ WORDS = {  # key facts as words (Husaini 23 Oct): JPS level names, no minus sign
     "no_verified": {"en": "no verified reading near this time", "ms": "tiada bacaan yang disahkan berhampiran masa ini"},
     "last": {"en": "{m} m at {t}, too old to use", "ms": "{m} m pada {t}, terlalu lama untuk digunakan"},
 }
+
+
+DAYS_MS = {"Mon": "Isnin", "Tue": "Selasa", "Wed": "Rabu", "Thu": "Khamis", "Fri": "Jumaat", "Sat": "Sabtu",
+           "Sun": "Ahad"}
+
+
+def gauge_place(name):
+    """'Sg. Kelantan di Kuala Krai (F1)' -> 'Kuala Krai' (the place people know)."""
+    name = re.sub(r"\s*\(F\d\)$", "", name or "")
+    return name.split(" di ", 1)[1] if " di " in name else name
+
+
+def rain_up(ru):
+    """B-88: the card's rain picture - heavy rain upstream (and when it may arrive), heavy rain here, until when."""
+    if not ru:
+        return None
+    heavy = [u for u in ru.get("upstream", []) if u["point"] in ru.get("heavy_upstream", [])]
+    local = ru.get("local") or {}
+    return {"heavy": [{"name": gauge_place(u["name"]), "past_72h_mm": u["past_72h_mm"], "past_24h_mm": u["past_24h_mm"],
+                       "next_24h_mm": u.get("next_24h_mm"), "fallen": u["heavy_fallen"], "window": u["window"]}
+                      for u in sorted(heavy, key=lambda u: -(u["past_72h_mm"] or 0))[:2]],
+            "local_12h_mm": local.get("max_12h_mm"), "local_heavy": bool(local.get("heavy")),
+            "until": local.get("until"), "until_heavy": bool(local.get("until_heavy")),
+            "golok": bool(ru.get("golok")), "combined": bool(ru.get("combined"))}
+
+
+def when_text(iso, lang):
+    """'2024-11-27T14:00:00+08:00' -> 'Wed 27 Nov, 14:00' / 'Rabu 27 Nov, 14:00' (BM month added at render)."""
+    try:
+        t = datetime.fromisoformat(str(iso)).astimezone(MYT)
+    except ValueError:
+        return None
+    day = t.strftime("%a")
+    return f"{DAYS_MS[day] if lang == 'ms' else day} {t.strftime('%d %b, %H:%M').lstrip('0')}"
+
+
+def rain_lines(card, lang):
+    """B-88 lines (outside the length cap, like the OSM lines: the line behind a raised verdict is never cut)."""
+    r = card.get("rain_up")
+    if not r:
+        return []
+    out = []
+    if r["heavy"]:
+        items = []
+        for u in r["heavy"]:
+            item = (T["rain_up_item"][lang].format(name=u["name"], mm72=_num(u["past_72h_mm"]), mm24=_num(u["past_24h_mm"]))
+                    if u["fallen"] else T["rain_up_fc_item"][lang].format(name=u["name"], mm=_num(u["next_24h_mm"])))
+            w = u["window"]
+            items.append(item + ", " + (T["may_reach"][lang].format(a=_num(w["min"]), b=_num(w["max"])) if w
+                                        else T["arrival_unknown"][lang]))
+        out.append(("rain_up", T["rain_up"][lang].format(items="; ".join(items)) + "."))
+    if r["local_heavy"]:
+        out.append(("rain_here", T["rain_here"][lang].format(mm=_num(r["local_12h_mm"])) + "."))
+        out.append(("small_rivers", T["small_rivers"][lang] + "."))
+    if r["until"]:
+        out.append(("until", T["until_heavy" if r["until_heavy"] else "until"][lang].format(t=when_text(r["until"], lang))
+                    + "."))
+    if r["golok"]:
+        out.append(("thailand", T["thailand"][lang] + "."))
+    return out
 
 
 def _trend_word(trend):
@@ -332,6 +406,9 @@ def key_facts(card, forecast=None, lang="en"):
             [T["rising"][lang]] if u.get("rising") else [])
         ups.append(f"{u['gauge']} ({', '.join(bits)})")
     f["upstream"] = ups
+    rain = [t.rstrip(".") for _, t in rain_lines(card, lang)]          # B-88: rain upstream / here / until
+    if rain:
+        f["rain_upstream_and_here"] = rain
     if card.get("warnings"):
         f["met_warnings"] = card["warnings"]
     if card.get("excluded"):
@@ -388,7 +465,8 @@ def _age(minutes, lang):
 FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "excluded", "rain", "upstream")
 # B-73 (Husaini 23 Oct): the OSM lines answer what the user asked (evacuation / cut-off questions only - the card has
 # them for no other intent), so they sit outside the cap like the explanation: up to 3 possible PPS and 2 bridges.
-OSM_LINES = ("pps", "bridge", "low_ground", "osm")
+OSM_LINES = ("pps", "bridge", "low_ground", "osm",
+             "rain_up", "rain_here", "small_rivers", "until", "thailand")        # + B-88 rain lines, outside the cap
 
 
 def bridge_name(name, lang):
@@ -545,6 +623,7 @@ def _lines(card, lang, explanation, low_confidence, drop):
     if card.get("rain_past_24h_mm") is not None and "rain" not in drop:
         out.append(("rain", T["rain_past"][lang].format(mm=_num(card["rain_past_24h_mm"]),
                                                         date=card.get("rain_date") or "?") + "."))
+    out += rain_lines(card, lang)
     if explanation:
         out.append(("explanation", explanation.strip()))
     for u in ([] if "upstream" in drop else card.get("upstream", [])):

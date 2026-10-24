@@ -4,7 +4,7 @@
 > 1. **What VEDA is:** a helper that answers "is my place in Kelantan at risk of flooding in the next day or two, and what should we do?" in BM or English, using JPS river gauges, rain forecasts and MetMalaysia warnings.
 > 2. **What you are checking:** the flood rules and numbers a person must sign off - which gauge speaks for which town, when a level means WATCH / PREPARE / ACT, how old a reading may be, what VEDA tells people to do.
 > 3. **How to reply:** under each item write its ID and your answer - "A3: OK", or "A3: change to …", or "A3: ?" if you are unsure. A short note is enough.
-> 4. **Order:** A, G, K first; then B to I. J is parked (no answer needed).
+> 4. **Order:** A, G, L, K first (L = the new rain rule, added 24 Oct - it can raise a verdict); then B to I. J is parked (no answer needed).
 > 5. **Deadline:** Saturday 24 Oct, night.
 
 _Prepared 22 Oct 2026 (evening). Everything VEDA currently treats as **"tentative — needs Dr Ariff"**, in one place. Estimated time: **about 1 hour**. Sections are in priority order — if time runs out, A–C matter most._
@@ -318,6 +318,50 @@ sign for a town downstream - say which), or *context only*. Until you fill this 
 | _DTMH0004 | Sg. Sokor di Kg. Sokor (F1) | Sg. Kelantan | Tanah Merah | — | |
 
 > Reply: OK, or your correction (fill the Role column, or write e.g. "_DKBR0010: upstream warning for Kota Bharu"): ______
+
+## L. Rain upstream + rain here (hulu + hilir) — ~10 min (added 24 Oct, B-88)
+
+Kelantan floods come from days of monsoon rain upstream that arrive while it also rains heavily in town. VEDA now
+reads the hourly Open-Meteo rain at its 7 rain points and, for each town, looks at the rain points **upstream of the
+town's own gauge** (from the gauge chain in section C). **All numbers below are tentative (set 24 Oct so the rule can
+be built and tested) — please change any of them.** The rule can raise a verdict; it can never lower one.
+
+| # | What | Tentative value |
+|---|---|---|
+| L1 | Heavy rain **upstream** (at any upstream rain point) | 3-day (72 h) total ≥ **100 mm**, or 24 h ≥ **50 mm** |
+| L2 | Heavy rain **here** (the town's own rain point) | ≥ **30 mm in 12 h** (rain that fell + forecast hours together) |
+| L3 | When upstream rain reaches the town | only the known travel times (section D): Kuala Krai → Kota Bharu 9–17 h, Dabong → Kota Bharu 32–40 h (23 h + 9–17 h). Any other pair: "arrival time not known" |
+| L4 | What the rule does | heavy rain upstream → at least **Keep watching** (WATCH). Heavy rain upstream that **has fallen** with a known arrival starting **within 24 h**, AND heavy rain here → **one level up** (never above ACT). With an unknown arrival time it never goes above Keep watching. |
+| L5 | "Rain likely until about <day, time>, then easing" | the last forecast hour (next 72 h) with ≥ **2.5 mm/h**; "**Heavy** rain likely until…" only if that period has an hour ≥ **7.6 mm/h** |
+
+Also on the card: "Small rivers and drains can rise fast in heavy rain — keep away from them" (advice only, when L2
+fires), and for towns on Sg. Golok (Rantau Panjang, Tumpat): "Rain upstream in Thailand is not checked yet."
+
+**What we measured (Open-Meteo archive, hour by hour, no hindsight — only rain that had already fallen; full table in
+`docs/validation/b88_rain_rule.md`):**
+- **Nov 2024 flood (22 Nov – 2 Dec):** the upstream rule (≥ Keep watching) first fires on **22 Nov 10:00** for Kota
+  Bharu, Pasir Mas and Tumpat (heavy rain at Kg. Tualang, arrival time not known), and stays on for 161–186 hours. The
+  "one level up" rule fires only for **Kota Bharu, from 27 Nov 10:00** (Kuala Krai's 9–17 h window, 72 hours in all).
+  Rantau Panjang never fires: its upstream is in Thailand (no rain point).
+- **Lead time:** VEDA cannot measure it yet. For Rantau Panjang the cited reports start on 26 Nov 08:00, already above
+  Alert; for the Sg. Kelantan towns VEDA has no Nov 2024 river readings (JPS data is not redistributed).
+- **14 ordinary days (1–14 Oct 2024):** the upstream rule fired for **1 hour** (4 Oct 18:00, Limau Kasturi); the
+  "one level up" rule never fired.
+
+**L6.** Are L1–L5 sensible for Kelantan? In particular: is 30 mm in 12 h "heavy" in town, and should the 3-day test
+(100 mm) or the 1-day test (50 mm) lead?
+> Answer: ______
+
+**L7.** Travel times: do you know rough times from **Kusial**, **Limau Kasturi** (Galas) or **Kg. Tualang** (Lebir) to
+Pasir Mas / Kota Bharu / Tumpat? Without them, rain at those points can only lift a town to Keep watching.
+> Answer: ______
+
+**L8.** Do you know the times Sg. Kelantan crossed Waspada / Bahaya at Pasir Mas, Kota Bharu (Tambatan Diraja) and
+Tumpat in Nov 2024 (a JPS or news source we can cite)? With them we can report how many hours of warning this rule
+would have given.
+> Answer: ______
+
+---
 
 ## J. Ground height (B-74, PARKED until after the hackathon - for later, no answer needed now)
 

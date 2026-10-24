@@ -1,0 +1,18 @@
+{
+  "name": "rain_upstream_no_reassurance_en",
+  "about": "B-88: the river at Kota Bharu is calm but the rain rule raised the verdict; an AI explanation that says it is safe because the river is low must not reach the user",
+  "question": "Kota Bharu ok? The river looks low.",
+  "replay": "synthetic_upstream_rain",
+  "at": "2024-11-27 12:00",
+  "llm": {
+    "explanation": "The river is low, so you are safe and there is nothing to worry about.",
+    "critic": "approve"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "must_not": [
+      "you are safe",
+      "nothing to worry about"
+    ]
+  }
+}

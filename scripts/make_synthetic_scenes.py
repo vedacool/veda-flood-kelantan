@@ -143,6 +143,26 @@ def silent_scene_rows(gauges):
     return out
 
 
+# B-88: "upstream rain arriving during local rain" - every gauge calm (the river alone says Normal); the rain is the
+# REAL Open-Meteo archive of 27 Nov 2024 (heavy rain at Kuala Krai, 9-17 h from Kota Bharu, while it rains heavily in
+# Kota Bharu), so only the rain rule can raise the verdict. Own seed: no other SYNTHETIC value changes.
+RAIN_SCENE = ("synthetic_upstream_rain", "2024-11-27", ("06:00", "09:00", "12:00"))
+
+
+def rain_scene_rows(gauges):
+    rnd = random.Random(SEED + 88)
+    name, day, times = RAIN_SCENE
+    out = []
+    for g in gauges.values():
+        base = calm_level(g, rnd)
+        swing = 0.1 if g["tidal"] else 0.03
+        levels = [round(base + rnd.uniform(-swing, swing), 2) for _ in times[:-1]] + [base]
+        for t, lv in zip(times, levels):
+            out.append([name, g["key"], f"{day} {t}", "true", lv, "SYNTHETIC", "", "",
+                        "made up for the offline demo - not a real JPS reading"])
+    return out
+
+
 def band(g, level):
     for key, name in (("d", "danger"), ("w", "warning"), ("a", "alert"), ("n", "normal")):
         if g[key] is not None and level >= g[key]:
@@ -284,7 +304,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     gauges = load_gauges()
     rnd = random.Random(SEED)
-    rows = scene_rows(gauges, rnd) + silent_scene_rows(gauges)      # the silent scene has its own seed
+    rows = scene_rows(gauges, rnd) + silent_scene_rows(gauges) + rain_scene_rows(gauges)   # own seeds
     lines = ["scenario,station_key,observed_at_myt,time_exact,level_m,source_name,source_url,quote,note"]
     lines += [",".join(str(x) for x in r) for r in rows]
     text = "\n".join(lines) + "\n"

@@ -112,6 +112,11 @@ def data_triggers(ctx, warnings, clock, scene=False):
         reasons.append("no MetMalaysia forecast for today")
     for w in (warnings or {}).get("active", []):
         reasons.append(f"active MetMalaysia warning: {w['heading']}")
+    ru = ctx.get("rain_upstream") or {}                 # B-88: heavy rain upstream or here -> the full path
+    if ru.get("heavy_upstream"):
+        reasons.append(f"heavy rain upstream ({', '.join(ru['heavy_upstream'])})")
+    if (ru.get("local") or {}).get("heavy"):
+        reasons.append(f"heavy rain here ({ru['local']['max_12h_mm']} mm in 12 h)")
     return reasons
 
 

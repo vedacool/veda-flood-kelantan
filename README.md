@@ -124,7 +124,7 @@ flowchart LR
 |---|---|---|
 | **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Super VL by name, lane `deep`) |
 | **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT DATA. Per-source circuit breaker. | No |
-| **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain. Builds the 24 h range, the confidence, and the comparison with past floods. | No |
+| **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain - including rain **upstream + here** (B-88, `app/rain_rule.py`: heavy rain at an upstream rain point lifts a town to at least Keep watching; when it can arrive within 24 h while it also rains heavily in town, one level up). Builds the 24 h range, the confidence, and the comparison with past floods. | No |
 | **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Live, 10 full runs on **23 Oct 2026, 22:47-23:07 MYT: the AI review completed in 8 of 10** (test harness the same evening: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never "a PPS is open" or "the road will be cut off". | No |
 
@@ -187,9 +187,9 @@ These are controlled tests, kept apart from the live rates above.
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 801 tests pass (24 Oct 2026), 13 skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 25 scenarios, 25 of 25 pass; pass^3
-  (all 3 repeat runs) 25 of 25, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Offline test suite (`python -m pytest -q`): 827 tests pass (24 Oct 2026), 13 skipped (they need live services).**
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 28 scenarios, 28 of 28 pass; pass^3
+  (all 3 repeat runs, 24 Oct) 28 of 28, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -207,8 +207,9 @@ These are controlled tests, kept apart from the live rates above.
   community halls, not the official APM list, and VEDA cannot know which one is open. Bridges are listed as facts only;
   no cut-off rule is approved yet (Dr Ariff, review pack I) and low ground is not assessed (no elevation data). OSM can
   be incomplete or out of date (loaded once at setup).
-- **Tentative values:** the verdict rules, freshness limits, upstream travel times and the tidal-gauge handling are
-  provisional. They are under review by a hydrology adviser (`docs/review_pack_ariff.md`) and labelled tentative.
+- **Tentative values:** the verdict rules, freshness limits, upstream travel times, the rain-upstream numbers (B-88:
+  checked on real archive rain - Nov 2024 flood and 14 ordinary days, `docs/validation/b88_rain_rule.md`, not tuned to
+  the result) and the tidal-gauge handling are provisional. Sg. Golok's upstream rain (Thailand) is not checked. They are under review by a hydrology adviser (`docs/review_pack_ariff.md`) and labelled tentative.
 - **Straight-line trend:** the 24 h range is a straight-line projection and overshoots on a steep rise (shown with
   medium confidence).
 - **AI steps are best effort:** Nightshift cuts a call that sends no first byte in about 45 s, and NVIDIA sometimes

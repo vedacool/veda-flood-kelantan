@@ -82,6 +82,7 @@ class ContextBuilder:
                       else "upstream sentinel (travel time unknown)")
             sentinels.append((e["attrs"].get("sort_order", 99), self._gauge(e["from"], "sentinel", reason, now, lag)))
         rain, forecast = self._fact(place, "rain_mm"), self._fact(place, "met_forecast_today")
+        upstream_rain = self._fact(place, "rain_upstream")             # B-88: rain upstream + here, per hour
         payload = {
             "intent": intent, "found": True,
             "place": {"id": place, "name": entity["attrs"].get("name"), "district": entity["attrs"].get("district"),
@@ -94,6 +95,9 @@ class ContextBuilder:
             "met_forecast": None if not forecast else {**forecast["value"], "for_date": forecast["source"]["at"],
                                                        "provenance": forecast["source"],
                                                        "selection_reason": "MetMalaysia town forecast for today"},
+            "rain_upstream": None if not upstream_rain else {
+                **upstream_rain["value"], "provenance": upstream_rain["source"],
+                "selection_reason": "rain points upstream of this place's controlling gauge + its own rain point"},
         }
         payload["items"] = len(gauges) + len(payload["sentinels"]) + bool(rain) + bool(forecast)
         payload["trace"] = {"strategy": STRATEGY, "built_at": now.isoformat(timespec="seconds"),

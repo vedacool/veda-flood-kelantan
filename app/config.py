@@ -58,7 +58,13 @@ REPLAYS = {"nov2024": {"title": "REPLAY · Nov 2024", "kind": "replay", "rain_ta
            "synthetic_silent_upstream": {"title": "SYNTHETIC · silent upstream gauge", "kind": "synthetic",
                                          "rain_table": "om_rain_jun2024", "default_at": "2024-06-15 10:00",
                                          "window": ("2024-06-15 04:00", "2024-06-15 10:00"),
-                                         "scenes": ["2024-06-15 10:00"]}}
+                                         "scenes": ["2024-06-15 10:00"]},
+           # B-88: made-up calm river levels + the REAL archive rain of 27 Nov 2024 (heavy upstream + here)
+           "synthetic_upstream_rain": {"title": "SYNTHETIC · upstream rain arriving during local rain",
+                                       "kind": "synthetic", "rain_table": "om_rain_nov2024",
+                                       "default_at": "2024-11-27 12:00",
+                                       "window": ("2024-11-27 06:00", "2024-11-27 12:00"),
+                                       "scenes": ["2024-11-27 12:00"]}}
 SAMPLE_SCENE = "synthetic_calm"          # a bare question in SAMPLE_MODE runs on this scene (Husaini 23 Oct)
 
 

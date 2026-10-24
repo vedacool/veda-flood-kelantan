@@ -79,6 +79,9 @@ W = {
                            "\u201c{now}\u201d."},
     "who_upstream": {"en": "the river upstream", "ms": "sungai di hulu"},
     "who_rain": {"en": "the rain forecast", "ms": "ramalan hujan"},
+    "who_rain_up": {"en": "the heavy rain upstream", "ms": "hujan lebat di hulu"},
+    "who_rain_both": {"en": "the heavy rain upstream arriving while it rains heavily here",
+                      "ms": "hujan lebat di hulu yang sampai ketika hujan lebat di sini"},
     "and_word": {"en": " and ", "ms": " dan "},
     "from_none": {"en": "no fresh river reading", "ms": "tiada bacaan sungai terkini"},
     "label_replay": {"en": "Past flood replay · {when}", "ms": "Ulang tayang banjir lalu · {when}"},
@@ -102,6 +105,16 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
     "sentinel>=alert": {"en": "The river upstream at {where} is high{window}.",
                         "ms": "Sungai di hulu ({where}) tinggi{window}."},
     "window": {"en": "; the water may reach here in {a}-{b} hours", "ms": "; air mungkin sampai ke sini dalam {a}-{b} jam"},
+    "upstream-rain": {"en": "Heavy rain has fallen upstream ({where}, {mm} mm in 3 days); {when}.",
+                      "ms": "Hujan lebat telah turun di hulu ({where}, {mm} mm dalam 3 hari); {when}."},
+    "upstream-rain-fc": {"en": "Heavy rain is forecast upstream ({where}, {mm} mm in 24 hours).",
+                         "ms": "Hujan lebat dijangka di hulu ({where}, {mm} mm dalam 24 jam)."},
+    "when_known": {"en": "the water may reach here in {a}-{b} hours", "ms": "air mungkin sampai ke sini dalam {a}-{b} jam"},
+    "when_unknown": {"en": "when it reaches here is not known", "ms": "bila ia sampai ke sini tidak diketahui"},
+    "upstream+local-rain": {"en": "Heavy rain upstream ({where}) may reach here in {a}-{b} hours while it is also raining "
+                                  "heavily here ({mm} mm in 12 hours), so VEDA moved up one step.",
+                            "ms": "Hujan lebat di hulu ({where}) mungkin sampai ke sini dalam {a}-{b} jam ketika hujan "
+                                  "lebat juga di sini ({mm} mm dalam 12 jam), jadi VEDA naikkan satu tahap."},
     "rain-heavy": {"en": "Heavy rain is forecast: {n24} mm in 24 hours, {n72} mm in 3 days.",
                    "ms": "Hujan lebat dijangka: {n24} mm dalam 24 jam, {n72} mm dalam 3 hari."},
     "rain-wet-ground": {"en": "{n72} mm of rain is forecast in 3 days, on ground already wet from the past week.",
@@ -117,7 +130,7 @@ KIND = {  # the strip's short names for the kinds of source used
     "river": {"en": "river here", "ms": "sungai di sini"}, "upstream": {"en": "river upstream", "ms": "sungai di hulu"},
     "rain": {"en": "rain", "ms": "hujan"}, "forecast": {"en": "forecast", "ms": "ramalan"},
     "warnings": {"en": "warnings", "ms": "amaran"}, "flood_warnings": {"en": "flood warnings", "ms": "amaran banjir"},
-    "map": {"en": "map", "ms": "peta"},
+    "map": {"en": "map", "ms": "peta"}, "rain_upstream": {"en": "rain upstream", "ms": "hujan di hulu"},
 }
 SOURCE_NAME = {
     "open_meteo": {"en": "Rain forecast (Open-Meteo)", "ms": "Ramalan hujan (Open-Meteo)"},
@@ -126,6 +139,7 @@ SOURCE_NAME = {
     "mygov_warning": {"en": "MetMalaysia warnings", "ms": "Amaran MetMalaysia"},
     "cross": {"en": "Flood warnings (data.gov.my)", "ms": "Amaran banjir (data.gov.my)"},
     "osm": {"en": "Map data (OpenStreetMap)", "ms": "Data peta (OpenStreetMap)"},
+    "rain_up": {"en": "Rain upstream ({n} rain points, Open-Meteo)", "ms": "Hujan di hulu ({n} titik hujan, Open-Meteo)"},
     "river": {"en": "River level: {name}", "ms": "Paras sungai: {name}"},
     "upstream": {"en": "River upstream: {name}", "ms": "Sungai di hulu: {name}"},
 }
@@ -273,6 +287,29 @@ def _rain(card, lang):
     return None
 
 
+def _why_rain(ru, rule, lang):
+    """B-88 Why sentences, from the rain picture the Forecast agent used."""
+    up = [u for u in ru.get("upstream", []) if u["point"] in ru.get("heavy_upstream", [])]
+    if rule == "upstream+local-rain":
+        u = next((u for u in up if u["point"] in ru.get("arriving_24h", [])), None)
+        if u:
+            return WHY[rule][lang].format(where=_place_of(u["name"]), a=_num(u["window"]["min"]),
+                                          b=_num(u["window"]["max"]), mm=_num((ru.get("local") or {}).get("max_12h_mm")))
+    u = next((u for u in sorted(up, key=lambda u: -(u["past_72h_mm"] or 0)) if u["heavy_fallen"]), None)
+    if u:
+        w = u["window"]
+        when = (WHY["when_known"][lang].format(a=_num(w["min"]), b=_num(w["max"])) if w else WHY["when_unknown"][lang])
+        return WHY["upstream-rain"][lang].format(where=_place_of(u["name"]), mm=_num(u["past_72h_mm"]), when=when)
+    u = next(iter(up), None)
+    return WHY["upstream-rain-fc"][lang].format(where=_place_of(u["name"]), mm=_num(u["next_24h_mm"])) if u else ""
+
+
+def _rain_text(card, lang, keys):
+    """B-88: the card's rain lines (same words as the card), for the Upstream / Rain rows."""
+    out = [t for k, t in card_mod.rain_lines(card, lang) if k in keys]
+    return [card_mod.months_ms(t) for t in out] if lang == "ms" else out
+
+
 def why(forecast, lang):
     """The Why sentence: the rule(s) that set the verdict, in plain words (rising-fast added when it moved it up)."""
     fc = forecast or {}
@@ -299,6 +336,8 @@ def why(forecast, lang):
         elif rule.startswith("rain"):
             r = fc.get("rain") or {}
             out.append(tmpl[lang].format(n24=_num(r.get("next_24h_mm")), n72=_num(r.get("next_72h_mm"))))
+        elif rule in ("upstream-rain", "upstream+local-rain"):
+            out.append(_why_rain(fc.get("rain_upstream") or {}, rule, lang))
         else:
             out.append(tmpl[lang])
     if any(t["rule"] == "rising-fast" for t in triggers):
@@ -326,6 +365,10 @@ def combined(forecast, lang):
         return None
     raisers = [t["rule"] for t in triggers if t["level"] == verdict]
     who = [W[k][lang] for k, pre in (("who_upstream", "sentinel"), ("who_rain", "rain")) if any(r.startswith(pre) for r in raisers)]
+    if "upstream+local-rain" in raisers:                       # B-88
+        who.append(W["who_rain_both"][lang])
+    elif "upstream-rain" in raisers:
+        who.append(W["who_rain_up"][lang])
     if not who:
         return None
     return W["combined_why"][lang].format(alone=HEADLINE[LEVELS[alone]][lang], who=W["and_word"][lang].join(who),
@@ -425,6 +468,9 @@ def sources(evidence, plan, lang):
     osm = ev.get("osm")
     if osm:
         out.append(("map", SOURCE_NAME["osm"][lang], None if osm["status"] == "ok" else "unreadable", None))
+    ru = ctx.get("rain_upstream")
+    if ru and ru.get("upstream"):                          # B-88: the rain points upstream of this place
+        out.append(("rain_upstream", SOURCE_NAME["rain_up"][lang].format(n=len(ru["upstream"])), None, None))
     rows = []
     for kind, name, reason, age in out:
         why_text = None
@@ -458,6 +504,7 @@ def share_text(view, lang):
     lines.append(v["line"][lang])
     if v.get("water"):
         lines.append(v["water"][lang]["main"])
+    lines += v.get("rain_share", {}).get(lang, [])                  # B-88: the rain lines behind the verdict
     lines.append(v["strip"][lang])
     lines.append(SAFETY[lang])
     return trace.redact("\n".join(lines))
@@ -478,8 +525,10 @@ def answer_view(result):
             "line": _both(lambda lang: _line(card, forecast, lang)),
             "todo": dict(card["action"]),
             "water": _both(lambda lang: _water(card, forecast, evidence, lang)) if card.get("gauge") else None,
-            "upstream": _both(lambda lang: _upstream(forecast, lang)),
+            "upstream": _both(lambda lang: _rain_text(card, lang, ("rain_up",)) + _upstream(forecast, lang)),
             "rain": _both(lambda lang: _rain(card, lang)) if _rain(card, "en") else None,
+            "rain_more": _both(lambda lang: _rain_text(card, lang, ("rain_here", "until", "small_rivers", "thailand"))),
+            "rain_share": _both(lambda lang: _rain_text(card, lang, ("rain_up", "rain_here", "until"))),
             "why": _both(lambda lang: why(forecast, lang)),
             "combined": _both(lambda lang: combined(forecast, lang)) if combined(forecast, "en") else None,
             "note": dict(W["calm_note"]) if verdict == "NORMAL" else None,

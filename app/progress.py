@@ -39,6 +39,8 @@ def describe(rec):
                 + (f" ({'; '.join(skipped[:2])}{'; ...' if len(skipped) > 2 else ''})" if skipped else ""))
     if a == "critic.request":          # B-71(b): the Critic asks the Data & Reconciler for a missing source
         return f"  Critic -> Data & Reconciler: {out}"
+    if a == "rain.upstream":           # B-88: rain upstream (and when it may arrive) + rain here
+        return f"  rain: {out}"
     if a == "data.request":
         return f"  Data & Reconciler -> Critic: {out}"
     if a == "verdict.recomputed":

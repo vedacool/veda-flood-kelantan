@@ -157,6 +157,18 @@ def _rain(rain):
                    past7 is not None and past7 >= WET_GROUND_7D_MM, "freshness": rain.get("freshness")}
 
 
+def _rain_upstream(ru):
+    """B-88: heavy rain at an upstream rain point -> at least WATCH (also when its arrival time is not known)."""
+    if not ru or not ru.get("heavy_upstream"):
+        return []
+    heavy = [u for u in ru["upstream"] if u["point"] in ru["heavy_upstream"]]
+    what = "; ".join(f"{u['name']} {u['past_72h_mm']} mm in 72 h / {u['past_24h_mm']} mm in 24 h"
+                     + (f" (forecast {u['next_24h_mm']} mm in 24 h)" if u["heavy_forecast"] and not u["heavy_fallen"] else "")
+                     + (f", may reach here in {u['window']['min']:g}-{u['window']['max']:g} h" if u["window"]
+                        else ", arrival time not known") for u in heavy)
+    return [("WATCH", "upstream-rain", f"heavy rain upstream: {what}")]
+
+
 def peak_time(p):
     """When a historic peak happened (MYT), from 'observed_when' ('27 Nov 2024 19:30', '29 Nov 2024', '2014') or the
     event name ('Dec 2014 ...'); None if it cannot be read."""
@@ -212,6 +224,9 @@ def _confidence(main, others, fired, rain, now_only):
     elif max(rs) > 0.05 and min(rs) < -0.05:
         score -= 0.1
         why.append("1 h and 3 h trends disagree")
+    if any(r[1] == "upstream-rain" for r in fired):
+        score -= 0.05
+        why.append("the upstream rain rule and its arrival times are tentative")
     if any(r[1].startswith("sentinel") for r in fired):
         score -= 0.05
         why.append("upstream travel times are tentative")
@@ -244,7 +259,9 @@ def forecast(plan, evidence, world=None, now=None):
         out.update({"verdict": "INSUFFICIENT_DATA", "level_name": None,     # no band from an unusable reading
                     "triggers": [{"level": "INSUFFICIENT_DATA", "rule": "fail-safe", "reason": why}],
                     "confidence": {"score": 0.1, "label": "low", "reasons": [why]}, "controlling": [], "upstream": [],
-                    "rain": None, "history": [], "bigger_than_2014": None})
+                    "rain": None, "history": [], "bigger_than_2014": None,
+                    # B-88: the rain picture is still shown on the card as context - never a trigger here
+                    "rain_upstream": None if now_only else ctx.get("rain_upstream")})
         return _finish(out, plan, world, evidence, run_id)
     fired, trends, fast = [], [], False
     for g in controlling:
@@ -256,13 +273,22 @@ def forecast(plan, evidence, world=None, now=None):
         fast = fast or (is_fast and g is main)
     up_fired, upstream = _upstream(ctx.get("sentinels", []))
     rain_fired, rain = ([], None) if now_only else _rain(ctx.get("rain"))
-    fired += up_fired + rain_fired
+    ru = None if now_only else ctx.get("rain_upstream")
+    fired += up_fired + rain_fired + _rain_upstream(ru)
     base = max((LEVELS.index(f[0]) for f in fired), default=0)
     triggers = [{"level": f[0], "rule": f[1], "reason": f[2]} for f in fired]
     if fast and base < len(LEVELS) - 1:
         base += 1
         triggers.append({"level": LEVELS[base], "rule": "rising-fast",
                          "reason": f"{main['name']} is rising fast (>= {RISING_FAST_M_PER_H} m/h) - one level up"})
+    if ru and ru.get("combined") and base < len(LEVELS) - 1:      # B-88 (tentative): hulu + hilir -> one level up
+        base += 1
+        local = ru.get("local") or {}
+        came = [u for u in ru["upstream"] if u["point"] in ru["arriving_24h"]]
+        triggers.append({"level": LEVELS[base], "rule": "upstream+local-rain", "reason": (
+            "heavy rain upstream arriving within 24 h (" + "; ".join(
+                f"{u['name']}, {u['window']['min']:g}-{u['window']['max']:g} h" for u in came)
+            + f") while it rains heavily here ({local.get('max_12h_mm')} mm in 12 h) - one level up")})
     main_trend = next(t for t in trends if t["role"] == "controlling")
     top = (main_trend["projection_m"].get("24h") or {}).get("max")
     history, bigger = _history(world, main, top, _clock(evidence) if evidence.get("replay") else None)
@@ -271,7 +297,7 @@ def forecast(plan, evidence, world=None, now=None):
                                           "reason": "controlling gauge below alert and no other rule fired"}],
                 "confidence": _confidence(main, [g for g in controlling if g is not main], fired, ctx.get("rain"),
                                           now_only),
-                "controlling": trends, "upstream": upstream, "rain": rain, "history": history,
+                "controlling": trends, "upstream": upstream, "rain": rain, "rain_upstream": ru, "history": history,
                 "bigger_than_2014": bigger})
     return _finish(out, plan, world, evidence, run_id)
 
