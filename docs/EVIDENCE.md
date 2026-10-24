@@ -48,6 +48,21 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 | 22-23 Oct | Audits | 22 Oct: no P0, 4 P1. 23 Oct: no P0, 10 P1 -> all 10 fixed ("GO for submission on the audit's P1 list"); the into-water gate caught 12 attack sentences and passed 12 real warnings | manual | `docs/audit/2026-10-22-audit.md`, `docs/audit/2026-10-23-audit.md` | Not re-verified |
 | 22 Oct | Dependency + secret scans | pip-audit: no known vulnerabilities in the pinned packages; gitleaks over the full history on every push | CI | ci.yml (`pip-audit`, `gitleaks-action`) | Runs in CI on every push |
 
+## Real outage, 24–25 Oct 2026 (JPS Public Infobanjir)
+Timestamps and outcomes only - no river readings (B-75).
+- **When JPS failed:** the collector's last good fetch was **24 Oct, 20:15 MYT**. From **20:30 MYT** every 15-minute
+  cycle failed: the site presented an HTTPS certificate that had expired on 13 Jun 2026 (`CERTIFICATE_VERIFY_FAILED`).
+  One diagnostic request outside the collector (25 Oct, 01:01 MYT) found the Kelantan data page answering **HTTP 404
+  "Not Found"** - no table. 19 failed cycles by 25 Oct, 01:00 MYT.
+- **What VEDA did:** kept the last good data; the collector retried every 15 minutes and kept running; certificate
+  checks were never disabled; `/health` reported "degraded" (newest reading stale); as the readings aged past the
+  freshness limit, answers said **"Can't confirm right now"** - never a guessed level.
+- **Example (live, 25 Oct, 01:04 MYT, run `20261025-010432-73fd`):** "Is Kota Bharu at risk of flooding right now?" ->
+  **Can't confirm right now** ("We have no fresh river reading for Kota Bharu."), with the safety steps and a link to
+  JPS Infobanjir; full path, 2 AI calls. Screenshot (no river reading shown):
+  [`docs/media/v2/outage/kota-bharu-live-25oct-375-en.png`](media/v2/outage/kota-bharu-live-25oct-375-en.png).
+- **When it recovered:** _to be filled in_ (collector records checked again at about 04:00 MYT and on Sunday afternoon).
+
 ## Counts over time
 **Offline tests** (from commit messages and the checklist; each `N` was the full suite at that commit):
 22 Oct 15:50 153 · 16:12 171 · 16:54 208 · 17:22 217 · 18:28 252 · 18:44 273 · ~19:12 312 ·
