@@ -83,6 +83,20 @@ def test_featured_runs_exist_and_are_labelled_as_recorded():
     assert 'label: "Recorded live run · {when} MYT"' in PAGE and 'label: "Larian langsung dirakam · {when} MYT"' in PAGE
 
 
+def test_the_live_critic_data_request_run_is_published_redacted_and_featured_first(client):
+    """Cowork 24 Oct: the live Wakaf Bharu run (24 Oct 20:10) where the Critic asks the Data & Reconciler for another
+    gauge - published with the same redaction as the others - is the first featured run."""
+    name = "2026-10-24_2010MYT_critic-data-request_20261024-201011-ef66.trace.jsonl"
+    assert next(iter(re.findall(r'"(\d{6}-[0-9a-f]{4})": "why_', PAGE))) == "201011-ef66"
+    body = client.get(f"/trace/recorded/{name}").json()
+    actions = [r["action"] for r in body["records"]]
+    assert "critic.request" in actions and "data.request" in actions and "verdict.recomputed" in actions
+    assert all(r.get("mode") == "live" for r in body["records"] if r["action"] == "run_start")
+    assert "not seen live" not in PAGE and "no_request" not in PAGE
+    assert ('"Writes the explanation and reviews the answer; can send it back.' in PAGE
+            and '"Menulis penjelasan dan menyemak jawapan; boleh menolaknya.' in PAGE and "Decides nothing" not in PAGE)
+
+
 def test_english_and_malay_have_the_same_words():
     ui = PAGE.split("const UI = {", 1)[1].split("\n};", 1)[0]
     en, ms = ui.split("\n  ms: {", 1)
