@@ -75,7 +75,8 @@
   .text { margin: 4px 0 0; word-break: break-word; }
   .hl { font-weight: 700; }
   .failed .hl { color: var(--warn-text); }
-  .raw summary { font-weight: 400; min-height: 36px; font-size: 1rem; }
+  .raw summary { font-weight: 400; min-height: 44px; font-size: 1rem; }
+  .lines a, .api p a, #p-file { display: inline-block; padding: 10px 0; }  /* 44 px taps for links in a line */
   pre { font: 1rem/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0;
         padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--line); }
   .links li { margin: 0 0 10px; }
@@ -237,7 +238,7 @@ const UI = {
     copy: "Copy", copied: "Copied", api_docs: "Full API docs:", api_cli: "From a clone, no keys:",
     m_ai: "Nemotron's own judgement on the 9 live runs of 24 Oct night: it ran in 6 of 9, agreed with the rules 6 times and raised the level 0 times. It can never lower the level.",
     m_slow: "When the AI was slow (run 223209, 24 Oct 22:32), the explanation timed out and the facts-only check took over: the answer still went out, checked.",
-    m_tests: "1061 tests pass and 41 of 41 safety evals pass, offline from the committed data (24 Oct).",
+    m_tests: "1065 tests pass and 41 of 41 safety evals pass, offline from the committed data (24 Oct).",
     l_evidence: "Every test and measurement (docs/EVIDENCE.md)",
     b_zetaris: "Zetaris: the one data layer. Every agent reads river levels, rain and warnings only through it, and every data query is in the log.",
     b_meterless: "Meterless: Nightshift carries every AI call and gives each one a receipt; the World Model is the agents' shared memory.",
@@ -277,7 +278,7 @@ const UI = {
     copy: "Salin", copied: "Disalin", api_docs: "Dokumentasi API penuh:", api_cli: "Daripada klon, tanpa kunci:",
     m_ai: "Penilaian Nemotron sendiri pada 9 rakaman langsung malam 24 Okt: ia berjalan dalam 6 daripada 9, bersetuju dengan peraturan 6 kali dan menaikkan tahap 0 kali. Ia tidak boleh menurunkan tahap.",
     m_slow: "Apabila AI lambat (rakaman 223209, 24 Okt 22:32), penjelasan tamat masa dan semakan fakta sahaja mengambil alih: jawapan tetap dihantar, sudah disemak.",
-    m_tests: "1061 ujian lulus dan 41 daripada 41 ujian keselamatan lulus, di luar talian daripada data yang disimpan (24 Okt).",
+    m_tests: "1065 ujian lulus dan 41 daripada 41 ujian keselamatan lulus, di luar talian daripada data yang disimpan (24 Okt).",
     l_evidence: "Setiap ujian dan ukuran (docs/EVIDENCE.md)",
     b_zetaris: "Zetaris: satu-satunya lapisan data. Setiap ejen membaca paras sungai, hujan dan amaran hanya melaluinya, dan setiap pertanyaan data ada dalam log.",
     b_meterless: "Meterless: Nightshift membawa setiap panggilan AI dan memberi setiap satu resit; World Model ialah memori bersama ejen.",

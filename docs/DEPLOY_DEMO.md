@@ -10,9 +10,9 @@ visitor --HTTPS--> Tailscale Funnel --> 127.0.0.1:8765 --> proxy (nginx) --+--> 
 ```
 - **proxy** (`demo/nginx.conf`): per-visitor rate limits - 20 answers (and feedback requests) a minute, burst 10,
   and 120 page requests a minute, burst 60; then HTTP 429 - at most 3 open streams (answer steps, live log) per
-  visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing) - a one-line demo banner in the page's
-  language with a small *Feedback* link, and a *Was this clear? 1-minute feedback* link under each answer
-  (`demo/demo-banner.js`; the app itself is unchanged) - the public API (`/api/v1/`) and its docs page (`/api/docs`)
+  visitor and 10 in all - security headers (CSP, HSTS, nosniff, no framing) - a *Was this clear? 1-minute
+  feedback* link under each answer (`demo/demo-banner.js`). The demo strip, top bar and footer (with *Feedback*) come
+  from the app's shared frame (B-96, `app/frame.py`); the feedback form wears the same frame - the public API (`/api/v1/`) and its docs page (`/api/docs`)
   with the same limits as an answer stream - `/admin`, run logs and FastAPI's own `/docs`, `/redoc`, `/openapi.json`
   closed (404), no access log (it would store IP addresses), visitors' addresses not passed on.
 - **veda** (the normal VEDA image): `SAMPLE_MODE=true`, read-only filesystem, 1 GB memory limit, on an internal
@@ -104,7 +104,7 @@ docker compose -f demo/compose.yaml --profile demo up -d --build
 docker compose -f demo/compose.yaml --profile demo ps          # veda "healthy", proxy and feedback "running"
 curl -s http://127.0.0.1:8765/health                           # {"status":"ok","sample_mode":true,...}
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/admin    # 404 (the proxy)
-curl -s http://127.0.0.1:8765/ | grep -c "veda-demo-banner"    # 1 (the banner)
+curl -s http://127.0.0.1:8765/ | grep -c 'class="vf-strip"'    # 1 (the demo strip)
 docker compose -f demo/compose.yaml --profile demo exec -T proxy \
   wget -S -O /dev/null http://veda:8000/admin 2>&1 | grep HTTP/   # 404 from the app itself (behind the proxy)
 ```
@@ -133,7 +133,7 @@ tailnet-only: Funnel exposes only what is listed there. **Never run `tailscale s
 
 ## 6. Test it from outside (5 min)
 On a phone **on mobile data, not on the tailnet** (or any computer logged out of Tailscale):
-1. Open the public address: the dark one-line banner "Demo · past flood replay · not an official warning"
+1. Open the public address: the dark one-line strip "Demo · past flood replay · not an official warning"
    is at the top (in BM after tapping BM). Link to share with judges and testers (opens the flood replay):
    `https://wyse5070.<your-tailnet>.ts.net/?replay=nov2024&at=2024-11-27%2019:30` -> tap **Rantau Panjang** -> Act now.
 2. `…/admin` -> 404. `…/feedback` -> the form, in BM if the phone is in Malay; send one test answer -> *Thank you*.

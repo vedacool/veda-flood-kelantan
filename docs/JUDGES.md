@@ -70,8 +70,8 @@ curl -X POST http://127.0.0.1:8000/run -H "Content-Type: application/json" -d @i
 Six ready-made inputs are in `input_examples/`, with VEDA's real answers and traces in `output_examples/`.
 
 ## 3. Where to see the agents (about 2 minutes)
-- **For judges** ([127.0.0.1:8000/judges](http://127.0.0.1:8000/judges), also linked from the public demo's banner):
-  VEDA in one minute (the four agents, Zetaris, Nemotron through Nightshift, the World Model - and what each one
+- **How it works** ([127.0.0.1:8000/how-it-works](http://127.0.0.1:8000/how-it-works), in the top bar of every page;
+  /judges redirects to it): the agents (the four agents, Zetaris, Nemotron through Nightshift, the World Model - and what each one
   decides), then the 19 recorded live runs (23-24 Oct 2026) replayed step by step on the page at 1× or 4×: each
   agent's steps, every Zetaris query, every Nemotron call with the model that answered and its receipt, and **Show
   raw** for the exact trace line. First: the live run of 24 Oct 20:10 (Wakaf Bharu), where the Critic finds a stale

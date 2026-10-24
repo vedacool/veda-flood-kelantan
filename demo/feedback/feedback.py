@@ -29,7 +29,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-for _root in (Path(__file__).resolve().parent, Path(__file__).resolve().parents[2]):    # the image, or the repo
+for _root in Path(__file__).resolve().parents[:3]:          # /srv in the image, or the repo root (demo/feedback/..)
     if (_root / "app" / "frame.py").is_file():
         sys.path.insert(0, str(_root))
         break
