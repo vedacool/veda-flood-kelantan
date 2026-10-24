@@ -124,8 +124,9 @@ class Clip:
         route.fulfill(response=resp)
         self.page.wait_for_selector("#s-answer:not([hidden])", timeout=60000)
         self.page.unroute(STREAM)
-        got = self.page.locator("#a-label-text").inner_text() if self.page.locator("#a-label").is_visible() else ""
-        if not got.startswith(expect):
+        # the server's own data label (the chip on screen shows the short form, "Replay · 27 Nov 2024, 7:30 pm")
+        got = self.page.evaluate("() => (result && result.view && result.view.label && result.view.label.en) || ''")
+        if not got.startswith(expect) or not self.page.locator("#a-label").is_visible():
             raise WrongData(f"answer labelled {got!r}, expected {expect!r}")
         self.page.evaluate("() => scrollTo(0, 0)")
         self.pause()
@@ -139,19 +140,22 @@ class Clip:
         self.scroll_through()
 
 
-def home(c, label, **scene):
+def home(c, label, show_map=False, **scene):
     c.go("/", label, lang="en", **scene)
     c.pause()
-    c.tap("#demo-link")                                  # show which data the demo runs on
-    c.pause()
-    c.scroll(0, 600)
+    if show_map:                                         # "Where these towns are", then back up to the towns
+        c.scroll("#map-box", 2000)
+        c.pause(3)
+        c.scroll(0, 1200)
+        c.pause(1)
 
 
 # ---------- the clips ----------
 def clip_a(c):
-    """Home -> tap Rantau Panjang (Nov 2024 replay, 27 Nov 19:30) -> waiting -> answer -> Details -> How VEDA worked."""
+    """Home -> the map -> tap Rantau Panjang (Nov 2024 replay, 27 Nov 19:30) -> waiting -> answer -> Details ->
+    How VEDA worked."""
     lab = f"{REPLAY} · 27 Nov 2024, 19:30 · offline (SAMPLE_MODE)"
-    home(c, lab, replay="nov2024", at="2024-11-27 19:30")
+    home(c, lab, show_map=True, replay="nov2024", at="2024-11-27 19:30")
     run_id = c.ask_town("Rantau Panjang", REPLAY)
     c.details()
     c.tap("#a-how")
@@ -229,7 +233,8 @@ def clip_f(c):
 
 
 CLIPS = {  # key: (file stem, what it shows, data source)
-    "a": ("a-replay-rantau-panjang", "Home → tap Rantau Panjang → waiting → answer → Details → How VEDA worked this out",
+    "a": ("a-replay-rantau-panjang",
+          "Home → the map → tap Rantau Panjang → waiting → answer → Details → How VEDA worked this out",
           "Past flood replay, Nov 2024 (readings reported in the news, cited), 27 Nov 19:30"),
     "b": ("b-live-log-replay-4x", "Live log replaying clip (a)'s run at 4×",
           "Past flood replay, Nov 2024, 27 Nov 19:30 (the trace of clip a)"),
