@@ -17,8 +17,8 @@ plain, reviewable rules; NVIDIA Nemotron (through Meterless Nightshift) only wri
 a Critic checks against the facts - and the answer card goes out, checked by code, even when the model is slow or
 down.
 
-> ⚠️ **Not an official flood warning.** Decision support only. Always follow JPS, APM and police instructions.
-> Emergency: 999 · APM (Civil Defence): 991.
+> ⚠️ **Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.**
+> VEDA is decision support only.
 
 ## Quick start for judges (offline, no keys, about 2 minutes)
 SAMPLE_MODE runs the real agent logic offline, with no network, no `.env` and no API keys, on **scenes**: the Nov 2024
@@ -214,7 +214,7 @@ flowchart LR
 | **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Super VL by name, lane `deep`) |
 | **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT_DATA. Per-source circuit breaker. | No |
 | **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain - including rain **upstream + here** (B-88, `app/rain_rule.py`: heavy rain at an upstream rain point lifts a town to at least Keep watching; when it can arrive within 24 h while it also rains heavily in town, one level up). Builds the 24 h range, the confidence, and the comparison with past floods. | No |
-| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts (each with an id) and the explanation, and answers: does the explanation contradict, exaggerate or downplay a fact? - and, in the same call, which level would it give, citing up to 2 fact ids (code accepts only a cited, one-level raise; see "AI judgement in the loop"). Live, **24 Oct 2026, 12:19-13:14 MYT: the AI review was done in 6 of 7 full-path runs** (23 Oct, 22:47-23:07: 8 of 10 full runs; test harness on 23 Oct: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
+| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts (each with an id) and the explanation, and answers: does the explanation contradict, exaggerate or downplay a fact? - and, in the same call, which level would it give, citing up to 2 fact ids (code accepts only a cited, one-level raise; see "AI judgement in the loop"). Live, **24 Oct 2026, 12:19-13:14 MYT: the AI review was done in 6 of 7 full-path runs** (23 Oct, 22:47-23:07: 8 of 10 full runs; planted-error harness 24 Oct: 5 of 5 answered planted errors rejected - see Evaluations). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never "a PPS is open" or "the road will be cut off". | No |
 
 Models are reached only through Meterless **Nightshift**: both AI steps ask for NVIDIA Nemotron 3.5 Super VL **by
@@ -275,9 +275,7 @@ unmodified) and certifi (MPL-2.0).
 ## Evaluations (test harness - not live use)
 These are controlled tests, kept apart from the live rates above. Every test and measurement in VEDA's history, with
 its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
-- **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
-  wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
-  exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
+- **Critic evaluation (test harness, planted errors, 24 Oct 2026, 23:20 MYT, Super VL, Nightshift restarted before each call): 9 of 12 calls answered (3 cut at 45 s); all 9 right - planted errors rejected 5 of 5 (EN contradiction 3/3, BM exaggeration 2/2), correct explanations passed 4 of 4 (EN 3/3, BM 1/1).** Reproduce: `python scripts/critic_planted_errors.py --tries 3` (live Nightshift; the facts are the SYNTHETIC rising-river card). The planted errors exist only in that script, never in VEDA or its answers.
 - **Offline test suite (`python -m pytest -q`): 1,052 tests pass (24 Oct 2026, 23:00 MYT), 13 skipped (they need live
   services).**
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 41 scenarios (6 of them for Nemotron's judgement,
@@ -295,9 +293,9 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   - "a PPS is open" claims and possible evacuation centres from OpenStreetMap.
 
 ## Responsible AI
-- **Not an official warning.** Every answer - the card (EN / BM), the web page, the API (`disclaimer`) and the command
-  line - says so and gives 999 / 991; VEDA is decision support only. Always follow JPS, APM / NADMA, the police and the
-  local authorities.
+- **Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.** Every answer - the
+  card (EN / BM: "Bukan amaran rasmi ..."), the web page, the API (`disclaimer`) and the command line - says this;
+  VEDA is decision support only.
 - **Covers mapped places only:** four towns offline, nine live; any other place gets "not covered yet" and the
   nearest covered place - never a guess.
 - **Can't confirm when data is missing:** with no fresh, healthy river reading the answer is "Can't confirm right now"
@@ -529,8 +527,7 @@ Zetaris.
     retry was added afterwards).
   - **Now (Super VL by name, test harness, 23 Oct 2026, 21:5x-22:25 MYT, 10 spaced calls each, replay and SYNTHETIC
     cards):** draft **7 of 10** answered (9-61 s, median 27 s; 1,025-2,735 tokens), all 7 passed the code checks; 3
-    failed (2 Nightshift no-first-byte cuts at 45 s, 1 NVIDIA HTTP 500). AI review **9 of 10** answered (4-18 s), all 9
-    right; planted errors rejected: EN 1/1, BM 2/2 answered calls.
+    failed (2 Nightshift no-first-byte cuts at 45 s, 1 NVIDIA HTTP 500). AI review **9 of 10** answered (4-18 s).
   - **Live, 10 full runs on 23 Oct 2026, 22:47-23:07 MYT (Super VL by name):** explanation shown in **8 of 10**,
     Critic AI review completed in **8 of 10**; every call that answered was served by
     `nvidia/nemotron-3.5-super-vl-120b-a12b`; every answer inside the 150 s budget (22-130 s). The 2 misses: a draft
@@ -539,8 +536,7 @@ Zetaris.
   - Nightshift cuts a call with no first byte in about **45 s** (measured 22 Oct 2026).
   - *History - Lightning:* Lightning spends hidden tokens even with reasoning off. Critic-call tests (test harness, 10 calls each,
     23 Oct): **200 tokens 0/10, 1000 tokens 5/10, 2000 tokens 10/10** completed.
-  - The small facts-only Critic call (test harness, 23 Oct): **10/10 completed twice, 2/2 planted errors rejected
-    each time** (one EN, one BM). Before it, the full-evidence Critic call completed in **1 of 10** live full runs
+  - The small facts-only Critic call (test harness, 23 Oct): **10/10 completed twice**. Before it, the full-evidence Critic call completed in **1 of 10** live full runs
     (22-23 Oct).
   - Live, 10 full runs on **23 Oct 2026, 12:29-13:29 MYT** (Lightning): explanation shown in **8 of 10**, Critic AI
     review completed in **8 of 10**.

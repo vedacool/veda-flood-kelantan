@@ -108,7 +108,8 @@ def test_offline_api_says_live_only(tmp_path, monkeypatch):
 
 
 def test_upstream_facts_only_rising_or_alert_one_fact_each():
-    notes = [{"gauge": "Kg. Jenob", "level_m": [JPS reading], "band": "normal", "rising": True,
+    # made-up levels (no real JPS reading in the repo, B-75)
+    notes = [{"gauge": "Kg. Jenob", "level_m": 19.5, "band": "normal", "rising": True,
               "thresholds": {"alert_m": 21.5, "warning_m": 22.5, "danger_m": 23.5},
               "change_1h_m": 0.47, "change_3h_m": 1.08, "arrives_in_h": None},
              {"gauge": "Kuala Krai", "level_m": 22.0, "band": "alert", "rising": False,
@@ -119,8 +120,8 @@ def test_upstream_facts_only_rising_or_alert_one_fact_each():
              {"gauge": "Tualang", "status": "no fresh reading"}]
     f = {fid: (text, r) for fid, text, r in critic._upstream_facts(notes, "Rantau Panjang")}
     assert set(f) == {"upstream.1", "upstream.2"} and all(r for _, r in f.values())
-    assert f["upstream.1"][0] == {"en": "Upstream Kg. Jenob: below Alert (21.5 m), rose 1.08 m in 3 h",
-                                  "ms": "Hulu Kg. Jenob: [JPS reading] m di bawah paras Waspada (21.5 m), naik 1.08 m dalam 3 jam"}
+    assert f["upstream.1"][0] == {"en": "Upstream Kg. Jenob: 2 m below Alert (21.5 m), rose 1.08 m in 3 h",
+                                  "ms": "Hulu Kg. Jenob: 2 m di bawah paras Waspada (21.5 m), naik 1.08 m dalam 3 jam"}
     assert f["upstream.2"][0]["en"] == ("Upstream Kuala Krai: 1 m above Alert (21 m), fell 0.12 m in 3 h, "
                                         "may reach Rantau Panjang in 9-17 h")
     from app import card
