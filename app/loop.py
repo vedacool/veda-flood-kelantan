@@ -134,7 +134,9 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     status, state = "fallback", "done"
                 elif res.status != "found":
                     p = {"question_language": lang, "place": None, "place_status": res.status,
-                         "place_message": res.message, "planned_by": "code"}
+                         "place_message": res.message, "planned_by": "code",
+                         "nearest": getattr(res, "nearest", None),       # the answer screen's "nearest is ..." button
+                         "suggestions": list(getattr(res, "suggestions", None) or [])}
                     text = card_mod.place_reply(res, lang)
                     if router.emergency(question):          # someone in trouble: safety advice first, place or not
                         text = card_mod.emergency_reply(lang, text)

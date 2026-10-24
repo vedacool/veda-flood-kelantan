@@ -56,16 +56,36 @@ W = {
     "rain_past": {"en": "{mm} mm fell in the 24 hours before this time", "ms": "{mm} mm turun dalam 24 jam sebelum masa ini"},
     "checked2": {"en": "Double-checked", "ms": "Disemak dua kali"},
     "checked1": {"en": "Checked", "ms": "Disemak"},
-    "from_live": {"en": "from the official river gauge, {t}", "ms": "dari stesen sungai rasmi, {t}"},
-    "from_reported": {"en": "from a reading reported in the news, {t}", "ms": "dari bacaan yang dilaporkan dalam berita, {t}"},
-    "from_estimated": {"en": "from an estimate between reported readings, {t}",
-                       "ms": "dari anggaran antara bacaan yang dilaporkan, {t}"},
-    "from_made_up": {"en": "from made-up test readings, {t}", "ms": "dari bacaan ujian rekaan, {t}"},
+    "combined": {"en": "combined from {n} sources: {kinds}", "ms": "digabung daripada {n} sumber: {kinds}"},
+    "n_left_out": {"en": "{n} left out", "ms": "{n} diketepikan"},
+    "from_live": {"en": "official river gauge", "ms": "stesen sungai rasmi"},
+    "from_reported": {"en": "reading reported in the news", "ms": "bacaan yang dilaporkan dalam berita"},
+    "from_estimated": {"en": "estimate between reported readings", "ms": "anggaran antara bacaan yang dilaporkan"},
+    "from_made_up": {"en": "made-up test reading", "ms": "bacaan ujian rekaan"},
+    "calm_note": {"en": "Nothing to do now. VEDA checks again whenever you ask.",
+                  "ms": "Tiada apa perlu dibuat sekarang. VEDA menyemak semula setiap kali anda bertanya."},
+    "cant_confirm": {"en": "We could not get a fresh river reading, so we will not guess. Check JPS Infobanjir; call 999 "
+                           "if you are in danger.",
+                     "ms": "Kami tidak dapat bacaan sungai terkini, jadi kami tidak akan meneka. Semak JPS Infobanjir; "
+                           "hubungi 999 jika anda dalam bahaya."},
+    "covers": {"en": "VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now.",
+               "ms": "Buat masa ini VEDA meliputi Rantau Panjang, Pasir Mas, Kota Bharu dan Tumpat."},
+    "nearest": {"en": " The nearest is {place}.", "ms": " Yang paling dekat ialah {place}."},
+    "did_you_mean": {"en": "Did you mean one of these?", "ms": "Adakah maksud anda salah satu daripada ini?"},
+    "down": {"en": "VEDA can't answer right now. If you are in danger call 999.",
+             "ms": "VEDA tidak dapat menjawab sekarang. Jika anda dalam bahaya, hubungi 999."},
+    "combined_why": {"en": "The river here alone would say \u201c{alone}\u201d; it is {who} that {verb} this to \u201c{now}\u201d.",
+                     "ms": "Sungai di sini sahaja akan menunjukkan \u201c{alone}\u201d; {who} yang menaikkannya kepada "
+                           "\u201c{now}\u201d."},
+    "who_upstream": {"en": "the river upstream", "ms": "sungai di hulu"},
+    "who_rain": {"en": "the rain forecast", "ms": "ramalan hujan"},
+    "and_word": {"en": " and ", "ms": " dan "},
     "from_none": {"en": "no fresh river reading", "ms": "tiada bacaan sungai terkini"},
     "label_replay": {"en": "Past flood replay · {when}", "ms": "Ulang tayang banjir lalu · {when}"},
     "label_synthetic": {"en": "Made-up test scene · {when}", "ms": "Senario ujian rekaan · {when}"},
     "used": {"en": "used", "ms": "digunakan"},
     "left_out": {"en": "left out: {why}", "ms": "diketepikan: {why}"},
+    "not_used": {"en": "not used: {why}", "ms": "tidak digunakan: {why}"},
 }
 WHY = {  # one sentence per verdict rule, plain words (the rule names stay in the trace)
     "level>=danger": {"en": "The river is at or above the danger level.", "ms": "Paras sungai pada atau melebihi paras Bahaya."},
@@ -93,6 +113,12 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
     "fail-safe": {"en": "VEDA has no fresh, checked river reading for this place, so it will not guess.",
                   "ms": "VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak meneka."},
 }
+KIND = {  # the strip's short names for the kinds of source used
+    "river": {"en": "river here", "ms": "sungai di sini"}, "upstream": {"en": "river upstream", "ms": "sungai di hulu"},
+    "rain": {"en": "rain", "ms": "hujan"}, "forecast": {"en": "forecast", "ms": "ramalan"},
+    "warnings": {"en": "warnings", "ms": "amaran"}, "flood_warnings": {"en": "flood warnings", "ms": "amaran banjir"},
+    "map": {"en": "map", "ms": "peta"},
+}
 SOURCE_NAME = {
     "open_meteo": {"en": "Rain forecast (Open-Meteo)", "ms": "Ramalan hujan (Open-Meteo)"},
     "open_meteo_past": {"en": "Rain record (Open-Meteo archive)", "ms": "Rekod hujan (arkib Open-Meteo)"},
@@ -103,6 +129,7 @@ SOURCE_NAME = {
     "river": {"en": "River level: {name}", "ms": "Paras sungai: {name}"},
     "upstream": {"en": "River upstream: {name}", "ms": "Sungai di hulu: {name}"},
 }
+NOT_A_DROP = ("not_needed", "quick", "past")      # not asked for, or not kept for a past date: "not used", not "left out"
 LEFT_OUT = {
     "no_reading": {"en": "no reading", "ms": "tiada bacaan"},
     "looked_wrong": {"en": "the reading looked wrong", "ms": "bacaan kelihatan salah"},
@@ -174,7 +201,7 @@ def _trend(card, forecast):
 def _line(card, forecast, lang):
     """The one line under the verdict badge."""
     if card["verdict"] == "INSUFFICIENT_DATA" or not card.get("gauge"):
-        return W["no_reading_past" if card.get("replay") else "no_reading"][lang]
+        return W["no_reading_past"][lang] if card.get("replay") else W["cant_confirm"][lang]
     comp, th = card.get("comparison") or {}, card.get("thresholds") or {}
     if comp.get("danger") is not None and comp["danger"] >= 0:
         key = "danger"
@@ -195,7 +222,9 @@ def _water(card, forecast, evidence, lang):
     g = card.get("gauge")
     if not g:
         return None
-    parts = [W["water"][lang].format(m=_num(g["level_m"]), t=g["read_at"].split(" ")[-1])]
+    origin = W[{"live": "from_live", "reported": "from_reported", "estimated": "from_estimated",
+                "made_up": "from_made_up"}[_source_kind(card)]][lang]
+    parts = [W["water"][lang].format(m=_num(g["level_m"]), t=g["read_at"].split(" ")[-1]) + f" ({origin})"]
     rate, trend = _rate(forecast), _trend(card, forecast)
     if card.get("tidal"):
         parts.append(W["tidal"][lang])
@@ -277,6 +306,50 @@ def why(forecast, lang):
     return " ".join(dict.fromkeys(out))
 
 
+GAUGE_RULES = ("level>=", "danger<=", "alert<=")
+LEVELS = ("NORMAL", "WATCH", "PREPARE", "ACT")
+
+
+def combined(forecast, lang):
+    """Track 1 (Cowork 24 Oct): when the verdict needed more than the river here, one plain sentence saying which
+    other source raised it; None when the river here alone gives the same verdict."""
+    fc = forecast or {}
+    verdict = fc.get("verdict")
+    if verdict not in LEVELS:
+        return None
+    triggers = fc.get("triggers") or []
+    alone = max((LEVELS.index(t["level"]) for t in triggers if t["rule"].startswith(GAUGE_RULES)
+                 and t["level"] in LEVELS), default=0)
+    if any(t["rule"] == "rising-fast" for t in triggers):
+        alone = min(alone + 1, len(LEVELS) - 1)
+    if alone >= LEVELS.index(verdict):
+        return None
+    raisers = [t["rule"] for t in triggers if t["level"] == verdict]
+    who = [W[k][lang] for k, pre in (("who_upstream", "sentinel"), ("who_rain", "rain")) if any(r.startswith(pre) for r in raisers)]
+    if not who:
+        return None
+    return W["combined_why"][lang].format(alone=HEADLINE[LEVELS[alone]][lang], who=W["and_word"][lang].join(who),
+                                          now=HEADLINE[verdict][lang], verb="raises" if len(who) == 1 else "raise")
+
+
+def other_view(result):
+    """The screens without a place card: place not covered (with the nearest covered place), did you mean, or VEDA
+    cannot answer (its data cannot be reached)."""
+    plan = result.get("plan") or {}
+    status = plan.get("place_status")
+    if status == "unavailable":
+        return {"kind": "down", "text": dict(W["down"])}
+    if status == "did_you_mean":
+        sug = [x.get("name") if isinstance(x, dict) else x for x in (plan.get("suggestions") or [])]
+        return {"kind": "did_you_mean", "text": dict(W["did_you_mean"]), "suggestions": [x for x in sug if x]}
+    if status == "not_covered":
+        near = (plan.get("nearest") or {}).get("name")
+        return {"kind": "not_covered", "nearest": near,
+                "text": {lang: W["covers"][lang] + (W["nearest"][lang].format(place=near) if near else "")
+                         for lang in LANGS}}
+    return None
+
+
 def _source_kind(card):
     if card.get("synthetic"):
         return "made_up"
@@ -288,15 +361,15 @@ def _source_kind(card):
     return "live"
 
 
-def _strip(card, answer, lang):
-    g = card.get("gauge")
+def _strip(answer, rows, lang):
+    """Cowork 24 Oct: '✓ Double-checked · combined from N sources: river here, river upstream, rain · 1 left out'."""
     tick = W["checked2" if answer.get("approved") else "checked1"][lang]
-    if not g:
-        return f"✓ {tick} · {W['from_none'][lang]}"
-    t = g["read_at"].split(" ")[-1]
-    kind = _source_kind(card)
-    return f"✓ {tick} · " + W[{"live": "from_live", "reported": "from_reported", "estimated": "from_estimated",
-                                "made_up": "from_made_up"}[kind]][lang].format(t=t)
+    used = [r for r in rows if r["used"]]
+    kinds = list(dict.fromkeys(KIND[r["kind"]][lang] for r in used))
+    text = f"✓ {tick} · " + (W["combined"][lang].format(n=len(used), kinds=", ".join(kinds)) if used
+                             else W["from_none"][lang])
+    out = sum(1 for r in rows if r["left_out"])
+    return text + (f" · {W['n_left_out'][lang].format(n=out)}" if out else "")
 
 
 def _label(evidence, lang):
@@ -321,43 +394,46 @@ def sources(evidence, plan, lang):
         key = "upstream" if g["role"] == "sentinel" else "river"
         name = SOURCE_NAME[key][lang].format(name=re.sub(r"\s*\(F\d\)$", "", g["name"]))
         if g["level_m"] is None:
-            out.append((name, "no_reading", None))
+            out.append((key, name, "no_reading", None))
         elif not (g.get("health") or {"ok": True})["ok"]:
-            out.append((name, "looked_wrong", None))
+            out.append((key, name, "looked_wrong", None))
         elif g.get("freshness") in ("stale", "unknown"):
-            out.append((name, "too_old", g.get("age_minutes")))
+            out.append((key, name, "too_old", g.get("age_minutes")))
         else:
-            out.append((name, None, None))
+            out.append((key, name, None, None))
     srcs = ev.get("sources") or {}
     past = bool(ev.get("replay"))
     for key in ("open_meteo", "mygov_forecast", "mygov_warning"):
         s = srcs.get(key) or {}
         name = SOURCE_NAME["open_meteo_past" if key == "open_meteo" and past else key][lang]
         status, note = s.get("status"), (s.get("note") or "")
+        kind = {"open_meteo": "rain", "mygov_forecast": "forecast", "mygov_warning": "warnings"}[key]
         if status in ("ok", "stale", "degraded"):
-            out.append((name, None, None))
+            out.append((kind, name, None, None))
         elif "replay" in note or "archive" in note:
-            out.append((name, "past", None))
+            out.append((kind, name, "past", None))
         elif status == "skipped":
-            out.append((name, "not_needed", None))
+            out.append((kind, name, "not_needed", None))
         else:
-            out.append((name, "unreadable", None))
+            out.append((kind, name, "unreadable", None))
     cross = ev.get("cross_check")
     if cross:
         reason = {"ok": None, "stale": "stale", "not_checked": "unreadable"}.get(cross.get("status"), "unreadable")
-        out.append((SOURCE_NAME["cross"][lang], reason, None))
+        out.append(("flood_warnings", SOURCE_NAME["cross"][lang], reason, None))
     elif (plan or {}).get("effort") == "quick":
-        out.append((SOURCE_NAME["cross"][lang], "quick", None))
+        out.append(("flood_warnings", SOURCE_NAME["cross"][lang], "quick", None))
     osm = ev.get("osm")
     if osm:
-        out.append((SOURCE_NAME["osm"][lang], None if osm["status"] == "ok" else "unreadable", None))
+        out.append(("map", SOURCE_NAME["osm"][lang], None if osm["status"] == "ok" else "unreadable", None))
     rows = []
-    for name, reason, age in out:
+    for kind, name, reason, age in out:
         why_text = None
         if reason:
             why_text = LEFT_OUT[reason][lang].format(age=_age(age, lang)) if reason == "too_old" else LEFT_OUT[reason][lang]
-        rows.append({"name": name, "used": reason is None,
-                     "note": W["used"][lang] if reason is None else W["left_out"][lang].format(why=why_text)})
+        dropped = reason is not None and reason not in NOT_A_DROP       # looked at and left out (counted on the strip)
+        rows.append({"kind": kind, "name": name, "used": reason is None, "left_out": dropped,
+                     "note": W["used"][lang] if reason is None else
+                     W["left_out" if dropped else "not_used"][lang].format(why=why_text)})
     return rows
 
 
@@ -382,7 +458,7 @@ def share_text(view, lang):
     lines.append(v["line"][lang])
     if v.get("water"):
         lines.append(v["water"][lang]["main"])
-    lines.append(v["strip"][lang].replace(" · Details ›", ""))
+    lines.append(v["strip"][lang])
     lines.append(SAFETY[lang])
     return trace.redact("\n".join(lines))
 
@@ -397,7 +473,6 @@ def answer_view(result):
     if not card:
         return None
     verdict = card.get("verdict", "INSUFFICIENT_DATA")
-    ms = lambda lang, s: card_mod.months_ms(s) if lang == "ms" and s else s       # noqa: E731
     view = {"verdict": verdict, "place": card.get("place"), "headline": HEADLINE[verdict],
             "label": _both(lambda lang: _label(evidence, lang)) if _label(evidence, "en") else None,
             "line": _both(lambda lang: _line(card, forecast, lang)),
@@ -405,8 +480,9 @@ def answer_view(result):
             "water": _both(lambda lang: _water(card, forecast, evidence, lang)) if card.get("gauge") else None,
             "upstream": _both(lambda lang: _upstream(forecast, lang)),
             "rain": _both(lambda lang: _rain(card, lang)) if _rain(card, "en") else None,
-            "strip": _both(lambda lang: ms(lang, _strip(card, answer, lang))),
             "why": _both(lambda lang: why(forecast, lang)),
+            "combined": _both(lambda lang: combined(forecast, lang)) if combined(forecast, "en") else None,
+            "note": dict(W["calm_note"]) if verdict == "NORMAL" else None,
             "level_bar": _level_bar(card, evidence),
             "explanation": ({"text": trace.redact(answer["explanation"]), "language": answer.get("language")}
                             if answer.get("explanation") and answer.get("approved") else None),
@@ -414,6 +490,7 @@ def answer_view(result):
             "double_checked": bool(answer.get("approved")),
             "emergency": bool(card.get("emergency")),
             "synthetic": bool(card.get("synthetic"))}
+    view["strip"] = _both(lambda lang: _strip(answer, view["sources"][lang], lang))
     view["share"] = _both(lambda lang: share_text(view, lang))
     return view
 

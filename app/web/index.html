@@ -73,6 +73,8 @@
   .v-ACT { background: var(--v-act); color: var(--on-act); }
   .v-INSUFFICIENT_DATA { background: var(--v-unknown); color: var(--on-unknown); }
   .oneline { font-size: 1.1rem; margin: 10px 0 4px; }
+  .calm { font-weight: 700; margin: 4px 0 8px; }
+  .combined { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-weight: 600; }
   .todo h2 { text-transform: uppercase; letter-spacing: .03em; }
   .rows { display: grid; gap: 0; }
   .rows > div { display: grid; grid-template-columns: 6.5em 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -162,6 +164,8 @@
   <p class="place" id="a-place"></p>
   <div class="badge" id="a-badge" role="img"></div>
   <p class="oneline" id="a-line"></p>
+  <p class="calm" id="a-note" hidden></p>
+  <button type="button" class="sos" id="a-sos" data-t="sos" hidden></button>
   <div class="card todo"><h2 data-t="todo"></h2><p id="a-todo" style="margin:0"></p></div>
   <div class="card rows" id="a-rows"></div>
   <div class="actions">
@@ -171,13 +175,15 @@
   <button type="button" class="strip" id="a-strip" aria-expanded="false" aria-controls="a-details"></button>
   <div id="a-details" hidden>
     <div class="card"><h2 data-t="why"></h2><p id="a-why" style="margin:0"></p>
+      <p id="a-combined" class="combined" hidden></p>
       <div id="a-bar-box"></div></div>
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
       <p class="note" data-t="expl_note"></p></div>
     <div class="card"><h2 data-t="sources"></h2><ul class="sources" id="a-sources"></ul></div>
     <button class="linkish" type="button" id="a-how" data-t="how_link"></button>
   </div>
-  <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p></div>
+  <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p>
+    <div class="towns" id="a-choices" style="margin-top:12px"></div></div>
   <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:12px"></button>
   <p class="note" data-t="disclaimer"></p>
 </section>
@@ -249,6 +255,7 @@ const UI = {
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
            "Know where your nearest relief centre (PPS) is - ask the village head."],
+    check_town: "Check {town}",
     how_link: "See how VEDA worked this out ›", how_title: "How VEDA worked this out",
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
@@ -283,6 +290,7 @@ const UI = {
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
            "Ketahui PPS (pusat pemindahan) terdekat - tanya ketua kampung."],
+    check_town: "Semak {town}",
     how_link: "Lihat bagaimana VEDA mendapat jawapan ini ›", how_title: "Bagaimana VEDA mendapat jawapan ini",
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
@@ -396,11 +404,17 @@ async function ask(question, town) {
   const creep = setInterval(() => bump((parseFloat($("w-bar").style.width) || 3) + 0.6), 1000);
   const [replay, at] = ($("mode").value || "|").split("|");
   const params = new URLSearchParams({ question, replay, at });
+  const stop = new AbortController();
+  const timeout = setTimeout(() => stop.abort(), RUN_TIMEOUT_MS);
   try {
-    const res = await fetch("/run/stream?" + params);
+    let res;
+    try { res = await fetch("/run/stream?" + params, { signal: stop.signal }); }
+    catch (e) { throw new Down(); }                          // server not reachable
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(res.status === 429 ? t("busy") : (body.error && body.error.message) || ("HTTP " + res.status));
+      if (res.status === 429) throw new Error(t("busy"));
+      if (res.status >= 500) throw new Down();
+      throw new Error((body.error && body.error.message) || ("HTTP " + res.status));
     }
     const reader = res.body.getReader(), dec = new TextDecoder();
     let buf = "";
@@ -422,22 +436,32 @@ async function ask(question, town) {
           $("w-tip").className = "card tip warn";
           $("w-tip").innerHTML = `<b>${esc(t("warn_label"))}:</b> ${esc(data.headings.join(" · "))}`;
         }
-        if (kind === "error") throw new Error(data.message);
+        if (kind === "error") throw new Down();
         if (kind === "result") { result = data; }
       }
     }
-    if (!result) throw new Error("No answer came back.");
+    if (!result) throw new Down();
     bump(100);
     $("w-status").textContent = t("s_done");
     renderAnswer();
     show("s-answer");
   } catch (e) {
-    show("s-home");
-    $("err").textContent = e.message; $("err").hidden = false;
+    if (e instanceof Down || e.name === "AbortError" || e instanceof TypeError) {   // down, timed out, cut off
+      result = { other: { kind: "down", text: UI_DOWN }, output: UI_DOWN[lang] };
+      renderAnswer();
+      show("s-answer");
+    } else {
+      show("s-home");
+      $("err").textContent = e.message; $("err").hidden = false;
+    }
   } finally {
-    clearInterval(tipTimer); clearInterval(creep);
+    clearInterval(tipTimer); clearInterval(creep); clearTimeout(timeout);
   }
 }
+class Down extends Error {}
+const RUN_TIMEOUT_MS = 210000;      // the full budget is 150 s; past this, say so instead of waiting forever
+const UI_DOWN = { en: "VEDA can't answer right now. If you are in danger call 999.",
+                  ms: "VEDA tidak dapat menjawab sekarang. Jika anda dalam bahaya, hubungi 999." };
 const STAGE_LINES = { "Understanding the question": "plan", "Checking river gauges, rain and warnings": "gather",
   "Working out the risk": "forecast", "Writing the answer": "draft", "Checking the answer": "critique", "Fixing the answer": "revise" };
 function stageFromLine(line) { return STAGE_LINES[line.replace(/^> /, "").trim()] || ""; }
@@ -467,11 +491,26 @@ function renderAnswer() {
   ["a-badge", "a-line", "a-rows", "a-strip"].forEach((id) => { $(id).hidden = !v; });
   document.querySelector("#s-answer .todo").hidden = !v;
   document.querySelector("#s-answer .actions").hidden = !v;
-  if (!v) {  // no place / not covered: the plain reply in the language it was written in
+  $("a-note").hidden = !(v && v.note);
+  $("a-sos").hidden = !(v && v.verdict === "INSUFFICIENT_DATA");
+  if (!v) {  // no place card: not covered (nearest place), did you mean, or VEDA's data cannot be reached
+    const o = result && result.other;
     $("a-label").hidden = true; $("a-place").textContent = ""; $("a-details").hidden = true;
-    $("a-plain-text").textContent = result ? result.output : "";
+    $("a-plain-text").textContent = o ? o.text[lang] : (result ? result.output : "");
+    const towns = o && o.kind === "not_covered" && o.nearest ? [o.nearest] : o && o.kind === "did_you_mean" ? o.suggestions : [];
+    $("a-choices").replaceChildren(...towns.map((town) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "primary";
+      b.textContent = t("check_town").replace("{town}", town);
+      b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
+      return b;
+    }));
+    $("a-sos").hidden = !(o && o.kind === "down");
     return;
   }
+  if (v.note) $("a-note").textContent = v.note[lang];
+  $("a-combined").hidden = !v.combined;
+  if (v.combined) $("a-combined").textContent = v.combined[lang];
   $("a-label").hidden = !v.label;
   if (v.label) $("a-label-text").textContent = v.label[lang];
   $("a-place").textContent = v.place || "";
@@ -569,6 +608,7 @@ $("a-strip").addEventListener("click", () => {
 });
 $("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
 $("a-listen").addEventListener("click", listen);
+$("a-sos").addEventListener("click", () => { stopSpeaking(); show("s-sos"); });
 $("a-how").addEventListener("click", () => { stopSpeaking(); renderHow(); show("s-how"); });
 $("h-back").addEventListener("click", () => show("s-answer"));
 $("a-again").addEventListener("click", () => { stopSpeaking(); show("s-home"); });

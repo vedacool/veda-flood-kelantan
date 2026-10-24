@@ -11,10 +11,11 @@
   :root { --bg: #f4f4f1; --fg: #1c1c1a; --muted: #5a5a54; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
           --on-accent: #fff; --amber: #a85f00; --amber-bg: #fff3df; --red: #b3261e; --wait-bg: #fff6c2; --wait: #6b5600;
           --c-system: #5a5c62; --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f;
-          --c-nemotron: #4f7d00; }
+          --c-nemotron: #4f7d00; --req: #1f5f8b; --req-bg: #e6f0f8; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #141413; --fg: #ececea; --muted: #a9a9a3; --card: #20201f; --line: #3a3a37; --accent: #82b8de;
-            --on-accent: #141413; --amber: #f0b45a; --amber-bg: #3a2a10; --red: #f08a80; --wait-bg: #3a3410; --wait: #f2dc6b; }
+            --on-accent: #141413; --amber: #f0b45a; --amber-bg: #3a2a10; --red: #f08a80; --wait-bg: #3a3410; --wait: #f2dc6b;
+            --req: #82b8de; --req-bg: #1d2a33; }
   }
   * { box-sizing: border-box; }
   html { font-size: 18px; }
@@ -48,6 +49,9 @@
   .out { margin: 6px 0 0; }
   .dec, .inp { margin: 4px 0 0; color: var(--muted); }
   .tag { font-weight: 700; color: var(--amber); }
+  .msg.req { background: var(--req-bg); border-color: var(--req); border-width: 2px 2px 2px 8px; }
+  .req-tag { color: var(--on-accent); background: var(--req); padding: 0 8px; border-radius: 999px; }
+  .meta { margin: 4px 0 0; font-size: .85rem; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
   aside .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; position: sticky; top: 76px; }
   aside h2 { font-size: 1rem; margin: 0 0 8px; }
   .who { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -95,6 +99,7 @@ const AGENTS = [  // name in the trace -> colour token
   ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];
 const COLOUR = Object.fromEntries(AGENTS);
 const NEMOTRON = "Nemotron 3.5 Super VL";
+const REQUESTS = ["critic.request", "data.request", "verdict.recomputed"];   // agents asking each other, shown apart
 let mode = "live", speed = 1, t0 = null, timer = null, source = null, waitEl = null, recorded = null, runTs0 = null;
 
 function whoPanel() {
@@ -139,19 +144,25 @@ function add(rec) {
     $("status").textContent = `Run ${rec.run_id} (${rec.mode === "sample" ? "SAMPLE_MODE: offline scenes" : "live"})`;
   }
   if (rec.action === "nightshift.chat") clearWait();
+  if (rec.action === "replay" && rec.output_summary) {     // say plainly what data this run is on
+    const made = /SYNTHETIC/.test(rec.output_summary);
+    $("status").textContent += ` · ${made ? "made-up test scene" : "past flood replay"}: ${rec.output_summary}`;
+  }
   const who = rec.agent_name || "System";
   if (rec.action === "state") {
     const li = el("li", "msg state", `${rec.input_summary} · ${rec.decision || ""}`);
     $("feed").append(li); li.scrollIntoView({ block: "nearest" });
     return;
   }
-  const li = el("li", `msg ${rec.status || ""}`);
+  const request = REQUESTS.includes(rec.action);
+  const li = el("li", `msg ${rec.status || ""}${request ? " req" : ""}`);
   li.style.setProperty("--who", `var(${COLOUR[who] || "--c-system"})`);
   const top = el("div", "top");
   top.append(el("span", "chip", who));
   if (rec.target_agent) top.append(el("span", "to", "→ " + rec.target_agent));
   top.append(el("span", "act", rec.action + (rec.status && rec.status !== "success" ? ` · ${rec.status}` : "")));
   if (rec.action === "ai.fallback") top.append(el("span", "tag", "AI fallback"));
+  if (request) top.append(el("span", "tag req-tag", "request"));
   top.append(el("span", "clock", clockText(rec)));
   li.append(top);
   if (rec.input_summary) li.append(el("p", "inp", "in: " + rec.input_summary));
@@ -161,6 +172,9 @@ function add(rec) {
   if (rec.action === "nightshift.chat" && d.served_model) {
     li.append(el("p", "dec", `answered by ${d.served_model}${d.receipt_id ? `, receipt ${d.receipt_id}` : ""}${rec.duration_ms ? `, ${(rec.duration_ms / 1000).toFixed(1)} s` : ""}`));
   }
+  const meta = [rec.status && `status ${rec.status}`, rec.confidence != null && `confidence ${rec.confidence}`,
+    rec.retry_count ? `retry ${rec.retry_count}` : null, rec.source && `source ${rec.source}`].filter(Boolean);
+  if (meta.length) li.append(el("p", "meta", meta.join(" · ")));
   $("feed").append(li);
   li.scrollIntoView({ block: "nearest" });
   working(rec.action === "run_end" ? "" : who, rec.action);

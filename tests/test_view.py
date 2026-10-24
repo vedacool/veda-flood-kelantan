@@ -81,11 +81,13 @@ def test_share_text_never_carries_the_question(views):
 
 def test_labels_say_replay_or_made_up(views):
     assert views["nov2024"][1]["label"]["en"].startswith("Past flood replay")
-    assert views["nov2024"][1]["strip"]["en"].endswith("from a reading reported in the news, 19:30")
+    assert views["nov2024"][1]["strip"]["en"] == ("✓ Double-checked · combined from 2 sources: river here, rain"
+                                                  " · 2 left out")
+    assert "(reading reported in the news)" in views["nov2024"][1]["water"]["en"]["main"]
     for key in ("synthetic_calm", "synthetic_rising", "synthetic_silent_upstream"):
         v = views[key][1]
         assert v["label"]["en"].startswith("Made-up test scene") and v["label"]["ms"].startswith("Senario ujian rekaan")
-        assert "made-up test readings" in v["strip"]["en"] and v["synthetic"]
+        assert "(made-up test reading)" in v["water"]["en"]["main"] and v["synthetic"]
 
 
 def test_rising_line_agrees_with_the_water_row(views):
@@ -102,7 +104,9 @@ def test_rising_line_agrees_with_the_water_row(views):
 def test_act_replay_rows(views):
     v = views["nov2024"][1]
     assert v["verdict"] == "ACT" and v["line"]["en"] == "The river is 1.94 m above the danger level and still rising."
-    assert v["water"]["en"]["main"] == "10.94 m at 19:30 · rising 12-15 cm an hour · up 35 cm in 3 hours"
+    assert v["water"]["en"]["main"] == ("10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour"
+                                        " · up 35 cm in 3 hours")
+    assert v["combined"] is None                      # the river here alone already says Act now
     assert v["upstream"]["en"] == ["No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."]
     assert v["why"]["en"] == "The river is at or above the danger level."
     out = [s for s in v["sources"]["en"] if not s["used"]]
@@ -182,3 +186,40 @@ def test_hide_question_walks_and_catches_shortened_copies():
     q = "Mak saya di Tumpat, kena pindah malam ni?"
     v = view.hide_question({"a": [q[:20] + "…", "other"], "details": {"normalized": "mak saya tumpat"}}, q, "X")
     assert v == {"a": ["X", "other"], "details": {"normalized": "X"}}
+
+
+def test_strip_counts_used_and_left_out_from_the_run(views):
+    v = views["synthetic_silent_upstream"][1]
+    used = [s for s in v["sources"]["en"] if s["used"]]
+    dropped = [s for s in v["sources"]["en"] if s["left_out"]]
+    assert v["strip"]["en"].startswith(f"✓ Double-checked · combined from {len(used)} sources: river here, river upstream")
+    assert v["strip"]["en"].endswith(f" · {len(dropped)} left out")
+    assert any(s["note"].startswith("not used: ") for s in v["sources"]["en"])       # not asked for != left out
+
+
+def test_combined_sentence_when_more_than_the_river_here_decides(views):
+    v = views["synthetic_silent_upstream"][1]
+    assert v["verdict"] == "WATCH"
+    assert v["combined"]["en"] == ("The river here alone would say “Normal for now”; it is the river upstream that "
+                                   "raises this to “Keep watching”.")
+    assert "sungai di hulu" in v["combined"]["ms"]
+    fc = {"verdict": "PREPARE", "triggers": [{"level": "WATCH", "rule": "level>=alert"},
+                                             {"level": "PREPARE", "rule": "rain-heavy"},
+                                             {"level": "PREPARE", "rule": "sentinel>=danger"}]}
+    assert view.combined(fc, "en") == ("The river here alone would say “Keep watching”; it is the river upstream and "
+                                       "the rain forecast that raise this to “Get ready”.")
+
+
+def test_states_without_a_place_card():
+    assert view.other_view({"plan": {"place_status": "unavailable"}})["text"]["en"].startswith("VEDA can't answer")
+    nc = view.other_view({"plan": {"place_status": "not_covered", "nearest": {"name": "Rantau Panjang", "km": 125}}})
+    assert nc["text"]["en"] == ("VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now. "
+                                "The nearest is Rantau Panjang.") and nc["nearest"] == "Rantau Panjang"
+    assert view.other_view({"plan": {"place_status": "did_you_mean", "suggestions": ["Tumpat"]}})["suggestions"] == ["Tumpat"]
+    assert view.other_view({"plan": {"place_status": "found"}}) is None
+
+
+def test_calm_and_cant_confirm_lines(views):
+    assert views["synthetic_calm"][1]["note"]["en"] == "Nothing to do now. VEDA checks again whenever you ask."
+    card = {"verdict": "INSUFFICIENT_DATA", "gauge": None, "replay": None}
+    assert view._line(card, {}, "en").startswith("We could not get a fresh river reading, so we will not guess.")

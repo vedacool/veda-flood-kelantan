@@ -129,7 +129,7 @@ def result_json(r):
            "safety_fixes": a.get("safety", []), "agents": agents,
            "log_file": _log_path(r["trace"]),
            "execution_time": (r.get("timing") or {}).get("total"), "timing": r.get("timing"),
-           "card": None, "disclaimer": dict(SAFETY), "view": view.answer_view(r),
+           "card": None, "disclaimer": dict(SAFETY), "view": view.answer_view(r), "other": view.other_view(r),
            "how": view.how_it_worked(r["trace"])}
     if r.get("card"):
         out["card"] = {lang: trace.redact(card_mod.render(r["card"], lang)) for lang in ("en", "ms")}
