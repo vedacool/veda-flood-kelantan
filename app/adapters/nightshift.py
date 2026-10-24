@@ -214,7 +214,18 @@ def _error_message(payload, r):
     return str(err or r.text or f"HTTP {r.status_code}")[:200]
 
 
-def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
+def _outcome(problem):
+    """'timeout' | 'empty' | 'failed' for a call that did not answer (B-93: every AI call line says how it ended)."""
+    p = str(problem or "")
+    return "timeout" if ("Timeout" in p or "ttfb_timeout" in p or "aborted" in p) else "empty" if "empty" in p else "failed"
+
+
+def _call_details(lane, body, meta, problem):
+    return {"requested_model": body.get("model"), "app": lane_app(lane), "expected_model": expected_model(lane),
+            "served_model": None, "receipt_id": None, "outcome": _outcome(problem), **(meta or {})}
+
+
+def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None, meta=None):
     """POST with retry/backoff. Returns (payload, attempts). Raises NightshiftError when out of retries or time.
     deadline: time.monotonic() value after which no new attempt starts (the run's time budget)."""
     base, token = _config()
@@ -261,26 +272,31 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
         if fatal:
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=fatal,
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
-                       decision="Not retryable - caller must fall back")
+                       decision="Not retryable - caller must fall back",
+                       details=_call_details(lane, body, meta, fatal))
             raise NightshiftError(fatal)
         if attempt > len(BACKOFF_S) or (max_attempts and attempt >= max_attempts):
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=problem,
                        status="failed", source=f"nightshift:{lane}", retry_count=attempt - 1, duration_ms=ms,
                        decision=("One try only - caller falls back" if max_attempts == 1
-                                 else "Out of retries - caller must fall back"))
+                                 else "Out of retries - caller must fall back"),
+                       details=_call_details(lane, body, meta, problem))
             raise NightshiftError(f"Nightshift failed after {attempt} attempts: {problem}")
         trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=problem,
                    status="retrying", source=f"nightshift:{lane}", retry_count=attempt, duration_ms=ms,
-                   decision=f"Retrying in {wait}s")
+                   decision=f"Retrying in {wait}s", details=_call_details(lane, body, meta, problem))
         _sleep(wait)
 
 
 def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max_tokens=DEFAULT_MAX_TOKENS,
-         temperature=0.2, target_agent=None, budget_s=None, max_attempts=None, stream=None):
+         temperature=0.2, target_agent=None, budget_s=None, max_attempts=None, stream=None, purpose=None,
+         fallback=False):
     """Send one chat request through Nightshift on lane `fast` or `deep`. Returns LLMResult, raises NightshiftError.
     budget_s: optional cap on total seconds incl. retries and the JSON repair (pass the run's remaining time).
     max_attempts=1: one try only, no retry and no JSON repair round (agents, Husaini 22 Oct night: Nightshift
-    cuts a call at ~45 s, so a retry mostly burns another 45 s - the caller falls back instead)."""
+    cuts a call at ~45 s, so a retry mostly burns another 45 s - the caller falls back instead).
+    purpose / fallback (B-93): what the call is for, and whether it stands in for another step - on its trace line."""
+    meta = {"purpose": purpose, "fallback": bool(fallback)}
     deadline = time.monotonic() + budget_s if budget_s else None
     if config.sample_mode():
         raise NightshiftError("SAMPLE_MODE: no live model calls offline - the agents use their code fallbacks")
@@ -296,14 +312,15 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
     prompt_summary = trace.summarize(_last_user(messages), 120)
 
     t0 = time.perf_counter()
-    payload, attempts = _call(lane, body, agent, prompt_summary, deadline, max_attempts)
+    payload, attempts = _call(lane, body, agent, prompt_summary, deadline, max_attempts, meta)
     msg = payload["choices"][0].get("message") or {}
     text = msg.get("content") or ""
     if not text.strip() and not msg.get("tool_calls"):
         # audit 24 Oct P2-7: an empty reply (HTTP 200, no text) is named as such, so the draft's empty-response
         # retry fires - before, it surfaced as "did not return valid JSON"
         trace.step(agent, "nightshift.chat", input_summary=prompt_summary, status="failed", output_summary="(empty)",
-                   source=f"nightshift:{lane}", retry_count=attempts - 1, decision="Empty response - caller decides")
+                   source=f"nightshift:{lane}", retry_count=attempts - 1, decision="Empty response - caller decides",
+                   details={**_call_details(lane, body, meta, "empty"), **_receipt(payload)})
         raise NightshiftError("model returned an empty response")
     data = None
     if json_mode:
@@ -313,7 +330,9 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
             if max_attempts == 1:
                 trace.step(agent, "nightshift.chat", input_summary=prompt_summary, status="failed",
                            output_summary=trace.summarize(text, 120), source=f"nightshift:{lane}",
-                           retry_count=attempts - 1, decision="Invalid JSON and one try only - caller falls back")
+                           retry_count=attempts - 1, decision="Invalid JSON and one try only - caller falls back",
+                           details={**_call_details(lane, body, meta, "invalid JSON"), **_receipt(payload),
+                                    "outcome": "invalid_json"})
                 raise NightshiftError(f"model did not return valid JSON (one try only): {e}") from e
             trace.step(agent, "nightshift.chat", input_summary=prompt_summary, output_summary=trace.summarize(text, 120),
                        status="retrying", source=f"nightshift:{lane}", retry_count=attempts,
@@ -321,7 +340,7 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
             repair = {**body, "messages": body["messages"] + [
                 {"role": "assistant", "content": text},
                 {"role": "user", "content": "That was not valid JSON. Reply with only the JSON object, nothing else."}]}
-            payload, more = _call(lane, repair, agent, prompt_summary, deadline)
+            payload, more = _call(lane, repair, agent, prompt_summary, deadline, meta=meta)
             attempts += more
             text = (payload["choices"][0].get("message") or {}).get("content") or ""
             try:
@@ -359,7 +378,8 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
                                else trace.summarize(text, 120)),
                status="success", target_agent=target_agent, source=f"nightshift:{lane}",
                retry_count=attempts - 1, duration_ms=ms, decision=decision,
-               details={"requested_model": model, "app": lane_app(lane), **rc, "expected_model": want, "pinned": pinned, "usage": result.usage,
+               details={"requested_model": model, "app": lane_app(lane), **rc, "expected_model": want, "pinned": pinned,
+                        "outcome": "ok", **meta, "usage": result.usage,
                         "attempts": attempts, "json_mode": json_mode, "thinking": bool(thinking),
                         # the exact prompt sent (local trace, shown on /admin; published traces are redacted first).
                         # Never the user's question: the agents send facts written by code (test_privacy_...)

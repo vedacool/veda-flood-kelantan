@@ -278,7 +278,8 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 944 tests pass (24 Oct 2026), 13 skipped (they need live services).**
+- **Offline test suite (`python -m pytest -q`): 1,052 tests pass (24 Oct 2026, 23:00 MYT), 13 skipped (they need live
+  services).**
 - **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 41 scenarios (6 of them for Nemotron's judgement,
   Part 7), 41 of 41 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `943441f`, 24 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
@@ -292,6 +293,19 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   - someone trapped by the water, also while Zetaris is down;
   - rain upstream + here (B-88), MetMalaysia warnings (rule A) and the Critic asking the Data & Reconciler for more data;
   - "a PPS is open" claims and possible evacuation centres from OpenStreetMap.
+
+## Responsible AI
+- **Not an official warning.** Every answer - the card (EN / BM), the web page, the API (`disclaimer`) and the command
+  line - says so and gives 999 / 991; VEDA is decision support only. Always follow JPS, APM / NADMA, the police and the
+  local authorities.
+- **Covers mapped places only:** four towns offline, nine live; any other place gets "not covered yet" and the
+  nearest covered place - never a guess.
+- **Can't confirm when data is missing:** with no fresh, healthy river reading the answer is "Can't confirm right now"
+  (INSUFFICIENT_DATA), never NORMAL - enforced by the safety gate and tested; the AI cannot change it.
+- **Human review:** the verdict rules and thresholds are tentative until a hydrology adviser signs them off
+  (`docs/review_pack_ariff.md`, `docs/review/ARIFF_MONDAY.md`); a person approves any new gauge before VEDA uses it
+  (`python -m app.discover approve`); the AI can only raise a level, by one step, citing facts code checks.
+- **Privacy:** the question never goes to an AI model; it stays in local logs with phone / IC numbers masked.
 
 ## Limitations (honest list)
 - **Coverage:** four towns offline (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat) and nine live (+ Kuala Krai,
@@ -423,8 +437,17 @@ Zetaris.
 - **Meterless World Model code (Apache-2.0):** `app/engines/world_model/resolve.py` and `stable_ids.py` are Python
   ports of the Meterless reference (`resolve.ts`, `stableIds.ts`) and `tests/conformance/test_world_model.py` ports
   its conformance runner - github.com/Meterless/Meterless; attribution in `NOTICE`.
+- The `jps2014_*` columns of `data/stations_mapping.csv` (each gauge's 2014 report name, thresholds and peak) come
+  from the same pre-existing compilation of the JPS 2014-2015 report.
 - Design notes summarised in `docs/BUILD_BRIEF.md` were written 20-22 Oct 2026, before the build window. All other
-  code in this repository was written inside the window.
+  code in this repository was written inside the window; the first commit is 22 Oct 2026, 02:22 UTC
+  (`git log --reverse`).
+- **Created inside the window from public sources (not pre-existing):** `data/stations_mapping.csv` (station list and
+  positions from data.gov.my `/flood-warning`, fetched 22 Oct; JPS thresholds from publicinfobanjir), `data/places.csv`
+  (Open-Meteo geocoding / GeoNames), `data/rain_points.csv` (the same station positions; two Thai-side points from
+  OpenStreetMap), `data/replay/nov2024_anchors.csv` (Bernama, Harian Metro, Kosmo and other news reports, each cited),
+  `data/map/home_map_lines.json` (OpenStreetMap, ODbL), the SYNTHETIC scenes and offline fixtures
+  (`scripts/make_synthetic_scenes.py`).
 
 ## AI and Model Usage
 1. **Models (through Meterless Nightshift):** NVIDIA **Nemotron 3.5 Super VL**, requested by name (`nvidia/nemotron-3.5-super-vl-120b-a12b`) on the
@@ -432,6 +455,16 @@ Zetaris.
    VEDA; Lightning was used until 23 Oct evening and is not used now (B-85). Every call's trace line names the model that **actually answered**, taken
    from Nightshift's response (`served_model`), with its receipt id; the web page and CLI show it live. Every
    AI step that falls back is marked with its own `ai.fallback` trace line, and the run's last line lists them.
+   **Each AI call's line (`action: nightshift.chat`) carries:** `requested_model`, `served_model`, `receipt_id`,
+   `duration_ms`, `status` and `outcome` (ok / failed / timeout / empty / invalid_json), `purpose` (write the
+   explanation · review the explanation + judge the level · facts-only judgement) and `fallback` (true for the
+   facts-only judgement that stands in when the explanation call failed) - a call that never answered keeps its
+   requested model with `served_model` / `receipt_id` empty. The run's last line counts them (`ai_calls`); an offline
+   run says `"ai": "no AI calls"`. Example (live, 24 Oct 23:16 MYT; prompt and reply redacted):
+   ```
+   {"agent_name": "Coordinator", "action": "nightshift.chat", "status": "failed", "duration_ms": 90030, "details": {"requested_model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "app": "veda-deep", "served_model": null, "receipt_id": null, "outcome": "timeout", "purpose": "write the explanation", "fallback": false}}
+   {"agent_name": "Critic", "action": "nightshift.chat", "status": "success", "duration_ms": 20902, "details": {"requested_model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "app": "veda-deep", "served_model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "receipt_id": "req_hngy8y9c", "pinned": true, "outcome": "ok", "purpose": "facts-only judgement (the explanation call failed)", "fallback": true}}
+   ```
 2. **Agent framework:** none - four agents in plain Python (`app/agents/`) driven by a small state machine
    (`app/loop.py`); FastAPI + uvicorn serve the API and the web page.
 3. **Sponsor technology:**
@@ -467,8 +500,9 @@ Zetaris.
   agent's stored verdict that the Critic reads back, the Critic's reviews, and the question radar (intent tags only).
 - **Its passing test:** the conformance checks ported from Meterless (8 checks) plus VEDA's engine tests:
   ```
-  python -m pytest tests/conformance -v
-  python -m pytest tests/test_world_model_engine.py -v
+  python -m pytest tests/conformance -v                    # 8 passed (24 Oct 2026, 23:00 MYT)
+  python -m pytest tests/test_world_model_engine.py -v     # 9 passed
+  python -m pytest tests/test_world_model_ids.py tests/test_world_context.py -v   # 22 passed, 1 skipped (needs live services)
   ```
 
 ### How VEDA uses Nemotron through Meterless Nightshift

@@ -185,7 +185,8 @@ def _draft_call(llm, request, feedback, budget_s):
         t = time.monotonic()
         try:
             return llm(nightshift.AI_LANE, msgs, agent=AGENT, json_mode=True, target_agent="Critic",
-                       max_tokens=MAX_TOKENS, budget_s=cap - (t - start), max_attempts=1)
+                       max_tokens=MAX_TOKENS, budget_s=cap - (t - start), max_attempts=1,
+                       purpose="write the explanation")
         except nightshift.NightshiftError as e:
             took, left = time.monotonic() - t, cap - (time.monotonic() - start)
             kind = ("fast" if took < DRAFT_FAST_FAIL_S else

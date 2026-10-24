@@ -35,6 +35,7 @@ class Run:
         self.step = 0
         self.lock = threading.Lock()
         self.fallbacks = []             # B-86: every AI fallback in this run ("<agent>: <what>"), repeated at run_end
+        self.ai_calls = 0               # B-93: Nightshift requests in this run (each attempt), repeated at run_end
 
 
 _current: ContextVar = ContextVar("veda_trace_run", default=None)
@@ -141,6 +142,8 @@ def step(agent, action, input_summary=None, output_summary=None, status="success
     with run.lock:
         run.step += 1
         n = run.step
+        if action == "nightshift.chat":
+            run.ai_calls += 1
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "trace_id": run.run_id,
@@ -209,7 +212,9 @@ def end_run(status="success", output_summary=None, details=None):
     try:
         step("System", "run_end", output_summary=output_summary or f"Run finished after {run.step} steps",
              status=status, decision=("AI fallback used: " + "; ".join(run.fallbacks)) if run.fallbacks
-             else "no AI fallback in this run", details={"ai_fallbacks": list(run.fallbacks), **(details or {})})
+             else "no AI fallback in this run", details={"ai_fallbacks": list(run.fallbacks), "ai_calls": run.ai_calls,
+                                                        **({"ai": "no AI calls"} if not run.ai_calls else {}),
+                                                        **(details or {})})
     finally:
         _current.set(None)
     return run.path

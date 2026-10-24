@@ -22,7 +22,7 @@ def live_models_offline_data(monkeypatch, tmp_path):
     monkeypatch.setattr(router, "data_triggers", lambda *a, **k: ["test: forced full"])
     bodies = []
 
-    def fake_call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
+    def fake_call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None, meta=None):
         bodies.append(json.dumps(body, ensure_ascii=False))
         review = body["messages"][0]["content"] in (critic.SMALL_SYSTEM, critic.CRITIC_SYSTEM)
         content = '{"ok": true, "reason": "matches"}' if review else '{"explanation": "Paras sungai di Tumpat normal."}'

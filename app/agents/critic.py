@@ -421,7 +421,8 @@ def _judge_only(answer, forecast, llm, budget_s, lane):
         left = None if budget_s is None else budget_s - (t - start)
         try:
             r = llm(lane, msgs, agent=AGENT, json_mode=True, thinking=False, target_agent="Forecast",
-                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1)
+                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1,
+                    purpose="facts-only judgement (the explanation call failed)", fallback=True)
             break
         except nightshift.NightshiftError:
             room = budget_s is None or budget_s - (time.monotonic() - start) > FAST_FAIL_S
@@ -490,7 +491,8 @@ def _small_review(answer, forecast, llm, budget_s, lane):
         left = None if budget_s is None else budget_s - (t - start)
         try:
             r = llm(lane, msgs, agent=AGENT, json_mode=True, thinking=False, target_agent="Coordinator",
-                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1)
+                    max_tokens=SMALL_MAX_TOKENS, budget_s=left, max_attempts=1,
+                    purpose="review the explanation + judge the level")
             break
         except nightshift.NightshiftError as e:
             took = time.monotonic() - t

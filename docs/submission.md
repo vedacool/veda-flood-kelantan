@@ -55,3 +55,6 @@ A live log shows each step; every AI call names the model that answered. Judges 
   reference, and the conformance tests port its runner (attribution in `NOTICE`).
 - Design notes summarised in `docs/BUILD_BRIEF.md` (written 20-22 Oct 2026). All other code was written inside the
   build window; the public repo's first commit is 22 Oct 2026 02:22 UTC.
+- The `jps2014_*` columns of `data/stations_mapping.csv` come from the same pre-existing 2014 compilation. The other
+  data tables were built inside the window from public sources (data.gov.my, JPS publicinfobanjir, Open-Meteo /
+  GeoNames, OpenStreetMap, cited news reports) - list in the README.
