@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEDA - live log</title>
+<link rel="icon" href="data:,">
+<style>
+  /* Judge / operator screen (Cowork weekend plan B6, 24 Oct): every trace step word for word, as it happens.
+     Plain HTML/CSS/JS, nothing loaded from outside. */
+  :root { --bg: #f4f4f1; --fg: #1c1c1a; --muted: #5a5a54; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
+          --on-accent: #fff; --amber: #a85f00; --amber-bg: #fff3df; --red: #b3261e; --wait-bg: #fff6c2; --wait: #6b5600;
+          --c-system: #5a5c62; --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f;
+          --c-nemotron: #4f7d00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141413; --fg: #ececea; --muted: #a9a9a3; --card: #20201f; --line: #3a3a37; --accent: #82b8de;
+            --on-accent: #141413; --amber: #f0b45a; --amber-bg: #3a2a10; --red: #f08a80; --wait-bg: #3a3410; --wait: #f2dc6b; }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; background: var(--card);
+           border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 1.2rem; margin: 0 auto 0 0; }
+  header a { color: var(--accent); }
+  button, select { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line);
+                   background: var(--card); color: var(--fg); cursor: pointer; }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; max-width: 1200px; margin: 0 auto; padding: 16px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } aside { order: -1; } }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .controls select { max-width: 100%; flex: 1 1 260px; }
+  #status { color: var(--muted); margin: 0 0 12px; }
+  #feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .msg { background: var(--card); border: 1px solid var(--line); border-left: 6px solid var(--who, var(--c-system));
+         border-radius: 12px; padding: 10px 12px; word-break: break-word; }
+  .msg.fallback, .msg.retrying { border-color: var(--amber); background: var(--amber-bg); }
+  .msg.failed { border-color: var(--red); }
+  .msg.wait { background: var(--wait-bg); border-color: var(--wait); color: var(--wait); font-weight: 700; }
+  .msg.state { background: transparent; border: 0; border-top: 2px solid var(--line); border-radius: 0; padding: 8px 0 0;
+               color: var(--muted); font-weight: 700; }
+  .top { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+  .chip { display: inline-block; padding: 1px 10px; border-radius: 999px; background: var(--who, var(--c-system)); color: #fff;
+          font-weight: 700; }
+  .to { color: var(--muted); font-weight: 700; }
+  .act { font-family: ui-monospace, Consolas, monospace; color: var(--muted); }
+  .clock { margin-left: auto; font-family: ui-monospace, Consolas, monospace; color: var(--muted); }
+  .out { margin: 6px 0 0; }
+  .dec, .inp { margin: 4px 0 0; color: var(--muted); }
+  .tag { font-weight: 700; color: var(--amber); }
+  aside .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; position: sticky; top: 76px; }
+  aside h2 { font-size: 1rem; margin: 0 0 8px; }
+  .who { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .who li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; }
+  .who li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--line); flex: none; }
+  .who li.working { background: var(--wait-bg); font-weight: 700; }
+  .who li.working::before { background: var(--who); animation: pulse 1s infinite; }
+  .who li.done::before { background: var(--who); }
+  .who small { margin-left: auto; color: var(--muted); }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .who li.working::before { animation: none; } }
+  .note { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VEDA · live log</h1>
+  <a href="/">← Ask a question</a>
+</header>
+<div class="wrap">
+  <main>
+    <div class="controls">
+      <button type="button" id="b-live" aria-pressed="true">Live</button>
+      <select id="rec" aria-label="Recorded run"><option value="">Replay a recorded run…</option></select>
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="4" aria-pressed="false">4×</button>
+      <button type="button" id="b-play" hidden>Play</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <p class="note" id="rnote" hidden></p>
+    <ol id="feed"></ol>
+  </main>
+  <aside><div class="panel">
+    <h2>Who is working</h2>
+    <ul class="who" id="who"></ul>
+    <p class="note">Word for word from the trace (<code>logs/trace-&lt;run_id&gt;.jsonl</code>). The user's question is not shown.</p>
+  </div></aside>
+</div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const AGENTS = [  // name in the trace -> colour token
+  ["System", "--c-system"], ["Coordinator", "--c-coordinator"], ["Data & Reconciler", "--c-data"],
+  ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];
+const COLOUR = Object.fromEntries(AGENTS);
+const NEMOTRON = "Nemotron 3.5 Super VL";
+let mode = "live", speed = 1, t0 = null, timer = null, source = null, waitEl = null, recorded = null, runTs0 = null;
+
+function whoPanel() {
+  $("who").replaceChildren(...AGENTS.map(([name, c]) => {
+    const li = document.createElement("li");
+    li.dataset.name = name; li.style.setProperty("--who", `var(${c})`);
+    li.innerHTML = `<span></span><small></small>`;
+    li.firstChild.textContent = name;
+    return li;
+  }));
+}
+function working(name, note) {
+  document.querySelectorAll("#who li").forEach((li) => {
+    if (li.classList.contains("working")) { li.classList.remove("working"); li.classList.add("done"); }
+    if (li.dataset.name === name) { li.classList.add("working"); li.classList.remove("done"); li.querySelector("small").textContent = note || ""; }
+  });
+}
+function clockText(rec) {
+  if (mode === "live") return t0 === null ? "" : ((performance.now() - t0) / 1000).toFixed(1) + " s";
+  const ts = Date.parse(rec.timestamp);
+  return isNaN(ts) || runTs0 === null ? "" : ((ts - runTs0) / 1000).toFixed(0) + " s";
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function modelName(id) { return /super-vl/i.test(id || "") ? NEMOTRON : (id || "the model"); }
+
+function showWait(rec) {
+  clearWait();
+  const d = rec.details || {};
+  waitEl = el("li", "msg wait");
+  waitEl.style.setProperty("--who", "var(--c-nemotron)");
+  waitEl.textContent = `Waiting for ${modelName(d.expected || d.model)}… (${rec.agent_name}${d.attempt > 1 ? `, try ${d.attempt}` : ""})`;
+  $("feed").append(waitEl);
+  working(NEMOTRON, rec.agent_name);
+  waitEl.scrollIntoView({ block: "nearest" });
+}
+function clearWait() { if (waitEl) { waitEl.remove(); waitEl = null; } }
+
+function add(rec) {
+  if (rec.action === "ai.waiting") { showWait(rec); return; }
+  if (rec.action === "run_start") {
+    $("feed").replaceChildren(); whoPanel(); t0 = performance.now(); runTs0 = Date.parse(rec.timestamp);
+    $("status").textContent = `Run ${rec.run_id} (${rec.mode === "sample" ? "SAMPLE_MODE: offline scenes" : "live"})`;
+  }
+  if (rec.action === "nightshift.chat") clearWait();
+  const who = rec.agent_name || "System";
+  if (rec.action === "state") {
+    const li = el("li", "msg state", `${rec.input_summary} · ${rec.decision || ""}`);
+    $("feed").append(li); li.scrollIntoView({ block: "nearest" });
+    return;
+  }
+  const li = el("li", `msg ${rec.status || ""}`);
+  li.style.setProperty("--who", `var(${COLOUR[who] || "--c-system"})`);
+  const top = el("div", "top");
+  top.append(el("span", "chip", who));
+  if (rec.target_agent) top.append(el("span", "to", "→ " + rec.target_agent));
+  top.append(el("span", "act", rec.action + (rec.status && rec.status !== "success" ? ` · ${rec.status}` : "")));
+  if (rec.action === "ai.fallback") top.append(el("span", "tag", "AI fallback"));
+  top.append(el("span", "clock", clockText(rec)));
+  li.append(top);
+  if (rec.input_summary) li.append(el("p", "inp", "in: " + rec.input_summary));
+  if (rec.output_summary) li.append(el("p", "out", rec.output_summary));
+  if (rec.decision) li.append(el("p", "dec", rec.decision));
+  const d = rec.details || {};
+  if (rec.action === "nightshift.chat" && d.served_model) {
+    li.append(el("p", "dec", `answered by ${d.served_model}${d.receipt_id ? `, receipt ${d.receipt_id}` : ""}${rec.duration_ms ? `, ${(rec.duration_ms / 1000).toFixed(1)} s` : ""}`));
+  }
+  $("feed").append(li);
+  li.scrollIntoView({ block: "nearest" });
+  working(rec.action === "run_end" ? "" : who, rec.action);
+  if (rec.action === "run_end") { $("status").textContent += " · finished"; working(""); }
+}
+
+// ---------- live ----------
+function goLive() {
+  stopReplay();
+  mode = "live"; $("b-live").setAttribute("aria-pressed", "true"); $("rec").value = ""; $("rnote").hidden = true;
+  $("b-play").hidden = true;
+  $("feed").replaceChildren(); whoPanel();
+  $("status").textContent = "Waiting for a question… Ask one on the main page (/) and every step appears here as it happens.";
+  if (source) source.close();
+  source = new EventSource("/live/stream");
+  source.addEventListener("trace", (ev) => add(JSON.parse(ev.data)));
+  source.onerror = () => { $("status").textContent = "Connection lost - reconnecting…"; };
+}
+
+// ---------- replay of a recorded run (its own timestamps; Nemotron calls wait as long as they took) ----------
+function stopReplay() { clearTimeout(timer); timer = null; clearWait(); }
+function loadRecorded(records, note) {
+  if (source) { source.close(); source = null; }
+  stopReplay();
+  mode = "replay"; $("b-live").setAttribute("aria-pressed", "false");
+  recorded = records; $("b-play").hidden = false;
+  $("rnote").hidden = !note; $("rnote").textContent = note ? "Recorded run: " + note : "";
+  play();
+}
+function play() {
+  stopReplay();
+  $("feed").replaceChildren(); whoPanel();
+  let i = 0;
+  const next = () => {
+    if (i >= recorded.length) { timer = null; return; }
+    const rec = recorded[i];
+    add(rec);
+    i += 1;
+    if (i >= recorded.length) return;
+    const nxt = recorded[i];
+    const gap = Math.max(0, Date.parse(nxt.timestamp) - Date.parse(rec.timestamp));
+    if (nxt.action === "nightshift.chat") showWait({ agent_name: nxt.agent_name, details: { expected: (nxt.details || {}).served_model || "nvidia/nemotron-3.5-super-vl" } });
+    timer = setTimeout(next, Math.min(gap / speed, 120000));
+  };
+  next();
+}
+
+$("b-live").addEventListener("click", goLive);
+$("b-play").addEventListener("click", () => recorded && play());
+function setSpeed(s) {
+  speed = s === 4 ? 4 : 1;
+  document.querySelectorAll("[data-speed]").forEach((x) => x.setAttribute("aria-pressed", String(Number(x.dataset.speed) === speed)));
+}
+document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
+$("rec").addEventListener("change", async () => {
+  if (!$("rec").value) { goLive(); return; }
+  const r = await fetch("/trace/recorded/" + encodeURIComponent($("rec").value)).then((x) => x.json());
+  loadRecorded(r.records || [], r.note);
+});
+
+whoPanel();
+fetch("/trace/recorded").then((r) => r.json()).then((list) => {
+  list.forEach((x) => {
+    const o = document.createElement("option");
+    o.value = x.name;
+    o.textContent = `${(x.started || "").replace("T", " ").replace("Z", " UTC")} · ${x.question || x.run_id}`;
+    $("rec").append(o);
+  });
+}).catch(() => {});
+const params = new URLSearchParams(location.search);
+if (params.get("run")) {  // one run from logs/ (this computer only), replayed from its trace
+  fetch("/trace/run/" + encodeURIComponent(params.get("run"))).then(async (r) => {
+    const body = await r.json();
+    if (!r.ok) throw new Error((body.error || {}).message || "HTTP " + r.status);
+    if (params.get("speed")) setSpeed(Number(params.get("speed")));
+    loadRecorded(body.records, null);
+  }).catch((e) => { $("status").textContent = e.message; });
+} else if (params.get("recorded")) {
+  fetch("/trace/recorded/" + encodeURIComponent(params.get("recorded"))).then((r) => r.json())
+    .then((b) => { if (params.get("speed")) setSpeed(Number(params.get("speed"))); loadRecorded(b.records || [], b.note); });
+} else {
+  goLive();
+}
+</script>
+</body>
+</html>

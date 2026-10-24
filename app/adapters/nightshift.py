@@ -219,6 +219,8 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None):
         try:
             if left <= 1:
                 raise requests.Timeout("run time budget used up")
+            trace.notify(agent, "ai.waiting", model=body.get("model"), expected=expected_model(lane), lane=lane,
+                         attempt=attempt)                       # the live log's "Waiting for Nemotron ..." bubble
             r = _post(base, token, body, lane_app(lane), timeout=min(cap, left))
             if body.get("stream") and "text/event-stream" in (r.headers.get("content-type") or ""):
                 payload = _read_stream(r, time.monotonic() + min(cap, left))

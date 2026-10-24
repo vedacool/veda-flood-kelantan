@@ -8,6 +8,12 @@ POST /run         {"question", "replay"?, "at"?} -> the answer as JSON (official
                   trace_id, log_file, execution_time ...)
 GET  /run/stream  same input as query parameters -> Server-Sent Events: one "step" event per trace step as it
                   happens (the B-17 listener), then one "result" event
+GET  /live        the live log (app/web/live.html): every trace step of the running run as it happens, or a
+                  recorded run replayed at 1x / 4x
+GET  /live/stream Server-Sent Events: every trace record of whatever run is going (the question is never shown)
+GET  /trace/recorded            the recorded live runs in data/sample/live_traces (JPS readings redacted)
+GET  /trace/recorded/{name}     one of them, record by record
+GET  /trace/run/{run_id}        a run from logs/ - this computer only (127.0.0.1), question not shown
 GET  /ui/words    fixed wording for screens that call no engine (headlines, emergency steps, disclaimer)
 GET  /            the web page (app/web/index.html): home, waiting, answer, share, emergency
 Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is running -> 429 (one writer for the
@@ -17,6 +23,7 @@ import json
 import logging
 import os
 import queue
+import re
 import threading
 from datetime import datetime
 
@@ -34,6 +41,11 @@ from app.agents.coordinator import SAFETY
 load_dotenv(config.ROOT / ".env")
 MAX_QUESTION = 500
 WEB_PAGE = config.ROOT / "app" / "web" / "index.html"
+LIVE_PAGE = config.ROOT / "app" / "web" / "live.html"
+RECORDED = config.ROOT / "data" / "sample" / "live_traces"
+RUN_ID = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
+QUESTION_HIDDEN = "(the question is not shown here - privacy)"
+_watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: one queue each
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
 
@@ -119,15 +131,54 @@ def result_json(r):
     return out
 
 
+def public_record(rec, question=None):
+    """A trace record for the live log: word for word, redacted, without the question - run_start's input, and any
+    field holding the question (or a shortened copy of it, e.g. the place finder's input and its 'normalized' copy)."""
+    if rec.get("action") == "run_start":
+        question = rec.get("input_summary") or question
+    q = (question or "").strip()
+
+    def hide(v, key=None):
+        if isinstance(v, dict):
+            return {k: hide(x, k) for k, x in v.items()}
+        if isinstance(v, list):
+            return [hide(x) for x in v]
+        if isinstance(v, str) and q and (key == "normalized" or q in v
+                                         or (len(v) >= 12 and v.rstrip(".… ") in q)):
+            return QUESTION_HIDDEN
+        return v
+    out = hide({k: v for k, v in rec.items() if k != "trace_id"})
+    return json.loads(trace.redact(json.dumps(out, ensure_ascii=False)))
+
+
+_live_question = {}                     # run_id -> the question as traced (to hide it in every published record)
+
+
+def _publish(rec):
+    run_id = rec.get("run_id")
+    if rec.get("action") == "run_start":
+        _live_question[run_id] = rec.get("input_summary")
+    with _watch_lock:
+        watchers = list(_watchers)
+    if watchers:
+        data = public_record(rec, _live_question.get(run_id))
+        for q in watchers:
+            q.put(data)
+    if rec.get("action") == "run_end":
+        _live_question.pop(run_id, None)
+
+
 def _run(question, replay, at, on_step=None):
     """One run. The full trace goes to logs/trace-<run_id>.jsonl; stdout (docker logs) gets the same short progress
-    lines as the page, one per important step, prefixed with the run id - never the question text (privacy)."""
+    lines as the page, one per important step, prefixed with the run id - never the question text (privacy). Every
+    record also goes to the live log's watchers (/live/stream)."""
     from app import loop, progress
 
     def step(rec):
         line = progress.describe(rec)
         if line:
             print(f"[{rec.get('run_id')}] {line}", flush=True)
+        _publish(rec)
         if on_step:
             on_step(rec)
     return loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True)
@@ -215,6 +266,86 @@ def run_stream(question: str = "", replay: str = "", at: str = ""):
             kind, data = item
             yield f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+def _local(request):
+    """This computer only (operator screens and real users' runs): the server's own loopback address."""
+    return (request.client.host if request.client else "") in ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+@app.get("/live", response_class=HTMLResponse)
+def live_page():
+    return LIVE_PAGE.read_text(encoding="utf-8")
+
+
+@app.get("/live/stream")
+def live_stream():
+    """Every trace record of whatever run is going, as it happens (a comment line every 15 s keeps it open)."""
+    q = queue.Queue()
+    with _watch_lock:
+        _watchers.append(q)
+
+    def stream():
+        try:
+            yield ": connected\n\n"
+            while True:
+                try:
+                    rec = q.get(timeout=15)
+                except queue.Empty:
+                    yield ": still here\n\n"
+                    continue
+                yield f"event: trace\ndata: {json.dumps(rec, ensure_ascii=False)}\n\n"
+        finally:
+            with _watch_lock:
+                if q in _watchers:
+                    _watchers.remove(q)
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+def _read_trace(path, hide_question):
+    records, note, question = [], None, None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if "redaction" in rec and "action" not in rec:
+            note = rec["redaction"]
+            continue
+        if rec.get("action") == "run_start":
+            question = rec.get("input_summary")
+        records.append(public_record(rec, question) if hide_question else rec)
+    return {"records": records, "note": note}
+
+
+@app.get("/trace/recorded")
+def recorded_list():
+    """The recorded live runs (published, JPS readings redacted) for the live log's replay."""
+    out = []
+    for f in sorted(RECORDED.glob("*.jsonl")):
+        first = next((json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[:3]
+                      if '"run_start"' in x), {})
+        out.append({"name": f.name, "run_id": first.get("run_id"), "started": first.get("timestamp"),
+                    "question": first.get("input_summary")})
+    return out
+
+
+@app.get("/trace/recorded/{name}")
+def recorded_one(name: str):
+    path = RECORDED / name
+    if "/" in name or "\\" in name or not name.endswith(".jsonl") or not path.is_file():
+        return _error(404, "not_found", "No recorded run with that name.")
+    return _read_trace(path, hide_question=False)
+
+
+@app.get("/trace/run/{run_id}")
+def run_trace(run_id: str, request: Request):
+    """A run from logs/ for the live log's per-run view - this computer only; the question is not shown."""
+    if not _local(request):
+        return _error(403, "local_only", "Run logs are shown on this computer only.")
+    path = trace.ROOT / "logs" / f"trace-{run_id}.jsonl"
+    if not RUN_ID.match(run_id) or not path.is_file():
+        return _error(404, "not_found", "No run with that id.")
+    return _read_trace(path, hide_question=True)
 
 
 @app.get("/ui/words")

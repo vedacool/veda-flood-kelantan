@@ -165,6 +165,20 @@ def step(agent, action, input_summary=None, output_summary=None, status="success
     return record
 
 
+def notify(agent, action, **details):
+    """Tell the live view something is starting (e.g. 'ai.waiting' when a Nemotron call goes out) without writing a
+    trace line - the call's own line follows when it ends. Marked transient; never stops a run."""
+    run = _current.get()
+    if run is None or not run.listener:
+        return
+    try:
+        run.listener({"timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                      "run_id": run.run_id, "agent_name": agent, "action": action, "transient": True,
+                      "status": "running", "details": _clean(details)})
+    except Exception as e:  # noqa: BLE001 - a broken display must never stop the run
+        print(f"WARNING: progress listener failed: {type(e).__name__}", file=sys.stderr)
+
+
 def ai_fallback(agent, what, reason):
     """B-86 (organiser answer, 23 Oct): mark plainly where an AI step fell back - one `ai.fallback` line
     ("fallback: <what> (<reason>)"), next to the served-model line that every successful AI call writes. The run
