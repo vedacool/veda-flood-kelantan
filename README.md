@@ -550,8 +550,7 @@ Zetaris.
     that took 71 s left the review too little time (cut at its 45 s cap -> explanation dropped), and a draft that hit
     an NVIDIA 500, was retried at once, and then ran to its 90 s cap -> the code-checked card only.
   - Nightshift cuts a call with no first byte in about **45 s** (measured 22 Oct 2026).
-  - *History - Lightning:* Lightning spends hidden tokens even with reasoning off. Before the small facts-only Critic
-    call (23 Oct), the full-evidence Critic call completed in **1 of 10** live full runs (22-23 Oct).
+  - *History - Lightning:* Lightning spends hidden tokens even with reasoning off.
   - Live, 10 full runs on **23 Oct 2026, 12:29-13:29 MYT** (Lightning): explanation shown in **8 of 10**, Critic AI
     review completed in **8 of 10**.
   - *History - Lightning, 23 Oct 2026 evening:* it stopped answering in time - 18:58-21:50 MYT, drafts used 5,267-8,000
