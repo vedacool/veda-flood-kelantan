@@ -59,9 +59,10 @@ Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its riv
 The same agents as the web page (Coordinator → Data & Reconciler → Forecast → Critic → safety gate), as JSON.
 Full docs with a filled-in example: **`/api/docs`** (only the three `/api/v1` routes).
 
-**Public demo** (offline sample mode, scenes only):
+**Public demo** (offline sample mode, scenes only; the demo's address is on the submission form - `<tailnet>` below
+stands for it):
 ```
-curl -X POST https://wyse5070.<your-tailnet>.ts.net/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'
+curl -X POST https://wyse5070.<tailnet>.ts.net/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'
 ```
 **On your computer** (after `python -m app.main` with SAMPLE_MODE=true, or the Docker command above):
 ```
