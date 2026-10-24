@@ -21,7 +21,7 @@ from app.adapters import zetaris  # noqa: E402
 from app.engines.world_model import veda_ingest  # noqa: E402
 
 OUT = ROOT / "docs" / "validation" / "b88_rain_rule.md"
-PERIODS = {"nov2024": ("om_rain_nov2024", "2024-11-22 00:00", "2024-12-02 00:00"),
+PERIODS = {"nov2024": ("om_rain_nov2024", "2024-11-18 00:00", "2024-12-02 00:00"),   # 18 Nov: first full 72 h
            "oct2024": ("om_rain_oct2024", "2024-10-01 00:00", "2024-10-15 00:00")}
 POINTS_SQL = "SELECT location_id, point_key, station_key, name FROM veda_pg.rain_points"
 # Reported river readings VEDA may use for Nov 2024 (news, cited - data/replay/nov2024_anchors.csv); for the Sg.
@@ -113,7 +113,7 @@ def report(results):
              f"24 h >= {rain_rule.UPSTREAM_24H_MM:g} mm at an upstream rain point; heavy local = >= "
              f"{rain_rule.LOCAL_12H_MM:g} mm in 12 h at the town's rain point; combined = heavy upstream with a known "
              f"window starting within {rain_rule.ARRIVAL_WITHIN_H:g} h + heavy local.", ""]
-    for period, title in (("nov2024", "Nov 2024 flood, 22 Nov 00:00 -> 2 Dec 00:00 MYT"),
+    for period, title in (("nov2024", "Nov 2024 flood, 18 Nov 00:00 -> 2 Dec 00:00 MYT"),
                           ("oct2024", "Ordinary rain, 1 Oct 00:00 -> 15 Oct 00:00 MYT (14 days)")):
         lines += [f"## {title}", "", "| Town | Upstream rule (>= Keep watching): first fires | hours firing | "
                   "episodes | Combined (+1 level): first fires | hours | Heavy local rain: hours |",

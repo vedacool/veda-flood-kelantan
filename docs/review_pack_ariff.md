@@ -342,7 +342,9 @@ fires), and for towns on Sg. Golok (Rantau Panjang, Tumpat): "Rain upstream in T
 - **Nov 2024 flood (22 Nov – 2 Dec):** the upstream rule (≥ Keep watching) first fires on **22 Nov 10:00** for Kota
   Bharu, Pasir Mas and Tumpat (heavy rain at Kg. Tualang, arrival time not known), and stays on for 161–186 hours. The
   "one level up" rule fires only for **Kota Bharu, from 27 Nov 10:00** (Kuala Krai's 9–17 h window, 72 hours in all).
-  Rantau Panjang never fires: its upstream is in Thailand (no rain point).
+  With the two Thai-side points (L9, added 24 Oct) **Rantau Panjang (and Tumpat's Golok side) first fires on 21 Nov
+  04:00** (Sukhirin; arrival time not known - so Keep watching at most), steady from 21 Nov 23:00. The check now starts
+  on 18 Nov (the first day with a full 72 h of archive); Kota Bharu and Pasir Mas are unchanged.
 - **Lead time:** VEDA cannot measure it yet. For Rantau Panjang the cited reports start on 26 Nov 08:00, already above
   Alert; for the Sg. Kelantan towns VEDA has no Nov 2024 river readings (JPS data is not redistributed).
 - **What the news reported (report times, not crossing times - no lead time is claimed):** in the Nov 2024 replay the
@@ -353,7 +355,7 @@ fires), and for towns on Sg. Golok (Rantau Panjang, Tumpat): "Rain upstream in T
   Bernama, Kota Bharu 28 Nov 2024 12:51 - APM Kelantan: the level "has exceeded the danger point"
   (https://bernama.com/en/news.php?id=2368592). The last two were re-checked on 24 Oct 2026.
 - **14 ordinary days (1–14 Oct 2024):** the upstream rule fired for **1 hour** (4 Oct 18:00, Limau Kasturi); the
-  "one level up" rule never fired.
+  "one level up" rule never fired; Rantau Panjang (with the Thai points) never fired.
 
 **L6.** Are L1–L5 sensible for Kelantan? In particular: is 30 mm in 12 h "heavy" in town, and should the 3-day test
 (100 mm) or the 1-day test (50 mm) lead?

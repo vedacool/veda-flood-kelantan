@@ -1,0 +1,25 @@
+{
+  "name": "thai_rain_rp_en",
+  "about": "Cowork 24 Oct: Rantau Panjang's upstream is in Thailand - the Thai-side Golok rain points (Open-Meteo archive, Buke Ta / Sukhirin) are shown with 'arrival time not known' instead of 'not checked'; they never lower the verdict [Nov 2024 replay, 27 Nov 19:30]",
+  "question": "Is Rantau Panjang safe now?",
+  "replay": "nov2024",
+  "at": "2024-11-27 19:30",
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "ACT",
+    "language": "en",
+    "must": [
+      "Heavy rain upstream: Buke Ta (Waeng; Thailand)",
+      "arrival time not known"
+    ],
+    "must_not": [
+      "Rain upstream in Thailand is not checked yet"
+    ],
+    "must_trace": [
+      "Thai-side Golok rain points read"
+    ]
+  }
+}

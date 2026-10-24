@@ -81,8 +81,8 @@ def test_share_text_never_carries_the_question(views):
 
 def test_labels_say_replay_or_made_up(views):
     assert views["nov2024"][1]["label"]["en"].startswith("Past flood replay")
-    assert views["nov2024"][1]["strip"]["en"] == ("✓ Double-checked · combined from 2 sources: river here, rain"
-                                                  " · 2 left out")
+    assert views["nov2024"][1]["strip"]["en"] == ("✓ Double-checked · combined from 3 sources: river here, rain,"
+                                                  " rain upstream · 2 left out")
     assert "(reading reported in the news)" in views["nov2024"][1]["water"]["en"]["detail"][0]
     for key in ("synthetic_calm", "synthetic_rising", "synthetic_silent_upstream"):
         v = views[key][1]
@@ -110,7 +110,8 @@ def test_act_replay_rows(views):
         "3.94 m above the alert level (7 m)", "1.94 m above the danger level (9 m)"]
     assert v["water"]["ms"]["main"] == "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras bahaya."
     assert v["combined"] is None                      # the river here alone already says Act now
-    assert v["upstream"]["en"] == ["No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."]
+    assert v["upstream"]["en"][0].startswith("Heavy rain upstream: Buke Ta (Waeng; Thailand)")      # Thai-side rain
+    assert v["upstream"]["en"][1] == "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."
     assert v["why"]["en"] == "The river is at or above the danger level."
     out = [s for s in v["sources"]["en"] if not s["used"]]
     assert any(s["note"] == "left out: reading too old (29 h ago)" for s in out)

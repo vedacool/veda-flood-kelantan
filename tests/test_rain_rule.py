@@ -200,7 +200,8 @@ def test_scene_pasir_mas_capped_and_tumpat_says_thailand_not_checked(scene):
     assert scene["Pasir"]["forecast"]["verdict"] == "WATCH"
     assert "masa sampai" not in scene["Pasir"]["answer"]["text"] and "arrival time not known" in scene["Pasir"]["answer"]["text"]
     t = scene["Tumpat"]
-    assert t["forecast"]["verdict"] == "WATCH" and "Rain upstream in Thailand is not checked yet." in t["answer"]["text"]
+    assert t["forecast"]["verdict"] == "WATCH" and "(Waeng; Thailand)" in t["answer"]["text"]
+    assert "not checked yet" not in t["answer"]["text"]               # Thai-side points have data now
 
 
 def test_scene_uses_no_rain_after_the_scene_time(scene):
