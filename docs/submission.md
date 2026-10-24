@@ -5,7 +5,7 @@ explanation and the pre-existing components (the organisers asked for both in th
 file holds the form description and the short deck versions, and must say the same thing. Every number here is one
 the README states with its date. Re-check the counts on the day of each submission.
 
-Last checked against the product: 24 Oct 2026, main at `586d05a` (853 tests, 33 safety scenarios).
+Last checked against the product: 24 Oct 2026, main at `af05b22` (938 tests, 34 safety scenarios).
 
 ## Form fields
 | Field | Value |
@@ -25,7 +25,7 @@ The problem is fragmented flood data. JPS river gauges, MetMalaysia warnings, Op
 
 Four agents work in one loop. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around broken gauges; a Forecast agent applies readable rules to the river, the upstream gauges, the rain upstream and in town, and MetMalaysia rain warnings; and a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and asks NVIDIA Nemotron (through Meterless Nightshift) whether the explanation contradicts the data. The Meterless World Model is their shared memory, with every fact's source. A safety gate checks every answer last. VEDA also discovers: it noticed 20 JPS gauges it had not mapped, proposes where each fits, and uses one only after a person approves, as context only.
 
-A live log shows each step as it happens, and every AI call names the model that answered. Judges can run it offline with no keys (SAMPLE_MODE: the Nov 2024 replay and labelled made-up scenes); 853 tests and 33 safety scenarios run in CI.
+A live log shows each step as it happens, and every AI call names the model that answered. Judges can run it offline with no keys (SAMPLE_MODE: the Nov 2024 replay and labelled made-up scenes); 938 tests and 34 safety scenarios run in CI.
 ```
 
 ## Sponsor technology explanation (deck version; full text: README "Sponsor technology explanation")
@@ -40,8 +40,9 @@ A live log shows each step as it happens, and every AI call names the model that
   by name, streamed under a hard time limit; every call's trace line names the model that actually answered and the
   Nightshift receipt; a fallback is marked `ai.fallback`.
 - **NVIDIA Nemotron 3.5 Super VL - two jobs.** Writes the 1-2 sentence explanation in the user's language, and is
-  the Critic's reviewer (does it contradict, exaggerate or downplay a fact?). Live, 10 full runs, 23 Oct 2026
-  22:47-23:07 MYT: explanation shown 8 of 10, review completed 8 of 10, every call served by Super VL.
+  the Critic's reviewer (does it contradict, exaggerate or downplay a fact?). Live, 24 Oct 12:19–13:14: 10 of 10
+  answered within 150 s; AI explanation in 6 of 7 full-path runs; Critic AI review 6 of 7; every call that answered
+  was served by Super VL ([`docs/EVIDENCE-live-24oct.md`](EVIDENCE-live-24oct.md)).
 - **What is unique:** the model never decides. Code reads, checks and reconciles the data and sets the verdict with
   rules a person can read; the model explains; a second call checks that explanation against the facts; a safety
   gate checks every answer last; the served model is verified on every call; a replay cuts every source at the
