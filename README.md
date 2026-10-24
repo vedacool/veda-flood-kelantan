@@ -55,6 +55,53 @@ python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
 
+## Try VEDA without the UI (API and command line)
+The same agents as the web page (Coordinator → Data & Reconciler → Forecast → Critic → safety gate), as JSON.
+Full docs with a filled-in example: **`/api/docs`** (only the three `/api/v1` routes).
+
+**Public demo** (offline sample mode, scenes only):
+```
+curl -X POST https://wyse5070.<your-tailnet>.ts.net/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'
+```
+**On your computer** (after `python -m app.main` with SAMPLE_MODE=true, or the Docker command above):
+```
+curl -X POST http://127.0.0.1:8000/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Rantau Panjang selamat ke?", "lang": "bm", "scene": "nov2024"}'
+curl http://127.0.0.1:8000/api/v1/scenes
+curl http://127.0.0.1:8000/api/v1/health
+```
+Windows PowerShell: `Invoke-RestMethod -Method Post http://127.0.0.1:8000/api/v1/ask -ContentType application/json -Body '{"question": "Is Tumpat safe tonight?"}'`
+
+**Command line** (no server, no keys needed - with no `.env` it runs offline and says so in one line):
+```
+python -m veda ask "Is Tumpat safe tonight?"
+python -m veda ask "Rantau Panjang selamat ke?" --lang bm --scene nov2024 --json
+python -m veda scenes
+```
+```
+Offline sample mode (no keys found): VEDA answers from its recorded and made-up scenes (no live data, no AI calls).
+Tumpat: Normal for now (NORMAL)  [SYNTHETIC · calm day]
+What to do: Nothing to do now. No action needed. Keep an eye on JPS updates.
+Why: The river is 0.62 m below the alert level.
+Nemotron's judgement: live mode only
+Critic: approved (checked by code, zetaris; 11 code checks)
+Steps: Understand the question (Coordinator) · Gather the data (Data & Reconciler) · Work out the risk (Forecast) · ...
+Run id: 20261024-224354-360a · mode: offline sample
+```
+**The answer's fields:** `level`, `level_label` (EN / BM), `what_to_do`, `why`, `facts_used`, `facts_left_out` (with
+the reason), `critic_checks`, `ai_judgement` (or "live mode only"), `steps` (one line per agent step), `mode`
+("offline sample" | "live"), `run_id`, plus the answer `text` and the disclaimer. `lang` is `en` or `bm`; `scene` is
+an id from `/api/v1/scenes` (offline scenes; without one, the SYNTHETIC calm day).
+
+**Limits:** the question is 1-300 characters, the body at most 4 KB; one question at a time (a second gets 429
+`busy`); errors are JSON `{"error": {"code", "message"}}` with a 4xx status. The public demo also limits each visitor
+(about 20 questions a minute, bursts of 10).
+
+**Running without Nightshift?** By default - no `.env`, no keys - the command line and a server started with
+SAMPLE_MODE=true run **offline on the scenes**: the real agent logic, no network, no AI calls; Nemotron's judgement
+shows as "live mode only". **Live mode** needs Zetaris keys (river data) and Meterless Nightshift (Nemotron 3.5 Super
+VL); VEDA calls Nemotron only through Nightshift. Live without Nightshift still answers: the card is written and
+checked by code, and the trace marks the AI fallback.
+
 **Flood replay (the real progression):** choose *REPLAY · Nov 2024* on the page, or use `--replay nov2024`. It
 replays the November 2024 Rantau Panjang flood with the JPS readings that news reports quoted at the time (each cited).
 Every data source is cut at the replay time, so nothing from later is ever used:

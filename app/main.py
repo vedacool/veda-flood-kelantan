@@ -17,6 +17,8 @@ GET  /trace/run/{run_id}        a run from logs/ - this computer only (127.0.0.1
 GET  /admin       operator screens (app/web/admin.html) - this computer only: sources + breakers, gauges found by
                   VEDA (approve as context), recent answers, one run in detail with the exact prompts sent to the AI
 GET  /admin/api/overview, GET /admin/api/run/{run_id}, POST /admin/api/approve   (same: this computer only)
+/api/v1/...      the public API (B-92, app/api.py): POST /api/v1/ask, GET /api/v1/scenes, GET /api/v1/health;
+                  docs at /api/docs (only these routes). The operator routes are in no schema.
 GET  /ui/words    fixed wording for screens that call no engine (headlines, emergency steps, disclaimer)
 GET  /            the web page (app/web/index.html): home, waiting, answer, share, emergency
 Bad input -> HTTP 400 {"error": {"code", "message"}}; a second run while one is running -> 429 (one writer for the
@@ -468,7 +470,7 @@ def recorded_one(name: str):
     return _read_trace(path, hide_question=False)
 
 
-@app.get("/trace/run/{run_id}")
+@app.get("/trace/run/{run_id}", include_in_schema=False)
 def run_trace(run_id: str, request: Request):
     """A run from logs/ for the live log's per-run view - this computer only; the question is not shown."""
     if not _local(request):
@@ -483,7 +485,7 @@ LOCAL_ONLY = ("<!doctype html><title>VEDA admin</title><p style='font:18px syste
               "screens open on this computer only (http://127.0.0.1).</p>")
 
 
-@app.get("/admin", response_class=HTMLResponse)
+@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
 def admin_page(request: Request):
     if not _local(request):
         return HTMLResponse(LOCAL_ONLY, status_code=403)
@@ -508,7 +510,7 @@ def _with_world(fn):
         _busy.release()
 
 
-@app.get("/admin/api/overview")
+@app.get("/admin/api/overview", include_in_schema=False)
 def admin_overview(request: Request):
     if not _local(request):
         return _error(403, "local_only", "This computer only.")
@@ -516,7 +518,7 @@ def admin_overview(request: Request):
     return err or out
 
 
-@app.get("/admin/api/run/{run_id}")
+@app.get("/admin/api/run/{run_id}", include_in_schema=False)
 def admin_run(run_id: str, request: Request):
     if not _local(request):
         return _error(403, "local_only", "This computer only.")
@@ -524,7 +526,7 @@ def admin_run(run_id: str, request: Request):
     return out if out is not None else _error(404, "not_found", "No run with that id.")
 
 
-@app.post("/admin/api/approve")
+@app.post("/admin/api/approve", include_in_schema=False)
 async def admin_approve(request: Request):
     """'Approve as context': a named person, live mode only. The X-VEDA-Admin header makes a browser ask first
     (CORS preflight), so another web page cannot send this."""
@@ -568,6 +570,11 @@ def public_url(request):
 @app.get("/", response_class=HTMLResponse)
 def page():
     return WEB_PAGE.read_text(encoding="utf-8")
+
+
+from app import api as _api  # noqa: E402 - B-92: the public API at /api (it imports this module late)
+
+app.mount("/api", _api.api)
 
 
 def main():

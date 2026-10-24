@@ -605,7 +605,8 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
     if use_model and answer.get("card") is not None and not answer.get("explanation"):
         use_model, skip_reason = False, "no AI-written text to check (card written by code)"
         left = REVIEW_CAP_S if budget_s is None else min(REVIEW_CAP_S, budget_s - (time.monotonic() - t_start))
-        if plan.get("effort") == "full" and answer.get("drafted_by") == "fallback" and left >= JUDGE_MIN_S:
+        offline = config.sample_mode() and llm is nightshift.chat        # no live model call can run offline
+        if plan.get("effort") == "full" and answer.get("drafted_by") == "fallback" and left >= JUDGE_MIN_S                 and not offline:
             try:                                  # the draft call failed: Nemotron still judges the level
                 judgement = _judge_only(answer, forecast, llm, left, critic_lane())
                 judgement["why"] = "facts-only judgement (the explanation call failed): " + judgement["why"]
