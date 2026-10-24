@@ -204,6 +204,9 @@ def test_the_v3_ui_rules():
     # Cowork critique: after a run the filled button goes ("Run again" is in the last line); the JPS bands sit in
     # step 2 under the gauge note
     assert '$("start").hidden = !!checked;' in PAGE and '$("start").hidden = true;' in PAGE
+    # after the run: to the "N of M matched" line, smooth unless the reader prefers reduced motion
+    assert 'matchMedia("(prefers-reduced-motion: reduce)").matches' in PAGE
+    assert '$("r-score").scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });' in PAGE
     # one feedback link per screen (Husaini 25 Oct): after the run "Tell us" shows, so the footer's Feedback hides
     render_check = PAGE.split("function renderCheck() {", 1)[1].split("\n}\n", 1)[0]
     assert """document.querySelectorAll('.vf-foot a[href="/feedback"]').forEach((a) => { a.hidden = true; });""" in render_check
@@ -247,6 +250,9 @@ def test_how_veda_got_there_reads_the_run(runs):
                                   "Baru. The level was worked out again. Checked the facts again and approved the answer.")
     assert silent["safety"] == "All safety checks passed."
     assert silent["gather"].startswith("Used 6 of 11 sources. Left out: Sg. Kelantan di Air Mulih, reading too old")
+    # ages with one decimal, the same as the data rows (Cowork B-96): Kg. Jenob is 3.5 h old at rp-before
+    for lang, age in (("en", "reading too old (3.5 h ago)"), ("ms", "bacaan terlalu lama (3.5 jam lalu)")):
+        assert age in trail.how_lines(runs["rp-before"], lang)[0]["text"], lang
     calm = {x["key"]: x["text"] for x in trail.how_lines(runs["tumpat-calm"], "ms")}
     assert calm["critique"] == "Menyemak semula fakta dan meluluskan jawapan."
     assert calm["forecast"].startswith("Normal buat masa ini. ")

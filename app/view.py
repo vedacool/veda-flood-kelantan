@@ -675,6 +675,10 @@ def _label(evidence, lang):
 
 
 def _age(minutes, lang):
+    """A left-out reading's age: one decimal from 2 h, as the Scenes data rows (Cowork B-96: "3.5 h ago", never
+    "3 h" next to "3.5 h"); the plain-text card keeps whole hours (card._age, its length cap)."""
+    if minutes is not None and minutes >= 120 and minutes % 60:
+        return card_mod.T["h_ago"][lang].format(n=f"{minutes / 60:.1f}")
     return card_mod._age(minutes, lang)
 
 
