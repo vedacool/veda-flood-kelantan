@@ -172,6 +172,7 @@
   .calm { font-weight: 700; margin: 4px 0 8px; }
   .combined { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-weight: 600; }
   .judge { margin-top: 12px; }
+  .demo-scenes { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; white-space: nowrap; }
   .judge-row { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 4px; font-weight: 600; }
   .judge .sub { margin: 0; }
   .todo h2 { text-transform: uppercase; letter-spacing: .03em; }
@@ -180,8 +181,9 @@
   .rows > div:last-child { border-bottom: 0; }
   .rows b { font-weight: 700; }
   .sub { color: var(--muted); }
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 12px 0; }
   .strip { width: 100%; justify-content: space-between; text-align: left; font-weight: 600; }
+  .strip > span:last-child { white-space: nowrap; margin-left: 12px; }      /* "Details ›" never wraps */
   .levelbar { position: relative; height: 26px; border-radius: 8px; margin: 34px 0 8px;
               background: linear-gradient(90deg, var(--v-normal) 0 var(--a), var(--v-watch) var(--a) var(--w),
                                           var(--v-prepare) var(--w) var(--d), var(--v-act) var(--d) 100%); }
@@ -233,8 +235,9 @@
     #s-answer > .todo, #s-answer > .actions, #s-answer > #a-share { grid-column: 1; }
     #s-answer > #a-rows { grid-column: 2; grid-row: 1 / 9; }
     #s-answer > #a-rows > .card:first-child { margin-top: 0; }
-    #s-answer > .actions { grid-template-columns: 2fr 1fr 1fr; }
+    #s-answer > .actions { grid-template-columns: 1fr auto; align-items: stretch; }   /* one row, card-wide */
     #s-answer > .actions .wide { grid-column: auto; }
+    #s-answer > .actions #a-listen { min-width: 6em; }
 
     /* Checking: the steps left, progress + tip right */
     #s-wait { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); column-gap: 40px;
@@ -268,6 +271,9 @@
     <div class="sheet" id="scenes" hidden></div>
   </div>
   <div class="town-list" id="towns"></div>
+  <!-- Part 8: the public demo only - read a scene first (Session B's /scenes); under the towns so the four rows stay on the first phone screen -->
+  <p class="intro" id="demo-intro" hidden><span data-t="demo_intro"></span>
+    <a href="/scenes" class="demo-scenes" data-t="demo_scenes"></a></p>
   <!-- Cowork 24 Oct (Part 6): live mode covers five more places - tappable like a town row; never offline -->
   <div id="also" hidden><p class="moment-label" data-t="also_covered"></p><div class="also-chips" id="also-chips"></div></div>
   <p class="small-note" id="few-readings" data-t="few_readings" hidden></p>
@@ -393,6 +399,12 @@
     <p id="a-todo" class="sub" style="margin:0"></p>
     <a class="btn wide" id="a-jps" href="https://publicinfobanjir.water.gov.my/" target="_blank" rel="noopener"
        data-t="open_jps" hidden></a></div>
+  <!-- Part 8 (design critique): send / listen right under WHAT TO DO -->
+  <div class="actions" id="a-actions">
+    <a class="btn wa wide" id="a-wa" target="_blank" rel="noopener" data-t="send_family"></a>
+    <button type="button" id="a-listen" data-t="listen"></button>
+  </div>
+  <button type="button" class="linkish" id="a-share" data-t="see_text"></button>
   <div id="a-rows">
     <div class="card" id="a-river-box"><h2 data-t="river_here"></h2><div class="river"><div id="a-post"></div>
       <ul class="river-lines" id="a-river-lines"></ul></div></div>
@@ -400,12 +412,6 @@
       <p class="sub" id="a-flow-caption"></p><div id="a-up-text"></div></div>
     <div class="card" id="a-rain-box2"><h2 data-t="rain"></h2><div id="a-rain-text"></div></div>
   </div>
-  <div class="actions">
-    <a class="btn wa wide" id="a-wa" target="_blank" rel="noopener" data-t="send_family"></a>
-    <button type="button" id="a-listen" data-t="listen"></button>
-    <button type="button" id="a-check" data-t="check_again"></button>
-  </div>
-  <button type="button" class="linkish" id="a-share" data-t="see_text"></button>
   <button type="button" class="strip" id="a-strip" aria-expanded="false" aria-controls="a-details"></button>
   <div id="a-details" hidden>
     <div class="card"><h2 data-t="why"></h2><p id="a-why" style="margin:0"></p>
@@ -425,7 +431,8 @@
   </div>
   <div class="card" id="a-plain" hidden><p class="share-text" id="a-plain-text" style="margin:0"></p>
     <div class="towns" id="a-choices" style="margin-top:12px"></div></div>
-  <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:12px"></button>
+  <button type="button" class="wide" id="a-check" data-t="check_again" style="margin-top:12px"></button>
+  <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:10px"></button>
   <button type="button" class="sos outline" id="a-sos" data-t="sos"></button>
   <p class="note" data-t="disclaimer"></p>
 </section>
@@ -508,6 +515,7 @@ const UI = {
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
     answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
     checks: "The Critic's {n} code checks",
+    demo_intro: "New here? Read a scene first, then test VEDA:", demo_scenes: "Scenes ›",
     ai_failed: "AI step not used", fallbacks: "AI steps replaced by code in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
@@ -569,6 +577,7 @@ const UI = {
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
     answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
     checks: "{n} semakan kod oleh Penyemak",
+    demo_intro: "Baru di sini? Baca senario dahulu, kemudian uji VEDA:", demo_scenes: "Senario ›",
     ai_failed: "Langkah AI tidak digunakan", fallbacks: "Langkah AI yang diganti dengan kod",
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
@@ -737,7 +746,7 @@ function setStage(name) {
   const i = STAGES.indexOf(name);
   if (i < 0) return;
   stageIdx = Math.max(stageIdx, i);
-  $("w-status").innerHTML = esc(t("s_" + name)) + agentTag(name);
+  $("w-status").innerHTML = esc(t("s_" + name)) + ($("log").hidden ? agentTag(name) : "");   // the log line has it
   const pct = name === "revise" ? 88 : [12, 35, 55, 70, 85][i] || 90;
   bump(pct);
 }
@@ -780,7 +789,7 @@ function checking(keys) {
       if (i > 0) items[i - 1].classList.add("done");
       if (i >= items.length) { timer = setTimeout(finish, 400); return; }
       items[i].hidden = false;
-      $("w-status").innerHTML = esc(t(keys[i])) + agentTag(CHECK_STAGE[keys[i]]);
+      $("w-status").textContent = t(keys[i]);                // the step's own line carries the agent tag
       i += 1;
       timer = setTimeout(next, each);
     };
@@ -904,23 +913,32 @@ function gaugePost(r) {
   const W = 260, H = 250, top = 12, span = H - 24;
   const marks = [r.normal_m, r.alert_m, r.warning_m, r.danger_m].filter((x) => x != null);
   const step = (r.danger_m - (r.alert_m != null ? r.alert_m : r.danger_m - 1)) || 1;
-  const lo = Math.min(r.level_m, ...marks) - step * [JPS reading];
+  const low = Math.min(...marks);                   // Part 8: no empty box under Normal (padding only when the river is lower)
+  const lo = r.level_m < low ? r.level_m - step * 0.6 : low;
   const hi = Math.max(r.level_m, r.danger_m, r.y2014_m != null ? r.y2014_m : -Infinity) + step * 0.6;
   const y = (v) => top + ((hi - v) / (hi - lo)) * span;
   const x0 = 78, x1 = 104;                                   // the post
   const band = (a, b, colour) => (a == null || b == null) ? "" :
     `<rect x="${x0}" y="${y(b)}" width="${x1 - x0}" height="${Math.max(0, y(a) - y(b))}" fill="${colour}"/>`;
-  const line = (v, label, dashed) => v == null ? "" :
-    `<line x1="${x0 - 4}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-width="2"${dashed ? ' stroke-dasharray="6 5"' : ""}/>` +
-    `<text x="${x1 + 8}" y="${y(v) - 5}" font-size="18" fill="currentColor">${esc(label)}</text>`;
+  // labels sit above their line, pushed apart so two never overlap (Part 8: the 2014 / Danger / Now collision)
+  const labelY = {};
+  [[r.y2014_m, "y2014"], [r.danger_m, "danger"], [r.warning_m, "warning"], [r.alert_m, "alert"], [r.normal_m, "normal"]]
+    .filter(([v]) => v != null).sort((a, b) => b[0] - a[0])
+    .reduce((prev, [v, k]) => {
+      let want = Math.max(y(v) - 5, prev + 20);
+      if (Math.abs(want - (y(r.level_m) + 6)) < 22) want = Math.max(want, y(r.level_m) + 30);   // not beside "Now ▶"
+      labelY[k] = want; return want; }, -Infinity);
+  const line = (v, label, dashed, key) => v == null ? "" :
+    `<line x1="${dashed ? x1 : x0 - 4}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-width="2"${dashed ? ' stroke-dasharray="6 5"' : ""}/>` +
+    `<text x="${x1 + 8}" y="${labelY[key]}" font-size="18" fill="currentColor">${esc(label)}</text>`;
   const m = (v) => `${v} ${t("m")}`;
   return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(t("level_now"))} ${m(r.level_m)}; ${esc(t("danger"))} ${m(r.danger_m)}">` +
     `<rect x="${x0}" y="${top}" width="${x1 - x0}" height="${span}" fill="var(--card)" stroke="currentColor" stroke-width="2"/>` +
     band(r.normal_m, r.alert_m, "#DDEBE3") + band(r.alert_m, r.warning_m != null ? r.warning_m : r.danger_m, "#F6D46B") +
     band(r.warning_m, r.danger_m, "#F0A04B") + band(r.danger_m, hi, "#8E1F1A") +
-    line(r.normal_m, `${t("normal")} ${m(r.normal_m)}`) + line(r.alert_m, `${t("alert")} ${m(r.alert_m)}`) +
-    line(r.warning_m, `${t("warning")} ${m(r.warning_m)}`) + line(r.danger_m, `${t("danger")} ${m(r.danger_m)}`) +
-    (r.y2014_m != null ? line(r.y2014_m, t("y2014"), true) : "") +
+    line(r.normal_m, `${t("normal")} ${m(r.normal_m)}`, false, "normal") + line(r.alert_m, `${t("alert")} ${m(r.alert_m)}`, false, "alert") +
+    line(r.warning_m, `${t("warning")} ${m(r.warning_m)}`, false, "warning") + line(r.danger_m, `${t("danger")} ${m(r.danger_m)}`, false, "danger") +
+    (r.y2014_m != null ? line(r.y2014_m, t("y2014"), true, "y2014") : "") +
     `<text x="${x0 - 6}" y="${y(r.level_m) + 6}" font-size="18" font-weight="800" text-anchor="end" fill="currentColor">${esc(t("level_now"))} ▶</text>` +
     `<line x1="${x0 - 2}" x2="${x1 + 2}" y1="${y(r.level_m)}" y2="${y(r.level_m)}" stroke="currentColor" stroke-width="5"/></svg>`;
 }
@@ -1173,6 +1191,7 @@ function showLive() {
 }
 const ready = fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
+  $("demo-intro").hidden = !h.demo;                     // Part 8: the public demo only
   showLive();
   // Cowork 24 Oct: the offline demo opens on the Nov 2024 flood at its peak, not on a made-up calm day
   if (sampleMode && !want) $("mode").value = PEAK;

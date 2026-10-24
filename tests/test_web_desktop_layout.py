@@ -29,10 +29,10 @@ def test_home_answer_and_checking_columns():
 
 def test_document_order_is_the_phone_order():
     """Phones and screen readers follow the document: towns before the map before the question box; the river cards
-    between WHAT TO DO and the actions; progress before the steps."""
+    after WHAT TO DO and its send / listen buttons (Part 8); progress before the steps."""
     order = lambda *ids: [PAGE.index(i) for i in ids]                                 # noqa: E731
     assert order('id="towns"', 'id="map-box"', 'id="ask"') == sorted(order('id="towns"', 'id="map-box"', 'id="ask"'))
-    a = order('class="card todo"', 'id="a-rows"', 'class="actions"', 'id="a-details"')
+    a = order('class="card todo"', 'class="actions"', 'id="a-rows"', 'id="a-details"')
     assert a == sorted(a)
     w = order('class="wait-side"', 'id="w-status"', 'id="w-tip"', 'class="wait-steps"', 'id="w-check"', 'id="log"')
     assert w == sorted(w)

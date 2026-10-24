@@ -254,7 +254,8 @@ async def health():
     """Is VEDA ready? In SAMPLE_MODE everything is offline replay, so nothing is called. Async (audit 24 Oct P1-1):
     the offline answer never waits for a worker thread; the live checks run on one."""
     if config.sample_mode():
-        return {"status": "ok", "sample_mode": True, "zetaris": "replay (offline)", "nightshift": "not used"}
+        return {"status": "ok", "sample_mode": True, "zetaris": "replay (offline)", "nightshift": "not used",
+                **({"demo": True} if config.demo_mode() else {})}      # Part 8: the page's demo-only intro line
     return await run_in_threadpool(_live_health)
 
 
