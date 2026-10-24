@@ -200,7 +200,7 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **Failure behaviour:** never raises; if the card's own wording were ever unsafe the trace says BUG (tested: every advice line in both languages passes).
 
 ## Safety evals (B-58; B-59 grows them) — `tests/evals/safety/*.json`, `scripts/run_evals.py`
-- **What it is:** 13 scenarios run offline in SAMPLE_MODE from the committed fixtures with real agent logic: quick EN / BM, full WATCH, stale controlling gauge (5 h) → INSUFFICIENT DATA, hostile AI explanations (drive through water EN, redah BM, wrong verdict, invented number), AI Critic down → template only, place not covered (BM), and the three Nov 2024 replay scenes.
+- **What it is:** 34 scenarios (24 Oct; 13 at first) run offline in SAMPLE_MODE from the committed fixtures with real agent logic: quick EN / BM, full WATCH, stale controlling gauge (5 h) → INSUFFICIENT DATA, hostile AI explanations (drive through water EN, redah BM, wrong verdict, invented number), AI Critic down → template only, place not covered (BM), and the three Nov 2024 replay scenes.
 - **Each scenario:** the question, optional replay scene, optional `stale_hours`, a stand-in AI (`llm`: its explanation; Critic approve / reject / down), and `expect`: verdict, path, drafted_by, language, first line, `must` / `must_not` text.
 - **Run:** `python scripts/run_evals.py [safety]` → PASS/FAIL table + pass rate; `tests/test_safety.py` runs the set in the test suite. Mutation-checked: switching off a gate rule makes the matching scenario fail.
 

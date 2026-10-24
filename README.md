@@ -3,8 +3,9 @@
 **Team Hujung Lab** (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) · GenAI Works Open Agent Hackathon 2026 ·
 Track: Solving Fragmented Intelligence · Machine-readable summary: [`metadata.json`](metadata.json)
 
-> **Judges: [try VEDA in 10 minutes](docs/JUDGES.md)** - offline, no keys, no Docker: three commands, then six things to
-> try (the Nov 2024 flood replay, a calm day, rain raising the alarm, a broken source, the agents' live log, BM).
+> **Judges: [try VEDA in 10 minutes](docs/JUDGES.md)** - offline, no keys, no Docker: three commands, then eight things to
+> try (the Nov 2024 flood replay, a calm day, rain raising the alarm, a broken source, how the agents worked it out,
+> the agents' live log, the Critic asking for more data, BM).
 
 VEDA is a multi-agent system for flood-prone Kelantan, Malaysia. Kelantan's flood data is scattered and sometimes
 stale or contradictory. VEDA cross-checks it and answers one question for anyone asking about a place, in English or
@@ -22,7 +23,8 @@ down.
 ## Quick start for judges (offline, no keys, about 2 minutes)
 SAMPLE_MODE runs the real agent logic offline, with no network, no `.env` and no API keys, on **scenes**: the Nov 2024
 replay (readings reported in the news, each cited) or a **SYNTHETIC** scene (made-up readings, labelled everywhere).
-A question without a scene runs on the SYNTHETIC calm day.
+On the command line and the API, a question without a scene runs on the SYNTHETIC calm day; the web page opens
+on the Nov 2024 replay.
 
 **Covered places:** Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat (in BM or English, common spellings such as
 "Kota Baru", "Psr Mas"). Any other Kelantan place gets "not covered yet" and the nearest covered place.
@@ -33,8 +35,9 @@ docker build -t veda .
 docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda
 ```
 Then open http://127.0.0.1:8000, tap a town or type a question (for example *"Mak ayah saya di Tumpat, kena pindah
-malam ni?"*), in English or Bahasa Melayu (EN | BM at the top). Offline, pick a scene under **Data** (the Nov 2024
-past-flood replay or a made-up test scene); "See what VEDA is doing ›" shows each step live while it works.
+malam ni?"*), in English or Bahasa Melayu (EN | BM at the top). Offline, the page opens on the Nov 2024 flood replay at its
+peak (27 Nov, 7:30 pm); **Change moment** switches to Before / Morning / Peak, and **Test scenes ›** to the made-up
+scenes. "See what VEDA is doing ›" shows each step live while it works.
 
 **Python 3.10+ without Docker** ([JPS reading] recommended; tested on 3.10-3.13):
 ```
@@ -45,7 +48,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 33 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 34 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its river data right now"; it does not crash.
@@ -54,11 +57,14 @@ Without SAMPLE_MODE and without Zetaris keys, VEDA answers "cannot reach its riv
 replays the November 2024 Rantau Panjang flood with the JPS readings that news reports quoted at the time (each cited).
 Every data source is cut at the replay time, so nothing from later is ever used:
 
-| Scene | What VEDA says |
+| Scene | What VEDA says for Rantau Panjang |
 |---|---|
 | 26 Nov 18:00 | PREPARE |
-| 27 Nov 08:00 | INSUFFICIENT DATA (no verified reading near this time, and VEDA will not guess) |
+| 27 Nov 08:00 | Can't confirm right now (INSUFFICIENT_DATA: no verified reading near this time, and VEDA will not guess) |
 | 27 Nov 19:30 | ACT, 0.1 m above the Dec 2014 peak |
+
+For Pasir Mas, Kota Bharu and Tumpat the replay has no cited river reading, so VEDA says it can't confirm - it never
+guesses.
 
 **SYNTHETIC scenes** (`--replay synthetic_rising`, `--replay synthetic_calm`):
 - *SYNTHETIC · rising river* is **a made-up stress scenario: synthetic river levels, real archived rain** (Open-Meteo,
@@ -88,8 +94,21 @@ One short answer card, written by code from checked data, in the user's language
 - any source that was excluded, and any disagreement it could not resolve.
 
 On the full path, Nemotron adds a short explanation **when the model replies in time** - not on every answer:
-explanation shown in 8 of 10 live full runs (23 Oct 2026, 22:47-23:07 MYT, Super VL). It is shown only if the code checks pass and the Critic's AI review approved it; otherwise
-the card goes out without it.
+explanation shown in 6 of 7 live full-path runs (24 Oct 2026, 12:19-13:14 MYT, Super VL; all 10 runs answered
+within 150 s - [`docs/EVIDENCE-live-24oct.md`](docs/EVIDENCE-live-24oct.md)). It is shown only if the code checks pass
+and the Critic's AI review approved it; otherwise the card goes out without it.
+
+**On the web page** the answer opens with the level word, "Level n of 4" and one action line, then WHAT TO DO NOW as
+numbered steps, **the river here** on a gauge post (the gauge's own JPS Normal / Alert / Warning / Danger marks, and
+the Dec 2014 flood line where the gauge has one), **coming from upstream** (hulu → hilir: the rain area and the
+upstream gauges, then "you"), the rain here, and **Send to family on WhatsApp** (level, what to do, who checked it,
+when and from what source, a link back - never the question). Numbers and gauge names stay in **Details**.
+
+| Home | Act now (Nov 2024 peak) | Can't confirm | WhatsApp text |
+|---|---|---|---|
+| ![Home](docs/media/v2/home-en-first-screen.png) | ![Act now](docs/media/v2/act-now-rantau-panjang-peak-en-first-screen.png) | ![Can't confirm](docs/media/v2/cant-confirm-pasir-mas-peak-en.png) | ![Share text](docs/media/v2/share-text-en.png) |
+
+More screens, EN and BM: [`docs/media/v2/`](docs/media/v2/).
 See `input_examples/` and `output_examples/` (6 real runs, each with its full trace).
 
 ## How it works
@@ -115,7 +134,7 @@ flowchart LR
 - **Agents that work together:** the Data & Reconciler says which sources it chose and skipped (and why); when the
   Critic finds a gap (a silent upstream gauge), it asks the Data & Reconciler for another source and the verdict is
   recomputed if one is found ("verdict recomputed after the Critic's request: NORMAL → WATCH"); every run, gauges JPS
-  publishes that VEDA has not mapped yet are noticed as "discovered" - a person approves one (`python -m app.discover`)
+  publishes that VEDA has not mapped yet are noticed as "discovered" - a person approves one (`python -m app.discover approve <station_key> --place <town> --by <name>`; `list` shows them)
   before it appears, and then only as context, never in the verdict.
 - **Code decides the path.** The quick path (about 6 s, written by code) is used when nothing is wrong. The full path
   (≤150 s, with Nemotron) is used when a gauge is at Alert or above, the river is rising, a MET warning is active, a
@@ -130,9 +149,9 @@ flowchart LR
 | Agent | Job | Uses AI? |
 |---|---|---|
 | **Coordinator** (`app/agents/coordinator.py`, `app/router.py`) | Finds the place, picks the answer language, decides quick or full and writes the plan. Writes the short explanation on the full path. | Only for the explanation (Nemotron 3.5 Super VL by name, lane `deep`) |
-| **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT DATA. Per-source circuit breaker. | No |
+| **Data & Reconciler** (`app/agents/data_agent.py`) | Fetches every source through Zetaris in parallel and checks freshness and plausibility. Reconciles disagreeing sources (reliability, then recency, else `conflicts_unresolved`). Heals: backup gauge → last reading for context → INSUFFICIENT_DATA. Per-source circuit breaker. | No |
 | **Forecast** (`app/agents/forecast_agent.py`) | Applies the verdict rules to the controlling gauges, upstream gauges and rain - including rain **upstream + here** (B-88, `app/rain_rule.py`: heavy rain at an upstream rain point lifts a town to at least Keep watching; when it can arrive within 24 h while it also rains heavily in town, one level up). Builds the 24 h range, the confidence, and the comparison with past floods. | No |
-| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Live, 10 full runs on **23 Oct 2026, 22:47-23:07 MYT: the AI review completed in 8 of 10** (test harness the same evening: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
+| **Critic** (`app/agents/critic.py`) | **Code + Zetaris re-check on every answer; AI review when the model replies in time.** The code checks cannot be overruled (verdict, numbers, never "go into water", flipped comparisons, reassurance under a warning). The Zetaris re-check re-reads the controlling gauge and the flood-warning feed itself. The AI review (Nemotron 3.5 Super VL via Nightshift) gets only the card's key facts and the explanation, and answers one question: does the explanation contradict, exaggerate or downplay a fact? Live, **24 Oct 2026, 12:19-13:14 MYT: the AI review was done in 6 of 7 full-path runs** (23 Oct, 22:47-23:07: 8 of 10 full runs; test harness on 23 Oct: 9 of 10 answered, all right, both planted errors - EN, BM - rejected). Any problem means reject and revise once; when the AI review does not complete, the AI explanation is dropped and only the code-checked card is sent. | AI review when it replies in time |
 | **Safety gate** (`app/safety.py`) | Last check on every answer: never NORMAL on unusable data, no advice into water, disclaimer with 999 / 991, ranges only, replay title, never "a PPS is open" or "the road will be cut off". | No |
 
 Models are reached only through Meterless **Nightshift**: both AI steps ask for NVIDIA Nemotron 3.5 Super VL **by
@@ -142,18 +161,18 @@ used (since 23 Oct, B-85). Agents get data only through `run_sql()` on **Zetaris
 ### When something fails (every case is a trace line; the answer still goes out)
 | What fails | What VEDA does | What the user sees |
 |---|---|---|
-| Zetaris unreachable / no keys | No guessing: stops after the place lookup | "VEDA cannot reach its river data right now…" + check JPS Infobanjir, 999 |
-| The controlling gauge is silent or stale | Backup gauge on the same river if one is fresh; else the last reading for context only | The backup is named, or **INSUFFICIENT DATA** (never NORMAL) |
+| Zetaris unreachable / no keys | No guessing: stops after the place lookup | "VEDA cannot reach its river data right now…" + check JPS Infobanjir, 999; someone trapped gets the stranded advice (999 / 991) first |
+| The controlling gauge is silent or stale | Backup gauge on the same river if one is fresh; else the last reading for context only | The backup is named, or **"Can't confirm right now"** (INSUFFICIENT_DATA, never NORMAL) |
 | data.gov.my rate limit / outage (HTTP 429) | Its circuit opens for 15 min; the Open-Meteo rain is read on its own; place lookup still works | "Tidak disemak / Not checked: MetMalaysia …" line; river answer as usual |
 | Open-Meteo unreadable | Its own circuit (never shared with data.gov.my) | Card without the rain line |
-| data.gov.my /flood-warning stale (frozen since Feb 2024) | Excluded from the verdict; status remembered 15 min | "Diketepikan (lapuk) / Excluded (stale)" |
+| data.gov.my /flood-warning stale (frozen since Feb 2024) | Excluded from the verdict; status remembered 15 min | "Left out: data.gov.my flood warnings (out of date)" / "Diketepikan: amaran banjir data.gov.my (sudah lama tidak dikemas kini)" |
 | Two sources disagree and cannot be reconciled | Kept as `conflicts_unresolved`, no source picked | "Sources disagree on …; VEDA did not pick one" |
-| Nemotron slow, empty or down | The draft gets one try inside the time budget (the Critic's review retries only a failure in under 10 s) | The code-written card without the AI explanation |
+| Nemotron slow, empty or down | The draft is retried after a fast failure, Nightshift's no-first-byte cut or an empty reply, inside its 90 s cap (the Critic's review retries only a failure in under 10 s) | The code-written card without the AI explanation |
 | The Critic's AI review does not complete | Code checks + Zetaris re-check still run; the unreviewed explanation is dropped | The code-checked card only |
 | An explanation breaks a rule (wrong number, verdict, reassurance, "PPS is open", …) | Reject → one rewrite → re-check; then the card alone | The card, never the bad sentence |
 | Place not covered / misspelt | Gazetteer: "Did you mean …?" or "not covered yet" + nearest covered place | A clear reply, no guessed location |
 | OpenStreetMap table unreadable | — | "Tidak disemak: OpenStreetMap" on an evacuation / cut-off answer |
-| A replay time with no verified reading | No reconstruction beyond the reported readings | INSUFFICIENT DATA ("no verified reading near this time") |
+| A replay time with no verified reading | No reconstruction beyond the reported readings | "Can't confirm right now" (INSUFFICIENT_DATA, "no verified reading near this time") |
 
 ## Data sources and licences
 Every third-party source VEDA uses, its licence or terms, and how VEDA uses it. **No JPS readings are stored in this
@@ -168,7 +187,7 @@ repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 repl
 | **SYNTHETIC scenes and offline fixtures** (`data/replay/synthetic_anchors.csv`, fixtures flagged `synthetic`) | Made up by `scripts/make_synthetic_scenes.py` from cited facts only (MIT, like the code); the rising scene is a made-up stress scenario: synthetic river levels, real archived rain | The SYNTHETIC · rising river / calm day scenes; labelled SYNTHETIC on the card, in the trace and in the sources |
 | **data.gov.my** API: MetMalaysia forecast and warnings, the JPS `/flood-warning` feed ([data.gov.my](https://data.gov.my/)) | Malaysian government open-data portal (public-sector open data); the API pages we checked on 23 Oct name no specific licence | Live: district forecast and MET warnings; the `/flood-warning` feed (frozen since 23 Feb 2024) is checked and excluded. Offline fixtures: the MetMalaysia warnings / forecast rows and the `/flood-warning` readings are SYNTHETIC (seeded script); only place names, station positions and the feed's last-update time are recorded as served |
 | **Open-Meteo** forecast and historical archive ([open-meteo.com](https://open-meteo.com/)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Rain forecast (live) and real archive rain for every scene, shown with its date; credited on the page and named on every card |
-| **OpenStreetMap**: named schools, masjid / surau, community halls, and road bridges over rivers near each covered place ([openstreetmap.org](https://www.openstreetmap.org/), via the Overpass API) | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); credited on every card that uses it | Loaded once by `scripts/load_osm.py` into veda-pg, read through Zetaris. An evacuation question lists up to 3 **possible** PPS ("not an official list, confirm with APM / the village head"); a cut-off question lists bridges as facts (what river they cross, how far, the JPS level at the nearest gauge on that river) and says "low ground not assessed". VEDA never says a PPS is open and never predicts a road being cut off. The SAMPLE_MODE fixture of this table is OSM data and stays under the ODbL |
+| **OpenStreetMap**: named schools, masjid / surau, community halls, and road bridges over rivers near each covered place ([openstreetmap.org](https://www.openstreetmap.org/), via the Overpass API) | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); credited on every card that uses it | Loaded once by `scripts/load_osm.py` into veda-pg, read through Zetaris. An evacuation question lists up to 3 **possible** evacuation centres (PPS) ("not an official list, confirm with APM / the village head"); a cut-off question lists bridges as facts (what river they cross, how far, the JPS level at the nearest gauge on that river) and says VEDA does not know yet which areas are low-lying. VEDA never says a PPS is open and never predicts a road being cut off. The SAMPLE_MODE fixture of this table is OSM data and stays under the ODbL |
 
 **VEDA's code** is released under the [MIT License](LICENSE), © 2026 Hujung Lab (Mohd Husaini Mohd Fauzi, Muhammad
 Ariff Baharudin). The data above keeps its own source's terms.
@@ -183,7 +202,7 @@ unmodified) and certifi (MPL-2.0).
   - never advice to walk, wade or drive through water, checked in English and Malay;
   - ranges, never one precise number;
   - always the disclaimer with 999 / 991.
-- Please don't type names, IC, phone numbers or addresses. The page says (EN + BM): "VEDA's AI writes a short explanation from the checked facts only. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked." Phone, IC and email are
+- Please don't type names, IC, phone numbers or addresses. The page says (EN + BM): "Please don't type names, IC, phone numbers or addresses. Your question is not sent to any AI model; it stays on this computer in VEDA's log files, with phone and IC numbers masked." Phone, IC and email are
   masked in the traces, and the server access log never contains the question. A test checks that the question text
   never appears in any Nightshift request.
 - Questions stay in local log files on the machine running VEDA. Only intent tags go into the World Model, never the
@@ -195,9 +214,10 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Critic evaluation (test harness, planted errors, 23 Oct): rejected 2 of 2 (EN + BM), no correct explanation
   wrongly rejected.** The planted errors were a contradiction ("the river is now falling" when it was rising) and an
   exaggeration in BM. They were written into the harness only, never into VEDA or its answers.
-- **Offline test suite (`python -m pytest -q`): 903 tests pass (24 Oct 2026), 13 skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 33 scenarios, 33 of 33 pass; pass^3
-  (all 3 repeat runs, 24 Oct) 33 of 33, ×3 in CI (the Docker job runs them 3 times on every push; 24 Oct: job 30 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Offline test suite (`python -m pytest -q`): 938 tests pass (24 Oct 2026, at `af05b22`), 13 skipped (they need live services).**
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 34 scenarios, 34 of 34 pass; pass^3:
+  34 of 34 in all 3 repeat runs in CI (the Docker job runs them 3 times on every push; 24 Oct at `af05b22`: green, job
+  32 s).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;
@@ -206,11 +226,13 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   - the Critic being down;
   - the Nov 2024 replay scenes, including no hindsight;
   - out-of-area places;
-  - someone trapped by the water.
+  - someone trapped by the water, also while Zetaris is down;
+  - rain upstream + here (B-88), MetMalaysia warnings (rule A) and the Critic asking the Data & Reconciler for more data;
+  - "a PPS is open" claims and possible evacuation centres from OpenStreetMap.
 
 ## Limitations (honest list)
-- **Coverage:** four towns only (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat), with upstream gauges at Kuala Krai
-  and Dabong. Other Kelantan places get "not covered yet" and the nearest covered place.
+- **Coverage:** four towns only (Pasir Mas, Rantau Panjang, Kota Bharu, Tumpat), read from 16 curated JPS gauges
+  including their upstream gauges (`data/stations_mapping.csv`). Other Kelantan places get "not covered yet" and the nearest covered place.
 - **Roads and relief centres (OpenStreetMap):** possible PPS are buildings OSM tags as schools, masjid / surau or
   community halls, not the official APM list, and VEDA cannot know which one is open. Bridges are listed as facts only;
   no cut-off rule is approved yet (Dr Ariff, review pack I) and low ground is not assessed (no elevation data). OSM can
@@ -221,11 +243,11 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Straight-line trend:** the 24 h range is a straight-line projection and overshoots on a steep rise (shown with
   medium confidence).
 - **AI steps are best effort:** Nightshift cuts a call that sends no first byte in about 45 s, and NVIDIA sometimes
-  answers HTTP 500. With Super VL (since 23 Oct evening) the explanation is shown in 8 of 10 live full runs (23 Oct 2026, 22:47-23:07 MYT, Super VL). History: on Lightning,
+  answers HTTP 500. With Super VL (since 23 Oct evening) the explanation is shown in 6 of 7 live full-path runs (24 Oct 2026, 12:19-13:14 MYT; on 23 Oct, 22:47-23:07 MYT: 8 of 10). History: on Lightning,
   23 Oct 12:29-13:29 MYT, 10 live full runs showed the explanation in 8 of 10; the same evening Lightning stopped
   answering in time (5-8k hidden reasoning tokens per answer) - which is why both steps moved to Super VL. Every
   answer still gets the code checks and the Zetaris re-check; without the AI review VEDA sends the code-written card
-  only and says why in the trace. Recorded traces of these runs: `data/sample/live_traces/` (JPS readings not redistributed, per organiser ruling 23 Oct 2026; each trace's first line says what was redacted).
+  only and says why in the trace. Recorded traces of the 23 Oct runs: `data/sample/live_traces/` (JPS readings not redistributed, per organiser ruling 23 Oct 2026; each trace's first line says what was redacted).
 - **Replay data:** the Nov 2024 replay uses a few real reported readings. Hours between two known readings are
   reconstructed on a straight line and labelled as such. Times reported as "about" lower the confidence.
 - **No river-flow model yet:** GloFAS river-flow forecasts are not used.
@@ -319,8 +341,9 @@ Zetaris.
   NVIDIA directly.
 - **NVIDIA Nemotron 3.5 Super VL - where it contributes.** It writes the 1-2 sentence explanation in the user's
   language (BM or English) from the card's key facts, and it is the Critic's AI reviewer: one question - does the
-  explanation contradict, exaggerate or downplay a fact? Measured live, 23 Oct 2026, 22:47-23:07 MYT: explanation
-  shown in 8 of 10 full runs, AI review completed in 8 of 10.
+  explanation contradict, exaggerate or downplay a fact? Measured live, 24 Oct 2026, 12:19-13:14 MYT: 10 of 10
+  runs answered within 150 s; explanation shown in 6 of 7 full-path runs, AI review done in 6 of 7 (23 Oct, 22:47-23:07
+  MYT: 8 of 10 and 8 of 10).
 - **What is unique:** the model never decides - code reads, checks and reconciles the data and sets the verdict with
   rules a person can read; the model explains, a second model call checks the explanation against the facts, and a
   safety gate checks every answer last. The served model is verified on every call; one source failing never blocks
@@ -393,9 +416,14 @@ Zetaris.
     re-check.
 - **Every call:** streamed, a hard time limit inside the 150 s answer budget (draft at most 90 s, AI review at most
   45 s), a trace line with the model that actually answered and the Nightshift receipt id. Retries: the draft is
-  retried once after a fast failure (an NVIDIA 500 in under 10 s) and once after Nightshift's 45 s no-first-byte cut,
-  but only while 45 s of its 90 s are left; the AI review retries only a fast failure.
+  retried once after a fast failure (an NVIDIA 500 in under 10 s), and once after Nightshift's 45 s no-first-byte cut
+  or an empty reply, but only while 45 s of its 90 s are left; the AI review retries only a fast failure.
 - **Measured (real numbers, dated):**
+  - **Live, 10 runs on 24 Oct 2026, 12:19-13:14 MYT (Super VL by name; [`docs/EVIDENCE-live-24oct.md`](docs/EVIDENCE-live-24oct.md)):**
+    **10 of 10 answered within 150 s** (3 quick 5.5-6.4 s, 7 full 27.6-80.4 s); **AI explanation shown in 6 of 7**
+    full-path runs; **Critic AI review done in 6 of 7**; every call that answered was served by
+    `nvidia/nemotron-3.5-super-vl-120b-a12b`. The 2 draft misses were empty replies after ~26 s (the empty-reply
+    retry was added afterwards).
   - **Now (Super VL by name, test harness, 23 Oct 2026, 21:5x-22:25 MYT, 10 spaced calls each, replay and SYNTHETIC
     cards):** draft **7 of 10** answered (9-61 s, median 27 s; 1,025-2,735 tokens), all 7 passed the code checks; 3
     failed (2 Nightshift no-first-byte cuts at 45 s, 1 NVIDIA HTTP 500). AI review **9 of 10** answered (4-18 s), all 9
