@@ -1,7 +1,10 @@
 /* B-96 shared frame (top bar, demo strip, footer) - one file for every VEDA page: home + answer (index.html),
    /scenes, /how-it-works, /feedback. Uses the page's own colour tokens when it has them, else its own. */
-.vf-top { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; padding: 6px 16px;
+.vf-top { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; padding: 6px 16px; position: static;
           border-bottom: 1px solid var(--line, #d8d6cf); background: var(--card, #fff); }
+.vf-links { display: flex; flex-wrap: wrap; order: 3; flex-basis: 100%; margin-left: -10px; }   /* phone: 2nd row */
+.vf-top .vf-lang { order: 2; }
+@media (min-width: 700px) { .vf-links { order: 1; flex-basis: auto; margin-left: 8px; } }      /* one row */
 .vf-top a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: var(--fg, #1c1c1a);
             text-decoration: none; font-size: 1rem; }
 .vf-top a:hover, .vf-top a:focus-visible { text-decoration: underline; }
@@ -11,9 +14,13 @@
                    overflow: hidden; }
 .vf-top .vf-lang button { font: inherit; min-height: 44px; min-width: 48px; padding: 6px 12px; border: 0;
                           background: transparent; color: var(--fg, #1c1c1a); font-weight: 700; cursor: pointer; }
-.vf-top .vf-lang button[aria-pressed="true"] { background: var(--accent, #1f5e8c); color: var(--on-accent, #fff); }
+/* the chosen language: bold + underlined, never filled (one filled button per screen) */
+.vf-top .vf-lang button[aria-pressed="true"] { background: transparent; color: var(--fg, #1c1c1a); font-weight: 800;
+                                               box-shadow: inset 0 -4px 0 var(--accent, #1f5e8c); }
 .vf-strip { margin: 0; padding: 4px 16px; font-size: 1rem; background: #1c1c1a; color: #fff; }
 .vf-foot { margin: 32px 0 0; padding: 14px 16px 24px; border-top: 1px solid var(--line, #d8d6cf);
            display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; font-size: 1rem; color: var(--muted, #55554f); }
 .vf-foot a { display: inline-flex; align-items: center; min-height: 44px; color: var(--fg, #1c1c1a); }
-@media (max-width: 400px) { .vf-top a { padding: 0 7px; } .vf-top .vf-home { font-size: [JPS reading]rem; } }
+/* desktop: the bar, the strip and the footer line up with the page's content (max 1200 px, 32 px gutter) */
+@media (min-width: 1024px) { .vf-top, .vf-strip, .vf-foot { padding-left: max(32px, calc((100% - 1200px) / 2 + 32px));
+                                                           padding-right: max(32px, calc((100% - 1200px) / 2 + 32px)); } }

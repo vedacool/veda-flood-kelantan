@@ -14,7 +14,7 @@ def test_home_and_how_it_works_carry_the_frame(monkeypatch):
     for path, current in (("/", "/"),):
         html = c.get(path).text
         assert html.count('class="vf-top"') == 1 and html.count('class="vf-foot"') == 1, path
-        nav = re.search(r'<nav aria-label="VEDA">(.*?)</nav>', html).group(1)
+        nav = re.search(r'<header class="vf-top">(.*?)</header>', html).group(1)
         assert re.findall(r'href="([^"]+)"', nav) == ["/", "/scenes", "/how-it-works"]          # nothing else in the bar
         assert re.search(rf'href="{current}"[^>]*aria-current="page"', nav), path               # current page in bold
         assert '<!--VEDA:' not in html and 'id="aa"' not in html

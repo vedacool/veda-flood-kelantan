@@ -19,7 +19,7 @@ def test_send_and_listen_sit_right_under_what_to_do_and_check_again_at_the_botto
 
 def test_details_never_wraps_and_the_desktop_row_is_one_row():
     assert ".strip > span:last-child { white-space: nowrap;" in PAGE
-    assert "#s-answer > .actions { grid-template-columns: 1fr auto;" in PAGE
+    assert 'id="a-actions"' in PAGE                                   # B-96: WhatsApp alone (Listen is a link)
 
 
 def test_one_agent_tag_per_step():
@@ -32,11 +32,7 @@ def test_gauge_post_labels_are_spaced_and_the_2014_line_starts_right_of_the_post
     assert "const lo = r.level_m < low ? r.level_m - step * 0.6 : low;" in PAGE
 
 
-def test_demo_intro_only_in_the_demo(monkeypatch):
-    m = re.search(r'<p class="intro" id="demo-intro" hidden>.*?href="/scenes"', PAGE, re.S)
-    assert m and PAGE.index('id="towns"') < m.start()                       # under the towns: they stay on screen 1
-    assert 'demo_intro: "New here? Read a scene first, then test VEDA:", demo_scenes: "Scenes ›"' in PAGE
-    assert 'demo_intro: "Baru di sini? Baca senario dahulu, kemudian uji VEDA:", demo_scenes: "Senario ›"' in PAGE
+def test_health_says_demo_only_in_the_public_demo(monkeypatch):
     from app import main
     monkeypatch.setenv("SAMPLE_MODE", "true")
     monkeypatch.delenv("VEDA_DEMO", raising=False)

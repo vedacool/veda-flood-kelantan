@@ -30,9 +30,11 @@ def top(page, demo=None):
     demo = config.sample_mode() if demo is None else demo
     cur = lambda p: ' aria-current="page"' if p == page else ""                       # noqa: E731
     links = "".join(f'<a href="{href}"{cur(key)} {_words((en, ms))}</a>' for key, (href, en, ms) in PAGES.items())
+    # phone: VEDA + EN|BM on the first row, the two page links on the second; desktop: one row (frame.css)
     bar = ('<link rel="stylesheet" href="/frame.css">'
-           '<header class="vf-top"><nav aria-label="VEDA">'
-           f'<a class="vf-home" id="home-link" href="/"{cur("home")}>VEDA</a>{links}</nav>'
+           '<header class="vf-top">'
+           f'<a class="vf-home" id="home-link" href="/"{cur("home")}>VEDA</a>'
+           f'<nav class="vf-links" aria-label="VEDA">{links}</nav>'
            '<span class="vf-lang seg" role="group" aria-label="Language / Bahasa">'
            '<button type="button" data-lang="en" aria-pressed="true">EN</button>'
            '<button type="button" data-lang="ms" aria-pressed="false">BM</button></span></header>')

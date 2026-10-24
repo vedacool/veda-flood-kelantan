@@ -68,9 +68,8 @@
                   line-height: 1.15; gap: 2px; }
   .chips button small { font-size: 16px; color: var(--muted); font-weight: 400; }
   .small-note { font-size: 16px; color: var(--muted); margin: 8px 0 0; }
-  .chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent);
-                                       font-weight: 700; }
-  .chips button[aria-pressed="true"] small { color: var(--on-accent); }
+  /* B-96: the chosen moment is outlined + bold, never filled (one filled button per screen) */
+  .chips button[aria-pressed="true"] { border: 3px solid var(--accent); font-weight: 800; }
   .sheet { display: grid; gap: 8px; margin: -6px 0 14px; padding: 10px; border: 1px solid var(--line);
            border-radius: 14px; background: var(--card); }
   .sheet button { justify-content: flex-start; text-align: left; }
@@ -172,7 +171,17 @@
   .calm { font-weight: 700; margin: 4px 0 8px; }
   .combined { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-weight: 600; }
   .judge { margin-top: 12px; }
-  .demo-scenes { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; white-space: nowrap; }
+  .lede { font-size: 1.15rem; margin: 4px 0 14px; }
+  #s-home footer a { display: inline-flex; align-items: center; min-height: 44px; }   /* B-96: 44 px taps */
+  .i30-links { display: grid; gap: 0; margin: 8px 0 4px; }
+  .i30-links a, #a-useful a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
+  .other-head { font-size: 1.2rem; margin: 22px 0 8px; }
+  .links-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 20px; margin: 0 0 6px; }
+  #a-whybox { margin: 4px 0 8px; }
+  .trail { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+  .tech { margin-top: 12px; }
+  .tech summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+  .tech-log { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
   .judge-row { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 4px; font-weight: 600; }
   .judge .sub { margin: 0; }
   .todo h2 { text-transform: uppercase; letter-spacing: .03em; }
@@ -232,12 +241,11 @@
                 grid-template-rows: repeat(7, auto) 1fr; column-gap: 32px; align-items: start; }
     #s-answer > * { grid-column: 1 / -1; }
     #s-answer > #a-label, #s-answer > #a-place, #s-answer > #a-badge, #s-answer > #a-line,
-    #s-answer > .todo, #s-answer > .actions, #s-answer > #a-share { grid-column: 1; }
+    #s-answer > .todo, #s-answer > .actions, #s-answer > #a-share, #s-answer > #a-links,
+    #s-answer > #a-whybox { grid-column: 1; }
     #s-answer > #a-rows { grid-column: 2; grid-row: 1 / 9; }
     #s-answer > #a-rows > .card:first-child { margin-top: 0; }
-    #s-answer > .actions { grid-template-columns: 1fr auto; align-items: stretch; }   /* one row, card-wide */
     #s-answer > .actions .wide { grid-column: auto; }
-    #s-answer > .actions #a-listen { min-width: 6em; }
 
     /* Checking: the steps left, progress + tip right */
     #s-wait { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); column-gap: 40px;
@@ -255,18 +263,19 @@
 <!-- 1. Home -->
 <section id="s-home">
   <h1 data-t="home_title"></h1>
+  <!-- B-96 (Cowork wireframes v3): offline / the public demo - "VEDA in 30 seconds", ONE filled button -->
+  <div id="intro30" hidden>
+    <p class="lede" data-t="i30_line"></p>
+    <button type="button" class="primary wide" id="i30-start" data-t="i30_start"></button>
+    <p class="i30-links"><a href="/scenes" data-t="i30_scenes"></a><a href="/how-it-works" data-t="i30_how"></a></p>
+    <h2 class="other-head" data-t="other_place"></h2>
+  </div>
   <!-- Cowork 24 Oct (demo UI round): in the demo, the moment of the replay is visible and easy to change -->
   <div id="moment" hidden>
-    <p class="intro" id="intro"></p>
-    <div class="moment-head"><p class="moment-label" id="moment-label" data-t="change_moment"></p>
-      <button type="button" class="linkish" id="scenes-link" aria-expanded="false" aria-controls="scenes"></button></div>
+    <div class="moment-head"><p class="moment-label" id="moment-label" data-t="change_moment"></p></div>
     <div class="chips" id="chips" role="group" aria-labelledby="moment-label"></div>
-    <div class="sheet" id="scenes" hidden></div>
   </div>
   <div class="town-list" id="towns"></div>
-  <!-- Part 8: the public demo only - read a scene first (Session B's /scenes); under the towns so the four rows stay on the first phone screen -->
-  <p class="intro" id="demo-intro" hidden><span data-t="demo_intro"></span>
-    <a href="/scenes" class="demo-scenes" data-t="demo_scenes"></a></p>
   <!-- Cowork 24 Oct (Part 6): live mode covers five more places - tappable like a town row; never offline -->
   <div id="also" hidden><p class="moment-label" data-t="also_covered"></p><div class="also-chips" id="also-chips"></div></div>
   <p class="small-note" id="few-readings" data-t="few_readings" hidden></p>
@@ -344,7 +353,7 @@
     <label for="q" data-t="or_type"></label>
     <div class="ask">
       <input id="q" maxlength="500" required aria-describedby="privacy-line">
-      <button class="primary" type="submit" data-t="ask"></button>
+      <button class="primary" type="submit" id="ask-go" data-t="ask"></button>
     </div>
     <p id="privacy-line" class="note"><span data-t="privacy_short"></span>
       <button class="linkish" type="button" id="priv-more" aria-expanded="false" aria-controls="privacy" data-t="more"></button></p>
@@ -395,9 +404,17 @@
   <!-- Part 8 (design critique): send / listen right under WHAT TO DO -->
   <div class="actions" id="a-actions">
     <a class="btn wa wide" id="a-wa" target="_blank" rel="noopener" data-t="send_family"></a>
-    <button type="button" id="a-listen" data-t="listen"></button>
   </div>
-  <button type="button" class="linkish" id="a-share" data-t="see_text"></button>
+  <!-- B-96: only WhatsApp is filled; Listen is a text link beside "See or copy the text" -->
+  <p class="links-row" id="a-links"><button type="button" class="linkish" id="a-share" data-t="see_text"></button>
+    <button type="button" class="linkish" id="a-listen" data-t="listen"></button></p>
+  <!-- B-96: what each agent did for THIS answer, in plain words (Session B's trail.how_lines); the raw log under it -->
+  <div id="a-whybox" hidden>
+    <button type="button" class="linkish" id="a-why-open" aria-expanded="false" aria-controls="a-trail-box"
+            data-t="why_open"></button>
+    <div class="card" id="a-trail-box" hidden><ol class="trail" id="a-trail"></ol>
+      <details class="tech"><summary data-t="tech_log"></summary><ol class="tech-log" id="a-tech" lang="en"></ol></details></div>
+  </div>
   <div id="a-rows">
     <div class="card" id="a-river-box"><h2 data-t="river_here"></h2><div class="river"><div id="a-post"></div>
       <ul class="river-lines" id="a-river-lines"></ul></div></div>
@@ -428,6 +445,7 @@
   <button type="button" class="wide" id="a-again" data-t="again" style="margin-top:10px"></button>
   <button type="button" class="sos outline" id="a-sos" data-t="sos"></button>
   <p class="note" data-t="disclaimer"></p>
+  <p class="note" id="a-useful" hidden><a href="/feedback" data-t="useful"></a></p>
 </section>
 
 <!-- 7. How VEDA worked this out (from the run's trace; never the question) -->
@@ -508,7 +526,11 @@ const UI = {
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
     answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
     checks: "The Critic's {n} code checks",
-    demo_intro: "New here? Read a scene first, then test VEDA:", demo_scenes: "Scenes ›",
+    i30_line: "VEDA answers this for Kelantan. Several AI agents check each other's work, and every step is logged.",
+    i30_start: "Start: Rantau Panjang at the Nov 2024 flood peak", i30_scenes: "Test it yourself: 7 scenes ›",
+    i30_how: "How it works: agents, a live run, the API ›", other_place: "Or check another place",
+    why_open: "Why this answer? See how the agents decided ›", why_close: "Hide how the agents decided",
+    tech_log: "Show technical log", useful: "Was this useful? Tell us",
     ai_failed: "AI step not used", fallbacks: "AI steps replaced by code in this run",
     no_rain: "No rain figure for this time.", busy: "VEDA is answering another question - try again in a minute.",
     empty_question: "Ask a question about a place in Kelantan.", question_too_long: "Please keep the question under 500 characters.",
@@ -570,7 +592,11 @@ const UI = {
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
     answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
     checks: "{n} semakan kod oleh Penyemak",
-    demo_intro: "Baru di sini? Baca senario dahulu, kemudian uji VEDA:", demo_scenes: "Senario ›",
+    i30_line: "VEDA menjawab soalan ini untuk Kelantan. Beberapa ejen AI menyemak kerja satu sama lain, dan setiap langkah direkodkan.",
+    i30_start: "Mula: Rantau Panjang semasa kemuncak banjir Nov 2024", i30_scenes: "Uji sendiri: 7 senario ›",
+    i30_how: "Cara VEDA berfungsi: ejen, larian langsung, API ›", other_place: "Atau semak tempat lain",
+    why_open: "Kenapa jawapan ini? Lihat cara ejen membuat keputusan ›", why_close: "Sembunyikan cara ejen membuat keputusan",
+    tech_log: "Tunjuk log teknikal", useful: "Adakah ini berguna? Beritahu kami",
     ai_failed: "Langkah AI tidak digunakan", fallbacks: "Langkah AI yang diganti dengan kod",
     no_rain: "Tiada angka hujan untuk masa ini.", busy: "VEDA sedang menjawab soalan lain - sila cuba semula sebentar lagi.",
     empty_question: "Sila tanya tentang satu tempat di Kelantan.", question_too_long: "Sila pastikan soalan kurang daripada 500 aksara.",
@@ -624,7 +650,7 @@ const ICON = {  // simple shapes so the verdict never relies on colour alone
 const STAGES = ["plan", "gather", "forecast", "draft", "critique", "revise"];
 
 let lang = "en", words = null, result = null, sampleMode = false, lastQuestion = "", speaking = false, askedMode = null;
-let skipCheck = null;
+let skipCheck = null, publicDemo = false;
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
 const t = (key) => UI[lang][key];
@@ -656,7 +682,7 @@ function applyLang() {
   $("towns").replaceChildren(...TOWNS.map((town) => {
     const b = document.createElement("button");
     b.type = "button"; b.dataset.town = town;
-    b.innerHTML = `<span><b>${esc(town)}</b><small>${esc(RIVER[town])}</small></span><span class="go">${esc(t("check_row"))}</span>`;
+    b.innerHTML = `<span><b>${esc(town)}</b><small>${esc(RIVER[town])}</small></span><span class="go" aria-hidden="true">›</span>`;
     b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
     return b;
   }));
@@ -686,8 +712,6 @@ function pick(v) { $("mode").value = v; renderMoment(); }
 function renderMoment() {
   const cur = $("mode").value;
   const d = DATA.find((x) => x.v === cur) || {};
-  $("intro").textContent = t("intro");
-  $("intro").hidden = d.k !== "past";
   $("few-readings").hidden = d.k !== "past" || $("moment").hidden;
   const chip = (label, sub, pressed, onClick, extra) => {
     const b = document.createElement("button");
@@ -698,14 +722,8 @@ function renderMoment() {
     b.addEventListener("click", onClick);
     return b;
   };
-  const scenesOpen = !$("scenes").hidden;
-  const inScenes = d.k === "madeup" || d.k === "live";
+  // B-96: the made-up test scenes live on /scenes (the top bar), not beside the moment switch
   $("chips").replaceChildren(...DATA.filter((x) => x.chip).map((x) => chip(t(x.chip), x.at[lang], x.v === cur, () => pick(x.v))));
-  $("scenes-link").textContent = scenesOpen ? t("hide_scenes") : t("test_scenes");
-  $("scenes-link").setAttribute("aria-expanded", String(scenesOpen));
-  $("scenes-link").style.textDecoration = inScenes ? "underline" : "none";   // a test scene is the chosen data
-  $("scenes").replaceChildren(...DATA.filter((x) => (x.k === "madeup" || (x.k === "live" && !sampleMode))).map((x) =>
-    chip(x.k === "live" ? t("live") : `${t("madeup")} · ${x.what[lang]}`, "", x.v === cur, () => pick(x.v))));
 }
 function momentLabel() {   // the answer screen's "Replay · 27 Nov 2024, 7:30 pm · Change", from the moment asked about
   const d = DATA.find((x) => x.v === askedMode) || {};
@@ -1040,6 +1058,13 @@ function renderAnswer() {
     $("a-expl-lang-text").textContent = t("expl_lang_note");
     $("a-expl-recheck").textContent = t("expl_recheck");
   }
+  const trail = result.trail && result.trail[lang];      // B-96: the plain trail + the technical log under it
+  $("a-whybox").hidden = !(trail && trail.length);
+  if (trail && trail.length) {
+    $("a-trail").innerHTML = trail.map((r) => `<li><b>${esc(r.who)}</b> ${escBm(r.text)}</li>`).join("");
+    $("a-tech").innerHTML = ((result.how && result.how.rows) || []).flatMap((r) =>
+      r.lines.map((l) => `<li><span class="sub">${esc(l.agent || r.who)}</span> ${esc(l.text)}</li>`)).join("");
+  }
   $("a-sources").innerHTML = v.sources[lang].map((s) =>
     `<li class="${s.used ? "" : "out"}">${s.used ? "✓" : "–"} ${esc(s.name)} <span class="sub">(${esc(s.note)})</span></li>`).join("");
 }
@@ -1115,11 +1140,9 @@ function toggle(btn, box, open, closed) {
 $("priv-more").addEventListener("click", () => toggle($("priv-more"), $("privacy"), "less", "more"));
 $("a-change").addEventListener("click", () => {
   stopSpeaking(); show("s-home");
-  const pastNow = (DATA.find((d) => d.v === $("mode").value) || {}).k === "past";
-  $("scenes").hidden = pastNow;                          // a test scene was chosen: show the scene list open
   renderMoment();
   $("moment").scrollIntoView();
-  const pressed = document.querySelector("#chips [aria-pressed='true'], #scenes [aria-pressed='true']");
+  const pressed = document.querySelector("#chips [aria-pressed='true']");
   if (pressed) pressed.focus();
 });
 $("w-check").addEventListener("click", () => { if (skipCheck) skipCheck(); });
@@ -1129,7 +1152,8 @@ document.querySelectorAll(".m-town").forEach((g) => {
   g.addEventListener("click", () => townFromMap(g));
   g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); townFromMap(g); } });
 });
-$("scenes-link").addEventListener("click", () => { $("scenes").hidden = !$("scenes").hidden; renderMoment(); });
+$("i30-start").addEventListener("click", () => {                  // B-96: the one filled button on the demo home
+  pick(PEAK); ask(UI[lang].q_default.replace("{town}", "Rantau Panjang"), "Rantau Panjang"); });
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
   $("log").hidden = !$("log").hidden;
@@ -1143,6 +1167,7 @@ $("a-strip").addEventListener("click", () => {
 });
 $("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
 $("a-listen").addEventListener("click", listen);
+$("a-why-open").addEventListener("click", () => toggle($("a-why-open"), $("a-trail-box"), "why_close", "why_open"));
 $("a-check").addEventListener("click", () => { stopSpeaking(); ask(lastQuestion, (result && result.view && result.view.place) || ""); });
 // B3: re-ask in the page's language - the standard question for this place, written in that language
 $("a-expl-recheck").addEventListener("click", () => {
@@ -1186,7 +1211,10 @@ function showLive() {
 }
 const ready = fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
-  $("demo-intro").hidden = !h.demo;                     // Part 8: the public demo only
+  publicDemo = !!h.demo;
+  $("intro30").hidden = !sampleMode;                   // B-96: offline / the public demo - judges and testers first
+  $("ask-go").classList.toggle("primary", !sampleMode);  // ONE filled button: the demo's Start, or live's Ask
+  $("a-useful").hidden = !publicDemo;                  // /feedback exists in the public demo only
   showLive();
   // Cowork 24 Oct: the offline demo opens on the Nov 2024 flood at its peak, not on a made-up calm day
   if (sampleMode && !want) $("mode").value = PEAK;

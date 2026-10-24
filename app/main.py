@@ -189,6 +189,10 @@ def result_json(r):
     out["ai_judgement"] = ({"status": "live_only"} if r.get("sample_mode", config.sample_mode()) and (r.get("plan") or {}).get("effort")
                            == "full" else {k: j.get(k) for k in ("ai_level", "code_level", "final", "reasons",
                                                                  "confidence", "status", "why", "capped")} if j else None)
+    # B-96: "Why this answer?" - what each agent did, in plain words (Session B's app/trail.py, the scenes' trail too)
+    from app import scenes, trail
+    compact = scenes.compact(out)
+    out["trail"] = {lang: trail.how_lines(compact, lang) for lang in ("en", "ms")} if out["view"] else None
     expl = (out["view"] or {}).get("explanation")
     out["explanation_lang"] = expl.get("language") if expl else None
     # A6: a recognised Kelantan place VEDA does not cover yet -> the nearest covered town and how far (else None)
