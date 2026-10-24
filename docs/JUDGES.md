@@ -5,9 +5,14 @@ now?* This page runs it **offline** on your own computer: no keys, no accounts, 
 needed**. Offline (SAMPLE_MODE) runs VEDA's real agents and rules on recorded scenes: the November 2024 flood replay
 (river readings reported in the news, each cited) or a made-up test scene (labelled on every answer).
 
+**Coverage:** 9 places. The 4 on the Home screen (Rantau Panjang, Pasir Mas, Kota Bharu, Tumpat) work offline and
+live; 5 more work by typing their name in live mode (Kuala Krai, Tanah Merah, Dabong, Wakaf Bharu, Pasir Pekan). Which
+JPS gauges each place reads is tentative for all 9 until Dr Ariff (our hydrology reviewer) checks them. Any other
+Kelantan place gets "not covered yet" and a button for the nearest covered place.
+
 ## 1. Start it (about 3 minutes)
 You need **Python 3.10 or newer ([JPS reading] recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.10, [JPS reading],
-3.12 and [JPS reading]: install, the tests - 853 then - the safety scenarios and every row below. At `af05b22`: 938 tests and 34
+3.12 and [JPS reading]: install, the tests - 853 then - the safety scenarios and every row below. At `8f51777`: 989 tests and 35
 safety scenarios, run by CI on Python 3.13.) In a terminal:
 
 **Windows (PowerShell)**
@@ -47,6 +52,7 @@ show **Can't confirm**.
 | How the agents worked it out | on any answer: **Details** → **See how VEDA worked this out** | One row per step: which agent, seconds, how many Zetaris queries, word-for-word outputs; steps without AI say "Code only". Offline the AI steps (writing and checking the answer) show an amber fallback line, because no model is called |
 | The agents talking, step by step | from that screen: **Replay these steps live** (or open [127.0.0.1:8000/live](http://127.0.0.1:8000/live) in a second tab *before* tapping a town) | The live log: every trace line as a chat bubble, who is working, the Critic's checks |
 | The Critic asking for more data | [127.0.0.1:8000/?replay=synthetic_silent_upstream&at=2024-06-15%2010:00](http://127.0.0.1:8000/?replay=synthetic_silent_upstream&at=2024-06-15%2010:00) → **Pasir Mas**, then Details → See how VEDA worked this out → Replay these steps live | Blue **request** bubbles: the Critic asks the Data & Reconciler for a missing upstream reading, it finds Kg. Temangan, and the verdict is recomputed from Normal to **Keep watching** |
+| A place VEDA does not cover | on any page above, type `Is Bachok safe?` in **Or type a question** → **Ask** | "Not covered yet", the covered places, and a big **Check Kota Bharu (20 km away)** button that asks about the nearest covered town |
 | Bahasa Melayu | tap **BM** at the top right (or add `&lang=ms` to any link) | The whole page and the answer in Malay; tap **EN** to go back |
 
 No browser? The same agents answer on the command line and over HTTP. In a **second** terminal, in the `veda` folder:
@@ -71,7 +77,7 @@ Six ready-made inputs are in `input_examples/`, with VEDA's real answers and tra
   redacted). Replay one at 4× in the live log: [127.0.0.1:8000/live](http://127.0.0.1:8000/live) → *Replay a recorded
   run…* → pick one → **4×**.
 - **Every test and measurement**, with dates and how to reproduce them: [`docs/EVIDENCE.md`](EVIDENCE.md).
-- `python -m pytest -q` (938 offline tests at `af05b22`) and `python scripts/run_evals.py` (34 safety scenarios).
+- `python -m pytest -q` (989 offline tests at `8f51777`) and `python scripts/run_evals.py` (35 safety scenarios).
 
 ## What only works live, and why
 | Live only | Why it is not in offline mode |
@@ -79,6 +85,7 @@ Six ready-made inputs are in `input_examples/`, with VEDA's real answers and tra
 | **Today's JPS river levels** | JPS readings are fetched live at runtime only and never stored in this repo (organiser ruling, 23 Oct 2026). Offline uses the cited Nov 2024 replay and made-up scenes instead |
 | **Nemotron's explanation and the Critic's AI review** | They need Meterless Nightshift with an NVIDIA key. Offline no model is called, so the answer card is the code-written one (it is always checked by code; the AI only adds 1-2 sentences). The recorded live traces above show the AI steps |
 | **`/admin`** in full (source health, circuit breakers, the growth strip, gauges VEDA found that wait for a person's approval) | They come from the World Model that live runs build up on disk. Offline each run has its own in-memory World Model, so `/admin` opens but shows only the list of recent answers; approving a gauge is live only and needs a named person |
+| **Kuala Krai, Tanah Merah, Dabong, Wakaf Bharu, Pasir Pekan** | Added 24 Oct for live mode, read from today's JPS gauges; the offline scenes are set up for the 4 Home towns only, so offline these 5 get "not covered yet" with the nearest covered town |
 | **MetMalaysia warnings and forecasts for today** | Read live from data.gov.my; the replay dates have no recorded warnings |
 
 Live setup (Zetaris + Nightshift): see the README, *Live setup*. Not an official flood warning: follow JPS / APM / police
