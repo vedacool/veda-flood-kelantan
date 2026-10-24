@@ -23,6 +23,9 @@ from app.adapters import zetaris
 # Words that do not change which place is meant ("Bandar Kota Bharu", "Jajahan Tumpat", "near Pasir Mas").
 FILLER = {"bandar", "jajahan", "daerah", "pekan", "town", "city", "district", "of", "di", "in", "at", "near",
           "dekat", "the", "kawasan", "area"}
+# A6 (24 Oct evening): these are filler only in front of a place ("Pekan Tumpat"); after a word they are part of
+# the name ("Pasir Pekan" was read as "pasir" - no place, no nearest town).
+PREFIX_ONLY = {"bandar", "jajahan", "daerah", "pekan", "kawasan"}
 CLOSE_MATCH = 0.75          # difflib ratio for "Did you mean ...?" (plain spelling similarity)
 AGENT = "Gazetteer"
 KNOWN_RETRY_S = 15 * 60     # after a failed read of the known names, wait like the circuit breaker (data.gov.my 429)
@@ -35,6 +38,10 @@ PLACES_SQL = ("SELECT a.alias_norm, p.place_id, p.name, p.district, p.kind, p.la
 DISTRICT_CENTRES_SQL = ("SELECT s.district, AVG(s.latitude) AS lat, AVG(s.longitude) AS lon "
                         "FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s GROUP BY s.district")
 KNOWN_KELANTAN_SQL = "SELECT DISTINCT place FROM veda.forecast_kelantan"
+# A6: the places JPS names its Kelantan stations after ("Sg. Golok di Kg. Jenob" -> Kg. Jenob), with positions - more
+# Kelantan names VEDA recognises, each placed exactly for the nearest covered town (station positions, not readings)
+STATION_PLACES_SQL = ("SELECT s.station_name, s.latitude, s.longitude FROM veda_wx.mygov_flood "
+                      "LATERAL VIEW explode(data) AS s")
 
 
 @dataclass
@@ -51,9 +58,16 @@ class Resolution:
 
 
 def normalize(text):
-    """Lower-case, letters/digits only, filler words dropped, single spaces: 'Bandar Kota-Bharu!' -> 'kota bharu'."""
+    """Lower-case, letters/digits only, filler words dropped, single spaces: 'Bandar Kota-Bharu!' -> 'kota bharu'.
+    'bandar' / 'pekan' / ... are dropped only where they start a name: 'Pasir Pekan' stays 'pasir pekan'."""
     words = re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).split()
-    return " ".join(w for w in words if w not in FILLER)
+    out = []
+    for i, w in enumerate(words):
+        prev = words[i - 1] if i else None
+        if w in FILLER and (w not in PREFIX_ONLY or prev is None or prev in FILLER):
+            continue
+        out.append(w)
+    return " ".join(out)
 
 
 _cache = {}
@@ -104,8 +118,30 @@ def _km(lat1, lon1, lat2, lon2):
     return 6371 * 2 * math.asin(math.sqrt(a))
 
 
+def station_places(agent=AGENT):
+    """{normalized place: (name, lat, lon)} from JPS's Kelantan station names; {} if they cannot be read."""
+    if "stations" not in _cache:
+        try:
+            rows = zetaris.run_sql(STATION_PLACES_SQL, agent=agent, purpose="gazetteer: places named by JPS stations",
+                                   limit=2000).records
+        except zetaris.ZetarisError:
+            rows = []
+        out = {}
+        for r in rows:
+            name = re.sub(r"\s*\((F\d+|RHN)\)|,?\s*(di\s+)?Kelantan$", "", str(r.get("station_name") or "")).strip()
+            name = name.split(" di ", 1)[-1].strip()
+            if name and r.get("latitude") is not None and normalize(name):
+                out.setdefault(normalize(name), (name, float(r["latitude"]), float(r["longitude"])))
+        _cache["stations"] = out
+    return _cache["stations"]
+
+
 def nearest_covered(name, aliases, agent=AGENT):
-    """{'name', 'km'} of the covered place nearest to a known Kelantan district, or None if it cannot be placed."""
+    """{'name', 'km'} of the covered place nearest to a known Kelantan place - a JPS station's place (its own
+    position) or a district (the average of its stations) - or None if it cannot be placed."""
+    spot = station_places(agent).get(normalize(name))
+    if spot:
+        return _nearest(spot[1], spot[2], aliases)
     if "centres" not in _cache:
         try:
             rows = zetaris.run_sql(DISTRICT_CENTRES_SQL, agent=agent, purpose="gazetteer: district positions").records
@@ -115,11 +151,15 @@ def nearest_covered(name, aliases, agent=AGENT):
     centre = _cache["centres"].get(normalize(name))
     if not centre:
         return None
+    return _nearest(centre["lat"], centre["lon"], aliases)
+
+
+def _nearest(lat, lon, aliases):
     places = {r["place_id"]: r for r in aliases.values() if r.get("lat") is not None}
-    best = min(places.values(), key=lambda r: _km(centre["lat"], centre["lon"], r["lat"], r["lon"]), default=None)
+    best = min(places.values(), key=lambda r: _km(lat, lon, r["lat"], r["lon"]), default=None)
     if best is None:
         return None
-    km = _km(centre["lat"], centre["lon"], best["lat"], best["lon"])
+    km = _km(lat, lon, best["lat"], best["lon"])
     return {"name": best["name"], "km": max(5, int(round(km / 5)) * 5)}
 
 
@@ -144,6 +184,7 @@ def resolve(text, agent=AGENT):
                              message="Did you mean " + " or ".join(names) + "?",
                              covered=sorted({r["name"] for r in aliases.values()}))
     if res is None:
+        known = {**{k: v[0] for k, v in station_places(agent).items()}, **known}    # A6: + JPS station places
         key = q if q in known else next(iter(difflib.get_close_matches(q, list(known), n=1, cutoff=0.85)), None)
         if key is None and q:       # a known name inside a longer question ("machang banjir tak") - longest wins
             inside = [k for k in known if k and re.search(rf"\b{re.escape(k)}\b", q)]

@@ -1,0 +1,272 @@
+{
+ "sql": "SELECT s.station_name, s.latitude, s.longitude FROM veda_wx.mygov_flood LATERAL VIEW explode(data) AS s",
+ "query_hash": "2c9b4c46e19aebc5",
+ "recorded_at": "2026-10-24T11:30:48Z",
+ "columns": [
+  "station_name",
+  "latitude",
+  "longitude"
+ ],
+ "rows": [
+  [
+   "Sg. Melor di Jambatan Melor",
+   "5.956478",
+   "102.297742"
+  ],
+  [
+   "Sg. Galas di Limau Kasturi",
+   "5.075726",
+   "102.07159"
+  ],
+  [
+   "Sg. Lanas di Air Lanas",
+   "5.784855",
+   "101.88935"
+  ],
+  [
+   "Sg. Pergau di Air Bol (F1)",
+   "5.7035",
+   "101.81841"
+  ],
+  [
+   "Sg. Kelantan di Tambatan D'Raja (F1)",
+   "6.134988",
+   "102.23489"
+  ],
+  [
+   "Sg. Galas di Dabong",
+   "5.37961",
+   "102.0154"
+  ],
+  [
+   "Sg. Lebir di Kg. Tualang",
+   "5.2749",
+   "102.26524"
+  ],
+  [
+   "Sg. Golok di Rantau Panjang (F1)",
+   "6.02289",
+   "101.9764"
+  ],
+  [
+   "Sg. Semerak di Pasir Puteh (F1)",
+   "5.83549",
+   "102.41136"
+  ],
+  [
+   "Sg. Golok di Kg. Jenob (F1)",
+   "5.83278",
+   "101.88306"
+  ],
+  [
+   "Sg. Kelantan di Kusial (F1)",
+   "5.76293",
+   "102.14699"
+  ],
+  [
+   "Sg. Golok di Kuala Jambu (F1)",
+   "6.14938",
+   "102.09293"
+  ],
+  [
+   "Sg. Galas di Kg. Lembaga (F1)",
+   "4.89691",
+   "101.96658"
+  ],
+  [
+   "Sg. Kelantan di Kg. Salor",
+   "6.043157",
+   "102.199323"
+  ],
+  [
+   "Sg. Galas di Chegar Lapan, Kelantan",
+   "5.369722",
+   "102.007222"
+  ],
+  [
+   "Sg. Pahi di Kg. Pahi",
+   "5.57512",
+   "102.22246"
+  ],
+  [
+   "Sg. Semerak di Tok Bali",
+   "5.894532",
+   "102.479529"
+  ],
+  [
+   "Sg. Galas di Kg. Pulai",
+   "4.78903",
+   "101.94134"
+  ],
+  [
+   "Sg. Lebir di Kuala Koh",
+   "4.87071",
+   "102.43955"
+  ],
+  [
+   "Sg. Pergau di Kg. Lawar",
+   "5.67311",
+   "101.70519"
+  ],
+  [
+   "Sg. Buaya Ikat di Kg. Pulau Lima",
+   "5.815541",
+   "102.455287"
+  ],
+  [
+   "Sg. Galas di Kg. Lembaga (RHN)",
+   "4.897222",
+   "101.966389"
+  ],
+  [
+   "Sg. Kelantan di Kuala Besar",
+   "6.20993",
+   "102.23593"
+  ],
+  [
+   "Sg. Kelantan di Kuala Krai",
+   "5.53264",
+   "102.19651"
+  ],
+  [
+   "Sg. Nenggiri di Bertam",
+   "5.146471",
+   "102.04431"
+  ],
+  [
+   "Serdang di Gunong Barat Bachok",
+   "5.941111",
+   "102.341667"
+  ],
+  [
+   "Gua Musang",
+   "4.8704",
+   "101.96069"
+  ],
+  [
+   "Sek. Keb. Chalil",
+   "5.09417",
+   "102.28135"
+  ],
+  [
+   "Batu 13",
+   "5.7848",
+   "101.88936"
+  ],
+  [
+   "Kg. Air Satan",
+   "5.730395",
+   "101.902279"
+  ],
+  [
+   "Kg. Jeli",
+   "5.7",
+   "101.8333"
+  ],
+  [
+   "Gunung Stong",
+   "5.34233",
+   "101.98253"
+  ],
+  [
+   "Emp. Bukit Kwong (RHN)",
+   "5.926389",
+   "101.958333"
+  ],
+  [
+   "Kg. Tandak (Bkt. P.Junu di Kelantan)",
+   "5.957778",
+   "102.046389"
+  ],
+  [
+   "Rumah Pam JPS Meranti",
+   "6.104819",
+   "102.095025"
+  ],
+  [
+   "Rumah Pam Repek di Kelantan",
+   "6.011667",
+   "102.098889"
+  ],
+  [
+   "SM Cherang Ruku",
+   "5.859875",
+   "102.490461"
+  ],
+  [
+   "Ladang Kerilla",
+   "5.6846",
+   "102.10509"
+  ],
+  [
+   "Pej. Pertanian Btg. Merbau di Kelantan",
+   "5.81",
+   "102.019444"
+  ],
+  [
+   "Pak Badol",
+   "5.9425",
+   "102.302778"
+  ],
+  [
+   "Felda Aring 5",
+   "4.80852",
+   "102.32049"
+  ],
+  [
+   "Felda Ciku 3",
+   "4.9714",
+   "102.20004"
+  ],
+  [
+   "Ladang Mentara",
+   "4.738352",
+   "102.015079"
+  ],
+  [
+   "Upper Chiku",
+   "4.909",
+   "102.17222"
+  ],
+  [
+   "Kg. Tg. Abd. Rahman Kuala Balah",
+   "5.42354",
+   "101.91528"
+  ],
+  [
+   "IPMI Zon Timur",
+   "6.12398",
+   "102.28951"
+  ],
+  [
+   "Peringat",
+   "5.78832",
+   "102.15288"
+  ],
+  [
+   "Ibu Bekalan To Uban di Kelantan",
+   "5.968056",
+   "102.136944"
+  ],
+  [
+   "Kg. Wakaf Raja di Kelantan",
+   "5.753889",
+   "102.430278"
+  ],
+  [
+   "Tok Ajam di Kelantan",
+   "5.858056",
+   "102.396667"
+  ],
+  [
+   "SK Kemahang 3",
+   "5.89779",
+   "101.99836"
+  ],
+  [
+   "Sg. Kelantan di Jambatan Tendong (F2)",
+   "6.056431",
+   "102.21313"
+  ]
+ ]
+}

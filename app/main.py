@@ -184,6 +184,9 @@ def result_json(r):
     # reader switches EN | BM. None when no AI paragraph is shown.
     expl = (out["view"] or {}).get("explanation")
     out["explanation_lang"] = expl.get("language") if expl else None
+    # A6: a recognised Kelantan place VEDA does not cover yet -> the nearest covered town and how far (else None)
+    near = (r.get("plan") or {}).get("nearest") if (r.get("plan") or {}).get("place_status") == "not_covered" else None
+    out["nearest_covered"] = {"place": near["name"], "km": near["km"]} if near else None
     return out
 
 

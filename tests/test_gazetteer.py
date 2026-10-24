@@ -103,3 +103,28 @@ def test_nearest_rain_point():
 def test_known_place_inside_a_question_is_recognised(offline, question, known):
     r = gazetteer.resolve(question)
     assert r.status == "not_covered" and r.known == known
+
+
+# -- A6 (24 Oct evening live test): "Pasir Pekan" got no nearest-town reply -------------------------------------------
+@pytest.mark.parametrize("text, norm", [("is pasir pekan will get flooding?", "is pasir pekan will get flooding"),
+                                        ("Pekan Tumpat banjir?", "tumpat banjir"), ("Bandar Kota Bharu", "kota bharu"),
+                                        ("rumah di pekan tumpat", "rumah tumpat"), ("near Pasir Mas", "pasir mas")])
+def test_prefix_words_are_dropped_only_in_front_of_a_name(text, norm):
+    assert gazetteer.normalize(text) == norm
+
+
+def test_a_place_named_by_a_jps_station_gets_its_nearest_covered_town(offline):
+    res = gazetteer.resolve("Kuala Besar banjir tak?")
+    assert res.status == "not_covered" and res.known == "Kuala Besar"
+    assert res.nearest and res.nearest["name"] in ("Kota Bharu", "Tumpat") and res.nearest["km"] >= 5
+
+
+def test_result_carries_nearest_covered(offline, tmp_path):
+    from app import loop, main
+    trace.end_run()
+    r = loop.run("Is Kuala Besar safe?", quiet=True, log_dir=tmp_path, default_scene=True)
+    out = main.result_json(r)
+    assert out["nearest_covered"] and set(out["nearest_covered"]) == {"place", "km"}
+    r = loop.run("Is Tumpat safe?", quiet=True, log_dir=tmp_path, default_scene=True)
+    assert main.result_json(r)["nearest_covered"] is None
+    trace.start_run("gazetteer test", log_dir=tmp_path, quiet=True)
