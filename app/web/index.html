@@ -199,6 +199,41 @@
   .steps { padding-left: 1.4em; }
   .steps li { margin: 0 0 10px; }
   @media (max-width: 400px) { .rows > div { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* B2 desktop (>= 1024 px only; the phone layout above is unchanged). Two columns placed with CSS grid, so the
+     document order - what phones and screen readers follow - stays the same. Each two-column screen gives its
+     right-hand box a span over the left column's rows plus one last flexible row, which takes up any extra height,
+     so the left column never gets gaps. Content at most ~1200 px wide. */
+  @media (min-width: 1024px) {
+    main { max-width: 1200px; padding: 24px 32px 48px; }
+    #s-how, #s-share, #s-sos { max-width: 760px; margin: 0 auto; }          /* text screens: readable line length */
+
+    /* Home: the town list (and the moment, the question box, the stranded button) left, the map right */
+    #s-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+              grid-template-rows: repeat(6, auto) 1fr; column-gap: 40px; align-items: start; }
+    #s-home > * { grid-column: 1; }
+    #s-home > #map-box { grid-column: 2; grid-row: 1 / 8; margin-top: 0; }
+    #s-home > footer { grid-column: 1 / -1; grid-row: 8; }
+
+    /* Answer: verdict, WHAT TO DO and the actions left; the river (gauge post, upstream strip, rain) right;
+       Details and everything after them full width below */
+    #s-answer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                grid-template-rows: repeat(7, auto) 1fr; column-gap: 32px; align-items: start; }
+    #s-answer > * { grid-column: 1 / -1; }
+    #s-answer > #a-label, #s-answer > #a-place, #s-answer > #a-badge, #s-answer > #a-line,
+    #s-answer > .todo, #s-answer > .actions, #s-answer > #a-share { grid-column: 1; }
+    #s-answer > #a-rows { grid-column: 2; grid-row: 1 / 9; }
+    #s-answer > #a-rows > .card:first-child { margin-top: 0; }
+    #s-answer > .actions { grid-template-columns: 2fr 1fr 1fr; }
+    #s-answer > .actions .wide { grid-column: auto; }
+
+    /* Checking: the steps left, progress + tip right */
+    #s-wait { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); column-gap: 40px;
+              align-items: start; }
+    #s-wait > #w-place { grid-column: 1 / -1; }
+    #s-wait > .wait-steps { grid-column: 1; grid-row: 2; }
+    #s-wait > .wait-side { grid-column: 2; grid-row: 2; }
+  }
 </style>
 </head>
 <body>
@@ -281,14 +316,18 @@
 <!-- 2. Waiting -->
 <section id="s-wait" hidden>
   <p class="place" id="w-place"></p>
+  <div class="wait-side"><!-- desktop: right column (progress + tip); phone: first, as before -->
   <p class="status" id="w-status" role="status" aria-live="polite"></p>
   <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="w-bar-box"><div id="w-bar"></div></div>
   <div class="card tip" id="w-tip"></div>
+  </div>
+  <div class="wait-steps"><!-- desktop: left column (the steps) -->
   <!-- Cowork 24 Oct: a short "checking" step - the run's real steps in plain words, 2-4 s, tap to skip -->
   <button type="button" class="card checking" id="w-check" hidden aria-describedby="w-skip-note">
     <ul id="w-check-list"></ul><span class="sub" id="w-skip-note" data-t="tap_skip"></span></button>
   <button class="linkish" type="button" id="w-more" aria-expanded="false" data-t="see_doing"></button>
   <ol id="log" hidden></ol>
+  </div>
 </section>
 
 <!-- 3. Answer -->
