@@ -19,7 +19,8 @@
   ul { padding-left: 1.2em; }
   li { margin: 6px 0; }
   a { color: var(--accent); }
-  li a { display: inline-flex; align-items: center; min-height: 44px; }
+  /* 44 px tap targets that keep the normal line height (padding offset by a negative margin) */
+  li a { display: inline-block; padding: 10px 0; margin: -10px 0; }
 </style>
 </head>
 <body>

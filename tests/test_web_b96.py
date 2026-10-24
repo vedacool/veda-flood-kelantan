@@ -42,3 +42,21 @@ def test_fix_round_plain_replay_line_end_links_and_one_disclaimer():
     assert PAGE.split('id="s-sos"')[0].count('data-t="disclaimer"') == 0 and 'data-t="footer"' not in PAGE
     assert 'i30_how: "Cara VEDA berfungsi: ejen, rakaman sebenar, API ›"' in PAGE
     assert 'useful: "Was this useful? Tell us"' in PAGE and '$("a-useful").hidden = !publicDemo;' in PAGE
+
+
+LIVE = (config.ROOT / "app" / "web" / "live.html").read_text(encoding="utf-8")
+
+
+def test_live_has_no_filled_button_and_opens_on_the_featured_run_in_the_demo():
+    assert 'button[aria-pressed="true"] { border: 3px solid var(--accent); font-weight: 800; }' in LIVE
+    assert "background: var(--accent)" not in LIVE                                   # nothing filled
+    assert 'id="b-replay"' in LIVE and 'const FEATURED = "20261024-201011";' in LIVE
+    assert 'if (h.sample_mode) listed.then(() => loadChosen(true)); else goLive();' in LIVE   # live mode unchanged
+    assert 'hint: "Press play to watch each agent step, recorded live."' in LIVE
+    assert LIVE.index('id="b-play"') < LIVE.index('<div class="wrap">')               # Play before the panel
+
+
+def test_bm_change_link_never_breaks_and_sources_lines_keep_their_height():
+    assert '<span class="nowrap"><span id="a-change-dot"' in PAGE
+    src = (config.ROOT / "app" / "web" / "sources.html").read_text(encoding="utf-8")
+    assert "li a { display: inline-block; padding: 10px 0; margin: -10px 0; }" in src

@@ -25,7 +25,10 @@
   .lhead h1 { font-size: 1.2rem; margin: 0 auto 0 0; }
   button, select { font: inherit; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line);
                    background: var(--card); color: var(--fg); cursor: pointer; }
-  button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  /* B-96: a selected choice is bold + outlined, never filled - /live has no filled button */
+  button[aria-pressed="true"] { border: 3px solid var(--accent); font-weight: 800; }
+  .seg2 { display: inline-flex; gap: 6px; }
+  .hint { margin: 0 0 10px; font-weight: 600; }
   .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; max-width: 1200px; margin: 0 auto; padding: 16px; }
   @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } aside { order: -1; } }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
@@ -65,6 +68,9 @@
   .note { color: var(--muted); }
   [hidden] { display: none !important; }
   main, aside { min-width: 0; }   /* B-96: no sideways scroll on a phone */
+  .top { max-width: 1200px; margin: 0 auto; padding: 16px 16px 0; }
+  .top .controls { margin-bottom: 8px; }
+  .controls select { min-width: 0; width: 100%; }
   #rec { max-width: 100%; }
 </style>
 </head>
@@ -75,15 +81,22 @@
   <h1>VEDA · live log</h1>
   <span class="note" id="h-note">The question itself is never shown here.</span>
 </div>
+<!-- B-96: the controls first on every width (in the demo, Play is what a visitor needs) -->
+<div class="top">
+  <div class="controls">
+    <span class="seg2" role="group" aria-label="Live or replay">
+      <button type="button" id="b-live" aria-pressed="true">Live</button>
+      <button type="button" id="b-replay" aria-pressed="false">Replay</button></span>
+    <select id="rec" aria-label="Recorded run" hidden></select>
+    <span class="seg2" role="group" aria-label="Speed" id="speeds" hidden>
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="4" aria-pressed="false">4×</button></span>
+    <button type="button" id="b-play" hidden>Play ▶</button>
+  </div>
+  <p class="hint" id="hint" hidden></p>
+</div>
 <div class="wrap">
   <main>
-    <div class="controls">
-      <button type="button" id="b-live" aria-pressed="true">Live</button>
-      <select id="rec" aria-label="Recorded run"><option value="">Replay a recorded run…</option></select>
-      <button type="button" data-speed="1" aria-pressed="true">1×</button>
-      <button type="button" data-speed="4" aria-pressed="false">4×</button>
-      <button type="button" id="b-play" hidden>Play</button>
-    </div>
     <p id="status" role="status" aria-live="polite"></p>
     <p class="note" id="rnote" hidden></p>
     <ol id="feed"></ol>
@@ -99,15 +112,18 @@
 const $ = (id) => document.getElementById(id);
 // The two public header lines follow the main page's EN | BM toggle (wording review 24 Oct); the log stays English.
 const HEAD = {
-  en: { note: "The question itself is never shown here.",
+  en: { hint: "Press play to watch each agent step, recorded live.",
+        note: "The question itself is never shown here.",
         waiting: "Waiting for a question… Ask one on VEDA's main page and every step appears here as it happens." },
-  ms: { note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
+  ms: { hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.",
+        note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
         waiting: "Menunggu soalan… Tanya di halaman utama VEDA dan setiap langkah akan muncul di sini ketika ia berlaku." },
 };
 const pageLang = () => { try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; } };
 function applyHeadLang() {
   const h = HEAD[pageLang()];
   $("h-note").textContent = h.note; $("h-note").lang = pageLang();
+  $("hint").textContent = h.hint; $("hint").lang = pageLang();
   if (Object.values(HEAD).some((x) => x.waiting === $("status").textContent)) $("status").textContent = h.waiting;
 }
 window.addEventListener("storage", (e) => { if (e.key === "veda.lang") applyHeadLang(); });
@@ -206,8 +222,8 @@ function add(rec) {
 // ---------- live ----------
 function goLive() {
   stopReplay();
-  mode = "live"; $("b-live").setAttribute("aria-pressed", "true"); $("rec").value = ""; $("rnote").hidden = true;
-  $("b-play").hidden = true;
+  mode = "live"; pressMode(); $("rnote").hidden = true;
+  $("b-play").hidden = true; $("hint").hidden = true;
   $("feed").replaceChildren(); whoPanel();
   $("status").textContent = HEAD[pageLang()].waiting;
   if (source) source.close();
@@ -218,13 +234,25 @@ function goLive() {
 
 // ---------- replay of a recorded run (its own timestamps; Nemotron calls wait as long as they took) ----------
 function stopReplay() { clearTimeout(timer); timer = null; clearWait(); }
-function loadRecorded(records, note) {
+function pressMode() {          // Live · Replay: the replay's run list and speed show only in Replay
+  $("b-live").setAttribute("aria-pressed", String(mode === "live"));
+  $("b-replay").setAttribute("aria-pressed", String(mode === "replay"));
+  $("rec").hidden = $("speeds").hidden = mode !== "replay";
+}
+function loadRecorded(records, note, wait) {
   if (source) { source.close(); source = null; }
   stopReplay();
-  mode = "replay"; $("b-live").setAttribute("aria-pressed", "false");
+  mode = "replay"; pressMode();
   recorded = records; $("b-play").hidden = false;
   $("rnote").hidden = !note; $("rnote").textContent = note ? "Recorded run: " + note : "";
+  $("hint").hidden = !wait;
+  if (wait) { $("feed").replaceChildren(); whoPanel(); $("status").textContent = ""; return; }   // demo: press Play
   play();
+}
+async function loadChosen(wait) {
+  if (!$("rec").value) return;
+  const r = await fetch("/trace/recorded/" + encodeURIComponent($("rec").value)).then((x) => x.json());
+  loadRecorded(r.records || [], r.note, wait);
 }
 function play() {
   stopReplay();
@@ -245,26 +273,27 @@ function play() {
 }
 
 $("b-live").addEventListener("click", goLive);
-$("b-play").addEventListener("click", () => recorded && play());
+$("b-play").addEventListener("click", () => { $("hint").hidden = true; if (recorded) play(); });
+$("b-replay").addEventListener("click", () => loadChosen(true));
 function setSpeed(s) {
   speed = s === 4 ? 4 : 1;
   document.querySelectorAll("[data-speed]").forEach((x) => x.setAttribute("aria-pressed", String(Number(x.dataset.speed) === speed)));
 }
 document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
-$("rec").addEventListener("change", async () => {
-  if (!$("rec").value) { goLive(); return; }
-  const r = await fetch("/trace/recorded/" + encodeURIComponent($("rec").value)).then((x) => x.json());
-  loadRecorded(r.records || [], r.note);
-});
+$("rec").addEventListener("change", () => loadChosen(true));
 
 whoPanel();
-fetch("/trace/recorded").then((r) => r.json()).then((list) => {
+// B-96: the run a judge should see first - the Critic asking the Data agent for more data (Wakaf Bharu, 24 Oct 20:10)
+const FEATURED = "20261024-201011";
+const listed = fetch("/trace/recorded").then((r) => r.json()).then((list) => {
   list.forEach((x) => {
     const o = document.createElement("option");
     o.value = x.name;
     o.textContent = `${(x.started || "").replace("T", " ").replace("Z", " UTC")} · ${x.question || x.run_id}`;
     $("rec").append(o);
   });
+  const f = list.find((x) => (x.name || "").includes(FEATURED));
+  if (f) $("rec").value = f.name;
 }).catch(() => {});
 const params = new URLSearchParams(location.search);
 if (params.get("run")) {  // one run from logs/ (this computer only), replayed from its trace
@@ -278,7 +307,10 @@ if (params.get("run")) {  // one run from logs/ (this computer only), replayed f
   fetch("/trace/recorded/" + encodeURIComponent(params.get("recorded"))).then((r) => r.json())
     .then((b) => { if (params.get("speed")) setSpeed(Number(params.get("speed"))); loadRecorded(b.records || [], b.note); });
 } else {
-  goLive();
+  // B-96: in the demo (offline) nothing runs live - open in Replay on the featured run, waiting for Play
+  fetch("/health").then((r) => r.json()).then((h) => {
+    if (h.sample_mode) listed.then(() => loadChosen(true)); else goLive();
+  }).catch(() => goLive());
 }
 applyHeadLang();
 </script>

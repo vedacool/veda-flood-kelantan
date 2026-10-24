@@ -57,7 +57,8 @@
   a { color: var(--accent); }
   [hidden] { display: none !important; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
-  .moment-line { color: var(--muted); margin: 0 0 4px; }        /* B-96: plain grey text, never a dashed pill */
+  .moment-line { color: var(--muted); margin: 0 0 4px; }
+  .nowrap { white-space: nowrap; }                                  /* "· Change" never breaks */        /* B-96: plain grey text, never a dashed pill */
   .chip { display: inline-block; border: 2px dashed var(--muted); border-radius: 999px; padding: 2px 12px; font-weight: 700;
           color: var(--muted); }
   /* the replay moment (demo) */
@@ -387,8 +388,8 @@
 
 <!-- 3. Answer -->
 <section id="s-answer" hidden>
-  <p id="a-label" class="moment-line" hidden><span id="a-label-text"></span><span id="a-change-dot" aria-hidden="true"
-     hidden> · </span><button type="button" class="linkish" id="a-change" data-t="change" hidden></button></p>
+  <p id="a-label" class="moment-line" hidden><span id="a-label-text"></span><span class="nowrap"><span id="a-change-dot"
+     aria-hidden="true" hidden> · </span><button type="button" class="linkish" id="a-change" data-t="change" hidden></button></span></p>
   <p class="place" id="a-place"></p>
   <!-- v2 (Cowork blueprint 24 Oct): level word + "Level n of 4" + ONE action line; never colour alone -->
   <div class="verdict" id="a-badge" role="group"></div>
