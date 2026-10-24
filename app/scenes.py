@@ -21,7 +21,7 @@ from pathlib import Path
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from app import config, trail
+from app import config, frame, trail
 from app.view import HEADLINE
 
 ROOT = config.ROOT
@@ -231,7 +231,7 @@ async def handle(tail, request):
     parts = [p for p in tail.split("/") if p]
     ids = {s["id"] for s in expected()["scenes"]}
     if request.method == "GET" and (not parts or (len(parts) == 1 and parts[0] in ids)):
-        return HTMLResponse(PAGE.read_text(encoding="utf-8"))
+        return HTMLResponse(frame.framed(PAGE.read_text(encoding="utf-8"), "scenes"))   # B-96 shared frame
     if request.method == "GET" and parts == ["data.json"]:
         exp, data = expected(), {s["id"]: s for s in scene_data()["scenes"]}
         return JSONResponse({"bands": exp["_bands"], "levels": HEADLINE,

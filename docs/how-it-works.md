@@ -237,6 +237,16 @@ Lanes in `lanes.toml`: `fast` = Nemotron 3.5 Lightning, `deep` = Nemotron 3.5 Su
 - **CLI mode line (stderr, one line):** SAMPLE_MODE or the demo → offline; no Zetaris keys → SAMPLE_MODE is set and it says so (never asks for keys); keys → live. The agents' progress lines go to stderr, the answer to stdout. Exit 0 answered, 2 bad input, 3 busy.
 - **Failure behaviour:** bad input → 400 / 413 / 415 `{error: {code, message}}`; another run going → 429 `busy`. Data or model problems never raise - they are in the answer and the trace (as on the web page).
 
+## Scenes test page (B-91, B-96) — `app/scenes.py`, `app/web/scenes.html`, `data/scenes/`
+- **Inputs:** `scenes_expected.json` (reviewed: story, one-line hook, expectations with reason + source + one check, news allow-list) and `scenes_data.json` (built from the fixtures by `scripts/make_scenes_data.py`). The page runs the scene through `/run/stream` and POSTs `compact(result)` (≤ 15 KB) to `/scenes/<id>/check`.
+- **Outputs:** `GET /scenes` (list: Real flood · November 2024 / Made-up tests, whole-row links), `GET /scenes/<id>` (three steps: the situation + one source line; the data with plain origins - news report / JPS station list / demo data / Open-Meteo archive - and per-value details; the expectations, "–" before the run, ✓ match / ✗ different after), both served in the shared frame (`frame.framed(html, "scenes")`). `check()` → `{verdict, verdict_name, rows [{id, ok, said}], matched, total, how {en, ms}, log}`: ✓ / ✗ come from the run output only; `said` and `how` are plain words, the raw step text is only in `log` (the page's "Show technical log").
+- **Failure behaviour:** unknown scene → 404; body > 15 KB → 413; not JSON → 400; an empty result → every row ✗. A busy engine (429) or a failed run shows one plain line; nothing on the page disappears.
+
+## How VEDA got there (B-96) — `app/trail.py`
+- **Inputs:** `trail.how_lines(out, lang)`, `out` = `scenes.compact(main.result_json(run))` (verdict, why {en, ms}, sources_by_lang, the gather / forecast / critique / safety step lines).
+- **Outputs:** 4 rows `[{key: gather | forecast | critique | safety, who, text}]` in EN or BM: sources used / left out (3 named, then "and N more"); the level + the view's plain why; what the Critic did in THIS run (asked the Data agent for a fresh upstream reading → found X or nothing; the level worked out again; approved or sent back), from the trace actions `critic.request`, `data.request`, `verdict.recomputed`, `critic.review`; the safety gate (all passed, or N fixes). Shared by /scenes and the answer screen. Never SAMPLE_MODE, run ids, rule names or confidence numbers.
+- **Failure behaviour:** a missing part leaves its row out (no sources → no Data row; no critique step → no Critic row); never raises.
+
 ## Entry points (B-19) — `app/main.py`, `app/web/index.html`, `app/progress.py`, `run.py`
 - **Start:** `python -m app.main` → http://127.0.0.1:8000 (`VEDA_HOST` / `VEDA_PORT`; 127.0.0.1 by default so it is not open to the LAN). CLI: `python run.py "<question>"` (`--verbose`, `--replay nov2024 --at "2024-11-26 18:00"`).
 - **Logs (FAQ: stdout and `logs/`):** every run writes `logs/trace-<run_id>.jsonl`; the web server also prints one `progress.describe` line per important step to stdout as `[<run_id>] <line>` (`docker logs`), never the question text. See `logs/README.md`.

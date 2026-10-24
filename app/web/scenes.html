@@ -20,18 +20,6 @@
   * { box-sizing: border-box; }
   html { font-size: 18px; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding: 4px 16px; border-bottom: 1px solid var(--line);
-           background: var(--card); position: sticky; top: 0; z-index: 2; }
-  header a, header button { min-height: 44px; display: inline-flex; align-items: center; color: var(--fg); }
-  header .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: .04em; text-decoration: none; }
-  header nav { display: flex; gap: 16px; margin-right: auto; }
-  header nav a { text-decoration: none; }
-  header nav a[aria-current="page"] { font-weight: 800; }
-  .langs { display: flex; }
-  .langs button { font: inherit; background: none; border: 0; padding: 0 10px; min-width: 44px; justify-content: center;
-                  cursor: pointer; color: var(--muted); }
-  .langs button[aria-pressed="true"] { color: var(--fg); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
-  @media (max-width: 599px) { header nav { order: 3; width: 100%; } }
   main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
   h1 { font-size: 1.5rem; line-height: 1.25; margin: 8px 0 12px; }
   h2 { font-size: 1.2rem; margin: 24px 0 8px; }
@@ -63,6 +51,7 @@
   .row { border-top: 1px solid var(--line); padding: 10px 0; }
   .row:first-child { border-top: 0; }
   .row .top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+  #s-source a { display: inline-block; padding: 10px 0; }         /* a 44 px tap in a grey line */
   .stale { color: var(--warn-text); font-weight: 700; margin: 4px 0; }
   .origin { color: var(--muted); font-size: .9rem; margin: 2px 0; }
   .bar { position: relative; height: 8px; border-radius: 4px; display: flex; overflow: hidden; margin: 8px 0 4px; }
@@ -97,17 +86,7 @@
 </style>
 </head>
 <body>
-<header>
-  <a class="brand" href="/" id="home">VEDA</a>
-  <nav aria-label="VEDA">
-    <a href="/scenes" id="nav-scenes" data-t="nav_scenes"></a>
-    <a href="/how-it-works" id="nav-how" data-t="nav_how"></a>
-  </nav>
-  <div class="langs" role="group" aria-label="Language / Bahasa">
-    <button type="button" data-lang="en" aria-pressed="true">EN</button>
-    <button type="button" data-lang="ms" aria-pressed="false">BM</button>
-  </div>
-</header>
+<!--VEDA:TOP-->
 <main id="scenes">
   <!-- the list -->
   <section id="list" hidden>
@@ -157,13 +136,12 @@
       </section>
     </div>
   </section>
-  <p class="note" data-t="footer"></p>
 </main>
 
 <script>
 "use strict";
 const UI = {
-  en: { nav_scenes: "Test scenes", nav_how: "How it works", list_title: "Test VEDA yourself",
+  en: { list_title: "Test VEDA yourself",
     list_intro: "Each test shows the situation and the data, tells you what VEDA should say, then you run it and compare.",
     group_real: "Real flood · November 2024", group_made: "Made-up tests",
     step1: "The situation", step2: "The data at that moment", step3: "What VEDA should do → what it did",
@@ -187,8 +165,8 @@ const UI = {
     score: "{n} of {m} matched", veda_said: "VEDA said: {v}", how_title: "How VEDA got there",
     full_answer: "See the full answer VEDA gave ›", live_link: "See a real live run with Nemotron ›", show_log: "Show technical log",
     feedback_q: "Did VEDA match what you expected?", tell_us: "Tell us", next: "Next test ›",
-    footer: "Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991." },
-  ms: { nav_scenes: "Senario ujian", nav_how: "Cara ia berfungsi", list_title: "Uji VEDA sendiri",
+  },
+  ms: { list_title: "Uji VEDA sendiri",
     list_intro: "Setiap ujian menunjukkan keadaan dan data, memberitahu apa yang patut VEDA katakan, kemudian anda jalankan dan bandingkan.",
     group_real: "Banjir sebenar · November 2024", group_made: "Ujian rekaan",
     step1: "Keadaannya", step2: "Data pada masa itu", step3: "Apa yang patut VEDA lakukan → apa yang dilakukannya",
@@ -213,7 +191,7 @@ const UI = {
     full_answer: "Lihat jawapan penuh VEDA ›", live_link: "Lihat rakaman langsung sebenar dengan Nemotron ›",
     show_log: "Tunjuk log teknikal",
     feedback_q: "Adakah VEDA sepadan dengan jangkaan anda?", tell_us: "Beritahu kami", next: "Ujian seterusnya ›",
-    footer: "Bukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan 999 · APM 991." },
+  },
 };
 const STAGE = { "Understanding the question": "plan", "Checking river gauges, rain and warnings": "gather",
   "Working out the risk": "forecast", "Writing the answer": "draft", "Checking the answer": "critique", "Fixing the answer": "revise" };
@@ -265,11 +243,7 @@ function bar(g) {
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  document.querySelectorAll(".langs [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
-  $("home").href = "/?lang=" + lang;
-  $("nav-scenes").href = "/scenes?lang=" + lang;
-  $("nav-how").href = "/how-it-works?lang=" + lang;
-  if (!sceneId) $("nav-scenes").setAttribute("aria-current", "page");
+  if (window.vedaFrameLang) window.vedaFrameLang(lang);              // the shared frame's words (top bar, strip, footer)
   if (all) render();
 }
 
@@ -443,13 +417,16 @@ function renderList() {
 
 $("start").addEventListener("click", start);
 $("r-again").addEventListener("click", () => { $("start").scrollIntoView({ block: "center", behavior: "smooth" }); start(); });
-document.querySelectorAll(".langs [data-lang]").forEach((b) => b.addEventListener("click", () => {
-  lang = b.dataset.lang; store.set("veda.lang", lang);
+function setLang(l) {                 // the frame's EN | BM switches this page in place (no reload)
+  lang = l; store.set("veda.lang", lang);
   const u = new URL(location.href); u.searchParams.set("lang", lang); history.replaceState(null, "", u);
   applyLang();
-}));
+}
+window.vedaSetLang = setLang;          // set before /frame.js runs, so the frame leaves the buttons to this page
+document.querySelectorAll(".vf-lang [data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
 fetch("/scenes/data.json").then((r) => r.json()).then((d) => { all = d; applyLang(); });
 applyLang();
 </script>
+<!--VEDA:FOOT-->
 </body>
 </html>

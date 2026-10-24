@@ -150,6 +150,11 @@ def test_routes(monkeypatch):
     c = TestClient(main.app)
     assert c.get("/scenes").status_code == 200 and 'id="scenes"' in c.get("/scenes").text
     assert c.get("/scenes/rp-peak").status_code == 200 and c.get("/scenes/nope").status_code == 404
+    for path in ("/scenes", "/scenes/rp-peak"):                                    # B-96: the shared frame (a28a6ff)
+        html = c.get(path).text
+        assert html.count('class="vf-top"') == 1 and html.count('class="vf-foot"') == 1 and "<!--VEDA:" not in html
+        assert re.search(r'href="/scenes"[^>]*aria-current="page"', html), path
+    assert PAGE.index("window.vedaSetLang = setLang;") < PAGE.index("<!--VEDA:FOOT-->")   # before /frame.js loads
     d = c.get("/scenes/data.json").json()
     assert [s["id"] for s in d["scenes"]][0] == "rp-before" and all(s["data"] for s in d["scenes"])
     assert c.post("/scenes/rp-peak/check", content=b"x" * (scenes.MAX_BODY + 1)).status_code == 413
