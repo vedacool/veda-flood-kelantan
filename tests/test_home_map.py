@@ -55,7 +55,7 @@ def test_map_towns_do_what_the_rows_do():
 
 
 def test_map_wording_and_placement():
-    for key in ("map_heading", "map_note", "map_credit", "map_thailand", "map_sea", "map_rain", "map_gauge", "map_alt"):
+    for key in ("map_heading", "map_note", "map_credit", "map_thailand", "map_sea", "map_rain1", "map_rain2", "map_gauge", "map_alt"):
         assert PAGE.count(f"{key}: ") == 2, key                         # EN and BM
     assert "Sketch from © OpenStreetMap contributors (ODbL)" in PAGE
     assert PAGE.index('id="towns"') < PAGE.index('id="few-readings"') < PAGE.index('id="map-box"')

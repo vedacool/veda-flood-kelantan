@@ -23,14 +23,15 @@ LINES = ROOT / "data" / "map" / "home_map_lines.json"
 PAGE = ROOT / "app" / "web" / "index.html"
 START, END = "<!-- MAP START (scripts/make_home_map.py) -->", "<!-- MAP END -->"
 USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda; one-off map sketch)"
-BBOX = (5.47, 101.80, 6.30, 102.40)           # south, west, north, east
+BBOX = (5.47, 101.80, 6.30, 102.45)           # south, west, north, east
 W = 340                                         # viewBox width; the height follows the map's shape
 PAD = 6
 SIMPLIFY_KM = 0.3
+DRAW_KM = 0.6                                    # simplified again when drawn, then curved
 UPSTREAM = ("5521044_DKKI0014", "_DTMH0008")    # Sg. Kelantan di Kuala Krai, Sg. Golok di Kg. Jenob
 # Label side per town, chosen so the four tap targets never overlap (Tumpat / Kota Bharu / Pasir Mas are close)
 # (side, how far the label's centre / start moves right of the dot). Measured at 375 px: no two targets overlap.
-SIDE = {"Rantau Panjang": ("below", -15), "Pasir Mas": ("below-start", 0), "Kota Bharu": ("right2", 0),
+SIDE = {"Rantau Panjang": ("right-below", 0), "Pasir Mas": ("above-end", 0), "Kota Bharu": ("right2", 0),
         "Tumpat": ("left", 0)}
 
 
@@ -137,15 +138,45 @@ def path(pts, xy):
     return "M" + " L".join(f"{x} {y}" for x, y in (xy(*p) for p in pts))
 
 
-def arrows(pts, xy, every=4):
-    """Small arrowheads along a river, pointing downstream (the list runs source -> mouth)."""
+def curve(pts, xy):
+    """A smooth path through the points (Catmull-Rom as cubic Beziers), so a river does not look jagged on a phone."""
+    p = [xy(*q) for q in pts]
+    out = [f"M{p[0][0]} {p[0][1]}"]
+    for i in range(len(p) - 1):
+        p0, p1, p2, p3 = p[max(i - 1, 0)], p[i], p[i + 1], p[min(i + 2, len(p) - 1)]
+        c1 = (round(p1[0] + (p2[0] - p0[0]) / 6, 1), round(p1[1] + (p2[1] - p0[1]) / 6, 1))
+        c2 = (round(p2[0] - (p3[0] - p1[0]) / 6, 1), round(p2[1] - (p3[1] - p1[1]) / 6, 1))
+        out.append(f"C{c1[0]} {c1[1]} {c2[0]} {c2[1]} {p2[0]} {p2[1]}")
+    return " ".join(out)
+
+
+def _along(p, f):
+    """The point at fraction f of the polyline p's length."""
+    seg = [math.dist(p[i], p[i + 1]) for i in range(len(p) - 1)]
+    goal, run = f * sum(seg), 0.0
+    for i, s in enumerate(seg):
+        if run + s >= goal:
+            t = (goal - run) / s if s else 0
+            return p[i][0] + t * (p[i + 1][0] - p[i][0]), p[i][1] + t * (p[i + 1][1] - p[i][1])
+        run += s
+    return p[-1]
+
+
+def arrows(pts, xy, fractions):
+    """Filled chevrons on the river pointing downstream (the list runs source -> mouth), each at the straightest
+    stretch near its fraction of the river's length."""
+    p = [xy(*q) for q in pts]
     out = []
-    for i in range(every, len(pts) - 1, every):
-        (ax, ay), (bx, by) = xy(*pts[i]), xy(*pts[i + 1])
-        ang = math.degrees(math.atan2(by - ay, bx - ax))
-        mx, my = round((ax + bx) / 2, 1), round((ay + by) / 2, 1)
-        out.append(f'<path d="M-5 -4 L3 0 L-5 4" transform="translate({mx} {my}) rotate({round(ang)})" '
-                   f'class="m-arrow"/>')
+    for f0 in fractions:
+        def bend(f, d=0.025):
+            a, b, c = _along(p, f - d), _along(p, f), _along(p, f + d)
+            t1, t2 = math.atan2(b[1] - a[1], b[0] - a[0]), math.atan2(c[1] - b[1], c[0] - b[0])
+            return abs((t2 - t1 + math.pi) % (2 * math.pi) - math.pi)
+        f = min((round(f0 + k / 100, 2) for k in range(-8, 9)), key=lambda x: (round(bend(x), 3), abs(x - f0)))
+        a, b, c = _along(p, f - 0.02), _along(p, f), _along(p, f + 0.02)
+        ang = math.degrees(math.atan2(c[1] - a[1], c[0] - a[0]))
+        out.append(f'<path d="M-7 -8 L8 0 L-7 8 L-3 0 Z" transform="translate({round(b[0], 1)} {round(b[1], 1)}) '
+                   f'rotate({round(ang)})" class="m-arrow"/>')
     return "".join(out)
 
 
@@ -160,12 +191,12 @@ def build():
     s, w, n, e = BBOX
     towns = [(r["name"], float(r["lat"]), float(r["lon"])) for r in rows(ROOT / "data" / "places.csv")]
     gauges = {r["station_key"]: r for r in rows(ROOT / "data" / "stations_mapping.csv", "gauge")}
-    golok, kel = data["golok"], data["kelantan"]
+    golok, kel = simplify(data["golok"], DRAW_KM), simplify(data["kelantan"], DRAW_KM)
     # Thailand: west of the Golok, from its southern end to the sea (a simplification: south of the river's source
     # the real border runs over land; the sketch stops the shading there)
     g_south, g_mouth = golok[0], golok[-1]
     mx = xy(*g_mouth)[0]              # up from the mouth, across the top, down the west edge; the sea is drawn over it
-    thai = path(golok, xy) + f" L{mx} -10 L-10 -10 L-10 {xy(g_south[0], w)[1]} Z"
+    thai = curve(golok, xy) + f" L{mx} -10 L-10 -10 L-10 {xy(g_south[0], w)[1]} Z"
     # the sea: north / east of the coastline, closed along the map's top and right edges
     coast = max(data["coast"], key=len)
     coast = sorted(coast, key=lambda p: p[1])
@@ -176,27 +207,29 @@ def build():
              f'<rect width="{W}" height="{height}" class="m-land"/>',
              f'<path d="{thai}" class="m-thai"/>',
              f'<path d="{sea}" class="m-sea"/>',
-             f'<path d="{path(golok, xy)}" class="m-border"/>']
+             f'<path d="{curve(golok, xy)}" class="m-border"/>']
     for line in data["coast"]:
         parts.append(f'<path d="{path(line, xy)}" class="m-coast"/>')
     for line in (kel, golok):
-        parts.append(f'<path d="{path(line, xy)}" class="m-river"/>' + arrows(line, xy))
+        parts.append(f'<path d="{curve(line, xy)}" class="m-river"/>')
+    parts.append(arrows(kel, xy, (0.22, 0.5, 0.74)) + arrows(golok, xy, ([JPS reading], [JPS reading])))   # 3 + 2, downstream
     tx, ty = xy(6.27, 101.815)
     parts.append(f'<text x="{tx}" y="{ty}" class="m-label m-thai-label" data-t="map_thailand"></text>')
-    cx, cy = xy(5.93, 101.845)                   # rain cloud over the Thai side of the upper Golok
+    cx, cy = xy(6.17, 101.86)                    # rain cloud inside the Thai side, clear of the river
     parts.append(f'<g transform="translate({cx} {cy})" class="m-cloud"><path d="M-14 6 a8 8 0 0 1 2 -15 a11 11 0 0 1 '
                  f'21 -2 a8 8 0 0 1 7 17 Z"/><path d="M-8 10 l-3 7 M0 10 l-3 7 M8 10 l-3 7" class="m-rain"/>'
-                 f'<text x="-18" y="34" class="m-label m-small" data-t="map_rain"></text></g>')
+                 f'<text x="-16" y="34" class="m-label m-small" data-t="map_rain1"></text>'
+                 f'<text x="-16" y="55" class="m-label m-small" data-t="map_rain2"></text></g>')
     parts.append(f'<text x="{W - 8}" y="{sea_lbl[1] + 14}" class="m-label m-sea-label" text-anchor="end" '
                  f'data-t="map_sea"></text>')
     for key in UPSTREAM:
         g = gauges[key]
         gx, gy = xy(float(g["lat"]), float(g["lon"]))
         place = g["jps_name"].split(" di ")[-1].replace(" (F1)", "")
-        lx, anchor = (gx - 10, "end") if key == UPSTREAM[0] else (gx + 10, "start")   # Kuala Krai: label left
+        lx, anchor = gx + 10, "start"                # both labels to the right of their dots
         parts.append(f'<circle cx="{gx}" cy="{gy}" r="6" class="m-gauge"/>'
                      f'<text x="{lx}" y="{gy - 2}" text-anchor="{anchor}" class="m-label">{place}</text>'
-                     f'<text x="{lx}" y="{gy + 16}" text-anchor="{anchor}" class="m-label m-small" '
+                     f'<text x="{lx}" y="{gy + 19}" text-anchor="{anchor}" class="m-label m-small" '
                      f'data-t="map_gauge"></text>')
     for name, lat, lon in towns:
         x, y = xy(lat, lon)
@@ -211,8 +244,10 @@ def build():
             lx, ly, anchor, box = x - 12, y + 7, "end", (x - 16 - wl, y - 28, wl + 32, 56)
         elif side == "right":
             lx, ly, anchor, box = x + 12, y + 7, "start", (x - 16, y - 28, wl + 32, 56)
-        elif side == "below-start":
-            lx, ly, anchor, box = x - 8 + dx, y + 30, "start", (x - 16 + dx, y - 12, wl + 24, 56)
+        elif side == "right-below":                 # on the Malaysian side, below-right of the dot
+            lx, ly, anchor, box = x + 4, y + 30, "start", (x - 16, y - 5, wl + 24, 56)
+        elif side == "above-end":                   # above-left of the dot, ending just past it
+            lx, ly, anchor, box = x + 8, y - 16, "end", (x + 16 - wl - 24, y - 46, wl + 24, 54)
         else:
             lx, ly, anchor, box = x + dx, y + 30, "middle", (x + dx - wl / 2 - 6, y - 16, wl + 12, 56)
         if side != "right2":
