@@ -28,6 +28,9 @@
   /* B-96: a selected choice is bold + outlined, never filled - /live has no filled button */
   button[aria-pressed="true"] { border: 3px solid var(--accent); font-weight: 800; }
   .seg2 { display: inline-flex; gap: 6px; }
+  #b-play { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }  /* the one filled button */
+  .rnote summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+  .rnote p { margin: 4px 0 8px; }
   .hint { margin: 0 0 10px; font-weight: 600; }
   .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; max-width: 1200px; margin: 0 auto; padding: 16px; }
   @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } aside { order: -1; } }
@@ -72,6 +75,11 @@
   .top .controls { margin-bottom: 8px; }
   .controls select { min-width: 0; width: 100%; }
   #rec { max-width: 100%; }
+  @media (min-width: 1024px) {        /* the same centred content width as the other pages (1200 px, 32 px gutter) */
+    .lhead { padding-left: max(32px, calc((100% - 1200px) / 2 + 32px)); padding-right: max(32px, calc((100% - 1200px) / 2 + 32px)); }
+    .top { padding-left: 32px; padding-right: 32px; }
+    .wrap { padding-left: 32px; padding-right: 32px; }
+  }
 </style>
 </head>
 <body>
@@ -98,7 +106,7 @@
 <div class="wrap">
   <main>
     <p id="status" role="status" aria-live="polite"></p>
-    <p class="note" id="rnote" hidden></p>
+    <details class="note rnote" id="rnote" hidden><summary id="rnote-sum"></summary><p id="rnote-text"></p></details>
     <ol id="feed"></ol>
   </main>
   <aside><div class="panel">
@@ -113,15 +121,43 @@ const $ = (id) => document.getElementById(id);
 // The two public header lines follow the main page's EN | BM toggle (wording review 24 Oct); the log stays English.
 const HEAD = {
   en: { hint: "Press play to watch each agent step, recorded live.",
+        redacted: "River readings are hidden, as the organisers asked. Details ▾",
         note: "The question itself is never shown here.",
         waiting: "Waiting for a question… Ask one on VEDA's main page and every step appears here as it happens." },
   ms: { hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.",
+        redacted: "Bacaan sungai disembunyikan, seperti yang diminta penganjur. Butiran ▾",
         note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
         waiting: "Menunggu soalan… Tanya di halaman utama VEDA dan setiap langkah akan muncul di sini ketika ia berlaku." },
 };
 const pageLang = () => { try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; } };
+// B-96: a recorded run is named by when (Malaysia time) and where - "24 Oct, 8:10 pm MYT · Wakaf Bharu"
+const PLACES = ["Rantau Panjang", "Pasir Mas", "Kota Bharu", "Tumpat", "Kuala Krai", "Tanah Merah", "Dabong",
+                "Wakaf Bharu", "Pasir Pekan"];
+const MONTHS = { en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                 ms: ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"] };
+function myt(iso, lang) {
+  const t = Date.parse(iso);
+  if (isNaN(t)) return "";
+  const d = new Date(t + 8 * 3600 * 1000), h = d.getUTCHours(), m = String(d.getUTCMinutes()).padStart(2, "0");
+  const h12 = h % 12 || 12, day = `${d.getUTCDate()} ${MONTHS[lang][d.getUTCMonth()]}`;
+  if (lang === "ms") {
+    const part = h < 12 ? "pagi" : h < 14 ? "tengah hari" : h < 19 ? "petang" : "malam";
+    return `${day}, ${h12}.${m} ${part}`;
+  }
+  return `${day}, ${h12}:${m} ${h < 12 ? "am" : "pm"} MYT`;
+}
+function labelRuns() {
+  const lang = pageLang();
+  [...$("rec").options].forEach((o) => {
+    const q = (o.dataset.question || "").toLowerCase();
+    const place = PLACES.find((pl) => q.includes(pl.toLowerCase()));
+    o.textContent = `${myt(o.dataset.started, lang)} · ${place || o.dataset.run}`;
+  });
+}
 function applyHeadLang() {
   const h = HEAD[pageLang()];
+  $("rnote-sum").textContent = h.redacted;
+  labelRuns();
   $("h-note").textContent = h.note; $("h-note").lang = pageLang();
   $("hint").textContent = h.hint; $("hint").lang = pageLang();
   if (Object.values(HEAD).some((x) => x.waiting === $("status").textContent)) $("status").textContent = h.waiting;
@@ -244,7 +280,7 @@ function loadRecorded(records, note, wait) {
   stopReplay();
   mode = "replay"; pressMode();
   recorded = records; $("b-play").hidden = false;
-  $("rnote").hidden = !note; $("rnote").textContent = note ? "Recorded run: " + note : "";
+  $("rnote").hidden = !note; $("rnote-text").textContent = note ? "Recorded run: " + note : ""; $("rnote").open = false;
   $("hint").hidden = !wait;
   if (wait) { $("feed").replaceChildren(); whoPanel(); $("status").textContent = ""; return; }   // demo: press Play
   play();
@@ -289,11 +325,12 @@ const listed = fetch("/trace/recorded").then((r) => r.json()).then((list) => {
   list.forEach((x) => {
     const o = document.createElement("option");
     o.value = x.name;
-    o.textContent = `${(x.started || "").replace("T", " ").replace("Z", " UTC")} · ${x.question || x.run_id}`;
+    o.dataset.started = x.started || ""; o.dataset.question = x.question || ""; o.dataset.run = x.run_id || "";
     $("rec").append(o);
   });
   const f = list.find((x) => (x.name || "").includes(FEATURED));
   if (f) $("rec").value = f.name;
+  labelRuns();
 }).catch(() => {});
 const params = new URLSearchParams(location.search);
 if (params.get("run")) {  // one run from logs/ (this computer only), replayed from its trace

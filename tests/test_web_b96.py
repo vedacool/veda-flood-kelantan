@@ -49,7 +49,11 @@ LIVE = (config.ROOT / "app" / "web" / "live.html").read_text(encoding="utf-8")
 
 def test_live_has_no_filled_button_and_opens_on_the_featured_run_in_the_demo():
     assert 'button[aria-pressed="true"] { border: 3px solid var(--accent); font-weight: 800; }' in LIVE
-    assert "background: var(--accent)" not in LIVE                                   # nothing filled
+    filled = [ln for ln in LIVE.splitlines() if "background: var(--accent)" in ln]
+    assert len(filled) == 1 and filled[0].lstrip().startswith("#b-play")               # Play: the one filled button
+    assert 'redacted: "River readings are hidden, as the organisers asked. Details ▾"' in LIVE
+    assert 'redacted: "Bacaan sungai disembunyikan, seperti yang diminta penganjur. Butiran ▾"' in LIVE
+    assert '<details class="note rnote" id="rnote" hidden>' in LIVE and '" UTC"' not in LIVE
     assert 'id="b-replay"' in LIVE and 'const FEATURED = "20261024-201011";' in LIVE
     assert 'if (h.sample_mode) listed.then(() => loadChosen(true)); else goLive();' in LIVE   # live mode unchanged
     assert 'hint: "Press play to watch each agent step, recorded live."' in LIVE
