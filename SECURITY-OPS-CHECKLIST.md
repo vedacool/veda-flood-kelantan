@@ -73,6 +73,22 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       level, **0 unexplained**; gitleaks v8.21.2 over the full history: **no leaks** (1 before translating
       `.gitleaksignore`); in the scratch repo with no `.env`: 746 tests pass, evals 24/24. Not tested in the dry run:
       CI on GitHub and the clean clone with Zetaris and Nightshift stopped (both on Monday).
+      **Rehearsal 24 Oct 11:50 MYT (B-77, Session B)** - the real procedure on a fresh mirror of
+      `github.com/vedacool/veda` at `ae55221`, stopped before creating anything on GitHub: `refs/pull/*` dropped
+      (only `main` goes public); 160 -> 160 commits, authors and dates unchanged, + 1 map commit = **161**; first
+      commit 22 Oct 2026 10:22:15 MYT; commit map 160 lines; 291 old blobs stripped, 156 rewritten; today's tree
+      identical to the private HEAD; history search over 220 real values: 1591 hits on lines unchanged in today's
+      tree, 163 cited replay values, 1 not a level, **0 unexplained**; gitleaks v8.21.2 over the full history: **no
+      leaks** (156 commits with changes); in the cleaned clone with no `.env`, SAMPLE_MODE: 838 tests pass (13 live
+      skipped), `test_no_jps_readings` 6/6, evals 30/30. The map commit now runs the project hooks (it did not in the
+      dry run). Scripts: `veda-private/history-clean/public_clean.py` + `history_probe3.py` (+ `fr/`, `gitleaks/`
+      beside them; they write to `work/` there). Monday, with Husaini's OK, from that folder:
+      1. `python public_clean.py` then `python history_probe3.py work\veda-public` (must print 0 unexplained) and
+         `gitleaks\gitleaks.exe detect --source work\veda-public --log-opts="--all" --redact`;
+      2. in `work\veda-public`: `pytest -q` and `python scripts/run_evals.py` with an empty `.env`;
+      3. `gh repo create vedacool/veda-kelantan --private`, `git remote add public <url>`, `git push public main`;
+         wait for CI green, then `gh repo edit vedacool/veda-kelantan --visibility public
+         --accept-visibility-change-consequences` and check it logged out (step 5 above).
 - [ ] JPS written consent - only if VEDA continues after the hackathon (`docs/OPEN.md` W-7).
 
 ## Running it
