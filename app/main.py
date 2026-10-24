@@ -55,6 +55,33 @@ _busy = threading.Lock()                 # one run at a time: the World Model on
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
 
 
+# A-P3-2 (24 Oct): security headers on every response. The pages are one file each with their own inline <style> and
+# <script> (no external code); data: only for the empty favicon; every request goes to this server.
+CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+       "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+SECURITY_HEADERS = {"Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
+                    "Referrer-Policy": "no-referrer"}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for k, v in SECURITY_HEADERS.items():
+        response.headers.setdefault(k, v)
+    return response
+
+
+def cross_site(request):
+    """A-P3-3: True when a browser says this request comes from another site (a link or script on someone else's
+    page). Browsers send Sec-Fetch-Site (and Origin on fetch); a non-browser client (curl, the CLI) sends neither -
+    and cannot be used against someone else's browser."""
+    site = request.headers.get("sec-fetch-site")
+    if site and site not in ("same-origin", "none"):
+        return True
+    origin = request.headers.get("origin")
+    return bool(origin) and origin.rstrip("/") != f"{request.url.scheme}://{request.url.netloc}"
+
+
 DEMO_CLOSED = ("/admin", "/trace/run/")          # operator screens, approve, a run's own log: never in the public demo
 
 
@@ -216,7 +243,9 @@ def health():
 
 @app.post("/run")
 async def run(request: Request):
-    """One question -> the answer JSON. 400 on bad input, 429 while another run is going."""
+    """One question -> the answer JSON. 400 on bad input, 415 unless JSON, 429 while another run is going."""
+    if "application/json" not in (request.headers.get("content-type") or ""):     # A-P3-3: no text/plain form posts
+        return _error(415, "json_only", "Send JSON (Content-Type: application/json) like {\"question\": \"Is Tumpat safe?\"}.")
     try:
         body = await request.json()
     except ValueError:
@@ -241,8 +270,11 @@ async def run(request: Request):
 
 
 @app.get("/run/stream")
-def run_stream(question: str = "", replay: str = "", at: str = "", lang: str = ""):
-    """The same run, streamed: a 'step' event per trace step as it happens, then a 'result' event."""
+def run_stream(request: Request, question: str = "", replay: str = "", at: str = "", lang: str = ""):
+    """The same run, streamed: a 'step' event per trace step as it happens, then a 'result' event. Refused when a
+    browser says it comes from another site (A-P3-3: a link elsewhere must not start a run)."""
+    if cross_site(request):
+        return _error(403, "cross_site", "A run starts from VEDA's own page.")
     try:
         question, replay, when = parse_input(question, replay or None, at or None)
     except BadInput as e:

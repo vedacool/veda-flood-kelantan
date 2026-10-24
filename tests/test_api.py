@@ -70,8 +70,10 @@ def test_bad_input_is_a_400_with_structured_json(client, payload, code):
     assert r.status_code == 400 and r.json()["error"]["code"] == code and r.json()["error"]["message"]
 
 
-def test_not_json_is_a_400(client):
+def test_not_json_is_refused(client):
     r = client.post("/run", content=b"question=Tumpat", headers={"Content-Type": "text/plain"})
+    assert r.status_code == 415 and r.json()["error"]["code"] == "json_only"            # A-P3-3: no form posts
+    r = client.post("/run", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code == 400 and r.json()["error"]["code"] == "bad_json"
 
 
@@ -196,3 +198,21 @@ def test_cli_at_outside_the_replay_window_gets_the_api_notice(monkeypatch, capsy
     assert "This replay covers 2024-11-26 08:00 to 2024-11-27 19:30 (MYT)." in capsys.readouterr().out
     assert run.main(["run.py", "--replay", "nov2024", "--at", "27/11/2024", "Rantau Panjang?"]) == 2
     assert "'at' must look like" in capsys.readouterr().out
+
+
+# -- audit A-P2/A-P3 (24 Oct): security headers, JSON-only POST, no run from another site ------------------------
+def test_security_headers_on_every_response(client):
+    for path in ("/", "/live", "/health", "/ui/words", "/trace/recorded"):
+        h = client.get(path).headers
+        assert "frame-ancestors 'none'" in h["content-security-policy"] and "script-src 'self' 'unsafe-inline'" in             h["content-security-policy"], path
+        assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY"
+        assert h["referrer-policy"] == "no-referrer"
+
+
+def test_a_link_on_another_site_cannot_start_a_run(client):
+    q = "/run/stream?question=Tumpat%3F&replay=synthetic_calm&at=2024-06-15%2010:00"
+    r = client.get(q, headers={"Sec-Fetch-Site": "cross-site"})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "cross_site"
+    assert client.get(q, headers={"Origin": "https://evil.example"}).status_code == 403
+    ok = client.get(q, headers={"Sec-Fetch-Site": "same-origin"})
+    assert ok.status_code == 200 and "event: result" in ok.text                        # the page's own request

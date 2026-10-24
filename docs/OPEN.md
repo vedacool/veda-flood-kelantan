@@ -4,7 +4,7 @@ Only two kinds of item live here (Husaini 23 Oct): **open audit findings** and *
 (what to build, in what order) is the backlog in the private planning folder; IDs `B-xx` / `S-xx` point there.
 Status lives here and in the backlog, never in Claude's memory. A finished item is deleted (git keeps the history).
 
-Last updated: 24 Oct 2026 (after B-71, B-86, A-P2-7, the new web page, the live log, how-it-worked, admin, the answer states, the accessibility pass, publish_trace and the B-88 rain rule). Tests: **898 pass** (13 skipped: live services). Evals: **33 of 33, ×3 (local pass^3 24 Oct; CI runs them 3 times)** (the Docker job runs them 3 times; 24 Oct 09:04 MYT: job 30 s, green).
+Last updated: 24 Oct 2026 (after B-71, B-86, A-P2-7, the new web page, the live log, how-it-worked, admin, the answer states, the accessibility pass, publish_trace and the B-88 rain rule). Tests: **900 pass** (13 skipped: live services). Evals: **33 of 33, ×3 (local pass^3 24 Oct; CI runs them 3 times)** (the Docker job runs them 3 times; 24 Oct 09:04 MYT: job 30 s, green).
 
 ## Open audit findings (audit 2026-10-23, `docs/audit/2026-10-23-audit.md`)
 IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all are **after the hackathon** except A-P2-1 (A-P2-3 fixed in B-85: stalled streams are cut on time).
@@ -17,14 +17,12 @@ IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all 
 | A-P2-5 | P2 | `/health` does not check Postgres, the newest reading's age or open circuit breakers | `app/main.py:110` | B-19 | after hackathon |
 | A-P2-9 | P2 | `load_dotenv` at import in `app/main.py` leaks the developer's `.env` into the test session | `app/main.py:32` | B-65 | after hackathon |
 | A-P3-1 | P3 | Lockfile has no hashes (`--require-hashes`) | `requirements-lock.txt` | B-65 (software-start item 6) | after hackathon |
-| A-P3-2 | P3 | No security headers (CSP, nosniff, frame-ancestors) | `app/main.py` | B-19 (software-start item 7) | after hackathon |
-| A-P3-3 | P3 | `POST /run` accepts `text/plain`; `GET /run/stream` starts a run (CSRF) | `app/main.py` | B-19 | after hackathon |
 | A-P3-4 | P3 | `logs/` and `data/cache/jps/` are never pruned (~3 MB/day) | `logs/` | B-65 | after hackathon |
 
 Closed with a decision: **W-8** - organiser ruling on JPS data (23 Oct, human admin): no disqualification; build accurately - credit does not replace consent, recorded copies only if the terms allow redistribution (they don't), so JPS is fetched live at runtime only; SAMPLE_MODE / demo use synthetic or openly licensed data; all third-party data declared in the README. Done in B-75.
 
 Fixed since the audit (deleted from this list): the 10 P1s, BM verdict words + months, card length, masking gaps,
-answer language, flipped-comparison check, Critic replay re-check, CI builds the Docker image, `VEDA_FAULTS` removed (A-P2-6), the answer language from the whole question (A-P3-6, 24 Oct: 'Kampung' / 'air' / 'di' in an English question stay English; a tie follows the page's EN | BM toggle), the small logic edges fixed (A-P3-5, 24 Oct: aging reading never 'high' confidence, date-only peaks known from the end of the day, CLI --at checked like the API, no 'None mm'), the unused model-planning path deleted (A-P2-7, 24 Oct: it would have sent the question to the model), BUILD_BRIEF / CLAUDE.md brought up to date (A-P2-8).
+answer language, flipped-comparison check, Critic replay re-check, CI builds the Docker image, `VEDA_FAULTS` removed (A-P2-6), security headers + no cross-site run (A-P3-2, A-P3-3, 24 Oct: CSP, nosniff, frame-ancestors 'none', no-referrer; POST /run JSON only; /run/stream refuses a request a browser marks cross-site), the answer language from the whole question (A-P3-6, 24 Oct: 'Kampung' / 'air' / 'di' in an English question stay English; a tie follows the page's EN | BM toggle), the small logic edges fixed (A-P3-5, 24 Oct: aging reading never 'high' confidence, date-only peaks known from the end of the day, CLI --at checked like the API, no 'None mm'), the unused model-planning path deleted (A-P2-7, 24 Oct: it would have sent the question to the model), BUILD_BRIEF / CLAUDE.md brought up to date (A-P2-8).
 
 ## Waiting on Husaini
 | ID | Item | Raised | Recommendation | Backlog |
