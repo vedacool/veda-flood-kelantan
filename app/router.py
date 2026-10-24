@@ -67,9 +67,27 @@ def _words(question):
     return re.findall(r"[a-z0-9']+", (question or "").lower())
 
 
-def language(question):
-    """'ms' if any BM word appears (mixed BM/EN counts as BM), else 'en'."""
-    return "ms" if set(_words(question)) & BM_WORDS else "en"
+# Common English words in flood questions - counted against BM_WORDS over the whole question (audit A-P3-6).
+EN_WORDS = {
+    "is", "are", "am", "was", "will", "would", "should", "can", "could", "do", "does", "did", "be", "the", "a", "an",
+    "my", "our", "your", "their", "his", "her", "i", "we", "you", "they", "he", "she", "it", "there", "this", "that",
+    "in", "at", "on", "of", "to", "for", "near", "from", "with", "and", "or", "if", "how", "what", "when", "where",
+    "why", "which", "who", "risk", "flood", "flooding", "floods", "flooded", "safe", "danger", "dangerous", "river",
+    "water", "rain", "raining", "rising", "level", "now", "today", "tonight", "tomorrow", "week", "next", "days",
+    "right", "still", "please", "help", "house", "home", "family", "parents", "mother", "father", "mum", "dad", "kids",
+    "school", "road", "roads", "cut", "off", "evacuate", "go", "leave", "stay", "live", "lives", "living", "area",
+}
+
+
+def language(question, hint=None):
+    """'ms' or 'en' from the WHOLE question: more BM words than English words -> 'ms', more English -> 'en', a tie
+    (e.g. only a place name) -> `hint` (the page's EN | BM toggle), else 'en'. So 'Kampung', 'air' or 'di' inside an
+    English question no longer switch the answer to BM (audit A-P3-6)."""
+    words = _words(question)
+    bm, en = sum(w in BM_WORDS for w in words), sum(w in EN_WORDS for w in words)
+    if bm != en:
+        return "ms" if bm > en else "en"
+    return hint if hint in ("en", "ms") else "en"
 
 
 # Someone already in trouble (23 Oct eval): the ACT advice (with "if trapped: ... 999 / 991") comes first,
@@ -120,9 +138,9 @@ def data_triggers(ctx, warnings, clock, scene=False):
     return reasons
 
 
-def route(question, place, world, pre):
+def route(question, place, world, pre, lang_hint=None):
     """quick or full for this question and place. pre = the Data & Reconciler prefetch result. Traced."""
-    lang = language(question)
+    lang = language(question, lang_hint)
     asked = question_triggers(question)
     reasons = [f"question mentions '{ph}' ({kind.replace('_', ' ')})" for kind, ph in asked]
     notes = []

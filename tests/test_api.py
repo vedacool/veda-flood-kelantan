@@ -16,14 +16,15 @@ def client(monkeypatch, tmp_path):
         monkeypatch.delenv(key, raising=False)
     gazetteer.clear_cache()
     real_run = main._run
-    monkeypatch.setattr(main, "_run", lambda q, r, a, on_step=None: _in_tmp(real_run, tmp_path, q, r, a, on_step))
+    monkeypatch.setattr(main, "_run", lambda q, r, a, on_step=None, lang=None: _in_tmp(real_run, tmp_path, q, r, a, on_step,
+                                                                                        lang))
     yield TestClient(main.app)
     gazetteer.clear_cache()
 
 
-def _in_tmp(real_run, tmp_path, question, replay, at, on_step):
+def _in_tmp(real_run, tmp_path, question, replay, at, on_step, lang=None):
     from app import loop
-    return loop.run(question, quiet=True, replay=replay, at=at, on_step=on_step, log_dir=tmp_path)
+    return loop.run(question, quiet=True, replay=replay, at=at, on_step=on_step, log_dir=tmp_path, lang_hint=lang)
 
 
 def test_health_in_sample_mode(client):

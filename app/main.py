@@ -177,7 +177,7 @@ def _publish(rec):
         _live_question.pop(run_id, None)
 
 
-def _run(question, replay, at, on_step=None):
+def _run(question, replay, at, on_step=None, lang=None):
     """One run. The full trace goes to logs/trace-<run_id>.jsonl; stdout (docker logs) gets the same short progress
     lines as the page, one per important step, prefixed with the run id - never the question text (privacy). Every
     record also goes to the live log's watchers (/live/stream)."""
@@ -190,7 +190,8 @@ def _run(question, replay, at, on_step=None):
         _publish(rec)
         if on_step:
             on_step(rec)
-    return loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True)
+    return loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True,
+                    lang_hint=lang if lang in ("en", "ms") else None)
 
 
 @app.get("/health")
@@ -229,7 +230,7 @@ async def run(request: Request):
     if not _busy.acquire(blocking=False):
         return _error(429, "busy", "VEDA is answering another question - try again in a minute.")
     try:
-        r = await run_in_threadpool(_run, question, replay, at)
+        r = await run_in_threadpool(_run, question, replay, at, None, body.get("lang"))
     except nightshift.NightshiftError as e:            # should not happen (agents fall back), but never a 500 page
         return _error(503, "model_unavailable", str(e))
     except zetaris.ZetarisError as e:                  # the loop answers "cannot check now"; this is the backstop
@@ -240,7 +241,7 @@ async def run(request: Request):
 
 
 @app.get("/run/stream")
-def run_stream(question: str = "", replay: str = "", at: str = ""):
+def run_stream(question: str = "", replay: str = "", at: str = "", lang: str = ""):
     """The same run, streamed: a 'step' event per trace step as it happens, then a 'result' event."""
     try:
         question, replay, when = parse_input(question, replay or None, at or None)
@@ -261,7 +262,7 @@ def run_stream(question: str = "", replay: str = "", at: str = ""):
 
     def work():
         try:
-            events.put(("result", result_json(_run(question, replay, when, on_step))))
+            events.put(("result", result_json(_run(question, replay, when, on_step, lang))))
         except Exception as e:                       # report, never hang the page
             events.put(("error", {"code": "run_failed", "message": trace.redact(f"{type(e).__name__}: {e}")}))
         finally:

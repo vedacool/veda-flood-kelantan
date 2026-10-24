@@ -50,10 +50,11 @@ def open_world(run_id):
 
 
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
-        on_step=None, replay=None, at=None, default_scene=False):
+        on_step=None, replay=None, at=None, default_scene=False, lang_hint=None):
     """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, card, reviews, timing,
     trace}.
-    budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live.
+    budget_s overrides the per-effort budget (tests); on_step(record) sees every trace step live. lang_hint ('en' /
+    'ms', the page's toggle) decides the answer language only when the question's words are a tie (A-P3-6).
     replay='nov2024', at=<aware datetime> (B-70): a flood replay - the clock is set to `at`, every data source is cut
     there, the World Model is a fresh in-memory one, the budget is REPLAY_BUDGET_S. Never raises for data or model problems; those end up in the
     answer and the trace."""
@@ -119,7 +120,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                 + (f" ({left():.0f} s of the {p['effort']} budget left)" if budget else ""))
             current, started = state, elapsed()
             if state == "plan":
-                lang = router.language(question)
+                lang = router.language(question, lang_hint)       # a tie -> the page's EN | BM toggle
                 try:
                     res, down = gazetteer.resolve(question, agent=coordinator.AGENT), None
                 except zetaris.ZetarisError as e:        # audit 23 Oct: Zetaris down / no keys -> an answer, not a 500
@@ -147,7 +148,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     answer = {"text": text, "language": lang, "drafted_by": "code"}
                     state = "done"
                 else:
-                    r = router.route(question, res.place, world, pre.result())
+                    r = router.route(question, res.place, world, pre.result(), lang_hint=lang_hint)
                     budget = budget_s or BUDGET_S[r["effort"]]
                     p = router.code_plan(question, res, r)          # both paths: no AI planning (22 Oct night)
                     coordinator.remember(world, p)

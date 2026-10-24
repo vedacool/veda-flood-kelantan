@@ -416,7 +416,7 @@ async function ask(question, town) {
   tipTimer = setInterval(showTip, 9000);
   const creep = setInterval(() => bump((parseFloat($("w-bar").style.width) || 3) + 0.6), 1000);
   const [replay, at] = ($("mode").value || "|").split("|");
-  const params = new URLSearchParams({ question, replay, at });
+  const params = new URLSearchParams({ question, replay, at, lang });   // lang: only breaks a tie (A-P3-6)
   const stop = new AbortController();
   const timeout = setTimeout(() => stop.abort(), RUN_TIMEOUT_MS);
   try {

@@ -11,16 +11,30 @@ from app.agents import data_agent
 
 @pytest.mark.parametrize("question, lang", [
     ("Is Rantau Panjang at risk of flooding?", "en"),
-    ("Kota Bharu ok?", "en"),
+    ("Kota Bharu ok?", "en"),                                         # a tie (no words) -> no hint -> en
     ("Adakah Tumpat selamat malam ini?", "ms"),
-    ("Is Pasir Mas ok tak?", "ms"),                                   # mixed BM/EN -> BM
-    ("My mak lives in Tumpat, should she move?", "ms"),
+    ("Is Pasir Mas ok tak?", "en"),                                   # a tie (is / tak) -> no hint -> en
+    ("My mak lives in Tumpat, should she move?", "en"),               # A-P3-6: the whole question is English
     ("Air naik doh ko Rantau Panjang?", "ms"),                        # Kelantan dialect
     ("Gapo jadi sungai Golok malam ni?", "ms"),
     ("Demo dok Pasir Mas, nok tubik ke dok?", "ms"),
 ])
-def test_language_any_bm_word_means_bm(question, lang):
+def test_language_from_the_whole_question(question, lang):
     assert router.language(question) == lang
+
+
+@pytest.mark.parametrize("question, hint, lang", [
+    ("Is the road to Kampung Laut flooded?", None, "en"),             # A-P3-6: "Kampung" no longer switches to BM
+    ("Is the air quality ok near the river in Tumpat?", None, "en"),  # "air"
+    ("Is my house di Kota Bharu safe right now?", None, "en"),        # "di"
+    ("Rumah mak saya di Kampung Laut selamat ke?", None, "ms"),
+    ("Kota Bharu?", "ms", "ms"),                                      # a tie -> the page's toggle
+    ("Kota Bharu?", "en", "en"),
+    ("Is Pasir Mas ok tak?", "ms", "ms"),
+    ("Banjir tak di Tumpat?", "en", "ms"),                            # not a tie: the words win over the toggle
+])
+def test_mixed_questions_and_the_page_toggle(question, hint, lang):
+    assert router.language(question, hint) == lang
 
 
 @pytest.mark.parametrize("question, kind", [
