@@ -225,6 +225,9 @@ def requery(evidence, world, run_id, budget_s=None):
                             "raw_at": raw_at.isoformat() if raw_at else None, "query_hash": r.query_hash}
     card_status = (evidence.get("cross_check") or {}).get("status")
     wall = datetime.now(timezone.utc)
+    if evidence.get("replay"):                       # no archive: the replay does not use this feed (data agent)
+        out["flood_warning"] = {"status": "skipped", "detail": "not re-queried (replay: data.gov.my keeps no archive)"}
+        return _requery_done(out, problems)
     if world is not None and not evidence.get("replay") and (data_agent._is_open(world, "data_gov_my", wall) or
                                                               data_agent.remembered(world, "mygov_flood", wall)):
         why = ("circuit open" if data_agent._is_open(world, "data_gov_my", wall)

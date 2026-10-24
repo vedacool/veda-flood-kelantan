@@ -863,8 +863,8 @@ def sources_selected(plan, ctx, sources, cross, osm):
             skipped.append(f"{label}: {s.get('note') or s.get('status') or 'not read'}")
     if cross:
         (skipped if cross.get("status") != "ok" else chosen).append(
-            "data.gov.my flood-warning" + {"stale": ": stale - excluded", "not_checked": ": could not be read"}.get(
-                cross.get("status"), ""))
+            "data.gov.my flood-warning" + {"stale": ": stale - excluded", "not_checked": ": could not be read",
+                                           "not_in_replay": ": " + NOT_IN_REPLAY}.get(cross.get("status"), ""))
     elif plan.get("effort") == "quick":
         skipped.append("data.gov.my flood-warning cross-check: quick path")
     if osm:
@@ -984,6 +984,13 @@ def gather(plan, world, now=None, pre=None):
     if quick:
         trace.step(AGENT, "data.quick", output_summary="cross-check and reconciliation skipped", source="plan",
                    decision="Quick plan: current readings only (the full path cross-checks data.gov.my)")
+    elif "jps_levels" in wanted and ctx["found"] and replay:
+        # data.gov.my keeps no archive: today's feed is not what existed at the replay moment (its newest reading,
+        # 23 Feb 2024, showed as "277 days old" in the Nov 2024 replay) -> not used, like the MetMalaysia feeds
+        cross = {"status": "not_in_replay", "note": "data.gov.my /flood-warning: " + NOT_IN_REPLAY, "newest": None,
+                 "pairs": []}
+        trace.step(AGENT, "data.cross_check", input_summary="JPS vs data.gov.my /flood-warning",
+                   output_summary="not available in replay", source="plan", decision=cross["note"])
     elif "jps_levels" in wanted and ctx["found"]:
         cross = _cross_check(ctx, clock, world, run_id, pre.get("results", {}).get(FLOOD_WARNING_SQL),
                              prefetched=FLOOD_WARNING_SQL in pre.get("results", {}))

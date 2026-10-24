@@ -85,7 +85,7 @@
     "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (210 min)",
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   },
   {
@@ -173,7 +173,7 @@
     "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (1050 min)",
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   },
   {
@@ -260,7 +260,7 @@
     "Sg. Golok di Kg. Jenob (F1) (upstream): reading too old (1740 min)",
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   },
   {
@@ -492,7 +492,7 @@
    "missing": [
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   },
   {
@@ -635,7 +635,7 @@
     "Sg. Kelantan di Kuala Krai (F1) (upstream): reading too old (360 min)",
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   },
   {
@@ -776,7 +776,7 @@
    "missing": [
     "MetMalaysia forecast: not available in replay: data.gov.my keeps no 2024 archive",
     "MetMalaysia warnings: not available in replay: data.gov.my keeps no 2024 archive",
-    "data.gov.my flood-warning: stale - excluded"
+    "data.gov.my flood-warning: not available in replay: data.gov.my keeps no 2024 archive"
    ]
   }
  ]

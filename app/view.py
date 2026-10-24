@@ -711,7 +711,8 @@ def sources(evidence, plan, lang):
             out.append((kind, name, "unreadable", None))
     cross = ev.get("cross_check")
     if cross:
-        reason = {"ok": None, "stale": "stale", "not_checked": "unreadable"}.get(cross.get("status"), "unreadable")
+        reason = {"ok": None, "stale": "stale", "not_checked": "unreadable",
+                  "not_in_replay": "past"}.get(cross.get("status"), "unreadable")
         out.append(("flood_warnings", SOURCE_NAME["cross"][lang], reason, None))
     elif (plan or {}).get("effort") == "quick":
         out.append(("flood_warnings", SOURCE_NAME["cross"][lang], "quick", None))
