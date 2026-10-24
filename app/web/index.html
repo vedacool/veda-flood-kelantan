@@ -36,6 +36,7 @@
                  align-items: center; justify-content: center; gap: 8px; }
   button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+  .big-choice { grid-column: 1 / -1; width: 100%; min-height: 64px; font-size: 1.15rem; }   /* B3: nearest covered */
   .wide { width: 100%; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
   .seg button { border: 0; border-radius: 0; min-width: 48px; padding: 8px 12px; font-weight: 700; }
@@ -361,6 +362,9 @@
       <p id="a-combined" class="combined" hidden></p>
       <div id="a-bar-box"></div></div>
     <div class="card" id="a-expl-box" hidden><h2 data-t="explained"></h2><p id="a-expl" style="margin:0"></p>
+      <!-- B3: the AI paragraph is written once, in the question's language (result.explanation_lang) -->
+      <p class="note" id="a-expl-lang" hidden><span id="a-expl-lang-text"></span> ·
+        <button type="button" class="linkish" id="a-expl-recheck"></button></p>
       <p class="note" data-t="expl_note"></p></div>
     <div class="card" id="a-water-box"><h2 data-t="water_detail"></h2><ul class="sources" id="a-water"></ul></div>
     <div class="card" id="a-rain-box"><h2 data-t="rain_detail"></h2><ul class="sources" id="a-rain"></ul></div>
@@ -445,7 +449,8 @@ const UI = {
            "Never walk or drive through floodwater - 15 cm of fast water can knock you down.",
            "Put important documents in a plastic bag, ready to take.",
            "Know where your nearest evacuation centre (PPS) is - ask the village head."],
-    check_town: "Check {town}",
+    check_town: "Check {town}", check_nearest: "Check {place} ({km} km away)",
+    expl_lang_note: "Written in Bahasa Melayu when you asked", expl_recheck: "Check again in English",
     how_link: "See how VEDA worked this out ›", how_title: "How VEDA worked this out",
     how_note: "Each line is copied from VEDA's step-by-step log. Your question is not shown.",
     how_live: "Replay these steps live ›", total: "Total {s} s", queries: "{n} data queries through Zetaris",
@@ -502,7 +507,8 @@ const UI = {
            "Jangan meredah air banjir - air deras setinggi 15 cm boleh menjatuhkan anda.",
            "Masukkan dokumen penting dalam beg plastik, sedia untuk dibawa.",
            "Ketahui pusat pemindahan (PPS) terdekat - tanya ketua kampung."],
-    check_town: "Semak {town}",
+    check_town: "Semak {town}", check_nearest: "Semak {place} ({km} km dari sini)",
+    expl_lang_note: "Ditulis dalam English semasa anda bertanya", expl_recheck: "Semak semula dalam BM",
     how_link: "Lihat bagaimana VEDA mendapat jawapan ini ›", how_title: "Bagaimana VEDA mendapat jawapan ini",
     how_note: "Setiap baris disalin daripada log langkah demi langkah VEDA (dalam bahasa Inggeris). Soalan anda tidak ditunjukkan.",
     how_live: "Main semula langkah-langkah ini ›", total: "Jumlah {s} s", queries: "{n} pertanyaan data melalui Zetaris",
@@ -877,11 +883,14 @@ function renderAnswer() {
     const o = result && result.other;
     $("a-label").hidden = true; $("a-place").textContent = ""; $("a-details").hidden = true;
     $("a-plain-text").textContent = o ? o.text[lang] : (result ? result.output : "");
-    const towns = o && o.kind === "not_covered" && o.nearest ? [o.nearest] : o && o.kind === "did_you_mean" ? o.suggestions : [];
+    const near = result && result.nearest_covered;   // B3: {place, km} - a known Kelantan place VEDA does not cover
+    const towns = near ? [near.place]
+      : o && o.kind === "not_covered" && o.nearest ? [o.nearest] : o && o.kind === "did_you_mean" ? o.suggestions : [];
     $("a-choices").replaceChildren(...towns.map((town) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "primary";
-      b.textContent = t("check_town").replace("{town}", town);
+      b.type = "button"; b.className = near ? "primary wide big-choice" : "primary";
+      b.textContent = near ? t("check_nearest").replace("{place}", town).replace("{km}", near.km)
+                           : t("check_town").replace("{town}", town);
       b.addEventListener("click", () => ask(UI[lang].q_default.replace("{town}", town), town));
       return b;
     }));
@@ -935,6 +944,13 @@ function renderAnswer() {
   $("a-how").hidden = !result.how;
   $("a-expl-box").hidden = !v.explanation;
   if (v.explanation) { $("a-expl").textContent = v.explanation.text; $("a-expl").lang = v.explanation.language || ""; }
+  // B3: the paragraph is in the question's language; when that is not the page's, say so and offer the page's
+  const el = result.explanation_lang;
+  $("a-expl-lang").hidden = !v.explanation || !el || el === lang;
+  if (!$("a-expl-lang").hidden) {
+    $("a-expl-lang-text").textContent = t("expl_lang_note");
+    $("a-expl-recheck").textContent = t("expl_recheck");
+  }
   $("a-sources").innerHTML = v.sources[lang].map((s) =>
     `<li class="${s.used ? "" : "out"}">${s.used ? "✓" : "–"} ${esc(s.name)} <span class="sub">(${esc(s.note)})</span></li>`).join("");
 }
@@ -1037,6 +1053,11 @@ $("a-strip").addEventListener("click", () => {
 $("a-share").addEventListener("click", () => { stopSpeaking(); renderShare(); show("s-share"); });
 $("a-listen").addEventListener("click", listen);
 $("a-check").addEventListener("click", () => { stopSpeaking(); ask(lastQuestion, (result && result.view && result.view.place) || ""); });
+// B3: re-ask in the page's language - the standard question for this place, written in that language
+$("a-expl-recheck").addEventListener("click", () => {
+  const place = (result && result.view && result.view.place) || "";
+  stopSpeaking(); ask(UI[lang].q_default.replace("{town}", place), place);
+});
 $("a-sos").addEventListener("click", () => { stopSpeaking(); show("s-sos"); });
 $("a-how").addEventListener("click", () => { stopSpeaking(); renderHow(); show("s-how"); });
 $("h-back").addEventListener("click", () => show("s-answer"));
