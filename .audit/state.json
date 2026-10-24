@@ -1,9 +1,9 @@
 {
-  "lastAuditCommit": "44f33b0",
+  "lastAuditCommit": "0f12eaa",
   "lastFullAuditCommit": "44f33b0",
-  "lastAuditDate": "2026-10-23",
-  "report": "docs/audit/2026-10-23-audit.md",
-  "note": "Full run 23 Oct, all 10 dimensions. No P0; 10 P1 found and fixed the same day (see report). P2/P3 open.",
+  "lastAuditDate": "2026-10-24",
+  "report": "docs/audit/2026-10-24-audit.md",
+  "note": "Incremental 44f33b0..0f12eaa (Cowork, 24 Oct). No P0; 4 P1 (live/stream freeze, stale rain_upstream, emergency on Zetaris-down/deadline, clock fixture order) - fixes approved 24 Oct.",
   "verifiedGood": {
     "secrets-in-history": "44f33b0",
     "app/ingest/jps.py:parse": "4d4e31d",
@@ -21,7 +21,16 @@
     "sql-injection:not-reachable": "44f33b0",
     "replay:rain-cut+peak-filter": "44f33b0",
     "dependencies:licences-no-gpl": "44f33b0",
-    "docker:digest-pinned+nonroot": "44f33b0"
+    "docker:digest-pinned+nonroot": "44f33b0",
+    "demo:route-lockdown-404": "0f12eaa",
+    "demo:sample-mode+no-dotenv+no-egress": "0f12eaa",
+    "live/stream:no-question-leak": "0f12eaa",
+    "app/web:no-xss-sinks": "0f12eaa",
+    "demo/feedback:answers-unforgeable+no-ip": "0f12eaa",
+    "docker:read-only+cap-drop+nonroot": "0f12eaa",
+    "app/rain_rule:boundaries+raise-only": "0f12eaa",
+    "app/web:375px-text16px+contrast": "0f12eaa",
+    "reliability:critic-budgets+zetaris-down+watchdog": "0f12eaa"
   },
   "fixesApplied": {
     "date": "2026-10-23",
@@ -33,9 +42,7 @@
       "30e8acf"
     ],
     "open": [
-      "P2/P3 list in docs/audit/2026-10-23-audit.md",
-      "B-24 metadata.json + demo link",
-      "code licence file"
+      "P2/P3 list in docs/audit/2026-10-24-audit.md (Session B: feedback.py, nginx)"
     ],
     "wontFix": []
   }
