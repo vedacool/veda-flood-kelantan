@@ -61,3 +61,20 @@ def test_map_wording_and_placement():
     assert PAGE.index('id="towns"') < PAGE.index('id="few-readings"') < PAGE.index('id="map-box"')
     assert SVG.count('class="m-gauge"') == 2 and "Kuala Krai" in SVG and "Kg. Jenob" in SVG
     assert "20 km" in SVG and 'class="m-north"' in SVG and 'class="m-cloud"' in SVG
+
+
+def test_each_town_label_is_nearest_its_own_dot():
+    """Cowork 24 Oct (5c): a label never reads as another town's - its centre is nearer its own dot than any other."""
+    dots, labels = {}, {}
+    for m in re.finditer(r'data-town="([^"]+)">.*?<circle cx="([\d.]+)" cy="([\d.]+)" r="8" class="m-dot"/>'
+                         r'<text x="([\d.]+)" y="([\d.]+)"(?: text-anchor="(\w+)")?[^>]*>([^<]+)(?:<tspan[^>]*>([^<]+))?',
+                         SVG):
+        town, cx, cy, tx, ty, anchor, first, second = m.groups()
+        w = max(len(first), len(second or "")) * 11.6
+        x0 = float(tx) - (w if anchor == "end" else w / 2 if anchor == "middle" else 0)
+        dots[town] = (float(cx), float(cy))
+        labels[town] = (x0 + w / 2, float(ty) - 7 + (10 if second else 0))
+    assert set(dots) == set(TOWNS)
+    for town, (lx, ly) in labels.items():
+        own = (lx - dots[town][0]) ** 2 + (ly - dots[town][1]) ** 2
+        assert all(own < (lx - x) ** 2 + (ly - y) ** 2 for t, (x, y) in dots.items() if t != town), town

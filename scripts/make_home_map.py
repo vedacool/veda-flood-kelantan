@@ -31,7 +31,7 @@ DRAW_KM = 0.6                                    # simplified again when drawn, 
 UPSTREAM = ("5521044_DKKI0014", "_DTMH0008")    # Sg. Kelantan di Kuala Krai, Sg. Golok di Kg. Jenob
 # Label side per town, chosen so the four tap targets never overlap (Tumpat / Kota Bharu / Pasir Mas are close)
 # (side, how far the label's centre / start moves right of the dot). Measured at 375 px: no two targets overlap.
-SIDE = {"Rantau Panjang": ("right-below", 0), "Pasir Mas": ("above-end", 0), "Kota Bharu": ("right2", 0),
+SIDE = {"Rantau Panjang": ("left2", 0), "Pasir Mas": ("below", 0), "Kota Bharu": ("right2", 0),
         "Tumpat": ("left", 0)}
 
 
@@ -212,10 +212,10 @@ def build():
         parts.append(f'<path d="{path(line, xy)}" class="m-coast"/>')
     for line in (kel, golok):
         parts.append(f'<path d="{curve(line, xy)}" class="m-river"/>')
-    parts.append(arrows(kel, xy, (0.22, 0.5, 0.74)) + arrows(golok, xy, ([JPS reading], [JPS reading])))   # 3 + 2, downstream
+    parts.append(arrows(kel, xy, (0.2, [JPS reading], [JPS reading])) + arrows(golok, xy, ([JPS reading], [JPS reading])))   # 3 + 2, downstream
     tx, ty = xy(6.27, 101.815)
     parts.append(f'<text x="{tx}" y="{ty}" class="m-label m-thai-label" data-t="map_thailand"></text>')
-    cx, cy = xy(6.17, 101.86)                    # rain cloud inside the Thai side, clear of the river
+    cx, cy = xy(6.205, 101.86)                   # rain cloud inside the Thai side, above the Rantau Panjang label
     parts.append(f'<g transform="translate({cx} {cy})" class="m-cloud"><path d="M-14 6 a8 8 0 0 1 2 -15 a11 11 0 0 1 '
                  f'21 -2 a8 8 0 0 1 7 17 Z"/><path d="M-8 10 l-3 7 M0 10 l-3 7 M8 10 l-3 7" class="m-rain"/>'
                  f'<text x="-16" y="34" class="m-label m-small" data-t="map_rain1"></text>'
@@ -234,7 +234,13 @@ def build():
     for name, lat, lon in towns:
         x, y = xy(lat, lon)
         (side, dx), wl = SIDE[name], len(name) * 11.6     # label width at 20 units, bold
-        if side == "right2":                        # two lines (Kota / Bharu): fits inside the map's east edge
+        if side == "left2":                         # two lines over the Thai side (Rantau / Panjang), right-aligned
+            first, second = name.split(" ", 1)
+            wl = max(len(first), len(second)) * 11.6
+            label = (f'<text x="{x - 12}" y="{y - 3}" text-anchor="end" class="m-label m-town-label">{first}'
+                     f'<tspan x="{x - 12}" dy="21">{second}</tspan></text>')
+            box = (max(0.0, x - 28 - wl), y - 28, x + 16 - max(0.0, x - 28 - wl), 56)
+        elif side == "right2":                      # two lines (Kota / Bharu): fits inside the map's east edge
             first, second = name.split(" ", 1)
             wl = max(len(first), len(second)) * 11.6
             label = (f'<text x="{x + 12}" y="{y - 3}" class="m-label m-town-label">{first}'
@@ -249,8 +255,8 @@ def build():
         elif side == "above-end":                   # above-left of the dot, ending just past it
             lx, ly, anchor, box = x + 8, y - 16, "end", (x + 16 - wl - 24, y - 46, wl + 24, 54)
         else:
-            lx, ly, anchor, box = x + dx, y + 30, "middle", (x + dx - wl / 2 - 6, y - 16, wl + 12, 56)
-        if side != "right2":
+            lx, ly, anchor, box = x + dx, y + 30, "middle", (x + dx - wl / 2 - 6, y - 8, wl + 12, 56)
+        if side not in ("right2", "left2"):
             label = f'<text x="{lx}" y="{ly}" text-anchor="{anchor}" class="m-label m-town-label">{name}</text>'
         bx, by, bw, bh = (round(v, 1) for v in box)
         parts.append(f'<g class="m-town" role="button" tabindex="0" data-town="{name}">'
