@@ -3,6 +3,9 @@
 **Team Hujung Lab** (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) · GenAI Works Open Agent Hackathon 2026 ·
 Track: Solving Fragmented Intelligence · Machine-readable summary: [`metadata.json`](metadata.json)
 
+> **Judges: [try VEDA in 10 minutes](docs/JUDGES.md)** - offline, no keys, no Docker: three commands, then six things to
+> try (the Nov 2024 flood replay, a calm day, rain raising the alarm, a broken source, the agents' live log, BM).
+
 VEDA is a multi-agent system for flood-prone Kelantan, Malaysia. Kelantan's flood data is scattered and sometimes
 stale or contradictory. VEDA cross-checks it and answers one question for anyone asking about a place, in English or
 Bahasa Melayu: **"Is my place at risk in the next 24–48 hours, and what should we do now?"** Every claim in the answer
