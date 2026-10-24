@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app import gazetteer, loop, router, trace
+from app import card, gazetteer, loop, router, trace
 from app.adapters import nightshift, zetaris
 from app.agents import coordinator, critic, data_agent
 from app.engines.world_model import WorldModel
@@ -212,6 +212,35 @@ def test_no_zetaris_gives_a_cannot_check_now_answer_not_a_crash(monkeypatch, tmp
     steps = [json.loads(x) for x in open(r["trace"], encoding="utf-8")]
     assert any(s.get("action") == "data.unavailable" and "SAMPLE_MODE" in s["decision"] for s in steps)
 
+
+
+# -- audit 24 Oct P1-3: someone trapped gets the stranded advice first, even when nothing else works -------------
+@pytest.mark.parametrize("question, lang", [("I am trapped, water in my house at Tumpat", "en"),
+                                            ("Saya terkandas di Tumpat, air masuk rumah", "ms")])
+def test_trapped_and_zetaris_down_gets_act_advice_first(monkeypatch, tmp_path, question, lang):
+    monkeypatch.setenv("SAMPLE_MODE", "false")
+    for key in ("ZETARIS_API_KEY", "ZETARIS_API_URL"):
+        monkeypatch.delenv(key, raising=False)
+    gazetteer.clear_cache()
+    r = loop.run(question, llm=stub(), world=WorldModel(), log_dir=tmp_path, quiet=True)
+    gazetteer.clear_cache()
+    lines_ = r["answer"]["text"].split("\n")
+    assert lines_[0] == card.T["stranded"][lang] + "." and card.ADVICE["ACT"][lang] in lines_[1]
+    assert card.unavailable_reply(lang) in r["answer"]["text"] and "991" in r["answer"]["text"]
+
+
+@pytest.mark.parametrize("question, lang, first", [
+    ("I am trapped, water in my house at Tumpat", "en", None),
+    ("Saya terkandas di Tumpat, air masuk rumah", "ms", None),
+    ("Is Tumpat safe?", "en", "VEDA ran out of time"), ("Tumpat banjir tak?", "ms", "VEDA kehabisan masa")])
+def test_out_of_time_answer_is_bilingual_and_emergency_first(offline, question, lang, first):
+    r = loop.run(question, llm=stub(), world=WorldModel(), log_dir=offline, quiet=True, deadline_s=-1)
+    text = r["answer"]["text"]
+    assert r["status"] == "failed" and r["answer"]["language"] == lang and loop.OUT_OF_TIME[lang] in text
+    if first:
+        assert text.startswith(first)
+    else:
+        assert text.startswith(card.T["stranded"][lang]) and card.ADVICE["ACT"][lang] in text
 
 def test_models_never_see_the_users_phone_number(offline, force):
     force("full")

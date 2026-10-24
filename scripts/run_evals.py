@@ -72,11 +72,18 @@ def run_one(sc, log_dir):
             ev["met_warnings"] = {"status": "ok", "active": [sc["met_warning"]], "note": "SYNTHETIC warning (eval stub)"}
             return ev
         data_agent.gather = gather
+    real_resolve = gazetteer.resolve
+    if sc.get("zetaris_down"):         # test-only stub (audit 24 Oct P1-3): Zetaris cannot be reached for this run
+        from app.adapters import zetaris
+
+        def resolve(*a, **k):
+            raise zetaris.ZetarisError("connection", "eval stub: Zetaris cannot be reached")
+        gazetteer.resolve = resolve
     try:
         r = loop.run(sc["question"], llm=stand_in(sc.get("llm")), log_dir=log_dir, quiet=True,
                      replay=sc.get("replay"), at=at, now=now, default_scene=True)
     finally:
-        data_agent.gather = real_gather
+        data_agent.gather, gazetteer.resolve = real_gather, real_resolve
     text = r["answer"]["text"] + "\n" + r["answer"]["safety_line"]
     ex, problems = sc.get("expect", {}), []
     verdict = (r.get("forecast") or {}).get("verdict")

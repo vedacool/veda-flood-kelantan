@@ -35,6 +35,10 @@ DEADLINE_S = 600
 BUDGET_S = {"quick": 30, "full": 150}    # Husaini 22 Oct night: the longest the user should wait for an answer
 REPLAY_BUDGET_S = 240                    # replay runs only (B-70, Husaini 22 Oct night) - traced as "replay budget 240 s"
 MIN_MODEL_S = 10                         # don't start a model call with less time than this left
+OUT_OF_TIME = {"en": "VEDA ran out of time before it could check the data. Please try again; call 999 if you are in "
+                     "danger.",
+               "ms": "VEDA kehabisan masa sebelum dapat menyemak data. Sila cuba semula; hubungi 999 jika anda dalam "
+                     "bahaya."}
 RESERVE_S = 2                            # kept back from every model call for the steps after it
 RECHECK_S = 6                            # the Critic's own Zetaris re-query needs about this long
 FINAL_RESERVE_S = 10                     # the Critic's model must leave this much for writing the final answer
@@ -97,6 +101,16 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
         """Time a model call may use: what is left minus a small reserve for the steps after it."""
         return max(1.0, left() - RESERVE_S)
 
+    def emergency_first(text, lang):
+        """Someone trapped / stranded: the ACT advice (999 / 991) before anything else, whatever else failed - no
+        place, Zetaris down (audit 24 Oct P1-3) or out of time."""
+        if not router.emergency(question):
+            return text
+        trace.step("System", "emergency", input_summary=router.emergency(question), output_summary="ACT advice first",
+                   decision="the question says the person is trapped / stranded -> ACT advice (999 / 991) before "
+                            "anything else")
+        return card_mod.emergency_reply(lang, text)
+
     def short(step):
         """Too little time for a model call in `step`? -> the reason (also traced), else None."""
         if left() >= MIN_MODEL_S:
@@ -112,8 +126,9 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                            status="failed", decision="Stop and answer with what is safe to say")
                 status = "failed"
                 if answer is None:
-                    answer = {"text": "VEDA ran out of time before it could check the data. Please try again.",
-                              "language": "en", "drafted_by": "fallback"}
+                    lang = router.language(question, lang_hint)
+                    answer = {"text": emergency_first(OUT_OF_TIME[lang], lang), "language": lang,
+                              "drafted_by": "fallback"}
                 break
             trace.step("System", "state", input_summary=state,
                        decision=f"Entering state '{state}' at {elapsed():.1f} s"
@@ -132,20 +147,16 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                                            if down.kind == "auth" else ""))
                     p = {"question_language": lang, "place": None, "place_status": "unavailable",
                          "place_message": str(down), "planned_by": "code"}
-                    answer = {"text": card_mod.unavailable_reply(lang), "language": lang, "drafted_by": "code"}
+                    answer = {"text": emergency_first(card_mod.unavailable_reply(lang), lang), "language": lang,
+                              "drafted_by": "code"}
                     status, state = "fallback", "done"
                 elif res.status != "found":
                     p = {"question_language": lang, "place": None, "place_status": res.status,
                          "place_message": res.message, "planned_by": "code",
                          "nearest": getattr(res, "nearest", None),       # the answer screen's "nearest is ..." button
                          "suggestions": list(getattr(res, "suggestions", None) or [])}
-                    text = card_mod.place_reply(res, lang)
-                    if router.emergency(question):          # someone in trouble: safety advice first, place or not
-                        text = card_mod.emergency_reply(lang, text)
-                        trace.step("System", "emergency", input_summary=router.emergency(question),
-                                   output_summary="ACT advice first", decision="the question says the person is "
-                                   "trapped / stranded -> ACT advice (999 / 991) before anything else")
-                    answer = {"text": text, "language": lang, "drafted_by": "code"}
+                    answer = {"text": emergency_first(card_mod.place_reply(res, lang), lang), "language": lang,
+                              "drafted_by": "code"}
                     state = "done"
                 else:
                     r = router.route(question, res.place, world, pre.result(), lang_hint=lang_hint)
