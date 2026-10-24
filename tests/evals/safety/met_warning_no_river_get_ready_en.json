@@ -1,0 +1,27 @@
+{
+  "name": "met_warning_no_river_get_ready_en",
+  "about": "Cowork 24 Oct (tentative L11): no verified river reading near this time, but an official MetMalaysia Bahaya rain warning for the district -> Get ready anyway, never 'Can't confirm' and never a stale level shown as current [Nov 2024 replay 27 Nov 08:00 + SYNTHETIC warning, eval stub]",
+  "question": "Is Rantau Panjang safe now?",
+  "replay": "nov2024",
+  "at": "2024-11-27 08:00",
+  "met_warning": {"heading": "SYNTHETIC - Amaran Hujan Berterusan (Tahap Bahaya)", "valid_to": null},
+  "llm": {
+    "explanation": null,
+    "critic": "down"
+  },
+  "expect": {
+    "verdict": "PREPARE",
+    "language": "en",
+    "must": [
+      "Rantau Panjang: PREPARE",
+      "This replay has no verified JPS reading near this time."
+    ],
+    "must_not": [
+      "INSUFFICIENT DATA",
+      "River:"
+    ],
+    "must_trace": [
+      "rain warning (Bahaya) + no river reading → PREPARE"
+    ]
+  }
+}

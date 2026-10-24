@@ -87,6 +87,8 @@ T = {  # fixed wording, BM + EN
                   "ms": "Hujan di hulu di Thailand: {items} (masa sampai tidak diketahui)"},
     "thai_item": {"en": "{name} {mm} mm in 3 days", "ms": "{name} {mm} mm dalam 3 hari"},
     "tide": {"en": "High tide can keep water in town longer", "ms": "Air pasang boleh membuat air bertakung lebih lama di bandar"},
+    "thunder": {"en": "Thunderstorm warning: small streams and drains can rise within an hour or two",
+                "ms": "Amaran ribut petir: anak sungai dan longkang boleh naik dalam masa satu atau dua jam"},
     "until": {"en": "Rain likely until about {t}, then easing", "ms": "Hujan dijangka hingga kira-kira {t}, kemudian reda"},
     "until_heavy": {"en": "Heavy rain likely until about {t}, then easing",
                     "ms": "Hujan lebat dijangka hingga kira-kira {t}, kemudian reda"},
@@ -224,7 +226,7 @@ def build(plan, evidence, forecast):
             "sources": [], "excluded": None, "conflicts": [], "vs_2014": None, "rain_past_24h_mm": None,
             "replay": (REPLAYS.get(((evidence or {}).get("replay") or {}).get("scenario")) or {}).get("title"),
             "reading_label": None, "backup": None, "last_reading": None}
-    if main and main["level_m"] is not None and verdict != "INSUFFICIENT_DATA":
+    if main and main["level_m"] is not None and verdict != "INSUFFICIENT_DATA" and not fc.get("no_river"):
         th = main["thresholds"]
         card["gauge"] = {"name": main["name"], "level_m": main["level_m"], "read_at": _hhmm(main["observed_at"])}
         card["reading_label"] = ((main.get("provenance") or {}).get("replay") or {}).get("label")
@@ -258,7 +260,7 @@ def build(plan, evidence, forecast):
         card["backup"] = {"primary": main["backup_for"], "backup": main["name"],
                           "since": _hhmm(silent["observed_at"]) if silent.get("observed_at") else None}
     last = ctx.get("last_reading")
-    if last and verdict == "INSUFFICIENT_DATA":
+    if last and (verdict == "INSUFFICIENT_DATA" or (fc.get("no_river") and not card["gauge"])):
         card["last_reading"] = {"level_m": last["level_m"], "at": _hhmm(last["observed_at"]),
                                 "age_minutes": last["age_minutes"]}
     scene = ((evidence or {}).get("replay") or {})
@@ -294,6 +296,9 @@ def build(plan, evidence, forecast):
     card["rain_up"] = rain_up(fc.get("rain_upstream"))
     # Cowork 24 Oct: a tide-influenced town (Kota Bharu, Tumpat) at Keep watching or higher - advice only, no verdict change
     card["tide_advice"] = card["tidal"] and verdict in ("WATCH", "PREPARE", "ACT")
+    card["thunder_advice"] = bool(fc.get("thunderstorm"))      # Cowork 24 Oct: at any verdict, no verdict change
+    # Cowork 24 Oct: Get ready from a Buruk / Bahaya warning with no river reading - the card still says what is missing
+    card["no_river"] = fc.get("no_river") if verdict != "INSUFFICIENT_DATA" and not card["gauge"] else None
     rules = [t.get("rule") or "" for t in fc.get("triggers", [])]     # lines behind the verdict are never trimmed
     card["keep"] = sorted({"upstream" for r in rules if r.startswith("sentinel")}
                           | {"rain" for r in rules if r.startswith("rain")})
@@ -351,6 +356,8 @@ def when_text(iso, lang):
 def rain_lines(card, lang):
     """B-88 lines (outside the length cap, like the OSM lines: the line behind a raised verdict is never cut)."""
     out = [("tide", T["tide"][lang] + ".")] if card.get("tide_advice") else []
+    if card.get("thunder_advice"):
+        out.append(("thunder", T["thunder"][lang] + "."))
     r = card.get("rain_up")
     if not r:
         return out
@@ -478,7 +485,7 @@ FIT_STEPS = ("short_gauge", "short_source", "short_label", "peak_part", "exclude
 # B-73 (Husaini 23 Oct): the OSM lines answer what the user asked (evacuation / cut-off questions only - the card has
 # them for no other intent), so they sit outside the cap like the explanation: up to 3 possible PPS and 2 bridges.
 OSM_LINES = ("pps", "bridge", "low_ground", "osm",
-             "rain_up", "rain_here", "small_rivers", "until", "thailand", "tide")   # + B-88 lines, outside the cap
+             "rain_up", "rain_here", "small_rivers", "until", "thailand", "tide", "thunder")   # + B-88 lines, outside the cap
 
 
 def bridge_name(name, lang):
@@ -594,7 +601,7 @@ def _lines(card, lang, explanation, low_confidence, drop):
             out.append(("vs2014", T["vs2014"][lang].format(d=_num(abs(v["diff_m"])), p=_num(v["peak_m"]),
                                                           rel=T["above" if v["diff_m"] >= 0 else "below"][lang])
                         + tag + "."))
-    elif card["verdict"] == "INSUFFICIENT_DATA":
+    elif card["verdict"] == "INSUFFICIENT_DATA" or card.get("no_river"):
         replay = bool(card.get("replay"))
         gap = "synthetic_gap" if card.get("synthetic") else "replay_gap"
         out.append(("no_reading", (T[gap][lang] if replay else T["no_reading"][lang].capitalize()) + "."))

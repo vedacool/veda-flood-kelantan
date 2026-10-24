@@ -64,6 +64,7 @@ W = {
     "from_made_up": {"en": "made-up test reading", "ms": "bacaan ujian rekaan"},
     "calm_note": {"en": "Nothing to do now. VEDA checks again whenever you ask.",
                   "ms": "Tiada apa perlu dibuat sekarang. VEDA menyemak semula setiap kali anda bertanya."},
+    "no_river_row": {"en": "No fresh river reading right now.", "ms": "Tiada bacaan sungai terkini sekarang."},
     "cant_confirm": {"en": "We could not get a fresh river reading, so we will not guess. Check JPS Infobanjir; call 999 "
                            "if you are in danger.",
                      "ms": "Kami tidak dapat bacaan sungai terkini, jadi kami tidak akan meneka. Semak JPS Infobanjir; "
@@ -116,6 +117,10 @@ WHY = {  # one sentence per verdict rule, plain words (the rule names stay in th
                                   "heavily here ({mm} mm in 12 hours), so VEDA moved up one step.",
                             "ms": "Hujan lebat di hulu ({where}) mungkin sampai ke sini dalam {a}-{b} jam ketika hujan "
                                   "lebat juga di sini ({mm} mm dalam 12 jam), jadi VEDA naikkan satu tahap."},
+    "met-warning-no-river": {"en": "There is no fresh river reading here, but MetMalaysia has an official {level} rain "
+                                   "warning for this district - an official warning is enough to get ready.",
+                             "ms": "Tiada bacaan sungai terkini di sini, tetapi MetMalaysia mengeluarkan amaran hujan rasmi "
+                                   "tahap {level} untuk daerah ini - amaran rasmi sudah cukup untuk bersedia."},
     "met-warning": {"en": "MetMalaysia has an official {level} rain warning for this district; that sets at least "
                           "“{min}”.",
                     "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini; ini menetapkan "
@@ -229,6 +234,10 @@ SET_BY = {  # Cowork 24 Oct: the line under the badge says what SET the verdict 
     "rain_forecast": {"en": "Heavy rain is forecast.", "ms": "Hujan lebat dijangka."},
     "met_warning": {"en": "MetMalaysia has an official {level} rain warning for this district.",
                     "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini."},
+    "met_warning_no_river": {"en": "MetMalaysia has an official {level} rain warning for this district. We could not "
+                                   "get a river reading, so get ready anyway.",
+                             "ms": "MetMalaysia mengeluarkan amaran hujan rasmi tahap {level} untuk daerah ini. Kami "
+                                   "tidak dapat bacaan sungai, jadi bersedialah juga."},
 }
 
 
@@ -242,7 +251,7 @@ def set_by(forecast):
     r = top[0]
     return ("rain_both" if r == "upstream+local-rain" else "rain_up" if r == "upstream-rain" else
             "upstream_gauge" if r.startswith("sentinel") else "rain_forecast" if r.startswith("rain") else
-            "met_warning" if r == "met-warning" else "river")
+            "met_warning" if r == "met-warning" else "met_warning_no_river" if r == "met-warning-no-river" else "river")
 
 
 MET_LEVEL_WORD = {"waspada": {"en": "alert-level", "ms": "Waspada"}, "buruk": {"en": "severe-level", "ms": "Buruk"},
@@ -251,13 +260,16 @@ MET_LEVEL_WORD = {"waspada": {"en": "alert-level", "ms": "Waspada"}, "buruk": {"
 
 def _met_level(forecast):
     """The MetMalaysia warning level behind a 'met-warning' trigger ('waspada' | 'buruk' | 'bahaya'), or None."""
-    t = next((t for t in (forecast or {}).get("triggers") or [] if t["rule"] == "met-warning"), None)
+    t = next((t for t in (forecast or {}).get("triggers") or [] if t["rule"] in ("met-warning", "met-warning-no-river")),
+             None)
     m = re.search(r"MetMalaysia (\w+) rain warning", (t or {}).get("reason", ""))
     return m.group(1).lower() if m and m.group(1).lower() in MET_LEVEL_WORD else None
 
 
 def _line(card, forecast, lang):
     """The one line under the verdict badge: the reason that set the verdict, in plain words."""
+    if set_by(forecast) == "met_warning_no_river":           # Cowork 24 Oct: Get ready with no river reading
+        return SET_BY["met_warning_no_river"][lang].format(level=MET_LEVEL_WORD[_met_level(forecast) or "buruk"][lang])
     if card["verdict"] == "INSUFFICIENT_DATA" or not card.get("gauge"):
         return W["no_reading_past"][lang] if card.get("replay") else W["cant_confirm"][lang]
     by = set_by(forecast)
@@ -346,6 +358,12 @@ def _water_plain(card, forecast, lang):
     return " ".join(x for x in (move, where) if x)
 
 
+def _water_missing(evidence, plan, lang):
+    """Get ready with no river reading (Cowork 24 Oct): the Water row says so; Details names the missing reading."""
+    missing = [f"{s['name']} - {s['note']}" for s in sources(evidence, plan, lang) if s["kind"] == "river" and not s["used"]]
+    return {"main": W["no_river_row"][lang], "detail": missing or [W["no_river_row"][lang]]}
+
+
 def _upstream(forecast, lang):
     rows = []
     for u in (forecast or {}).get("upstream", []):
@@ -424,6 +442,8 @@ def why(forecast, lang):
             out.append(tmpl[lang].format(n24=_num(r.get("next_24h_mm")), n72=_num(r.get("next_72h_mm"))))
         elif rule in ("upstream-rain", "upstream+local-rain"):
             out.append(_why_rain(fc.get("rain_upstream") or {}, rule, lang))
+        elif rule == "met-warning-no-river":
+            out.append(tmpl[lang].format(level=MET_LEVEL_WORD[_met_level(fc) or "buruk"][lang]))
         elif rule == "met-warning":
             out.append(tmpl[lang].format(level=MET_LEVEL_WORD[_met_level(fc) or "waspada"][lang],
                                          min=HEADLINE[t["level"]][lang]))
@@ -443,7 +463,7 @@ def combined(forecast, lang):
     other source raised it; None when the river here alone gives the same verdict."""
     fc = forecast or {}
     verdict = fc.get("verdict")
-    if verdict not in LEVELS:
+    if verdict not in LEVELS or fc.get("no_river"):           # no river reading: "the river alone" would be untrue
         return None
     triggers = fc.get("triggers") or []
     alone = max((LEVELS.index(t["level"]) for t in triggers if t["rule"].startswith(GAUGE_RULES)
@@ -615,12 +635,13 @@ def answer_view(result):
             "label": _both(lambda lang: _label(evidence, lang)) if _label(evidence, "en") else None,
             "line": _both(lambda lang: _line(card, forecast, lang)),
             "todo": dict(card["action"]),
-            "water": _both(lambda lang: _water(card, forecast, evidence, lang)) if card.get("gauge") else None,
+            "water": (_both(lambda lang: _water(card, forecast, evidence, lang)) if card.get("gauge") else
+                      _both(lambda lang: _water_missing(evidence, plan, lang)) if card.get("no_river") else None),
             "upstream": _both(lambda lang: _rain_text(card, lang, ("rain_up",)) + _upstream(forecast, lang)),
             "rain": _both(lambda lang: _rain(card, lang)) if _rain(card, "en") else None,
             "rain_more": _both(lambda lang: _rain_text(card, lang, ("rain_here", "until", "small_rivers", "thailand"))),
             "rain_share": _both(lambda lang: _rain_text(card, lang, ("rain_up", "rain_here", "until"))),
-            "todo_more": _both(lambda lang: _rain_text(card, lang, ("tide",))),       # Cowork 24 Oct: tide advice
+            "todo_more": _both(lambda lang: _rain_text(card, lang, ("tide", "thunder"))),   # Cowork 24 Oct advice
             "why": _both(lambda lang: why(forecast, lang)),
             "combined": _both(lambda lang: combined(forecast, lang)) if combined(forecast, "en") else None,
             "note": dict(W["calm_note"]) if verdict == "NORMAL" else None,

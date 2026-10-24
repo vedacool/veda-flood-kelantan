@@ -309,3 +309,56 @@ def test_line_under_the_verdict_names_the_warning(run_ctx):
     assert view._line(card, fc, "en") == "MetMalaysia has an official danger-level rain warning for this district."
     assert view._line(card, fc, "ms") == "MetMalaysia mengeluarkan amaran hujan rasmi tahap Bahaya untuk daerah ini."
     assert view.why(fc, "en").endswith("that sets at least “Get ready”.")
+
+
+# -- Cowork 24 Oct: no river reading + Buruk / Bahaya -> Get ready; thunderstorm -> flash-flood advice ----------
+def no_river(heading):
+    ev = ctx_with(None)
+    ev["usable"] = False
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": heading}]}
+    return ev
+
+
+@pytest.mark.parametrize("heading,expected", [("Amaran Hujan Berterusan (Tahap Bahaya)", "PREPARE"),
+                                              ("CONTINUOUS RAIN WARNING (SEVERE LEVEL)", "PREPARE"),
+                                              ("CONTINUOUS RAIN WARNING (ALERT LEVEL)", "INSUFFICIENT_DATA"),
+                                              ("THUNDERSTORMS WARNING", "INSUFFICIENT_DATA")])
+def test_no_river_reading_with_a_severe_warning_gets_ready(run_ctx, heading, expected):
+    fc = verdict(no_river(heading))
+    assert fc["verdict"] == expected and fc["no_river"]
+    if expected == "PREPARE":
+        assert fc["triggers"][0]["rule"] == "met-warning-no-river" and fc["confidence"]["label"] == "low"
+
+
+def test_no_river_get_ready_card_and_screen(run_ctx):
+    from app import card as card_mod, view
+    ev = no_river("Amaran Hujan Berterusan (Tahap Bahaya)")
+    fc = verdict(ev)
+    c = card_mod.build({"place": {"name": "Kota Bharu"}}, ev, fc)
+    assert c["gauge"] is None and c["no_river"]                 # a stale level is never shown as current
+    text = card_mod.render(c, "en")
+    assert "Kota Bharu: PREPARE" in text and "No fresh reading from the controlling gauge." in text
+    assert view._line(c, fc, "en") == ("MetMalaysia has an official danger-level rain warning for this district. We could "
+                                       "not get a river reading, so get ready anyway.")
+    assert view._line(c, fc, "ms").endswith("Kami tidak dapat bacaan sungai, jadi bersedialah juga.")
+    assert view.combined(fc, "en") is None
+    from app import trace
+    rec = [json.loads(x) for x in trace.current_run().path.read_text(encoding="utf-8").splitlines()]
+    assert any(x["output_summary"] == "rain warning (Bahaya) + no river reading → PREPARE" for x in rec)
+
+
+def test_thunderstorm_warning_adds_advice_at_any_verdict_and_changes_nothing(run_ctx):
+    from app import card as card_mod
+    ev = ctx_with(None)
+    ev["met_warnings"] = {"status": "ok", "active": [{"heading": "THUNDERSTORMS WARNING"}]}
+    fc = verdict(ev)
+    assert fc["verdict"] == "NORMAL" and fc["thunderstorm"]
+    c = card_mod.build({"place": {"name": "Kota Bharu"}}, ev, fc)
+    assert ("thunder", "Thunderstorm warning: small streams and drains can rise within an hour or two.") in \
+        card_mod.rain_lines(c, "en")
+    assert dict(card_mod.rain_lines(c, "ms"))["thunder"].startswith("Amaran ribut petir:")
+    from app import trace
+    rec = [json.loads(x) for x in trace.current_run().path.read_text(encoding="utf-8").splitlines()]
+    assert any(x["action"] == "forecast.thunderstorm" and x["output_summary"] == "thunderstorm warning → flash-flood advice"
+               for x in rec)
+    assert not forecast_agent.thunderstorm([{"heading": "CONTINUOUS RAIN WARNING (ALERT LEVEL)"}])

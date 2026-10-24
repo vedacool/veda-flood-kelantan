@@ -393,9 +393,11 @@ bertakung lebih lama di bandar." Advice only - the verdict does not change. Righ
 **L11.** (added 24 Oct, **applied the same day** with Cowork's OK) Section A says a MetMalaysia warning raises the
 verdict. VEDA now does: an active rain warning for the town's district sets a minimum - Waspada → at least Keep
 watching; Buruk / Bahaya → at least Get ready - and can never lower a verdict. A warning without a level (e.g. a
-thunderstorm warning) sets nothing; with no river reading VEDA still says "Can't confirm". The screen says
-"MetMalaysia has an official <level> rain warning for this district." Is this right, and should a thunderstorm
-warning count too?
+thunderstorm warning) sets nothing. The screen says "MetMalaysia has an official <level> rain warning for this
+district." **No river reading:** with a Buruk / Bahaya warning VEDA now says Get ready anyway ("We could not get a
+river reading, so get ready anyway."); with a Waspada warning it still says "Can't confirm" and shows the warning.
+**Thunderstorm warning:** no verdict change, but the card adds "Thunderstorm warning: small streams and drains can rise
+within an hour or two." Is all of this right?
 > Answer: ______
 
 ---
