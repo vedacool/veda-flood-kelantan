@@ -120,6 +120,8 @@ def _last_user(messages):
 
 
 def _post(base, token, body, app, timeout=TIMEOUT_S):
+    if config.demo_mode():                          # second safeguard behind SAMPLE_MODE: never a live call
+        raise NightshiftError("public demo (VEDA_DEMO=1): no live Nightshift call")
     headers = {"Authorization": f"Bearer {token}", "meterless-app": app, "meterless-scope": "user",
                "Content-Type": "application/json"}
     extra = {"stream": True} if body.get("stream") else {}
@@ -129,6 +131,13 @@ def _post(base, token, body, app, timeout=TIMEOUT_S):
 def is_ttfb_cut(error):
     """True when Nightshift cut the call because no first byte came in time (~45 s)."""
     return TTFB_CUT in str(error)
+
+
+def is_empty_response(error):
+    """True when the model answered with nothing (it spent its budget on hidden reasoning) - 24 Oct live: 4 of 13
+    draft calls."""
+    text = str(error)
+    return "empty response" in text or "empty_response" in text
 
 
 def _lines_until(r, stop_at):
@@ -355,7 +364,8 @@ def chat(lane, messages, agent, json_mode=False, thinking=False, tools=None, max
 def main(argv):
     """CLI check of the AI lane: a fixed 'reply OK' request (never a user question) - prints the served model."""
     from dotenv import load_dotenv
-    load_dotenv(trace.ROOT / ".env")
+    if not config.demo_mode():                      # VEDA_DEMO=1: no .env is read
+        load_dotenv(trace.ROOT / ".env")
     trace.start_run("Nightshift check (fixed prompt)")
     try:
         r = chat(AI_LANE, [{"role": "user", "content": 'Reply with exactly this JSON: {"ok": true}'}],

@@ -41,7 +41,8 @@ from app import admin, config, progress, trace, view
 from app.adapters import nightshift, zetaris
 from app.agents.coordinator import SAFETY
 
-load_dotenv(config.ROOT / ".env")
+if not config.demo_mode():                   # VEDA_DEMO=1 (public demo): no .env is read, whatever is set
+    load_dotenv(config.ROOT / ".env")
 MAX_QUESTION = 500
 WEB_PAGE = config.ROOT / "app" / "web" / "index.html"
 LIVE_PAGE = config.ROOT / "app" / "web" / "live.html"
@@ -52,6 +53,17 @@ QUESTION_HIDDEN = "(the question is not shown here - privacy)"
 _watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: one queue each
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.")
+
+
+DEMO_CLOSED = ("/admin", "/trace/run/")          # operator screens, approve, a run's own log: never in the public demo
+
+
+@app.middleware("http")
+async def _public_demo(request: Request, call_next):
+    """VEDA_DEMO=1: the operator routes answer 404 inside the app too (the proxy closes them as well)."""
+    if config.demo_mode() and request.url.path.startswith(DEMO_CLOSED):
+        return _error(404, "not_found", "not in the public demo")
+    return await call_next(request)
 
 
 class _NoQueryString(logging.Filter):

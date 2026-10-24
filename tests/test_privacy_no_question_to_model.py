@@ -16,7 +16,7 @@ QUESTION = "Mak saya Siti Zubaidah di Tumpat, nombor 0123456789, kena pindah mal
 def live_models_offline_data(monkeypatch, tmp_path):
     """Recorded data (SAMPLE_MODE fixtures) but the real Nightshift adapter, with the network call replaced."""
     monkeypatch.setenv("SAMPLE_MODE", "true")
-    monkeypatch.setattr(nightshift, "config", SimpleNamespace(sample_mode=lambda: False))
+    monkeypatch.setattr(nightshift, "config", SimpleNamespace(sample_mode=lambda: False, demo_mode=lambda: False))
     monkeypatch.setenv("METERLESS_BASE_URL", "http://127.0.0.1:9/v1")
     monkeypatch.setenv("METERLESS_RUNTIME_TOKEN", "test-token")
     monkeypatch.setattr(router, "data_triggers", lambda *a, **k: ["test: forced full"])

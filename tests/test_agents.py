@@ -342,3 +342,65 @@ def test_slow_other_failure_is_not_retried(clock):
     with pytest.raises(nightshift.NightshiftError):
         coordinator._draft_call(llm, {}, None, 150)
     assert len(llm.calls) == 1
+
+
+# -- B-85 + Cowork 24 Oct: one draft retry after an empty response, same rule as the ttfb cut -------------------
+class _Clock:
+    def __init__(self):
+        self.t = 1000.0
+
+    def monotonic(self):
+        return self.t
+
+
+def _draft_stub(clock, script):
+    """script: [(seconds the call takes, error message or None for success)]; records the budget each call got."""
+    calls = []
+
+    def llm(lane, messages, agent, budget_s=None, **kw):
+        took, err = script[len(calls)]
+        calls.append(budget_s)
+        clock.t += took
+        if err:
+            raise nightshift.NightshiftError(err)
+        return SimpleNamespace(data={"explanation": "ok"}, text="ok")
+    llm.calls = calls
+    return llm
+
+
+EMPTY = "Nightshift failed after 1 attempts: empty response -> retry with max_tokens=8192"
+
+
+@pytest.mark.parametrize("first_took,retried", [(26, True), (46, False)])     # 90-26 = 64 s left; 90-46 = 44 s left
+def test_draft_retries_once_after_an_empty_response_only_with_45_s_left(run, monkeypatch, first_took, retried):
+    clock = _Clock()
+    monkeypatch.setattr(coordinator.time, "monotonic", clock.monotonic)
+    llm = _draft_stub(clock, [(first_took, EMPTY), (12, None)])
+    if retried:
+        assert coordinator._draft_call(llm, {}, None, None).data == {"explanation": "ok"}
+        assert len(llm.calls) == 2 and llm.calls[1] == pytest.approx(90 - first_took)     # never past the 90 s cap
+        rec = [x for x in lines(trace.current_run().path) if x["action"] == "draft.retry"][-1]
+        assert "draft retry after empty response" in rec["decision"]
+    else:
+        with pytest.raises(nightshift.NightshiftError):
+            coordinator._draft_call(llm, {}, None, None)
+        assert len(llm.calls) == 1
+
+
+def test_draft_empty_response_retry_happens_once_and_respects_the_run_budget(run, monkeypatch):
+    clock = _Clock()
+    monkeypatch.setattr(coordinator.time, "monotonic", clock.monotonic)
+    llm = _draft_stub(clock, [(15, EMPTY), (15, EMPTY), (5, None)])
+    with pytest.raises(nightshift.NightshiftError):
+        coordinator._draft_call(llm, {}, None, None)
+    assert len(llm.calls) == 2                                           # one retry only
+    clock2 = _Clock()
+    monkeypatch.setattr(coordinator.time, "monotonic", clock2.monotonic)
+    llm2 = _draft_stub(clock2, [(15, EMPTY), (5, None)])
+    with pytest.raises(nightshift.NightshiftError):                       # run budget 50 s: 35 s left < 45 s
+        coordinator._draft_call(llm2, {}, None, 50)
+    assert llm2.calls == [50]
+
+
+def test_is_empty_response():
+    assert nightshift.is_empty_response(EMPTY) and not nightshift.is_empty_response("HTTP 200: ttfb_timeout:nvidia/x")

@@ -71,7 +71,8 @@ def approve(world, key, place_id, by):
 
 
 def main(argv=None):
-    load_dotenv(config.ROOT / ".env")
+    if not config.demo_mode():                      # VEDA_DEMO=1: no .env is read
+        load_dotenv(config.ROOT / ".env")
     ap = argparse.ArgumentParser(description="VEDA gauge discovery (B-71c)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list", help="scan, then list discovered gauges with their proposed fit")

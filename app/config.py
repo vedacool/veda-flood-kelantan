@@ -20,9 +20,15 @@ def flag(name, default=False):
     return os.getenv(name, "true" if default else "false").strip().lower() == "true"
 
 
+def demo_mode():
+    """VEDA_DEMO=1 (or true): the public demo (Session B, docs/DEPLOY_DEMO.md) - SAMPLE_MODE forced on, no .env
+    read, no live call possible, operator routes answer 404 - whatever else is set."""
+    return os.getenv("VEDA_DEMO", "").strip().lower() in ("1", "true")
+
+
 def sample_mode():
-    """SAMPLE_MODE=true: offline judge mode, no live calls."""
-    return flag("SAMPLE_MODE")
+    """SAMPLE_MODE=true: offline judge mode, no live calls. Always on in the public demo (VEDA_DEMO=1)."""
+    return demo_mode() or flag("SAMPLE_MODE")
 
 
 # --- Secrets -------------------------------------------------------------------------------------------------

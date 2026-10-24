@@ -185,6 +185,8 @@ def _config():
 
 
 def _post(sql, limit, timeout=TIMEOUT_S):
+    if config.demo_mode():                          # second safeguard behind SAMPLE_MODE: never a live call
+        raise ZetarisError("demo", "public demo (VEDA_DEMO=1): no live Zetaris call")
     url, key, org = _config()
     headers = {"Authorization": f"Bearer {key}", "X-Org-ID": org, "X-Request-ID": str(uuid.uuid4()),
                "Content-Type": "application/json"}
@@ -362,7 +364,8 @@ def run_ddl(sql, agent, purpose=None, setup=False, budget_s=None):
 def main(argv):
     """CLI check: run one SELECT and print the rows."""
     from dotenv import load_dotenv
-    load_dotenv(trace.ROOT / ".env")
+    if not config.demo_mode():                      # VEDA_DEMO=1: no .env is read
+        load_dotenv(trace.ROOT / ".env")
     sql = " ".join(argv[1:]) or "SELECT 1 AS x"
     trace.start_run(f"zetaris CLI: {sql}")
     try:

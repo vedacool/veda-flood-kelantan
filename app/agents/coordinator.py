@@ -189,13 +189,16 @@ def _draft_call(llm, request, feedback, budget_s):
         except nightshift.NightshiftError as e:
             took, left = time.monotonic() - t, cap - (time.monotonic() - start)
             kind = ("fast" if took < DRAFT_FAST_FAIL_S else
-                    "ttfb" if nightshift.is_ttfb_cut(e) else None)
-            need = DRAFT_TTFB_RETRY_MIN_S if kind == "ttfb" else DRAFT_MIN_TRY_S
+                    "ttfb" if nightshift.is_ttfb_cut(e) else
+                    "empty" if nightshift.is_empty_response(e) else None)
+            # Cowork 24 Oct: an empty response gets the ttfb rule - one retry, only with >= 45 s of the draft left
+            need = DRAFT_TTFB_RETRY_MIN_S if kind in ("ttfb", "empty") else DRAFT_MIN_TRY_S
             if kind is None or kind in used or left < need:
                 raise
             used.add(kind)
             why = (f"failed fast (< {DRAFT_FAST_FAIL_S} s)" if kind == "fast" else
-                   f"cut by Nightshift (no first byte) and {left:.0f} s of {cap:.0f} s left")
+                   f"cut by Nightshift (no first byte) and {left:.0f} s of {cap:.0f} s left" if kind == "ttfb" else
+                   f"draft retry after empty response ({left:.0f} s of {cap:.0f} s left)")
             trace.step(AGENT, "draft.retry", input_summary=f"draft failed after {took:.0f} s",
                        output_summary=str(e)[:150], status="retrying", decision=f"{why} -> one more try")
 
