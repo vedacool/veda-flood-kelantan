@@ -86,7 +86,7 @@
 <!--VEDA:TOP-->
 <!-- B-96: the shared frame above (its VEDA link goes home); this page's own heading below -->
 <div class="lhead">
-  <h1>VEDA · live log</h1>
+  <h1 id="h-title">VEDA · live log</h1>
   <span class="note" id="h-note">The question itself is never shown here.</span>
 </div>
 <!-- B-96: the controls first on every width (in the demo, Play is what a visitor needs) -->
@@ -110,9 +110,10 @@
     <ol id="feed"></ol>
   </main>
   <aside><div class="panel">
-    <h2>Who is working</h2>
+    <h2 id="who-title">Who is working</h2>
     <ul class="who" id="who"></ul>
-    <p class="note">Word for word from the trace (<code>logs/trace-&lt;run_id&gt;.jsonl</code>).</p>
+    <details class="note"><summary id="who-note">Word for word from the trace</summary>
+      <p lang="en"><code>logs/trace-&lt;run_id&gt;.jsonl</code></p></details>
   </div></aside>
 </div>
 <script>
@@ -120,17 +121,23 @@
 const $ = (id) => document.getElementById(id);
 // The two public header lines follow the main page's EN | BM toggle (wording review 24 Oct); the log stays English.
 const HEAD = {
-  en: { hint: "Press play to watch each agent step, recorded live.", live: "Live", replay: "Replay", play: "Play ▶",
+  en: { title: "VEDA · live log", who: "Who is working", verbatim: "Word for word from the trace",
+        hint: "Press play to watch each agent step, recorded live.", live: "Live", replay: "Replay", play: "Play ▶",
         redacted: "River readings are hidden, as the organisers asked. Details ▾",
         note: "The question itself is never shown here.",
         waiting: "Waiting for a question… Ask one on VEDA's main page and every step appears here as it happens." },
-  ms: { hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.", live: "Langsung", replay: "Ulang tayang",
+  ms: { title: "VEDA · log langsung", who: "Siapa sedang bekerja", verbatim: "Sama seperti dalam log", hint: "Tekan main untuk melihat setiap langkah ejen, dirakam secara langsung.", live: "Langsung", replay: "Ulang tayang",
         play: "Main ▶",
         redacted: "Bacaan sungai disembunyikan, seperti yang diminta penganjur. Butiran ▾",
         note: "Soalan itu sendiri tidak pernah ditunjukkan di sini.",
         waiting: "Menunggu soalan… Tanya di halaman utama VEDA dan setiap langkah akan muncul di sini ketika ia berlaku." },
 };
-const pageLang = () => { try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; } };
+// audit 26 Oct: ?lang= first (a shared link), then the one saved VEDA setting
+const pageLang = () => {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (q) return q === "ms" || q === "bm" ? "ms" : "en";
+  try { return localStorage.getItem("veda.lang") === "ms" ? "ms" : "en"; } catch (e) { return "en"; }
+};
 // B-96: a recorded run is named by when (Malaysia time) and where - "24 Oct, 8:10 pm MYT · Wakaf Bharu"
 const PLACES = ["Rantau Panjang", "Pasir Mas", "Kota Bharu", "Tumpat", "Kuala Krai", "Tanah Merah", "Dabong",
                 "Wakaf Bharu", "Pasir Pekan"];
@@ -157,6 +164,9 @@ function labelRuns() {
 }
 function applyHeadLang() {
   const h = HEAD[pageLang()];
+  document.documentElement.lang = pageLang();          // audit 26 Oct: screen readers read BM as BM
+  $("h-title").textContent = h.title; $("who-title").textContent = h.who; $("who-note").textContent = h.verbatim;
+  document.title = h.title.replace(" · ", " - ");
   $("rnote-sum").textContent = h.redacted;
   labelRuns();
   $("h-note").textContent = h.note; $("h-note").lang = pageLang();
@@ -168,7 +178,11 @@ function applyHeadLang() {
 window.addEventListener("storage", (e) => { if (e.key === "veda.lang") applyHeadLang(); });
 // B-96: the frame's EN | BM switches this page in place
 window.vedaSetLang = (l) => { try { localStorage.setItem("veda.lang", l); } catch (e) { /* private window */ }
+  const u = new URL(location.href);                    // keep ?lang= in step, so pageLang() follows the button
+  if (u.searchParams.has("lang")) { u.searchParams.set("lang", l); history.replaceState(null, "", u); }
   applyHeadLang(); if (window.vedaFrameLang) window.vedaFrameLang(l); };
+// audit 26 Oct: this page binds the frame's EN | BM buttons itself (frame.js leaves them to a page with vedaSetLang)
+document.querySelectorAll(".vf-lang [data-lang]").forEach((b) => b.addEventListener("click", () => vedaSetLang(b.dataset.lang)));
 const AGENTS = [  // name in the trace -> colour token
   ["System", "--c-system"], ["Coordinator", "--c-coordinator"], ["Data & Reconciler", "--c-data"],
   ["Forecast", "--c-forecast"], ["Critic", "--c-critic"], ["Nemotron 3.5 Super VL", "--c-nemotron"]];

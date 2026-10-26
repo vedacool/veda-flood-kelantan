@@ -88,7 +88,9 @@ def test_offline_details_say_live_mode_only_never_a_stand_in_result():
 def test_the_page_shows_the_judgement_row_and_the_critics_checks():
     from app import config
     page = (config.ROOT / "app" / "web" / "index.html").read_text(encoding="utf-8")
-    assert 'id="a-judge"' in page and "const jg = v.judgement;" in page and 'details class="checks"' in page
+    assert 'id="a-judge"' in page and "const jg = v.judgement;" in page
+    # audit 26 Oct: the Critic's check names are trace terms - inside "Show technical log" on the how screen
+    assert '<details class="tech"><summary>${esc(t("tech_log"))}</summary>${raw}</details>' in page and "r.checks.map" in page
     live = (config.ROOT / "app" / "web" / "live.html").read_text(encoding="utf-8")
     assert '"critic.ai_judgement"' in live
 

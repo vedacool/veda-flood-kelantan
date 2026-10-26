@@ -10,6 +10,7 @@
     return l === "ms" || l === "bm" ? "ms" : "en";
   }
   function words(l) {
+    document.documentElement.lang = l;               // audit 26 Oct: /sources etc. - screen readers read BM as BM
     document.querySelectorAll("[data-vf-en]").forEach((el) => { el.textContent = el.getAttribute("data-vf-" + l); });
     document.querySelectorAll(".vf-lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
   }

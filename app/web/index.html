@@ -393,6 +393,8 @@
 </section>
 
 <!-- 3. Answer -->
+<!-- audit 26 Oct: outside the screens (a hidden screen is never announced) - says the answer when it arrives -->
+<p id="sr-answer" class="sr-only" aria-live="polite"></p>
 <section id="s-answer" hidden>
   <p id="a-label" class="moment-line" hidden><span id="a-label-text"></span><span class="nowrap"><span id="a-change-dot"
      aria-hidden="true" hidden> · </span><button type="button" class="linkish" id="a-change" data-t="change" hidden></button></span></p>
@@ -678,6 +680,16 @@ function show(id) {
   window.scrollTo(0, 0);
 }
 
+// audit 26 Oct (A-P2-18): a screen reader hears the answer arrive - the place and the verdict, or the plain text
+function announce() {
+  const v = result && result.view;
+  $("sr-answer").textContent = "";
+  setTimeout(() => {
+    $("sr-answer").textContent = v ? `${v.place || ""}: ${v.headline[lang]}. ${v.level_text[lang]}`
+      : $("a-plain-text").textContent;
+  }, 100);
+}
+
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
@@ -889,11 +901,13 @@ async function ask(question, town) {
     $("w-status").textContent = t("s_done");
     renderAnswer();
     show("s-answer");
+    announce();
   } catch (e) {
     if (e instanceof Down || e.name === "AbortError" || e instanceof TypeError) {   // down, timed out, cut off
       result = { other: { kind: "down", text: UI_DOWN }, output: UI_DOWN[lang] };
       renderAnswer();
       show("s-answer");
+      announce();
     } else {
       show("s-home");
       $("err").textContent = e.message; $("err").hidden = false;
@@ -1102,15 +1116,21 @@ function renderHow() {
       ? `<p class="ai">${esc(t("answered").replace("{m}", a.model || "?"))} · ${esc(t("receipt"))} ${esc(a.receipt || "-")} · ${a.seconds} s</p>`
       : `<p class="warn">${esc(t("ai_failed"))} (${esc(a.agent)}): ${esc(a.note || a.status)} · ${a.seconds} s</p>`).join("");
     const aiStep = ["draft", "critique", "revise"].includes(r.key);
+    // audit 26 Oct: plain words on the screen (the trail's sentence for this step); the trace's own terms (SAMPLE_MODE,
+    // confidence decimals, check names, fallback lines) only inside "Show technical log"
+    const plain = (((result.trail || {})[lang]) || []).find((x) => x.key === r.key);
+    const raw = r.lines.map((l) => `<p lang="en"${l.status === "fallback" ? ' class="warn"' : ""}>${esc(l.text)}</p>`).join("") +
+      (r.checks ? `<p>${esc(t("checks").replace("{n}", r.checks.length))}</p>` +
+        `<ul lang="en">${r.checks.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : "");
     return `<li><div class="head"><b>${esc(r.name[lang])}</b><span class="sub">${esc(r.who)}</span>` +
       `<span class="secs">${r.seconds != null ? r.seconds + " s" : ""}</span></div>` +
+      (plain ? `<p>${esc(plain.text)}</p>` : "") +
       (r.queries ? `<p class="sub">${esc(t("queries").replace("{n}", r.queries))}</p>` : "") +
-      r.lines.map((l) => `<p lang="en"${l.status === "fallback" ? ' class="warn"' : ""}>${esc(l.text)}</p>`).join("") +
-      (r.checks ? `<details class="checks"><summary>${esc(t("checks").replace("{n}", r.checks.length))}</summary>` +
-        `<ul lang="en">${r.checks.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></details>` : "") +
-      (ai || (aiStep ? "" : `<p class="sub">${esc(t("code_only"))}</p>`)) + `</li>`;
+      (ai || (aiStep ? "" : `<p class="sub">${esc(t("code_only"))}</p>`)) +
+      (raw ? `<details class="tech"><summary>${esc(t("tech_log"))}</summary>${raw}</details>` : "") + `</li>`;
   }).join("") + (h.fallbacks && h.fallbacks.length
-    ? `<li><p class="warn">${esc(t("fallbacks"))}: ${esc(h.fallbacks.join("; "))}</p></li>` : "");
+    ? `<li><details class="tech"><summary>${esc(t("tech_log"))}</summary><p class="warn" lang="en">` +
+      `${esc(t("fallbacks"))}: ${esc([...new Set(h.fallbacks)].join("; "))}</p></details></li>` : "");
   $("h-live").href = "/live?run=" + encodeURIComponent(result.run_id);
 }
 
