@@ -54,6 +54,25 @@ Incremental 0f12eaa..83aa552, no P0. Feature freeze (26 Oct): fixes only as Cowo
 | A-P3-20 | P3 | UX polish: no H1 on answer/waiting; /sources lang attr; dark placeholder contrast; placeholder cut at 375 | `app/web/index.html, frame.js` |
 | A-P3-21 | P3 | rain_upstream fact < 6 h reused when the query returns no rows for the place | `app/agents/data_agent.py:928-938` |
 
+## Open audit findings (Cowork full audit 2026-10-26, `docs/audit/2026-10-26-full-audit.md`)
+Same-finding duplicates keep the first ID: Cowork P2 'AI raise dropped' = A-P1-11; 'CLI rule' = A-P3-11 (raised to P2 by Cowork); 'EVIDENCE/JUDGES numbers' = A-P2-16 + A-P3-12; '/live and /sources in BM' = A-P2-17 + A-P3-20; 'malformed JSON 500' = A-P3-7.
+Husaini 26 Oct: if only Nightshift is down at start, VEDA stays live (code-only cards).
+
+| ID | Sev | Finding | Where |
+|---|---|---|---|
+| A-P1-12 | P1 | Dropped Nightshift stream (ChunkedEncodingError) crashes the whole run: no answer, no gate | `app/adapters/nightshift.py:264, app/loop.py:270` |
+| A-P1-13 | P1 | Signs box can use a reading VEDA rejected as implausible (fresh but unhealthy) | `app/agents/data_agent.py:456, app/view.py:1055-1063` |
+| A-P1-14 | P1 | Judge path: private repo links + broken `cd` after clone (fix at freeze with public_links) | `app/web/judges.html:179-209, docs/JUDGES.md:20-30, metadata.json:10` |
+| A-P1-15 | P1 | Form text has old numbers (989 tests / 35 scenarios) | `docs/submission.md:8,28` |
+| A-P1-16 | P1 | Dead 'Tell us' link on scene results outside the public demo (Session B) | `app/web/scenes.html:269` |
+| A-P2-19 | P2 | Trail can say 'Sent the answer back' when the Critic approved (reads a non-final review) | `app/scenes.py:178, app/trail.py` |
+| A-P2-20 | P2 | Never-into-water regex misses phrasings; 'avoid' negates across a clause | `app/agents/critic.py:59-82` |
+| A-P2-21 | P2 | Nightshift call budget starts after the POST returns (first-byte wait not counted) | `app/adapters/nightshift.py:244-246` |
+| A-P2-22 | P2 | Smart-quoted key crashes start-up / doctor instead of falling back | `app/main.py:_zetaris_status, veda/doctor.py:zetaris_check` |
+| A-P2-23 | P2 | Pre-push docs-only skip bypassable by a rename | `scripts/precommit.py:66,71` |
+| A-P2-24 | P2 | 'How VEDA worked this out' shows raw terms outside 'Show technical log' | `app/web/index.html, app/view.py` |
+| A-P3-22 | P3 | Cowork's P3 list (26 Oct full audit, 30 items: lang=constructor, uneven ages, aging upstream as fresh, tmpfs fill, ...) | `docs/audit/2026-10-26-full-audit.md (P3)` |
+
 ## Waiting on Husaini
 | ID | Item | Raised | Recommendation | Backlog |
 |---|---|---|---|---|

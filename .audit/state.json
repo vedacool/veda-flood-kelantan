@@ -1,6 +1,6 @@
 {
   "lastAuditCommit": "83aa552",
-  "lastFullAuditCommit": "44f33b0",
+  "lastFullAuditCommit": "83aa552",
   "lastAuditDate": "2026-10-26",
   "report": "docs/audit/2026-10-26-audit.md",
   "note": "Incremental 0f12eaa..83aa552 (26 Oct, five read-only reviewers + main-session verify). No P0; 1 P1 (A-P1-11 AI raise dropped in the no-river branch); 9 P2; 15 P3. The 4 P1s of 24 Oct fixed.",
@@ -53,8 +53,10 @@
     "wontFix": []
   },
   "lastFindingIds": {
-    "P1": 11,
-    "P2": 18,
-    "P3": 21
-  }
+    "P1": 16,
+    "P2": 24,
+    "P3": 22
+  },
+  "lastFullAuditDate": "2026-10-26",
+  "fullReport": "docs/audit/2026-10-26-full-audit.md (Cowork)"
 }
