@@ -392,3 +392,25 @@ def test_the_page_fits_the_why_the_same_way():
     run = js + f"\nconsole.log(JSON.stringify({json.dumps(cases)}.map((t) => fitWhy(t))));"
     out = subprocess.run([node, "-e", run], capture_output=True, text=True, encoding="utf-8", check=True).stdout
     assert json.loads(out) == [scenes.fit_why(c) for c in cases]
+
+
+def test_a_malformed_check_body_is_a_400_never_a_500(runs):
+    """Audit 26 Oct: wrong types in the posted compact result -> 400 bad_shape; every real compact result is accepted."""
+    c = TestClient(main.app)
+    assert all(scenes.compact_shape_ok(out) for out in runs.values())
+    assert c.post("/scenes/rp-peak/check", json=runs["rp-peak"]).status_code == 200
+    for bad in ([], "x", 5, {"steps": "x"}, {"steps": [1]}, {"steps": [{"lines": "x"}]}, {"steps": [{"lines": [5]}]},
+                {"sources": {"a": 1}}, {"sources": [{"name": 5}]}, {"sources_by_lang": {"en": "x"}},
+                {"why": {"en": 5}}, {"why": "x"}, {"verdict": 5}):
+        r = c.post("/scenes/rp-peak/check", json=bad)
+        assert r.status_code == 400 and r.json()["error"]["code"] == "bad_shape", bad
+
+
+def test_tell_us_only_in_the_public_demo_and_lang_guard():
+    """Cowork audit P1-5: run locally there is no /feedback, so the last line's "Did VEDA match… Tell us" hides; the page
+    reads /health "demo" as the answer page does. Audit: ?lang=constructor must not pass the language guard."""
+    assert '<span id="r-ask" hidden>' in PAGE and 'fetch("/health")' in PAGE and "publicDemo = !!h.demo;" in PAGE
+    assert '$("r-ask").hidden = !publicDemo;' in PAGE
+    judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
+    for page in (PAGE, judges):
+        assert 'if (!Object.hasOwn(UI, lang)) lang = "en";' in page and "if (!UI[lang])" not in page

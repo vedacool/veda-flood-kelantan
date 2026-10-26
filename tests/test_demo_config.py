@@ -45,9 +45,19 @@ def test_open_streams_are_capped_per_visitor_and_in_all():
     assert "events { worker_connections 1024; }" in NGINX
     assert "limit_conn_zone $visitor zone=streams_per_visitor" in NGINX and "limit_conn_status 429;" in NGINX
     assert 'map $host $everyone { default "all"; }' in NGINX and "limit_conn_zone $everyone zone=streams_all" in NGINX
-    for loc in ("location = /run/stream {", "location = /live/stream {"):
+    block = NGINX.split("location = /run/stream {", 1)[1].split("}", 1)[0]
+    assert "limit_conn streams_per_visitor 3;" in block and "limit_conn streams_all 10;" in block
+
+
+def test_open_live_logs_never_block_questions():
+    """Audit 26 Oct (A-P2-12): /live/stream counts in its own zones; questions (/run/stream, /api/v1/, /api/docs) keep
+    theirs - so 10 open live logs cannot use up the slots a question needs."""
+    assert "limit_conn_zone $visitor zone=live_per_visitor" in NGINX and "limit_conn_zone $everyone zone=live_all" in NGINX
+    live = NGINX.split("location = /live/stream {", 1)[1].split("}", 1)[0]
+    assert "limit_conn live_per_visitor 3;" in live and "limit_conn live_all 10;" in live and "streams_" not in live
+    for loc in ("location = /run/stream {", "location ^~ /api/v1/ {", "location = /api/docs {"):
         block = NGINX.split(loc, 1)[1].split("}", 1)[0]
-        assert "limit_conn streams_per_visitor 3;" in block and "limit_conn streams_all 10;" in block
+        assert "limit_conn streams_all 10;" in block and "live_" not in block, loc
 
 
 def test_the_demo_strip_comes_from_the_app_not_the_proxy():

@@ -240,6 +240,30 @@ def check(scene_id, out):
             "how": {lang: trail.how_lines(out, lang) for lang in ("en", "ms")}, "log": log}
 
 
+def compact_shape_ok(out):
+    """True when `out` has the types compact() gives (every key optional): what check() and trail.how_lines() read."""
+    def strs(d):
+        return isinstance(d, dict) and all(isinstance(v, str) for v in d.values())
+
+    def source(s):
+        return isinstance(s, dict) and isinstance(s.get("name", ""), str) and isinstance(s.get("used", False), bool) \
+            and isinstance(s.get("note", ""), str)
+
+    def step(s):
+        return isinstance(s, dict) and isinstance(s.get("key", ""), str) and isinstance(s.get("who", ""), str) \
+            and isinstance(s.get("lines", []), list) and all(
+                isinstance(ln, dict) and isinstance(ln.get("action", ""), (str, type(None)))
+                and isinstance(ln.get("text", ""), str) for ln in s.get("lines", []))
+
+    if not isinstance(out, dict):
+        return False
+    by_lang = out.get("sources_by_lang", {})
+    return (isinstance(out.get("verdict"), (str, type(None))) and strs(out.get("why", {}))
+            and isinstance(out.get("sources", []), list) and all(map(source, out.get("sources", [])))
+            and isinstance(by_lang, dict) and all(isinstance(v, list) and all(map(source, v)) for v in by_lang.values())
+            and isinstance(out.get("steps", []), list) and all(map(step, out.get("steps", []))))
+
+
 # ---------- the one route: /scenes, /scenes/<id>, /scenes/data.json, POST /scenes/<id>/check ----------
 async def handle(tail, request):
     parts = [p for p in tail.split("/") if p]
@@ -258,5 +282,8 @@ async def handle(tail, request):
             out = json.loads(body)
         except ValueError:
             return JSONResponse({"error": {"code": "bad_json", "message": "Send the run result as JSON."}}, status_code=400)
-        return JSONResponse(check(parts[0], out if isinstance(out, dict) else {}))
+        if not compact_shape_ok(out):                      # audit 26 Oct: a malformed body is a 400, never a 500
+            return JSONResponse({"error": {"code": "bad_shape", "message": "Send the compact result (see compact())."}},
+                                status_code=400)
+        return JSONResponse(check(parts[0], out))
     return JSONResponse({"error": {"code": "not_found", "message": "No such scene."}}, status_code=404)

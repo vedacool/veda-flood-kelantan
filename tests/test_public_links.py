@@ -34,3 +34,15 @@ def test_the_script_and_its_test_are_never_swept():
     for p in pl.SKIP:                                     # without the exclusion they would be rewritten
         assert pl.LINK.search((pl.ROOT / p).read_text(encoding="utf-8")), p
     assert pl.PRIVATE == "https://github.com/vedacool/veda" and pl.PUBLIC != pl.PRIVATE
+
+
+def test_the_judge_path_still_works_after_the_sweep():
+    """Cowork audit P1-3: after --apply the clone URL changes to the public repo; each clone names its folder, so the
+    next line's `cd veda` stays right (a bare `git clone .../veda-kelantan.git` would make a veda-kelantan folder)."""
+    import re
+    judges = pl.LINK.sub(pl.PUBLIC, (pl.ROOT / "docs" / "JUDGES.md").read_text(encoding="utf-8")).splitlines()
+    clones = [i for i, line in enumerate(judges) if line.startswith("git clone ")]
+    assert len(clones) == 2
+    for i in clones:
+        url, folder = re.fullmatch(r"git clone (\S+) (\S+)", judges[i]).groups()
+        assert url == pl.PUBLIC + ".git" and judges[i + 1] == f"cd {folder}" and folder == "veda", judges[i:i + 2]

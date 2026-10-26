@@ -130,8 +130,8 @@
             <li><a href="/how-it-works#live" id="r-live" data-t="live_link"></a></li>
             <li><details class="more" id="r-logbox"><summary id="r-logsum"></summary><div id="r-log" lang="en"></div></details></li>
           </ul>
-          <p class="last"><span data-t="feedback_q"></span> <a id="r-feedback" data-t="tell_us"></a> ·
-            <button type="button" class="linkish" id="r-again" data-t="again"></button> · <a id="r-next" data-t="next"></a></p>
+          <p class="last"><span id="r-ask" hidden><span data-t="feedback_q"></span> <a id="r-feedback" data-t="tell_us"></a> ·
+            </span><button type="button" class="linkish" id="r-again" data-t="again"></button> · <a id="r-next" data-t="next"></a></p>
         </div>
       </section>
     </div>
@@ -202,9 +202,10 @@ const fill = (key, vals) => Object.entries(vals).reduce((s, [k, v]) => s.replace
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
 let lang = new URLSearchParams(location.search).get("lang") || store.get("veda.lang") || "en";
-if (!UI[lang]) lang = "en";
+if (!Object.hasOwn(UI, lang)) lang = "en";            // not UI[lang]: ?lang=constructor would pass (audit)
 const t = (k) => UI[lang][k];
 let all = null, scene = null, checked = null, running = false, rawLines = [];
+let publicDemo = false;                // /feedback exists in the public demo only (/health "demo"), as on the answer page
 const sceneId = (location.pathname.match(/^\/scenes\/([a-z0-9-]+)\/?$/) || [])[1] || null;
 
 function when(text) {                 // "2024-11-26 18:00" -> "26 Nov 2024, 6:00 pm" / "26 Nov 2024, 6:00 petang"
@@ -419,7 +420,9 @@ async function start() {
 
 function renderCheck() {
   $("result").hidden = false;
-  // one feedback link per screen: the last line's "Tell us" replaces the footer's Feedback (as on the answer page)
+  // one feedback link per screen: in the public demo the last line's "Tell us" replaces the footer's Feedback (as on
+  // the answer page); run locally there is no /feedback, so neither shows (Cowork audit P1-5)
+  $("r-ask").hidden = !publicDemo;
   document.querySelectorAll('.vf-foot a[href="/feedback"]').forEach((a) => { a.hidden = true; });
   $("r-score").textContent = `${fill("score", { n: checked.matched, m: checked.total })} · ${fill("veda_said", { v: checked.verdict_name[lang] })}`;
   $("r-how").innerHTML = checked.how[lang].map((s) => `<li><b>${esc(s.who)}:</b> ${esc(s.text)}</li>`).join("");
@@ -445,6 +448,8 @@ function setLang(l) {                 // the frame's EN | BM switches this page 
 window.vedaSetLang = setLang;          // set before /frame.js runs, so the frame leaves the buttons to this page
 document.querySelectorAll(".vf-lang [data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
 fetch("/scenes/data.json").then((r) => r.json()).then((d) => { all = d; applyLang(); });
+fetch("/health").then((r) => r.json()).then((h) => { publicDemo = !!h.demo; if (checked) renderCheck(); })
+  .catch(() => { /* no /health: stay as run locally (no feedback link) */ });
 applyLang();
 </script>
 <!--VEDA:FOOT-->
