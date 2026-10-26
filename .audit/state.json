@@ -1,9 +1,9 @@
 {
-  "lastAuditCommit": "0f12eaa",
+  "lastAuditCommit": "83aa552",
   "lastFullAuditCommit": "44f33b0",
-  "lastAuditDate": "2026-10-24",
-  "report": "docs/audit/2026-10-24-audit.md",
-  "note": "Incremental 44f33b0..0f12eaa (Cowork, 24 Oct). No P0; 4 P1 (live/stream freeze, stale rain_upstream, emergency on Zetaris-down/deadline, clock fixture order) - fixes approved 24 Oct.",
+  "lastAuditDate": "2026-10-26",
+  "report": "docs/audit/2026-10-26-audit.md",
+  "note": "Incremental 0f12eaa..83aa552 (26 Oct, five read-only reviewers + main-session verify). No P0; 1 P1 (A-P1-11 AI raise dropped in the no-river branch); 9 P2; 15 P3. The 4 P1s of 24 Oct fixed.",
   "verifiedGood": {
     "secrets-in-history": "44f33b0",
     "app/ingest/jps.py:parse": "4d4e31d",
@@ -22,15 +22,21 @@
     "replay:rain-cut+peak-filter": "44f33b0",
     "dependencies:licences-no-gpl": "44f33b0",
     "docker:digest-pinned+nonroot": "44f33b0",
-    "demo:route-lockdown-404": "0f12eaa",
+    "demo:route-lockdown-404": "83aa552",
     "demo:sample-mode+no-dotenv+no-egress": "0f12eaa",
     "live/stream:no-question-leak": "0f12eaa",
-    "app/web:no-xss-sinks": "0f12eaa",
+    "app/web:no-xss-sinks": "83aa552",
     "demo/feedback:answers-unforgeable+no-ip": "0f12eaa",
     "docker:read-only+cap-drop+nonroot": "0f12eaa",
     "app/rain_rule:boundaries+raise-only": "0f12eaa",
-    "app/web:375px-text16px+contrast": "0f12eaa",
-    "reliability:critic-budgets+zetaris-down+watchdog": "0f12eaa"
+    "app/web:375px-text16px+contrast": "83aa552",
+    "reliability:critic-budgets+zetaris-down+watchdog": "0f12eaa",
+    "api/v1:input-caps+scene-allowlist": "83aa552",
+    "health:reason-key-names-only": "83aa552",
+    "installers:env-never-overwritten+127.0.0.1": "83aa552",
+    "critic:judge-never-lowers+never-changes-cant-confirm": "83aa552",
+    "scenes:not-hard-coded": "83aa552",
+    "secrets-in-diff": "83aa552"
   },
   "fixesApplied": {
     "date": "2026-10-23",
@@ -45,5 +51,10 @@
       "P2/P3 list in docs/audit/2026-10-24-audit.md (Session B: feedback.py, nginx)"
     ],
     "wontFix": []
+  },
+  "lastFindingIds": {
+    "P1": 11,
+    "P2": 18,
+    "P3": 21
   }
 }
