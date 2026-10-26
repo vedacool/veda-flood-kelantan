@@ -414,3 +414,18 @@ def test_tell_us_only_in_the_public_demo_and_lang_guard():
     judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
     for page in (PAGE, judges):
         assert 'if (!Object.hasOwn(UI, lang)) lang = "en";' in page and "if (!UI[lang])" not in page
+
+
+def test_the_trail_reads_the_final_critic_review():
+    """Audit 26 Oct (Cowork): a long review step must not lose its final verdict to the 12-line cut."""
+    from app import scenes, trail
+    lines = ([{"action": "critic.review", "text": "reject: unclear"}]
+             + [{"action": "critic.check", "text": f"check {i}"} for i in range(14)]
+             + [{"action": "critic.review", "text": "approve: all checks pass"}])
+    result = {"verdict": "WATCH", "view": {"why": {"en": "x", "ms": "x"}},
+              "how": {"rows": [{"key": "critique", "who": "Critic", "lines": lines}]}}
+    out = scenes.compact(result)
+    kept = out["steps"][0]["lines"]
+    assert len(kept) == 12 and kept[-1]["text"] == "approve: all checks pass"
+    text = " ".join(r["text"] for r in trail.how_lines(out, "en") if r["key"] == "critique")
+    assert "Sent the answer back" not in text

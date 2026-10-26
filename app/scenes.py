@@ -179,8 +179,19 @@ def compact(result):
             "sources": [{"name": s["name"], "used": s["used"]} for s in by_lang["en"]],
             "sources_by_lang": by_lang,
             "steps": [{"key": r.get("key"), "who": r.get("who"),
-                       "lines": [{"action": ln.get("action"), "text": (ln.get("text") or "")[:160]} for ln in r.get("lines", [])][:12]}
+                       "lines": [{"action": ln.get("action"), "text": (ln.get("text") or "")[:160]}
+                                 for ln in _keep_final_review(r.get("lines", []))]}
                       for r in how.get("rows", []) if r.get("key") in STEPS_SENT]}
+
+
+def _keep_final_review(lines, n=12):
+    """The first n lines of a step - but always its LAST Critic review, which the trail reads (audit 26 Oct: a cut
+    at 12 lines could leave an earlier 'reject' as the last one seen, and the trail said "Sent the answer back")."""
+    out = list(lines[:n])
+    last = next((ln for ln in reversed(lines) if ln.get("action") == "critic.review"), None)
+    if last is not None and not any(ln is last for ln in out):
+        out = out[:n - 1] + [last]
+    return out
 
 
 def _name(code, lang):
