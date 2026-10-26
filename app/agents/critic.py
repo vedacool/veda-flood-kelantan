@@ -61,9 +61,15 @@ UNSAFE = re.compile(
     r"(go|going|get|getting|head|heading) (through|across|into) (the )?(flood|water|flooded|river)|"
     r"cross(ing)? (the )?(flooded |flood )?(flood|water|road|river|floodwater)|"
     r"(use|using|take|taking) the (flooded )?road|safe to (travel|drive|cross|go out|use the road|walk)|"
+    # audit 26 Oct (Cowork): more phrasings - enter the floodwater, pass the flooded road, ... through the flooded lane
+    r"enter(ing)? (the |that |this )?(flood ?water|flood|water|flooded)|"
+    r"pass(ing)? (through |along |over )?(the |that |this )?(flooded|flood ?water)|"
+    r"through (the |that |this )?(flooded|flood ?water)\b|"
     r"redah|meredah|harung|mengharung|"
     r"(lalu|melalui|melintas|merentas)( jalan| kawasan| sungai)?( yang)? (banjir|dinaiki air|berair|air)|"
-    r"selamat untuk (melalui|meredah|memandu|berjalan|keluar|melintas))", re.IGNORECASE)
+    r"selamat untuk (melalui|meredah|memandu|berjalan|keluar|melintas)|"
+    r"boleh (lalu|melalui|redah|meredah|lintas|melintas)\b|"
+    r"(?<!jam )(?<!minit )(?<!hari )(?<!minggu )(?<!bulan )(?<!tahun )lalu jalan( itu| ini| tu)?\b)", re.IGNORECASE)     # "2 jam lalu" = "2 hours ago"
 NEGATION = re.compile(r"\b(do not|don't|dont|never|avoid|avoiding|should not|shouldn't|must not|mustn't|cannot|"
                       r"can't|not safe|not to|jangan|elak|elakkan|tidak selamat|tidak boleh|tak boleh|dilarang|"
                       r"usah)\b", re.IGNORECASE)
@@ -72,14 +78,25 @@ NOT_A_NEGATION = re.compile(r"\b(don't|dont|do not|never|jangan|tak|tidak|usah|n
 DANGER = re.compile(r"\b(dangerous|deadly|unsafe|fatal|berbahaya|bahaya|maut)\b", re.IGNORECASE)
 DANGER_DENIED = re.compile(r"\b(not|no|isn't|tidak|tak|bukan|tiada)\b", re.IGNORECASE)
 NEGATION_GAP = 4                                    # words allowed between the negation and the unsafe phrase
+# audit 26 Oct (Cowork): "avoid" / "elak" negates only inside its own clause - "Avoid the bank, then walk through the
+# flooded lane" is advice to go in. ("Do not, under any circumstances, drive through" still counts: a real negation.)
+AVOID = ("avoid", "avoiding", "elak", "elakkan")
+CLAUSE_END = re.compile(r"[,;:]|\b(but|and|then|so|however|tetapi|tapi|dan|kemudian|jadi)\b", re.IGNORECASE)
 
 
 def _negated(before):
     """True when the words just before an unsafe phrase end in a real negation ("don't worry" does not count)."""
-    words = re.findall(r"[\w']+", NOT_A_NEGATION.sub(" ", before))
+    clean = NOT_A_NEGATION.sub(" ", before)
+    words = re.findall(r"[\w']+", clean)
     if words and words[-1].lower() in ("not", "tidak", "tak", "bukan"):       # "not safe to ...", "tidak selamat"
         return True
-    return bool(NEGATION.search(" ".join(words[-(NEGATION_GAP + 2):])))
+    for m in reversed(list(NEGATION.finditer(" ".join(words[-(NEGATION_GAP + 2):])))):
+        if m.group(0).lower() not in AVOID:
+            return True
+        at = clean.lower().rfind(m.group(0).lower())
+        if not CLAUSE_END.search(clean[at + len(m.group(0)):]):
+            return True                                 # "avoid crossing the flooded road": same clause
+    return False
 
 
 def _danger_after(after):

@@ -52,6 +52,13 @@ def test_good_draft_passes_code_checks():
     (" It is safe to use the road by the river tonight.", "unsafe"),
     (" Boleh lalu jalan yang banjir dengan kereta.", "unsafe"),
     (" Drive through the water, it is not dangerous.", "unsafe"),
+    # audit 26 Oct (Cowork): phrasings the pattern missed, and "avoid" across a clause
+    (" It is fine to walk down through the flooded lane.", "unsafe"),
+    (" You can pass the flooded road by car.", "unsafe"),
+    (" Feel free to enter the floodwater to check the house.", "unsafe"),
+    (" Boleh lalu jalan itu dengan motosikal.", "unsafe"),
+    (" Avoid the river bank, then walk through the flooded lane.", "unsafe"),
+    (" Elakkan tebing sungai, tetapi boleh lalu jalan itu.", "unsafe"),
 ])
 def test_unsafe_advice_is_caught_in_english_and_malay(extra, problem):
     assert problem in kinds(critic.code_checks(GOOD + extra, facts(), EVIDENCE))
@@ -62,7 +69,10 @@ def test_unsafe_advice_is_caught_in_english_and_malay(extra, problem):
                                    " Do not, under any circumstances, drive through water.",
                                    " Driving through floodwater is deadly.", " It is not safe to drive through water.",
                                    " Tidak selamat untuk meredah air.", " Elakkan daripada meredah air banjir.",
-                                   " Avoid crossing the flooded road."])
+                                   " Avoid crossing the flooded road.", " Do not enter the floodwater.",
+                                   " Never pass through the flooded road.", " Jangan lalu jalan itu.",
+                                   " Elakkan melalui jalan yang banjir.",
+                                   " Bacaan 2 jam lalu jalan raya ditutup."])      # "jam lalu" = "hours ago"
 def test_warnings_against_going_into_water_are_fine(extra):
     assert critic.code_checks(GOOD + extra, facts(), EVIDENCE) == []
 
