@@ -256,6 +256,12 @@ used (since 23 Oct, B-85). Agents get data only through `run_sql()` on **Zetaris
 | OpenStreetMap table unreadable | — | "Tidak disemak: OpenStreetMap" on an evacuation / cut-off answer |
 | A replay time with no verified reading | No reconstruction beyond the reported readings | "Can't confirm right now" (INSUFFICIENT_DATA, "no verified reading near this time") |
 
+## Repository history
+This public repository was created from our private build repository with JPS readings removed from history, per the
+organiser ruling of 23 Oct 2026 (JPS data is fetched live at runtime only). Author and commit dates are unchanged; the
+first commit is 22 Oct 2026 02:22 UTC, after the build window opened. `docs/history/commit-map.txt` maps each public
+commit to the original. The original history, push records and CI runs are available to organisers on request.
+
 ## Data sources and licences
 Every third-party source VEDA uses, its licence or terms, and how VEDA uses it. **No JPS readings are stored in this
 repo** (organiser ruling, 23 Oct 2026): offline answers run on the Nov 2024 replay or on SYNTHETIC scenes.

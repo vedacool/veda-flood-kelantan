@@ -2,10 +2,10 @@
 # All three are made-up test values used to prove trace redaction works ("zk_live_ABCDEF123456",
 # "abcd1234efgh") in the B-02 version of tests/test_trace.py. They were never real credentials; the
 # current test builds them at runtime. Real .env secrets were checked against the full history: 0 hits.
-bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:45
-bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:49
-bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:51
+eb48f58e9ab7aab321933a9dd548857e20b88518:tests/test_trace.py:generic-api-key:45
+eb48f58e9ab7aab321933a9dd548857e20b88518:tests/test_trace.py:generic-api-key:49
+eb48f58e9ab7aab321933a9dd548857e20b88518:tests/test_trace.py:generic-api-key:51
 # Two made-up 17-character placeholder Zetaris keys in the start-mode / doctor tests (B-104, B-106); checked against
 # this machine's real .env secrets: no match (26 Oct, Cowork + Husaini approved).
-9070e7171a9573b150fbac0b39caad5eb88655e2:tests/test_doctor.py:generic-api-key:12
-6be6e83cff1ee583d26e9cb9b5aa803c29c37109:tests/test_start_mode.py:generic-api-key:11
+7aceaaa5532a61888a258f6edec6a55999c98e56:tests/test_doctor.py:generic-api-key:12
+2055c8f3e082648bb2a220fd53c08225adc1684c:tests/test_start_mode.py:generic-api-key:11
