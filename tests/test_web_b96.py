@@ -68,3 +68,10 @@ def test_bm_change_link_never_breaks_and_sources_lines_keep_their_height():
     assert '<span class="nowrap"><span id="a-change-dot"' in PAGE
     src = (config.ROOT / "app" / "web" / "sources.html").read_text(encoding="utf-8")
     assert "li a { display: inline-block; padding: 10px 0; margin: -10px 0; }" in src
+
+
+def test_a_trailing_arrow_never_wraps_alone():
+    """Cowork 26 Oct: "...the API ›" - the arrow is joined to the last word (EN + BM), on the page and in the frame."""
+    from app import frame
+    assert 'w.replace(/ ([›‹])/g, "\u00a0$1")' in PAGE
+    assert "Data sources ›" in frame.foot() and "Sumber data ›" in frame.foot()

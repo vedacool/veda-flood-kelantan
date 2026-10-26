@@ -22,7 +22,7 @@ STRIP_LIVE = ("Live · river readings from JPS now · not an official warning",
 FEEDBACK = ("Feedback", "Maklum balas")
 API_DOCS = ("API docs", "Dokumen API")
 NOTICE = ("Not an official warning · 999 / APM 991", "Bukan amaran rasmi · 999 / APM 991")
-SOURCES = ("Data sources ›", "Sumber data ›")
+SOURCES = ("Data sources ›", "Sumber data ›")             # the "›" never wraps alone
 BIGGER = ("Bigger text", "Teks lebih besar")
 
 

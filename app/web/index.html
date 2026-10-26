@@ -663,7 +663,8 @@ let lang = "en", words = null, result = null, sampleMode = false, lastQuestion =
 let skipCheck = null, publicDemo = false;
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
-const t = (key) => UI[lang][key];
+// a link's trailing "›" (or "‹") never wraps alone onto its own line: joined to the last word (Cowork 26 Oct)
+const t = (key) => { const w = UI[lang][key]; return typeof w === "string" ? w.replace(/ ([›‹])/g, " $1") : w; };
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // English words kept in BM text are shown in italics (wording review 24 Oct)
 const EN_IN_BM = /\bpower bank\b/g;
