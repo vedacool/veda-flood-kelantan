@@ -84,11 +84,12 @@ def ask(question, lang="en", scene=None, on_step=None):
         r = main._run(q, replay, at, on_step, LANGS[lang])
     finally:
         main._busy.release()
-    return public_answer(main.result_json(r), r, lang)
+    return public_answer(main.result_json(r), r, lang, question)
 
 
-def public_answer(out, r, lang):
+def public_answer(out, r, lang, question=None):
     """main.result_json() (the web page's answer) -> the API's fields, in `lang`."""
+    from app import router
     lg = LANGS[lang]
     v = out.get("view") or {}
     level = out.get("verdict") if v else None
@@ -117,11 +118,15 @@ def public_answer(out, r, lang):
         "ai_judgement": ("live mode only" if (j or {}).get("status") == "live_only" else j
                          if j else "not run (quick path: answer and review by code)" if v else None),
         "steps": steps,
-        "signs": ({"title": v["signs"]["title"][lg], "lines": v["signs"]["lines"][lg], "footer": v["signs"]["footer"][lg]}
-                  if v.get("signs") else None),                                   # B-105
+        "signs": ({"title": v["signs"]["title"][lg], "lines": v["signs"]["lines"][lg],
+                   "advice": (v["signs"].get("advice") or {}).get(lg), "footer": v["signs"]["footer"][lg]}
+                  if v.get("signs") else None),                                   # B-105 (advice: its own line)
         "trail": [{"who": r["who"], "text": r["text"]} for r in ((out.get("trail") or {}).get(lg) or [])],   # B-96
         "text": out.get("output"), "language": "bm" if out.get("language") == "ms" else out.get("language"),
-        "emergency": bool(v.get("emergency")), "nearest_covered": out.get("nearest_covered"),
+        # audit 26 Oct A-P2-11: true on EVERY emergency path - also the answers with no card (Zetaris down, out of
+        # time, place not covered), whose text already starts with the stranded advice
+        "emergency": bool(v.get("emergency")) or bool(question and router.emergency(question)),
+        "nearest_covered": out.get("nearest_covered"),
         "disclaimer": (out.get("disclaimer") or {}).get(lg),
     }
 

@@ -51,6 +51,15 @@ def test_scenes_and_health(offline):
 def test_trapped_question_gets_the_emergency_words_first(offline):
     a = TestClient(main.app).post("/api/v1/ask", json={"question": "I am trapped by water in Tumpat"}).json()
     assert "999" in a["text"].split("\n")[0] or "999" in a["text"][:300]
+    assert a["emergency"] is True
+
+
+def test_emergency_flag_on_a_path_with_no_card(offline):
+    """Audit 26 Oct A-P2-11: place not covered (no card) - the stranded advice comes first AND the flag is true."""
+    a = TestClient(main.app).post("/api/v1/ask", json={"question": "I am trapped by water in Gua Musang"}).json()
+    assert a["level"] is None and a["text"].startswith("If you are stranded") and a["emergency"] is True
+    calm = TestClient(main.app).post("/api/v1/ask", json={"question": "Is Gua Musang at risk?"}).json()
+    assert calm["emergency"] is False
 
 
 @pytest.mark.parametrize("kw, status, code", [
