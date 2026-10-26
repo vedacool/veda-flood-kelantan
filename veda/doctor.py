@@ -75,7 +75,7 @@ def zetaris_check(sql):
     from app.adapters import zetaris
     try:
         r = zetaris._post(sql, 1, timeout=10)
-    except (zetaris.ZetarisError, requests.RequestException) as e:
+    except Exception as e:                  # noqa: BLE001 - audit 26 Oct: e.g. a smart-quoted key (UnicodeEncodeError)
         return f"unreachable ({type(e).__name__})"
     if r.ok:
         return "ok"
@@ -109,7 +109,7 @@ def nightshift_models():
         if not requests.get(base.rsplit("/v1", 1)[0] + "/healthz", timeout=5).ok:
             return "error", []
         r = requests.get(f"{base}/models", headers={"Authorization": f"Bearer {token}"}, timeout=10)
-    except requests.RequestException as e:
+    except Exception as e:                  # noqa: BLE001
         return f"unreachable ({type(e).__name__})", []
     if not r.ok:
         return ("token refused (401)" if r.status_code == 401 else f"error (HTTP {r.status_code})"), []
@@ -210,8 +210,12 @@ def start_mode(zstate, nstate):
     if config.sample_mode():
         return "offline", config.sample_reason()
     from app import main
-    reason = main.offline_reason(zetaris_state=zstate or "not checked", nightshift_state=nstate or "not checked")
-    return ("offline", reason) if reason else ("live", "keys set, Zetaris and Nightshift answering")
+    reason = main.offline_reason(zetaris_state=zstate or "not checked")
+    if reason:
+        return "offline", reason
+    note = main.nightshift_note(nightshift_state=nstate if nstate not in (None, "not set") else None)
+    return "live", (f"Zetaris answering; {note} - answers are written by code until it answers" if note
+                    else "keys set, Zetaris and Nightshift answering")
 
 
 def _can_print(text):
@@ -239,9 +243,17 @@ def init_env(root=None, out=print):
 def _health(port, timeout=3):
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8"))
+            h = json.loads(r.read().decode("utf-8"))
+        return h if isinstance(h, dict) and "sample_mode" in h else None      # a VEDA /health, nothing else
     except (OSError, ValueError):
         return None
+
+
+def _port_busy(port):
+    import socket
+    with socket.socket() as s:
+        s.settimeout(1)
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 def start(port=8000, root=None, out=print, wait_s=120):
@@ -249,6 +261,9 @@ def start(port=8000, root=None, out=print, wait_s=120):
     Already running on that port -> says so and starts nothing."""
     root = root or ROOT
     h = _health(port)
+    if h is None and _port_busy(port):
+        out(f"Port {port} is in use by another program - stop it, or use: python -m veda start --port 8001")
+        return 1
     if h is None:
         (root / "logs").mkdir(exist_ok=True)
         log = open(root / "logs" / f"server-{port}.log", "ab")
@@ -259,8 +274,10 @@ def start(port=8000, root=None, out=print, wait_s=120):
         deadline = time.monotonic() + wait_s
         while h is None and time.monotonic() < deadline and proc.poll() is None:
             time.sleep(1)
-            h = _health(port, timeout=30)
+            h = _health(port, timeout=5)
         if h is None:
+            if proc.poll() is None:                 # audit 26 Oct: never leave a hung server behind
+                proc.terminate()
             out(f"The server did not start - see logs/server-{port}.log, then run: python -m veda doctor")
             return 1
         stop = f"Stop-Process -Id {proc.pid}" if os.name == "nt" else f"kill {proc.pid}"

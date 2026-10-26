@@ -21,16 +21,22 @@ except ImportError:                 # B-106: the doctor still runs (and says so)
 
 
 def _mode_line():
-    """Decide the mode before VEDA is imported: keys -> live, no keys -> offline sample mode (said in one line)."""
+    """Decide the mode with the server's rule (main.offline_reason): live, or offline sample mode with the reason
+    (said in one line)."""
     from app import config
     if not config.demo_mode():
         load_dotenv(config.ROOT / ".env")
     if config.sample_mode():
         return "Offline sample mode: VEDA answers from its recorded and made-up scenes (no live data, no AI calls)."
-    if not (os.getenv("ZETARIS_API_KEY") and os.getenv("ZETARIS_API_URL")):
-        os.environ["SAMPLE_MODE"] = "true"
-        return ("Offline sample mode (no keys found): VEDA answers from its recorded and made-up scenes "
+    from app import main                       # audit 26 Oct: the server's own start-up rule (B-104), one rule
+    reason = main.offline_reason()
+    if reason:
+        os.environ["SAMPLE_MODE"] = "true"     # this one-shot process only
+        return (f"Offline sample mode ({reason}): VEDA answers from its recorded and made-up scenes "
                 "(no live data, no AI calls).")
+    note = main.nightshift_note()
+    if note:
+        return f"Live mode: river data through Zetaris; {note} - the answer is written by code."
     return "Live mode: river data through Zetaris, Nemotron through Meterless Nightshift."
 
 

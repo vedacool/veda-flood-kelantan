@@ -62,7 +62,12 @@ _busy = threading.Lock()                 # one run at a time: the World Model on
 
 @asynccontextmanager
 async def _lifespan(_app):
-    await run_in_threadpool(start_mode)          # B-104: live, or offline sample mode with the reason - once, at start
+    # B-104: live, or offline sample mode with the reason - once, at start. Audit 26 Oct: never longer than
+    # START_LIMIT_S - a Zetaris that answers but stalls can't hang the start; then the offline demo, with that reason
+    try:
+        await asyncio.wait_for(run_in_threadpool(start_mode), START_LIMIT_S)
+    except asyncio.TimeoutError:
+        _fall_back(f"the start-up check took longer than {START_LIMIT_S} s (Zetaris not answering in time)")
     yield
 
 
@@ -277,7 +282,7 @@ async def health():
 def _zetaris_status():
     try:
         return "ok" if zetaris._post("SELECT 1 AS x", 1, timeout=10).ok else "error"
-    except (zetaris.ZetarisError, requests.RequestException) as e:
+    except Exception as e:                  # noqa: BLE001 - audit 26 Oct: e.g. a smart-quoted key (UnicodeEncodeError)
         return f"unreachable ({type(e).__name__})"
 
 
@@ -285,36 +290,56 @@ def _nightshift_status():
     try:
         base = os.getenv("METERLESS_BASE_URL", "http://127.0.0.1:8088/v1").rstrip("/").rsplit("/v1", 1)[0]
         return "ok" if requests.get(f"{base}/healthz", timeout=5).ok else "error"
-    except requests.RequestException as e:
+    except Exception as e:                  # noqa: BLE001
         return f"unreachable ({type(e).__name__})"
 
 
-LIVE_KEYS = ("ZETARIS_API_URL", "ZETARIS_API_KEY", "METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN")
+START_LIMIT_S = 20          # audit 26 Oct: the whole start-up check, however Zetaris behaves
+LIVE_KEYS = ("ZETARIS_API_URL", "ZETARIS_API_KEY")       # live river data needs these; Nightshift is optional
+NIGHTSHIFT_KEYS = ("METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN")
 
 
-def offline_reason(zetaris_state=None, nightshift_state=None):
-    """B-104: why this server can't run live, or None. Only the two services a live answer needs: missing keys, or
-    Zetaris / Nightshift not answering. Key NAMES only, never a value. JPS, Postgres and the collector are not checked:
-    their outages are answered live ("Can't confirm right now" + the signs box). The doctor (B-106) passes the two
-    states it already found; the server checks them itself."""
+def offline_reason(zetaris_state=None):
+    """B-104: why this server can't run live, or None. Husaini 26 Oct: only missing Zetaris keys or an unreachable
+    Zetaris -> the offline demo. Nightshift down or not set up keeps VEDA live with code-written cards (the agents'
+    fallbacks; see nightshift_note). Key NAMES only, never a value. JPS, Postgres and the collector are not checked:
+    their outages are answered live ("Can't confirm right now" + the signs box). The doctor (B-106) and the CLI use
+    this same rule; the doctor passes the Zetaris state it already found."""
     missing = [k for k in LIVE_KEYS if not os.getenv(k, "").strip()]
     if missing:
         where = "no .env file" if not (config.ROOT / ".env").exists() else "missing in .env"
         return f"{where}: {', '.join(missing)} not set"
-    states = (("Zetaris", zetaris_state or _zetaris_status()), ("Nightshift", nightshift_state or _nightshift_status()))
-    down = [f"{name} {state}" for name, state in states if state != "ok"]
-    return f"{' and '.join(down)} at start-up" if down else None
+    state = zetaris_state or _zetaris_status()
+    return None if state == "ok" else f"Zetaris {state} at start-up"
+
+
+def nightshift_note(nightshift_state=None):
+    """None when Nightshift answers, else why live answers are written by code until it does (never a key value)."""
+    missing = [k for k in NIGHTSHIFT_KEYS if not os.getenv(k, "").strip()]
+    if missing:
+        return f"Nightshift not set up ({', '.join(missing)} not set)"
+    state = nightshift_state or _nightshift_status()
+    return None if state == "ok" else f"Nightshift {state}"
+
+
+def _fall_back(reason):
+    config.fall_back_to_sample(reason)
+    logging.getLogger("uvicorn.error").warning("VEDA: starting in offline sample mode - %s", reason)
 
 
 def start_mode():
-    """B-104, run once at server start: live when the keys are set and Zetaris + Nightshift answer, else offline sample
-    mode with one log line saying why. SAMPLE_MODE=true or the public demo skip the check (already offline)."""
+    """B-104, run once at server start: live when the Zetaris keys are set and Zetaris answers, else offline sample
+    mode with one log line saying why. Nightshift down -> still live, one log line (code-written cards until it
+    answers). SAMPLE_MODE=true or the public demo skip the check (already offline)."""
     if config.sample_mode():
         return
     reason = offline_reason()
     if reason:
-        config.fall_back_to_sample(reason)
-        logging.getLogger("uvicorn.error").warning("VEDA: starting in offline sample mode - %s", reason)
+        _fall_back(reason)
+        return
+    note = nightshift_note()
+    if note:
+        logging.getLogger("uvicorn.error").warning("VEDA: live - %s; answers are written by code until it answers", note)
 
 
 def _live_health():

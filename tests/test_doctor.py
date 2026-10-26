@@ -125,3 +125,23 @@ def test_both_installers_use_the_same_env_step_and_bind_localhost():
         for never in ("sudo ", "Remove-Item", "rm -", "curl ", "wget ", "docker ", "0.0.0.0", "Copy-Item", "cp "):
             assert never not in text, (name, never)
     assert '"--host", "127.0.0.1"' in (config.ROOT / "veda" / "doctor.py").read_text(encoding="utf-8")
+
+
+def test_nightshift_down_still_starts_live(home):
+    mp, tmp = home
+    keys_and_services(mp, tmp)
+    mp.setattr(doctor, "nightshift_models", lambda: ("unreachable (ConnectionError)", []))
+    mode, text = run(tmp)
+    assert mode == "live" and text.endswith("Mode: the server will start LIVE - Zetaris answering; Nightshift "
+                                            "unreachable (ConnectionError) - answers are written by code until it answers")
+
+
+def test_start_says_when_the_port_is_busy(monkeypatch, tmp_path):
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen()
+        port = s.getsockname()[1]
+        out = []
+        assert doctor.start(port, root=tmp_path, out=out.append) == 1
+    assert out == [f"Port {port} is in use by another program - stop it, or use: python -m veda start --port 8001"]

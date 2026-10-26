@@ -47,7 +47,42 @@ def test_unreachable_services_start_offline_with_the_reason(fresh):
     assert "Demo · past flood replay · not an official warning" in TestClient(main.app).get("/").text
     fresh.setitem(config._FALLBACK, "reason", None)
     services(fresh, nightshift="error")
-    assert main.offline_reason() == "Nightshift error at start-up"
+    assert main.offline_reason() is None and main.nightshift_note() == "Nightshift error"   # Husaini 26 Oct
+
+
+def test_only_nightshift_down_stays_live_with_code_written_cards(fresh, caplog):
+    for k, v in KEYS.items():
+        fresh.setenv(k, v)
+    services(fresh, nightshift="unreachable (ConnectionError)")
+    with caplog.at_level(logging.WARNING, logger="uvicorn.error"):
+        main.start_mode()
+    assert not config.sample_mode()
+    assert [r.getMessage() for r in caplog.records] == [
+        "VEDA: live - Nightshift unreachable (ConnectionError); answers are written by code until it answers"]
+    fresh.delenv("METERLESS_RUNTIME_TOKEN")
+    assert main.offline_reason() is None and "METERLESS_RUNTIME_TOKEN not set" in main.nightshift_note()
+
+
+def test_the_start_up_check_has_an_overall_time_limit(fresh):
+    import time as _t
+    for k, v in KEYS.items():
+        fresh.setenv(k, v)
+    fresh.setattr(main, "START_LIMIT_S", 1)
+    fresh.setattr(main, "_zetaris_status", lambda: _t.sleep(3) or "ok")         # answers, but far too slowly
+    t0 = _t.monotonic()
+    with TestClient(main.app) as c:
+        h = c.get("/health").json()
+    assert _t.monotonic() - t0 < 3
+    assert h["sample_mode"] is True and h["reason"].startswith("the start-up check took longer than 1 s")
+
+
+def test_a_smart_quoted_key_falls_back_instead_of_crashing(fresh):
+    from app.adapters import zetaris
+
+    def bad(*a, **k):
+        "“key”".encode("latin-1")                                   # what requests does with the header
+    fresh.setattr(zetaris, "_post", bad)
+    assert main._zetaris_status() == "unreachable (UnicodeEncodeError)"
 
 
 def test_reason_names_keys_never_values(fresh):

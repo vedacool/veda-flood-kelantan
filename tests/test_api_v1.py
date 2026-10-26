@@ -108,7 +108,7 @@ def test_cli_exits_0_with_no_keys_and_says_offline(offline, monkeypatch, capsys)
     monkeypatch.delenv("SAMPLE_MODE")
     assert cli.main(["ask", "Is Tumpat safe tonight?", "--json"]) == 0
     out = capsys.readouterr()
-    assert out.err.startswith("Offline sample mode (no keys found)")
+    assert out.err.startswith("Offline sample mode (") and "ZETARIS_API_URL" in out.err.splitlines()[0]   # B-104 rule
     assert json.loads(out.out)["mode"] == "offline sample"
     assert cli.main(["ask", ""]) == 2
 

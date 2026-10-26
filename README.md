@@ -65,10 +65,11 @@ python scripts/run_evals.py                  # 41 safety scenarios, pass/fail ta
 python -m pytest -q                          # offline test suite
 ```
 Start the server: with Zetaris + Nightshift it runs live; without them it runs the offline demo automatically. It
-checks once at start (keys set, Zetaris and Nightshift answering), logs one line saying why it went offline, and
-`/health` shows `"sample_mode": true` with the `"reason"`. A river-data outage while it runs never switches it: it
-stays live and answers "Can't confirm right now". The command line (`python -m veda`) also switches to offline sample
-mode by itself and says so.
+checks once at start (at most 20 s): no Zetaris keys or no answer from Zetaris -> the offline demo, with one log line
+saying why, and `/health` shows `"sample_mode": true` with the `"reason"`. If only Nightshift is down, it stays live
+and the answers are written by code until Nightshift answers. A river-data outage while it runs never switches it: it
+stays live and answers "Can't confirm right now". The command line (`python -m veda`) uses the same rule and says
+which mode it is in.
 
 ## Try VEDA without the UI (API and command line)
 The same agents as the web page (Coordinator → Data & Reconciler → Forecast → Critic → safety gate), as JSON.
