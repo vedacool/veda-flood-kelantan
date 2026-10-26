@@ -236,6 +236,7 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None, m
         problem = fatal = None
         cap = LANE_TIMEOUT_S.get(lane, TIMEOUT_S)
         left = deadline - time.monotonic() if deadline else cap
+        stop = time.monotonic() + min(cap, left)   # audit 26 Oct: the budget clock starts at the attempt, not the reply
         try:
             if left <= 1:
                 raise requests.Timeout("run time budget used up")
@@ -243,7 +244,7 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None, m
                          attempt=attempt)                       # the live log's "Waiting for Nemotron ..." bubble
             r = _post(base, token, body, lane_app(lane), timeout=min(cap, left))
             if body.get("stream") and "text/event-stream" in (r.headers.get("content-type") or ""):
-                payload = _read_stream(r, time.monotonic() + min(cap, left))
+                payload = _read_stream(r, stop)
             else:
                 payload = r.json() if r.content else {}
             if not isinstance(payload, dict):          # list / str body: never crash on .get
@@ -261,10 +262,10 @@ def _call(lane, body, agent, prompt_summary, deadline=None, max_attempts=None, m
                 problem = f"HTTP {r.status_code}: {message}"
             else:
                 fatal = f"Nightshift error HTTP {r.status_code}: {message}"
-        except (requests.ConnectionError, requests.Timeout) as e:
-            problem = f"network error: {type(e).__name__}"
-        except ValueError:
+        except ValueError:                    # before RequestException: requests' JSONDecodeError is both
             problem = "response was not JSON"
+        except requests.RequestException as e:   # audit 26 Oct P1-1: incl. a stream dropped mid-answer
+            problem = f"network error: {type(e).__name__}"      # (ChunkedEncodingError) - traced, then retry / fail
         ms = int((time.perf_counter() - t0) * 1000)
         wait = BACKOFF_S[min(attempt, len(BACKOFF_S)) - 1]
         if deadline is not None and not fatal and time.monotonic() + wait >= deadline:

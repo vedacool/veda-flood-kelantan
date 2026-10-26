@@ -53,6 +53,14 @@ def open_world(run_id):
     return WorldModel(storage=WORLD_PATH, audit_jsonl=config.ROOT / "logs" / f"worldmodel-audit-{run_id}.jsonl")
 
 
+def _ai_broken(step, e):
+    """Audit 26 Oct P1-1: an AI step raised (a bug, or a dropped stream that slipped past the adapter) - one trace
+    line, and the reason the rest of the run uses for its code-only card."""
+    why = f"the AI {step} failed ({type(e).__name__})"
+    trace.ai_fallback("System", f"{step}: card written by code", why)
+    return why
+
+
 def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir=None, quiet=False, budget_s=None,
         on_step=None, replay=None, at=None, default_scene=False, lang_hint=None):
     """One question end to end. Returns {run_id, status, answer, plan, evidence, forecast, card, reviews, timing,
@@ -85,6 +93,7 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
     world = world or open_world(run_.run_id)
     state, p, evidence, fc, card, answer, status = "plan", None, None, None, None, None, "success"
     first_verdict, judgement = None, None
+    ai_broken = None      # audit 26 Oct P1-1: an AI step raised -> code-only from here on (checks + gate still run)
     reviews, timing, budget = [], {}, None
     pool = ThreadPoolExecutor(max_workers=1)
     pre = pool.submit(trace.bind(data_agent.prefetch), world, now, replay)    # world refresh while code routes
@@ -203,16 +212,28 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 why = ("quick path: answer written by code" if p["effort"] == "quick" else
                        "the AI raised the level: card written by code (the explanation was for the lower level)"
                        if evidence.get("ai_minimum") else short("the answer"))
-                answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
-                                           budget_s=model_time(), use_model=why is None, skip_reason=why,
-                                           by_design=bool(evidence.get("ai_minimum")))
+                try:
+                    answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
+                                               budget_s=model_time(), use_model=why is None and not ai_broken,
+                                               skip_reason=why or ai_broken, by_design=bool(evidence.get("ai_minimum")))
+                except Exception as e:                # noqa: BLE001 - never a crash for an AI step: the card
+                    ai_broken = _ai_broken("draft", e)
+                    answer = coordinator.template_answer(card, p["question_language"], ai_broken)
                 state = "critique"
             elif state == "critique":
                 quick = p["effort"] == "quick"
                 why = "quick plan: review by code checks only" if quick else short("the review")
-                rv = critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
-                                   llm=llm, budget_s=max(1.0, left() - FINAL_RESERVE_S), use_model=why is None,
-                                   recheck_data=not quick and (why is None or left() >= RECHECK_S), skip_reason=why)
+                try:
+                    rv = critic.review(question, p, evidence, fc, answer, world, round_no=len(reviews) + 1,
+                                       llm=llm, budget_s=max(1.0, left() - FINAL_RESERVE_S),
+                                       use_model=why is None and not ai_broken, skip_reason=why or ai_broken,
+                                       recheck_data=not quick and (why is None or left() >= RECHECK_S))
+                except Exception as e:                # noqa: BLE001 - the Critic's AI part broke: card only
+                    ai_broken = _ai_broken("review", e)
+                    answer = coordinator.template_answer(card, p["question_language"], ai_broken)
+                    state = "done"
+                    timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
+                    continue
                 if (rv.get("data_request") or {}).get("found"):
                     state = "forecast"                    # B-71(b): new source -> recompute, redraft, re-check
                     timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
@@ -253,9 +274,14 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                 else:
                     state = "revise"
             elif state == "revise":
-                answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
-                                           budget_s=model_time(), feedback=reviews[-1], previous=answer)
-                state = "critique"
+                try:
+                    answer = coordinator.draft(question, p, evidence, forecast=fc, card=card, llm=llm,
+                                               budget_s=model_time(), feedback=reviews[-1], previous=answer)
+                    state = "critique"
+                except Exception as e:                # noqa: BLE001
+                    ai_broken = _ai_broken("revision", e)
+                    answer = coordinator.template_answer(card, p["question_language"], ai_broken)
+                    state = "done"
             timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
         answer = safety.gate(answer, card, evidence, fc)      # B-58: the last check on every answer, every path
         timing["total"] = round(elapsed(), 1)
