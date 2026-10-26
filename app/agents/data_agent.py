@@ -454,9 +454,13 @@ def heal(ctx, world, clock):
             ctx["silent"] = [main]
             note(2, f"{main['name']} {silent_since(main)} -> using {good['name']}", main, good["name"])
         else:
-            ctx["last_reading"] = main if main["level_m"] is not None else None
+            # audit 26 Oct P1-2: the last reading is context only when it was HEALTHY (just too old) - never a
+            # reading rejected as implausible (out of range, impossible jump), however fresh
+            healthy = (main.get("health") or {"ok": True}).get("ok")
+            ctx["last_reading"] = main if main["level_m"] is not None and healthy else None
             note(3, f"{main['name']} {silent_since(main)} and no fresh backup -> INSUFFICIENT DATA"
-                    + (f"; last reading {main['level_m']} m shown for context only" if main["level_m"] is not None
+                    + (f"; last reading {main['level_m']} m shown for context only" if ctx["last_reading"]
+                       else "; its reading failed the health check - not shown" if main["level_m"] is not None
                        else ""), main)
     for i, sentinel in enumerate(ctx.get("sentinels", [])):
         if _fresh_ok(sentinel):

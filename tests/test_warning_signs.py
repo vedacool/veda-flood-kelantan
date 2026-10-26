@@ -23,8 +23,8 @@ def signs(last=None, rain=None, sentinels=(), met=None, reason=STALE, card=CARD)
     return view.warning_signs(card, fc, ev)
 
 
-HEAVY_HERE = {"local": {"heavy": True}, "upstream": []}
-HEAVY_UP = {"local": {"heavy": False}, "upstream": [{"heavy_fallen": True}]}
+HEAVY_HERE = {"local": {"heavy": True, "past_12h_mm": 35.0}, "upstream": []}
+HEAVY_UP = {"local": {"heavy": False, "past_12h_mm": 0.0}, "upstream": [{"heavy_fallen": True, "past_24h_mm": 60.0}]}
 FORECAST_ONLY = {"local": {"heavy": False}, "upstream": [{"heavy_fallen": False, "heavy_forecast": True}]}
 MET_BURUK = {"status": "ok", "active": [{"heading": "Continuous rain warning (SEVERE LEVEL) Kelantan"}]}
 
@@ -33,7 +33,7 @@ def test_each_sign_only_when_present_and_fresh():
     assert signs() is None                                                         # nothing -> no box
     assert signs(rain=HEAVY_HERE)["lines"]["en"] == [f"Heavy rain here in the last 12{NB}h."]
     assert signs(rain=HEAVY_UP)["lines"]["ms"] == [f"Hujan lebat di hulu dalam 24{NB}jam lalu."]
-    both = {"local": {"heavy": True}, "upstream": [{"heavy_fallen": True}]}
+    both = {"local": {"heavy": True, "past_12h_mm": 31.0}, "upstream": [{"heavy_fallen": True, "past_24h_mm": 50.0}]}
     assert signs(rain=both)["lines"]["en"] == [f"Heavy rain here and upstream in the last 24{NB}h."]
     assert signs(rain=FORECAST_ONLY) is None                                       # forecast rain is not "in the last"
     up = signs(sentinels=[sentinel(change_3h=0.6)])
@@ -94,3 +94,43 @@ def test_replay_gap_keeps_cant_confirm_and_shows_the_signs(monkeypatch, tmp_path
     assert r["forecast"]["verdict"] == "INSUFFICIENT_DATA" and v["verdict"] == "INSUFFICIENT_DATA"   # unchanged
     assert v["signs"]["kinds"] == kinds and v["signs"]["serious"]
     assert "Signs shown (they do not set a level): the last river reading, heavy rain." in v["why"]["en"]
+
+
+def test_rain_only_when_it_fell_inside_the_window_the_sentence_names():
+    """Audit 26 Oct (Cowork P1-2, A-P2-10): never forecast rain, never rain older than the 12 / 24 h named."""
+    forecast_here = {"local": {"heavy": True, "past_12h_mm": 0.0, "max_12h_mm": 40.0}, "upstream": []}
+    assert signs(rain=forecast_here) is None                        # 40 mm FORECAST here: not "in the last 12 h"
+    old_upstream = {"local": {"heavy": False, "past_12h_mm": 0.0},
+                    "upstream": [{"heavy_fallen": True, "past_24h_mm": 0.0, "past_72h_mm": 110.0}]}
+    assert signs(rain=old_upstream) is None                         # 110 mm 2-3 days ago: not "in the last 24 h"
+    assert signs(rain={"local": {"past_12h_mm": 29.9}, "upstream": [{"past_24h_mm": 49.9}]}) is None
+    edge = signs(rain={"local": {"past_12h_mm": 30.0}, "upstream": [{"past_24h_mm": 50.0}]})
+    assert edge["lines"]["en"] == [f"Heavy rain here and upstream in the last 24{NB}h."]
+
+
+def test_never_a_reading_veda_rejected_as_implausible():
+    """Audit 26 Oct (Cowork P1-2): a fresh reading that failed the health check is no "last river reading"."""
+    rejected = {"band": "danger", "age_minutes": 10, "health": {"ok": False, "problem": "impossible jump"}}
+    assert signs(last=rejected) is None
+    rejected_calm = {"band": "normal", "age_minutes": 10, "health": {"ok": False}}
+    out = signs(last=rejected_calm, rain=HEAVY_HERE)
+    assert out["kinds"] == ["rain"] and not any("Last river reading" in x for x in out["lines"]["en"])
+    healthy_old = {"band": "warning", "age_minutes": 840, "health": {"ok": True}}
+    assert signs(last=healthy_old)["kinds"] == ["last"]
+
+
+def test_the_data_agent_keeps_only_a_healthy_last_reading(monkeypatch):
+    from app.agents import data_agent
+    monkeypatch.setattr(data_agent.trace, "step", lambda *a, **k: None)
+    for health, kept in (({"ok": False, "problem": "out of range"}, False), ({"ok": True}, True), (None, True)):
+        main = {"name": "G", "role": "controlling", "station": "station:jps:1", "level_m": 5.0, "freshness": "stale",
+                "observed_at": None, "health": health, "band": "warning"}
+        ctx = {"gauges": [main], "sentinels": []}
+
+        class World:
+            store = type("S", (), {"state": {"entities": {}}})()
+
+            def entity(self, _):
+                return {"attrs": {}}
+        data_agent.heal(ctx, World(), None)
+        assert (ctx.get("last_reading") is not None) is kept, health

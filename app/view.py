@@ -15,6 +15,7 @@ from app import card as card_mod
 from app import config, progress, trace
 from app.agents.coordinator import SAFETY
 from app.config import MYT, REPLAYS
+from app.rain_rule import LOCAL_12H_MM, UPSTREAM_24H_MM
 
 LANGS = ("en", "ms")
 HEADLINE = {  # Cowork 24 Oct; also in docs/review_pack_ariff.md section G
@@ -443,7 +444,7 @@ def plain_pps(text, lang):
     return text
 
 
-HEAVY_HERE_MM = 30.0     # the words "heavy rain here" = the rain rule's local threshold (L2, tentative)
+HEAVY_HERE_MM = LOCAL_12H_MM   # "heavy rain here" = the rain rule's own threshold (L2) - one source (A-P2-15)
 
 
 def _upstream_plain(card, forecast, lang):
@@ -485,7 +486,7 @@ def _rain_plain(card, forecast, lang):
     past, nxt = card.get("rain_past_24h_mm"), card.get("rain_24h_mm")
     if past is not None or (local.get("past_12h_mm") or 0) >= HEAVY_HERE_MM:
         mm = past if past is not None else local.get("past_12h_mm")
-        heavy = (mm or 0) >= HEAVY_HERE_MM or (past is not None and r.get("local_heavy"))
+        heavy = (mm or 0) >= HEAVY_HERE_MM          # fallen rain only (local_heavy also counts forecast rain)
         return W["rain_heavy_past" if heavy else "rain_some_past" if (mm or 0) >= 1 else "rain_none_past"][lang]
     if nxt is not None or r.get("local_heavy"):
         # A2: the summary and the "until" line agree - a heavy spell starting now makes the summary say heavy too
@@ -1057,13 +1058,17 @@ def warning_signs(card, forecast, evidence):
     ctx = ev.get("context") or {}
     signs = {}                                                       # kind -> {lang: line}
     last = ctx.get("last_reading")
+    if last and not ((last.get("health") or {"ok": True}).get("ok")):
+        last = None                                  # audit 26 Oct P1-2: never a reading VEDA rejected as implausible
     band = (last or {}).get("band")
     if last and band in BAND_WORD:
         signs["last"] = {lang: SIGNS["last"][lang].format(age=_short_age(last.get("age_minutes"), lang),
                                                           band=BAND_WORD[band][lang]) for lang in LANGS}
     ru = fc.get("rain_upstream") or {}
-    here = bool((ru.get("local") or {}).get("heavy"))
-    fallen = [u for u in ru.get("upstream") or [] if u.get("heavy_fallen")]      # fallen rain only: "in the last"
+    # audit 26 Oct (P1-2 / A-P2-10): only rain that FELL inside the window the sentence names - never forecast rain
+    # (local.heavy) or rain older than 24 h (heavy_fallen also counts the 72 h total)
+    here = ((ru.get("local") or {}).get("past_12h_mm") or 0) >= HEAVY_HERE_MM
+    fallen = [u for u in ru.get("upstream") or [] if (u.get("past_24h_mm") or 0) >= UPSTREAM_24H_MM]
     if here or fallen:
         where = "both" if here and fallen else "here" if here else "upstream"
         hours = 12 if where == "here" else 24
