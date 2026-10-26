@@ -33,8 +33,14 @@ def test_a_dirty_tree_blocks_the_push(monkeypatch, capsys):
 
 def test_a_rename_of_code_into_a_doc_name_runs_the_gate(tmp_path):
     """Audit 26 Oct (Cowork): `git mv app/loop.py app/loop.md` must not pass as docs-only."""
+    import os
     import subprocess
-    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a], check=True, capture_output=True, text=True).stdout
+    # Inside a git hook (the pre-push gate runs this suite) git sets GIT_DIR / GIT_INDEX_FILE etc.; inherited, they
+    # point `git -C tmp_path` at the REAL repository - this test then overwrote its user.name / user.email and
+    # committed there (26 Oct). The throwaway repo must see no GIT_* variable.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a], check=True, capture_output=True, text=True,  # noqa: E731
+                                    env=env).stdout
     git("init", "-q")
     git("config", "user.email", "t@example.invalid")
     git("config", "user.name", "t")
