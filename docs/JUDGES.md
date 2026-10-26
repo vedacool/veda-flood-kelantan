@@ -12,8 +12,8 @@ Kelantan place gets "not covered yet" and a button for the nearest covered place
 
 ## 1. Start it (about 3 minutes)
 You need **Python 3.11 or newer (3.13 recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.11,
-3.12 and [JPS reading]: install, the tests - 853 then - the safety scenarios and every row below. At `d4ed2c3` (26 Oct): over 1,000 tests and
-41 safety evals, run by CI on Python 3.13.) In a terminal:
+3.12 and 3.13: install, the tests - 853 then - the safety scenarios and every row below. At `0ed62be` (26 Oct): over 1,000 tests and
+47 safety evals, run by CI on Python 3.13.) In a terminal:
 
 **Windows (PowerShell)**
 ```
@@ -83,7 +83,7 @@ Six ready-made inputs are in `input_examples/`, with VEDA's real answers and tra
   redacted). Replay one at 4× in the live log: [127.0.0.1:8000/live](http://127.0.0.1:8000/live) → *Replay a recorded
   run…* → pick one → **4×**.
 - **Every test and measurement**, with dates and how to reproduce them: [`docs/EVIDENCE.md`](EVIDENCE.md).
-- `python -m pytest -q` (over 1,000 offline tests at `d4ed2c3`) and `python scripts/run_evals.py` (41 safety evals).
+- `python -m pytest -q` (over 1,000 offline tests at `0ed62be`) and `python scripts/run_evals.py` (47 safety evals).
 
 ## What only works live, and why
 | Live only | Why it is not in offline mode |

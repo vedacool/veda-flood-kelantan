@@ -5,7 +5,7 @@ explanation and the pre-existing components (the organisers asked for both in th
 file holds the form description and the short deck versions, and must say the same thing. Every number here is one
 the README states with its date. Re-check the counts on the day of each submission.
 
-Last checked against the product: 26 Oct 2026, main at `d4ed2c3` (over 1,000 tests and 41 safety evals; CI run 40269479950).
+Last checked against the product: 26 Oct 2026, main at `0ed62be` (over 1,000 tests and 47 safety evals; CI run 40272733252).
 
 ## Form fields
 | Field | Value |
@@ -25,7 +25,7 @@ The problem is fragmented flood data. JPS river gauges, MetMalaysia warnings, Op
 
 Four agents work in one loop. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around broken gauges; a Forecast agent applies readable rules to the river, upstream gauges, rain upstream and in town, and MetMalaysia rain warnings; and a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and asks NVIDIA Nemotron (via Meterless Nightshift) whether the explanation contradicts the data. The Meterless World Model is their shared memory, with every fact's source. A safety gate checks every answer last. VEDA also found 20 JPS gauges it had not mapped and proposes where each fits; one is used, as context only, after a person approves.
 
-A live log shows each step; every AI call names the model that answered. Judges can run it offline with no keys (the Nov 2024 replay and labelled made-up scenes); over 1,000 tests and 41 safety evals run in CI.
+A live log shows each step; every AI call names the model that answered. Judges can run it offline with no keys (the Nov 2024 replay and labelled made-up scenes); over 1,000 tests and 47 safety evals run in CI.
 ```
 
 ## Sponsor technology explanation (deck version; full text: README "Sponsor technology explanation")
