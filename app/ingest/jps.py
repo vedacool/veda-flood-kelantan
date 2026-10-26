@@ -24,7 +24,7 @@ from app.adapters import pg
 
 URL = ("https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/aras-air-data/"
        "?state=KEL&district=ALL&station=ALL&lang=en")
-USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda; flood-risk research, low-rate, cached)"
+USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-kelantan; flood-risk research, low-rate, cached)"
 CACHE_DIR = trace.ROOT / "data" / "cache" / "jps"
 MIN_INTERVAL_S = 15 * 60          # scrape rule: at most once per 15 minutes
 TIMEOUT_S = 60

@@ -29,7 +29,7 @@ LINES = ROOT / "data" / "map" / "home_map_lines.json"
 PAGE = ROOT / "app" / "web" / "index.html"
 START, END = "<!-- MAP START (scripts/make_home_map.py) -->", "<!-- MAP END -->"
 LIVE_START, LIVE_END = "<!-- MAP LIVE START (scripts/make_home_map.py) -->", "<!-- MAP LIVE END -->"
-USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda; one-off map sketch)"
+USER_AGENT = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-kelantan; one-off map sketch)"
 BBOX = (5.47, 101.80, 6.30, 102.45)           # south, west, north, east
 BBOX_LIVE = (5.33, 101.80, 6.30, 102.45)      # live: south to Dabong (Sg. Galas)
 # Live map: the five added places (not tappable). (label kind, x offset, y offset) from the dot, in map units.

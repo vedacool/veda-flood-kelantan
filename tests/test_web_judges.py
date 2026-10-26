@@ -132,7 +132,7 @@ def test_repo_link_is_the_one_the_publishing_sweep_rewrites():
     spec = importlib.util.spec_from_file_location("public_links", trace.ROOT / "scripts" / "public_links.py")
     pl = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(pl)
-    assert f'const REPO = "{pl.PRIVATE}";' in PAGE and pl.LINK.search(PAGE)
+    assert f'const REPO = "{pl.PUBLIC}";' in PAGE and not pl.LINK.search(PAGE)   # swept 26 Oct: the public repo
     assert "README.md#how-it-works" in PAGE and "docs/EVIDENCE.md" in PAGE
 
 

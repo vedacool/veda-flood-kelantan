@@ -17,13 +17,16 @@ def test_link_matches_the_private_repo_only():
     assert not pl.LINK.search("https://github.com/vedacool/vedanta")
 
 
-def test_dry_run_changes_the_user_facing_links_and_keeps_the_private_mentions():
+def test_the_sweep_is_applied_and_keeps_the_private_mentions():
+    """Cowork 26 Oct: --apply ran (the public repo is vedacool/veda-kelantan). A dry run now changes nothing; the
+    user-facing links point at the public repo; the lines that name the private repo on purpose are kept."""
     changes, kept = pl.plan(pl.PUBLIC)
-    changed = {str(c[0].relative_to(pl.ROOT)).replace("\\", "/") for c in changes if c[1] is not None}
-    assert {"docs/JUDGES.md", "metadata.json", "app/ingest/jps.py"} <= changed
+    assert [c for c in changes if c[1] is not None] == []                   # nothing left to switch
     kept_text = " ".join(k[2] for k in kept)
     assert "stays **PRIVATE and untouched**" in kept_text                   # build evidence, never switched
-    assert all("vedacool/veda-kelantan" not in c[2] for c in changes if c[1] is not None)
+    for path in ("docs/JUDGES.md", "metadata.json", "app/ingest/jps.py", "app/web/judges.html"):
+        text = (pl.ROOT / path).read_text(encoding="utf-8")
+        assert pl.PUBLIC in text and not pl.LINK.search(text), path
 
 
 def test_the_script_and_its_test_are_never_swept():

@@ -17,7 +17,7 @@ You need **Python 3.11 or newer (3.13 recommended)** and **git**. (Tested 24 Oct
 
 **Windows (PowerShell)**
 ```
-git clone https://github.com/vedacool/veda.git veda
+git clone https://github.com/vedacool/veda-kelantan.git veda
 cd veda
 py -3 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
@@ -26,7 +26,7 @@ $env:SAMPLE_MODE="true"; .venv\Scripts\python -m app.main
 
 **macOS / Linux**
 ```
-git clone https://github.com/vedacool/veda.git veda
+git clone https://github.com/vedacool/veda-kelantan.git veda
 cd veda
 python3 -m venv .venv          # python3 --version must say 3.11 or newer
 .venv/bin/python -m pip install -r requirements.txt
