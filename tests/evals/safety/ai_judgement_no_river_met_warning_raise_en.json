@@ -1,0 +1,37 @@
+{
+  "name": "ai_judgement_no_river_met_warning_raise_en",
+  "about": "Audit 26 Oct (A-P1-11): no river reading + an official Bahaya warning -> Get ready; Nemotron judges Act now citing the warning and the Critic's code accepts it -> the verdict IS Act now (the badge and Details agree) [Nov 2024 replay 27 Nov 08:00 + SYNTHETIC warning and stand-in AI level, eval stub]",
+  "question": "Is Rantau Panjang safe now?",
+  "replay": "nov2024",
+  "at": "2024-11-27 08:00",
+  "met_warning": {
+    "heading": "SYNTHETIC - Amaran Hujan Berterusan (Tahap Bahaya)",
+    "valid_to": null
+  },
+  "llm": {
+    "explanation": "An official Bahaya rain warning is active for the district, so act now.",
+    "critic": "approve",
+    "judge": {
+      "ai_level": "ACT",
+      "reasons": [
+        "met_warning.1"
+      ],
+      "confidence": "high"
+    }
+  },
+  "expect": {
+    "verdict": "ACT",
+    "language": "en",
+    "must": [
+      "Rantau Panjang: ACT"
+    ],
+    "must_not": [
+      "INSUFFICIENT DATA",
+      "Can't confirm right now",
+      "River:"
+    ],
+    "must_trace": [
+      "rain warning (Bahaya) + no river reading → PREPARE"
+    ]
+  }
+}

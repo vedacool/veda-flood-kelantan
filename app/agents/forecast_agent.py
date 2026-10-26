@@ -334,6 +334,13 @@ def forecast(plan, evidence, world=None, now=None):
                        output_summary=f"rain warning ({lvl.capitalize()}) + no river reading → PREPARE",
                        decision=f"{why}; an official {lvl.capitalize()} warning for the district -> get ready anyway "
                                 "(tentative, L11)")
+            # audit 26 Oct (A-P1-11): an AI raise the Critic accepted applies here too - only up, never from "Can't
+            # confirm" (this level comes from the official warning, not from an unusable river reading)
+            ai = evidence.get("ai_minimum")
+            if ai and ai.get("level") in LEVELS and LEVELS.index(ai["level"]) > LEVELS.index(verdict):
+                verdict = ai["level"]
+                triggers.insert(0, {"level": verdict, "rule": "ai-judgement", "reason": ai["reason"],
+                                    "texts": ai.get("texts")})
         out.update({"verdict": verdict, "level_name": None,     # no band from an unusable reading
                     "triggers": triggers, "no_river": why,
                     "confidence": {"score": 0.1, "label": "low", "reasons": [why]}, "controlling": [], "upstream": [],

@@ -283,6 +283,13 @@ def run(question, llm=None, world=None, now=None, deadline_s=DEADLINE_S, log_dir
                     answer = coordinator.template_answer(card, p["question_language"], ai_broken)
                     state = "done"
             timing[current] = round(timing.get(current, 0) + elapsed() - started, 1)
+        if judgement and fc and judgement.get("final") not in (None, fc.get("verdict")):
+            # audit 26 Oct (A-P1-11): "final" is always the verdict the person sees - a raise that did not end up in
+            # the verdict is recorded as not used, never as raised (the badge and Details must agree)
+            judgement = {**judgement, "status": "ignored", "final": fc.get("verdict"),
+                         "why": f"{judgement.get('why') or ''}; not applied - the verdict is {fc.get('verdict')}"}
+            trace.step("Critic", "critic.ai_judgement_final", output_summary=judgement["why"], status="fallback",
+                       decision="the AI's level did not reach the verdict -> recorded as not used")
         answer = safety.gate(answer, card, evidence, fc)      # B-58: the last check on every answer, every path
         timing["total"] = round(elapsed(), 1)
         over = budget is not None and timing["total"] > budget

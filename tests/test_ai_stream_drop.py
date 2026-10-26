@@ -65,3 +65,20 @@ def test_a_dropped_stream_at_any_ai_step_still_gives_the_checked_card(monkeypatc
     assert "999" in r["answer"]["safety_line"]                                     # the safety gate still ran
     assert r["answer"].get("drafted_by") != "model" or drop_at != "draft"
     assert ok, problems                                                            # the scenario's own checks pass
+
+
+def test_final_is_always_the_verdict_the_person_sees(monkeypatch, tmp_path):
+    """Audit 26 Oct (A-P1-11): if an accepted raise does not reach the verdict, the judgement says "not used" with
+    final = the real verdict - the badge and Details never disagree. (Forced here by a forecast that drops it.)"""
+    from app.agents import forecast_agent
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    for key in ("ZETARIS_API_KEY", "ZETARIS_API_URL", "METERLESS_RUNTIME_TOKEN"):
+        monkeypatch.delenv(key, raising=False)
+    real = forecast_agent.forecast
+    monkeypatch.setattr(forecast_agent, "forecast",
+                        lambda p, ev, world: real(p, {k: v for k, v in ev.items() if k != "ai_minimum"}, world))
+    sc = json.loads((config.ROOT / "tests" / "evals" / "safety" /
+                     "ai_judgement_no_river_met_warning_raise_en.json").read_text(encoding="utf-8"))
+    ok, problems, r = run_evals.run_one(sc, tmp_path)
+    assert r["forecast"]["verdict"] == "PREPARE"
+    assert r["ai_judgement"]["final"] == "PREPARE" and r["ai_judgement"]["status"] == "ignored"
