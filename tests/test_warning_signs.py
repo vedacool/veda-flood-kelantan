@@ -7,6 +7,7 @@ import pytest
 
 from app import config, gazetteer, loop, view
 
+NB = " "                                   # number and unit never split (Cowork 26 Oct)
 STALE = "the controlling gauge has no fresh, healthy reading"
 CARD = {"verdict": "INSUFFICIENT_DATA"}
 
@@ -30,22 +31,24 @@ MET_BURUK = {"status": "ok", "active": [{"heading": "Continuous rain warning (SE
 
 def test_each_sign_only_when_present_and_fresh():
     assert signs() is None                                                         # nothing -> no box
-    assert signs(rain=HEAVY_HERE)["lines"]["en"] == ["Heavy rain here in the last 12 h."]
-    assert signs(rain=HEAVY_UP)["lines"]["ms"] == ["Hujan lebat di hulu dalam 24 jam lalu."]
+    assert signs(rain=HEAVY_HERE)["lines"]["en"] == [f"Heavy rain here in the last 12{NB}h."]
+    assert signs(rain=HEAVY_UP)["lines"]["ms"] == [f"Hujan lebat di hulu dalam 24{NB}jam lalu."]
     both = {"local": {"heavy": True}, "upstream": [{"heavy_fallen": True}]}
-    assert signs(rain=both)["lines"]["en"] == ["Heavy rain here and upstream in the last 24 h."]
+    assert signs(rain=both)["lines"]["en"] == [f"Heavy rain here and upstream in the last 24{NB}h."]
     assert signs(rain=FORECAST_ONLY) is None                                       # forecast rain is not "in the last"
     up = signs(sentinels=[sentinel(change_3h=0.6)])
     assert up["lines"]["en"] == ["Upstream at Kg. Jenob: rising."] and up["lines"]["ms"] == ["Di hulu, Kg. Jenob: sedang naik."]
     at = signs(sentinels=[sentinel(band="warning")])
     assert at["lines"]["en"] == ["Upstream at Kg. Jenob: at Warning."] and at["lines"]["ms"] == ["Di hulu, Kg. Jenob: paras Amaran."]
-    assert signs(met=MET_BURUK)["lines"]["en"] == ["MetMalaysia warning: severe-level rain."]
+    assert signs(met=MET_BURUK)["lines"]["en"] == ["MetMalaysia warning: severe rain."]
+    assert signs(met=MET_BURUK)["lines"]["ms"] == ["Amaran MetMalaysia: hujan Buruk."]
     assert signs(met={**MET_BURUK, "status": "stale"}) is None                     # a stale warnings feed is no sign
     last = {"band": "warning", "age_minutes": 840}
     out = signs(last=last)
-    assert out["lines"]["en"][0] == "Last river reading (14 h ago): Warning." and out["lines"]["ms"][0] == \
-        "Bacaan sungai terakhir (14 jam lalu): Amaran."
+    assert out["lines"]["en"][0] == f"Last river reading (14{NB}h ago): Warning." and out["lines"]["ms"][0] == \
+        f"Bacaan sungai terakhir (14{NB}jam lalu): Amaran."
     assert out["footer"]["en"] == "Signs from: the last JPS reading. River level not available."
+    assert signs(last={"band": "alert", "age_minutes": 40})["lines"]["ms"] == [f"Bacaan sungai terakhir (40{NB}minit lalu): Waspada."]
 
 
 def test_a_stale_upstream_post_is_never_a_sign():
@@ -53,14 +56,15 @@ def test_a_stale_upstream_post_is_never_a_sign():
     assert signs(sentinels=[sentinel(change_3h=0.9, freshness="unknown")]) is None
 
 
-def test_the_serious_line():
+def test_the_serious_line_is_advice_not_a_sign():
     serious = "Treat this as serious until you can confirm with JPS or the authorities."
-    assert serious in signs(last={"band": "danger", "age_minutes": 200})["lines"]["en"]
-    assert serious not in signs(last={"band": "alert", "age_minutes": 200})["lines"]["en"]   # Alert alone: box, no line
-    assert serious not in signs(rain=HEAVY_HERE)["lines"]["en"]                               # one sign
+    danger = signs(last={"band": "danger", "age_minutes": 200})
+    assert danger["advice"]["en"] == serious and serious not in danger["lines"]["en"]      # its own line, not a bullet
+    assert signs(last={"band": "alert", "age_minutes": 200})["advice"] is None               # Alert alone: box, no line
+    assert signs(rain=HEAVY_HERE)["advice"] is None                                         # one sign
     two = signs(rain=HEAVY_HERE, met=MET_BURUK)
-    assert two["lines"]["en"][-1] == serious and two["lines"]["ms"][-1] == \
-        "Anggap ini serius sehingga anda dapat sahkan dengan JPS atau pihak berkuasa."
+    assert two["advice"]["ms"] == "Anggap ini serius sehingga anda dapat sahkan dengan JPS atau pihak berkuasa."
+    assert len(two["lines"]["en"]) == 2
 
 
 def test_no_box_when_nothing_fresh_or_when_the_reading_is_not_the_reason():
@@ -72,7 +76,8 @@ def test_no_box_when_nothing_fresh_or_when_the_reading_is_not_the_reason():
 def test_never_a_level_never_metres():
     out = signs(last={"band": "danger", "age_minutes": 90, "level_m": 9.4}, rain=HEAVY_UP,
                 sentinels=[sentinel(band="alert")], met=MET_BURUK)
-    text = " ".join(out["lines"]["en"] + out["lines"]["ms"] + [out["footer"]["en"], out["footer"]["ms"]])
+    text = " ".join(out["lines"]["en"] + out["lines"]["ms"] + [out["footer"]["en"], out["footer"]["ms"]]
+                    + list(out["advice"].values()))
     assert not re.search(r"\d+(\.\d+)?\s?m\b", text) and "9.4" not in text
     assert not re.search(r"(?i)\b(keep watching|get ready|act now|normal for now|flood is coming)\b", text)
 

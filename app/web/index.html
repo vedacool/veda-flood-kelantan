@@ -178,6 +178,7 @@
   .signs { border: 3px solid var(--signs); border-radius: 14px; padding: 12px 14px; margin: 10px 0 12px; background: var(--card); }
   .signs-title { margin: 0 0 6px; font-weight: 800; }
   .signs-list { margin: 0 0 6px; padding-left: 1.2em; display: grid; gap: 4px; }
+  .signs-advice { margin: 0 0 6px; font-weight: 800; }
   .signs-foot { margin: 0; color: var(--muted); }
   #s-home footer a { display: inline-flex; align-items: center; min-height: 44px; }   /* B-96: 44 px taps */
   .i30-links { display: grid; gap: 0; margin: 8px 0 4px; }
@@ -401,7 +402,8 @@
   <p class="oneline sub" id="a-line"></p>
   <!-- B-105: warning signs when this town's river reading is too old (the verdict stays "Can't confirm") -->
   <div class="signs" id="a-signs" role="note" hidden><p class="signs-title" id="a-signs-title"></p>
-    <ul class="signs-list" id="a-signs-list"></ul><p class="signs-foot" id="a-signs-foot"></p></div>
+    <ul class="signs-list" id="a-signs-list"></ul><p class="signs-advice" id="a-signs-advice" hidden></p>
+    <p class="signs-foot" id="a-signs-foot"></p></div>
   <div class="card todo"><h2 data-t="todo"></h2><ol class="steps big-steps" id="a-steps"></ol>
     <p id="a-todo" class="sub" style="margin:0"></p>
     <a class="btn wide" id="a-jps" href="https://publicinfobanjir.water.gov.my/" target="_blank" rel="noopener"
@@ -1024,6 +1026,8 @@ function renderAnswer() {
   if (sg) {
     $("a-signs-title").textContent = sg.title[lang];
     $("a-signs-list").innerHTML = sg.lines[lang].map((x) => `<li>${esc(x)}</li>`).join("");
+    $("a-signs-advice").hidden = !sg.advice;                // advice, not a sign: its own bold line
+    $("a-signs-advice").textContent = sg.advice ? sg.advice[lang] : "";
     $("a-signs-foot").textContent = sg.footer[lang];
   }
   $("a-steps").innerHTML = v.steps[lang].map((s) => `<li>${escBm(s)}</li>`).join("");

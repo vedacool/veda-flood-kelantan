@@ -1002,7 +1002,7 @@ JUDGE = {  # Part 7: the Details row "Rules said / Nemotron said / Final" on eve
 SIGNS = {
     "title": {"en": "⚠ Signs the river may rise suddenly", "ms": "⚠ Tanda paras sungai mungkin naik mendadak"},
     "last": {"en": "Last river reading ({age} ago): {band}.", "ms": "Bacaan sungai terakhir ({age} lalu): {band}."},
-    "rain": {"en": "Heavy rain {where} in the last {h} h.", "ms": "Hujan lebat {where} dalam {h} jam lalu."},
+    "rain": {"en": "Heavy rain {where} in the last {h} h.", "ms": "Hujan lebat {where} dalam {h} jam lalu."},
     "where": {"here": {"en": "here", "ms": "di sini"}, "upstream": {"en": "upstream", "ms": "di hulu"},
               "both": {"en": "here and upstream", "ms": "di sini dan di hulu"}},
     "up": {"en": "Upstream at {post}: {state}.", "ms": "Di hulu, {post}: {state}."},
@@ -1027,24 +1027,25 @@ SIGNS = {
 BAND_WORD = {"below_normal": {"en": "Normal", "ms": "Normal"}, "normal": {"en": "Normal", "ms": "Normal"},
              "alert": {"en": "Alert", "ms": "Waspada"}, "warning": {"en": "Warning", "ms": "Amaran"},
              "danger": {"en": "Danger", "ms": "Bahaya"}}
-MET_WORD = {"waspada": {"en": "alert-level", "ms": "Waspada"}, "buruk": {"en": "severe-level", "ms": "Buruk"},
-            "bahaya": {"en": "danger-level", "ms": "Bahaya"}}
+MET_WORD = {"waspada": {"en": "alert", "ms": "Waspada"}, "buruk": {"en": "severe", "ms": "Buruk"},
+            "bahaya": {"en": "danger", "ms": "Bahaya"}}
+NBSP = " "                     # B-105: a number never wraps away from its unit
 STALE_REASON = "no fresh, healthy reading"          # forecast_agent's reason when the town's own reading is too old
 
 
 def _short_age(minutes, lang):
-    """'40 min' / '14 h' / '3.5 h' (no 'ago': the sign's own wording adds it)."""
+    """'40 min' / '14 h' / '3.5 h' with a non-breaking space (no 'ago': the sign's own wording adds it)."""
     if minutes is None:
         return "?"
     if minutes < 120:
-        return f"{minutes} min" if lang == "en" else f"{minutes} minit"
+        return f"{minutes}{NBSP}min" if lang == "en" else f"{minutes}{NBSP}minit"
     h = minutes / 60
     n = f"{h:.0f}" if not minutes % 60 else f"{h:.1f}"
-    return f"{n} h" if lang == "en" else f"{n} jam"
+    return f"{n}{NBSP}h" if lang == "en" else f"{n}{NBSP}jam"
 
 
 def warning_signs(card, forecast, evidence):
-    """The advisory box (B-105) -> {'kinds', 'serious', 'lines': {lang: [...]}, 'title', 'footer'} or None. Only when
+    """The advisory box (B-105) -> {'kinds', 'serious', 'lines': {lang: [...]}, 'advice', 'title', 'footer'} or None. Only when
     the verdict is "Can't confirm" because the town's own river reading is too old. Signs: a) the last known level
     (band word only), b) heavy rain (the B-88 rule), c) a fresh upstream post rising or at Alert+ (the Forecast
     agent's own upstream rule), e) an active leveled MetMalaysia warning (rule A, fresh feed only). The box shows
@@ -1086,8 +1087,9 @@ def warning_signs(card, forecast, evidence):
         return None                                                  # nothing fresh worth a box
     kinds = [k for k in ("last", "rain", "up", "met") if k in signs]
     serious = band in ("warning", "danger") or len(others) >= 2
-    lines = {lang: [signs[k][lang] for k in kinds] + ([SIGNS["serious"][lang]] if serious else []) for lang in LANGS}
-    return {"kinds": kinds, "serious": serious, "title": dict(SIGNS["title"]), "lines": lines,
+    lines = {lang: [signs[k][lang] for k in kinds] for lang in LANGS}
+    advice = dict(SIGNS["serious"]) if serious else None              # advice, not a sign: its own bold line
+    return {"kinds": kinds, "serious": serious, "title": dict(SIGNS["title"]), "lines": lines, "advice": advice,
             "footer": {lang: SIGNS["footer"][lang].format(sources=", ".join(SIGNS["source"][k][lang] for k in kinds))
                        for lang in LANGS}}
 
