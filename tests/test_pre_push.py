@@ -18,7 +18,7 @@ def test_pushed_files_come_from_the_pushed_range(monkeypatch):
     calls = []
     monkeypatch.setattr(pc, "_git", lambda *a: calls.append(a) or "README.md\ndocs/x.md\n")
     files = pc._pushed_files("refs/heads/main " + "a" * 40 + " refs/heads/main " + "b" * 40 + "\n")
-    assert files == {"README.md", "docs/x.md"} and calls[-1] == ("diff", "--name-only", "b" * 40 + ".." + "a" * 40)
+    assert files == {"README.md", "docs/x.md"} and calls[-1] == ("diff", "--name-only", "--no-renames", "b" * 40 + ".." + "a" * 40)
     assert pc._pushed_files("refs/heads/x " + "0" * 40 + " refs/heads/x " + "b" * 40 + "\n") == set()   # delete
 
 
@@ -29,3 +29,21 @@ def test_a_dirty_tree_blocks_the_push(monkeypatch, capsys):
     monkeypatch.setattr(pc, "_git", lambda *a: "?? docs/notes.md\n" if a[0] == "status" else "")
     monkeypatch.setattr(pc, "_pushed_files", lambda _: {"README.md"})
     assert pc.pre_push("") == 0                                   # docs-only push: skipped before the tree check
+
+
+def test_a_rename_of_code_into_a_doc_name_runs_the_gate(tmp_path):
+    """Audit 26 Oct (Cowork): `git mv app/loop.py app/loop.md` must not pass as docs-only."""
+    import subprocess
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a], check=True, capture_output=True, text=True).stdout
+    git("init", "-q")
+    git("config", "user.email", "t@example.invalid")
+    git("config", "user.name", "t")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "loop.py").write_text("x = 1", encoding="utf-8")
+    git("add", ".")
+    git("commit", "-qm", "a")
+    base = git("rev-parse", "HEAD").strip()
+    git("mv", "app/loop.py", "app/loop.md")
+    git("commit", "-qm", "b")
+    files = set(git("diff", "--name-only", "--no-renames", f"{base}..HEAD").split())
+    assert files == {"app/loop.py", "app/loop.md"} and not pc._doc_only(files)

@@ -63,7 +63,9 @@ def _pushed_files(stdin_text):
         base = remote if remote != ZERO else (_git("merge-base", local, "origin/main").strip() or None)
         if base is None:
             return None                                         # nothing to compare with: run the gate
-        files |= {f for f in _git("diff", "--name-only", f"{base}..{local}").splitlines() if f}
+        # audit 26 Oct: --no-renames - a rename (app/loop.py -> app/loop.md) lists the deleted code file too, so it
+        # can never pass as a docs-only push
+        files |= {f for f in _git("diff", "--name-only", "--no-renames", f"{base}..{local}").splitlines() if f}
     return files
 
 
