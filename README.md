@@ -61,7 +61,7 @@ set SAMPLE_MODE=true                         # PowerShell: $env:SAMPLE_MODE="tru
 python run.py "Is Rantau Panjang at risk?"
 python run.py --replay nov2024 --at "2024-11-27 19:30" "Rantau Panjang selamat ke?"
 python -m app.main                           # the web page on http://127.0.0.1:8000
-python scripts/run_evals.py                  # 41 safety scenarios, pass/fail table
+python scripts/run_evals.py                  # 47 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
 Start the server: with Zetaris + Nightshift it runs live; without them it runs the offline demo automatically. It
@@ -296,8 +296,9 @@ These are controlled tests, kept apart from the live rates above. Every test and
 its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Critic evaluation (test harness, planted errors, 24 Oct 2026, 23:20 MYT, Super VL, Nightshift restarted before each call): 9 of 12 calls answered (3 cut at 45 s); all 9 right - planted errors rejected 5 of 5 (EN contradiction 3/3, BM exaggeration 2/2), correct explanations passed 4 of 4 (EN 3/3, BM 1/1).** Reproduce: `python scripts/critic_planted_errors.py --tries 3` (live Nightshift; the facts are the SYNTHETIC rising-river card). The planted errors exist only in that script, never in VEDA or its answers.
 - **Offline test suite (`python -m pytest -q`): over 1,000 tests pass; 13 are skipped (they need live services).**
-- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 41 scenarios (6 of them for Nemotron's judgement,
-  Part 7), 41 of 41 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `943441f`, 24 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
+- **Safety scenarios (`tests/evals/safety/`, `python scripts/run_evals.py`): 47 scenarios (7 of them for Nemotron's judgement,
+  Part 7), 47 of 47 pass locally; pass^3 in CI (the Docker job runs them 3 times on every push): green at `6297c97`, CI run
+  40271883392, 26 Oct).** They run offline on the scenes with stand-in models, so they test VEDA's own
   logic, not Nemotron. They cover:
   - quick and full paths;
   - BM, EN and Kelantan dialect;

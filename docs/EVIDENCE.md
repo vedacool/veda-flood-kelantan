@@ -11,6 +11,10 @@ rules run hour by hour on archived data, no hindsight · **manual** = measured b
 
 | Date | What was tested | Result | Kind | Reproduce / source | Status |
 |---|---|---|---|---|---|
+| 26 Oct 12:59 | Offline test suite at `6297c97` | **1125 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q`; the pre-push gate and CI run 40271883392 (green, both jobs) show the same line | Re-verified 26 Oct |
+| 26 Oct 12:59 | Safety scenarios at `6297c97` | **47 of 47** (7 for Nemotron's judgement); ×3 in CI: the Docker job log of run 40271883392 shows "47/47 passed" three times (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | Re-verified 26 Oct |
+| 24 Oct 23:20 | **Critic planted-error harness**, Super VL by name, Nightshift restarted before each call | **9 of 12 calls answered** (3 cut at 45 s); all 9 right: planted errors rejected **5 of 5** (EN contradiction 3/3, BM exaggeration 2/2), correct explanations passed **4 of 4** (EN 3/3, BM 1/1) | harness (live Nightshift) | `python scripts/critic_planted_errors.py --tries 3` (committed in `f26da07`, 24 Oct 23:52, with this result in its message) | Not re-verified (needs live Nightshift) |
+| 24 Oct 21:38-22:36 | **Live runs with Nemotron's judgement in the loop** (Part 7), 9 runs, Rantau Panjang (EN) / Pasir Mas (BM) / Kota Bharu (EN) | Judgement ran in **6 of 9** (agreed 6, raised 0, judged lower 0); no run changed level; all within the 150 s budget | live | [`docs/EVIDENCE-live-24oct-night.md`](EVIDENCE-live-24oct-night.md) (run ids, receipts, times) | Not re-verified (live) |
 | 24 Oct ~20:10 | Offline test suite at `8f51777` | **989 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`); CI run 40092646506 green at `8f51777` | Re-verified 24 Oct |
 | 24 Oct ~20:10 | Safety scenarios at `8f51777` | **35 of 35**; ×3 in CI: the Docker job log of run 40092646506 shows "35/35 passed" three times (pass^3) | CI + harness | `python scripts/run_evals.py`; ci.yml (`for i in 1 2 3`) | Re-verified 24 Oct (1 run locally; ×3 from the CI log) |
 | 24 Oct ~18:10 | Offline test suite at `af05b22` | **938 passed, 13 skipped** (live services) | CI + local | `python -m pytest -q` (CI: `-p no:cacheprovider`); CI run 40083934555 green at `af05b22` | Re-verified 24 Oct (local at `76c61d9`, docs only after `af05b22`) |
@@ -84,5 +88,6 @@ Timestamps and outcomes only - no river readings (B-75).
 - Open: offline (SAMPLE_MODE), a scene has recorded data only at its listed times; a time inside the window without a
   recording (e.g. the calm day at 08:00) gives "no fresh reading" because the recording is missing, not because the
   river data is (the trace says `no fixture …`).
-- The planted-error and model harnesses are not published in the repo (`docs/DECISIONS.md` says so); their numbers
-  can only be checked against the commit messages and the README.
+- The Critic planted-error harness is in the repo since `f26da07` (`scripts/critic_planted_errors.py`; it needs live
+  Nightshift). The 23 Oct model probes (rows dated 23 Oct) were run with scripts that were not committed; those numbers
+  can only be checked against the commit messages.
