@@ -24,8 +24,8 @@ LIVE_SETUP = "README 'Live setup'"
 
 def _python():
     v = sys.version_info
-    ok = v >= (3, 10)
-    return ok, f"Python {v.major}.{v.minor}.{v.micro}", None if ok else "install Python 3.10+ ([JPS reading] recommended)"
+    ok = v >= (3, 11)                       # requirements-lock.txt (starlette) needs 3.11+
+    return ok, f"Python {v.major}.{v.minor}.{v.micro}", None if ok else "install Python 3.11+ (3.13 recommended)"
 
 
 def _packages(root):

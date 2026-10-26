@@ -8,16 +8,16 @@ if ($Rest -contains "--no-start") { $NoStart = $true }      # the same flag as i
 $ErrorActionPreference = "Continue"     # each step checks its exit code itself (pip warnings are not errors)
 Set-Location -LiteralPath $PSScriptRoot
 
-# 1. Python 3.10 or newer (the "py" launcher first, then python / python3 on PATH)
+# 1. Python 3.11 or newer (the pinned packages need it) (the "py" launcher first, then python / python3 on PATH)
 $py = $null
 foreach ($c in @("py -3", "python", "python3")) {
     $cand = $c -split " "; $exe = $cand[0]; $pre = @($cand | Select-Object -Skip 1)
     if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { continue }
-    & $exe @pre -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" 2>$null
+    & $exe @pre -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" 2>$null
     if ($LASTEXITCODE -eq 0) { $py = $cand; break }
 }
 if (-not $py) {
-    Write-Host "X  Python 3.10 or newer not found. Install it from https://www.python.org/downloads/ ([JPS reading] recommended,"
+    Write-Host "X  Python 3.11 or newer not found. Install it from https://www.python.org/downloads/ (3.13 recommended,"
     Write-Host "   tick 'Add python.exe to PATH'), then run .\install.ps1 again."
     exit 1
 }

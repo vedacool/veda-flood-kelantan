@@ -52,7 +52,7 @@ malam ni?"*), in English or Bahasa Melayu (EN | BM at the top). Offline, the pag
 peak (27 Nov, 7:30 pm); **Change moment** switches to Before / Morning / Peak, and the made-up test scenes are under
 **Test scenes** in the top bar (`/scenes`). "See what VEDA is doing ›" shows each step live while it works.
 
-**Python 3.10+ without Docker** ([JPS reading] recommended; tested on 3.10-3.13):
+**Python 3.11+ without Docker** (3.13 recommended; tested on 3.11-3.13):
 ```
 python -m venv .venv
 .venv\Scripts\activate                       # macOS/Linux: source .venv/bin/activate

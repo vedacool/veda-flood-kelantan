@@ -11,7 +11,7 @@ JPS gauges each place reads is tentative for all 9 until Dr Ariff (our hydrology
 Kelantan place gets "not covered yet" and a button for the nearest covered place.
 
 ## 1. Start it (about 3 minutes)
-You need **Python 3.10 or newer ([JPS reading] recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.10, [JPS reading],
+You need **Python 3.11 or newer (3.13 recommended)** and **git**. (Tested 24 Oct 2026 on Windows with Python 3.11,
 3.12 and [JPS reading]: install, the tests - 853 then - the safety scenarios and every row below. At `d4ed2c3` (26 Oct): over 1,000 tests and
 41 safety evals, run by CI on Python 3.13.) In a terminal:
 
@@ -28,7 +28,7 @@ $env:SAMPLE_MODE="true"; .venv\Scripts\python -m app.main
 ```
 git clone https://github.com/vedacool/veda.git veda
 cd veda
-python3 -m venv .venv          # python3 --version must say 3.10 or newer
+python3 -m venv .venv          # python3 --version must say 3.11 or newer
 .venv/bin/python -m pip install -r requirements.txt
 SAMPLE_MODE=true .venv/bin/python -m app.main
 ```

@@ -16,16 +16,16 @@ for arg in "$@"; do
   esac
 done
 
-# 1. Python 3.10 or newer
+# 1. Python 3.11 or newer (the pinned packages need it)
 PY=""
 for cand in python3 python; do
-  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
     PY="$cand"
     break
   fi
 done
 if [ -z "$PY" ]; then
-  echo "X  Python 3.10 or newer not found. Install it (python.org, or your package manager; [JPS reading] recommended),"
+  echo "X  Python 3.11 or newer not found. Install it (python.org, or your package manager; 3.13 recommended),"
   echo "   then run ./install.sh again."
   exit 1
 fi
