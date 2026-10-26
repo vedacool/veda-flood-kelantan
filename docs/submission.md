@@ -5,7 +5,7 @@ explanation and the pre-existing components (the organisers asked for both in th
 file holds the form description and the short deck versions, and must say the same thing. Every number here is one
 the README states with its date. Re-check the counts on the day of each submission.
 
-Last checked against the product: 26 Oct 2026, main at `0ed62be` (over 1,000 tests and 47 safety evals; CI run 40272733252).
+Last checked against the product: 26 Oct 2026, main at `8dd5f8f` (over 1,000 tests and 47 safety evals; CI run 40278716334 at `12be2da`, only docs changed since).
 
 ## Form fields
 | Field | Value |
@@ -17,15 +17,17 @@ Last checked against the product: 26 Oct 2026, main at `0ed62be` (over 1,000 tes
 | GitHub Solution | the public repo https://github.com/vedacool/veda-flood-kelantan (B-77) - never the private `vedacool/veda` |
 | Pitch Deck | link or upload |
 
-## Description (1,985 characters including the 6 line breaks - 1,991 if each break counts as 2; limit 2,000; paste as is)
+## Description (1,927 characters including the 8 line breaks - 1,935 if each break counts as 2; limit 2,000; paste as is)
 ```text
-VEDA helps families in Kelantan, Malaysia, decide whether to act on a flood. Ask in English or Bahasa Melayu ("Rantau Panjang selamat ke malam ni?") and VEDA returns one checked answer you can forward on WhatsApp: what to do now, a verdict (Normal, Keep watching, Get ready, Act now or Can't confirm) with the official JPS level and what set it, a comparison with the 2014 flood, every source with its age, what was left out and why, and the 999/991 numbers. It covers 9 places: 4 on Home, 5 more by typing (live); their gauge links await expert review.
+VEDA helps families in Kelantan, Malaysia, decide whether to act on a flood. Ask in English or Bahasa Melayu ("Rantau Panjang selamat ke malam ni?") and get one checked answer you can forward on WhatsApp: what to do now, a level (Normal, Keep watching, Get ready, Act now or Can't confirm) set from official JPS marks, a comparison with the 2014 flood, every source with its age, what was left out and why, and 999/991.
 
-The problem is fragmented flood data. JPS river gauges, MetMalaysia warnings, Open-Meteo rain and OpenStreetMap live in different places with no shared station IDs, and one official flood feed has been frozen since Feb 2024 while looking live. On Nov 2024 archive rain, VEDA's rain rule raised Rantau Panjang to Keep watching from 21 Nov (heavy rain on the Thai side of Sg. Golok), five days before the first cited river report (26 Nov) found the river above Warning.
+The problem is fragmented flood data: JPS river gauges, MetMalaysia warnings, Open-Meteo rain and OpenStreetMap sit in different places with no shared station IDs, and one official flood feed has been frozen since Feb 2024 while looking live. No single source tells a family what to do.
 
-Four agents work in one loop. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around broken gauges; a Forecast agent applies readable rules to the river, upstream gauges, rain upstream and in town, and MetMalaysia rain warnings; and a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and asks NVIDIA Nemotron (via Meterless Nightshift) whether the explanation contradicts the data. The Meterless World Model is their shared memory, with every fact's source. A safety gate checks every answer last. VEDA also found 20 JPS gauges it had not mapped and proposes where each fits; one is used, as context only, after a person approves.
+Separate agents check each other. A Coordinator picks a quick or full path; a Data & Reconciler reads every source through Zetaris, drops stale ones and works around silent gauges; a Forecast agent applies readable rules to the river, upstream gauges, rain and warnings; a Critic re-checks the facts in Zetaris, can ask the Data agent for a missing upstream reading, and has NVIDIA Nemotron 3.5 Super VL (via Meterless Nightshift) review the answer. Nemotron may raise the level only when it cites real facts, never lower it. The Meterless World Model is their shared memory; a safety gate checks every answer last. VEDA also found 20 JPS gauges it had not mapped and waits for a person to approve each.
 
-A live log shows each step; every AI call names the model that answered. Judges can run it offline with no keys (the Nov 2024 replay and labelled made-up scenes); over 1,000 tests and 47 safety evals run in CI.
+It fails honestly. When the JPS site went down on 24 Oct, VEDA kept the last good data, said "Can't confirm" instead of guessing, and still showed the warning signs it could trust.
+
+Judges can check it themselves: a public demo with the Nov 2024 replay, 7 test scenes that show the data and the expected answer before you run them, a public API, a live log where every AI call names the model that answered, and a one-command install that runs offline with no keys. Over 1,000 tests and 47 safety evals run in CI.
 ```
 
 ## Sponsor technology explanation (deck version; full text: README "Sponsor technology explanation")
@@ -39,14 +41,17 @@ A live log shows each step; every AI call names the model that answered. Judges 
 - **Meterless Nightshift - the only AI provider.** OpenAI-format calls with app id `veda-deep`, the model asked for
   by name, streamed under a hard time limit; every call's trace line names the model that actually answered and the
   Nightshift receipt; a fallback is marked `ai.fallback`.
-- **NVIDIA Nemotron 3.5 Super VL - two jobs.** Writes the 1-2 sentence explanation in the user's language, and is
-  the Critic's reviewer (does it contradict, exaggerate or downplay a fact?). Live, 24 Oct 12:19–13:14: 10 of 10
-  answered within 150 s; AI explanation in 6 of 7 full-path runs; Critic AI review 6 of 7; every call that answered
-  was served by Super VL ([`docs/EVIDENCE-live-24oct.md`](EVIDENCE-live-24oct.md)).
-- **What is unique:** the model never decides. Code reads, checks and reconciles the data and sets the verdict with
-  rules a person can read; the model explains; a second call checks that explanation against the facts; a safety
-  gate checks every answer last; the served model is verified on every call; a replay cuts every source at the
-  replay time, so nothing from later leaks in.
+- **NVIDIA Nemotron 3.5 Super VL - three jobs.** Writes the 1-2 sentence explanation in the user's language; is
+  the Critic's AI reviewer (does the explanation contradict, exaggerate or downplay a fact?); and gives its own
+  judgement of the level, citing up to 2 facts. VEDA uses that judgement only to RAISE the level - cited real
+  facts, at least medium confidence, at most one level (unless a cited fact itself stands higher) - never to lower
+  it, and it never changes "Can't confirm". Live, 24 Oct night: Nemotron judged 6 of 9 runs and agreed every
+  time; when the explanation call timed out, a facts-only judgement took over
+  ([`docs/EVIDENCE-live-24oct-night.md`](EVIDENCE-live-24oct-night.md)).
+- **What is unique:** the rules set a safe floor and the model can only raise it, citing facts. Code reads, checks
+  and reconciles the data and sets the verdict with rules a person can read; the model explains; a second call
+  checks that explanation against the facts; a safety gate checks every answer last; the served model is verified
+  on every call; a replay cuts every source at the replay time, so nothing from later leaks in.
 
 ## Pre-existing components (deck / form version; full text: README "Pre-existing components")
 - **The historic flood peak table** - all of `data/historic_peaks.csv` (15 rows) - was **compiled before 22 Oct

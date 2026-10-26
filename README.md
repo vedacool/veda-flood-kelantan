@@ -199,7 +199,7 @@ flowchart LR
     N --> CR[Critic<br/>code checks + own Zetaris re-check<br/>on every answer; AI review +<br/>Nemotron's own level]
     K -.->|explanation call failed:<br/>facts-only judgement| CR
     CR -->|reject: one revision| N
-    CR -->|Nemotron's level higher,<br/>cited facts checked by code:<br/>raise only, one step| F
+    CR -->|Nemotron's level higher,<br/>cited facts checked by code:<br/>raise only, at most one level| F
     CR --> S[Safety gate<br/>last check on every answer]
     S --> A[Answer + trace]
 ```
@@ -327,7 +327,7 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
   (INSUFFICIENT_DATA), never NORMAL - enforced by the safety gate and tested; the AI cannot change it.
 - **Human review:** the verdict rules and thresholds are tentative until a hydrology adviser signs them off
   (`docs/review_pack_ariff.md`, `docs/review/ARIFF_MONDAY.md`); a person approves any new gauge before VEDA uses it
-  (`python -m app.discover approve`); the AI can only raise a level, by one step, citing facts code checks.
+  (`python -m app.discover approve`); the AI can only raise a level, at most one level (unless a cited fact itself stands higher), citing facts code checks.
 - **Privacy:** the question never goes to an AI model; it stays in local logs with phone / IC numbers masked.
 
 ## Limitations (honest list)
@@ -446,14 +446,16 @@ Zetaris.
   limit, and writes one trace line per call with the model that actually answered and the Nightshift receipt id. A
   call that falls back is marked with an `ai.fallback` line (organiser rule, 23 Oct). Never `meterless/auto`, never
   NVIDIA directly.
-- **NVIDIA Nemotron 3.5 Super VL - where it contributes.** It writes the 1-2 sentence explanation in the user's
-  language (BM or English) from the card's key facts, and it is the Critic's AI reviewer: does the explanation
-  contradict, exaggerate or downplay a fact? In the same call it gives its own level, citing up to 2 facts - code
-  raises the level by one step only when the cited facts support it, and never lowers it. Measured live, 24 Oct 2026, 12:19-13:14 MYT: 10 of 10
-  runs answered within 150 s; explanation shown in 6 of 7 full-path runs, AI review done in 6 of 7 (23 Oct, 22:47-23:07
-  MYT: 8 of 10 and 8 of 10).
+- **NVIDIA Nemotron 3.5 Super VL - three jobs.** Writes the 1-2 sentence explanation in the user's language; is
+  the Critic's AI reviewer (does the explanation contradict, exaggerate or downplay a fact?); and gives its own
+  judgement of the level, citing up to 2 facts. VEDA uses that judgement only to RAISE the level - cited real
+  facts, at least medium confidence, at most one level (unless a cited fact itself stands higher) - never to lower
+  it, and it never changes "Can't confirm". Live, 24 Oct night: Nemotron judged 6 of 9 runs and agreed every
+  time; when the explanation call timed out, a facts-only judgement took over
+  ([`docs/EVIDENCE-live-24oct-night.md`](docs/EVIDENCE-live-24oct-night.md)).
 - **What is unique:** code reads, checks and reconciles the data and sets the verdict with rules a person can read;
-  the model can only raise that level, by one step, citing facts code checks - never lower it; the model explains, a second model call checks the explanation against the facts, and a
+  the model can only raise that level, at most one level (unless a cited fact itself stands higher), citing facts
+  code checks - never lower it, and never change "Can't confirm"; the model explains, a second model call checks the explanation against the facts, and a
   safety gate checks every answer last. The served model is verified on every call; one source failing never blocks
   the river answer (per-source circuit breakers); a flood replay cuts every source at the replay time so nothing from
   later leaks in.
