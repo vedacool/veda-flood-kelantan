@@ -27,8 +27,29 @@ def demo_mode():
 
 
 def sample_mode():
-    """SAMPLE_MODE=true: offline judge mode, no live calls. Always on in the public demo (VEDA_DEMO=1)."""
-    return demo_mode() or flag("SAMPLE_MODE")
+    """SAMPLE_MODE=true: offline judge mode, no live calls. Always on in the public demo (VEDA_DEMO=1), and after the
+    server's start-up check fell back to it (B-104)."""
+    return demo_mode() or flag("SAMPLE_MODE") or _FALLBACK["reason"] is not None
+
+
+# B-104 (Cowork 26 Oct): one app, two modes. At server start, no keys or an unreachable Zetaris / Nightshift -> offline
+# sample mode, with the reason. Set once at start; a data outage while running (e.g. JPS) never switches the mode.
+_FALLBACK = {"reason": None}
+
+
+def fall_back_to_sample(reason):
+    """Run offline from now on (set SAMPLE_MODE for every module and any child process), remembering why."""
+    _FALLBACK["reason"] = reason
+    os.environ["SAMPLE_MODE"] = "true"
+
+
+def sample_reason():
+    """Why VEDA runs offline (for /health), or None when it runs live."""
+    if demo_mode():
+        return "public demo (VEDA_DEMO)"
+    if _FALLBACK["reason"]:
+        return _FALLBACK["reason"]
+    return "SAMPLE_MODE=true" if flag("SAMPLE_MODE") else None
 
 
 # --- Secrets -------------------------------------------------------------------------------------------------

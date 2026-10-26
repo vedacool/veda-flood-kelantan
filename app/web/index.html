@@ -533,7 +533,8 @@ const UI = {
     answered: "Answered by {m}", receipt: "receipt", code_only: "Code only - no AI in this step",
     checks: "The Critic's {n} code checks",
     i30_line: "VEDA answers this for Kelantan. Several AI agents check each other's work, and every step is logged.",
-    i30_start: "Start: Rantau Panjang at the Nov 2024 flood peak", i30_scenes: "Test it yourself: 7 scenes ›",
+    i30_start: "Start: Rantau Panjang at the Nov 2024 flood peak", i30_start_live: "Start: check Kota Bharu now",
+    i30_scenes: "Test it yourself: 7 scenes ›",
     i30_how: "How it works: agents, a live run, the API ›", other_place: "Or check another place",
     why_open: "Why this answer? See how the agents decided ›", why_close: "Hide how the agents decided",
     tech_log: "Show technical log ▾", tech_hide: "Hide technical log ▴", useful: "Was this useful? Tell us",
@@ -600,7 +601,8 @@ const UI = {
     answered: "Dijawab oleh {m}", receipt: "resit", code_only: "Kod sahaja - tiada AI dalam langkah ini",
     checks: "{n} semakan kod oleh Penyemak",
     i30_line: "VEDA menjawab soalan ini untuk Kelantan. Beberapa ejen AI menyemak kerja satu sama lain, dan setiap langkah direkodkan.",
-    i30_start: "Mula: Rantau Panjang semasa kemuncak banjir Nov 2024", i30_scenes: "Uji sendiri: 7 senario ›",
+    i30_start: "Mula: Rantau Panjang semasa kemuncak banjir Nov 2024", i30_start_live: "Mula: semak Kota Bharu sekarang",
+    i30_scenes: "Uji sendiri: 7 senario ›",
     i30_how: "Cara VEDA berfungsi: ejen, rakaman sebenar, API ›", other_place: "Atau semak tempat lain",
     why_open: "Kenapa jawapan ini? Lihat cara ejen membuat keputusan ›", why_close: "Sembunyikan cara ejen membuat keputusan",
     tech_log: "Tunjuk log teknikal ▾", tech_hide: "Sembunyikan log teknikal ▴", useful: "Adakah ini berguna? Beritahu kami",
@@ -1172,7 +1174,8 @@ document.querySelectorAll(".m-town").forEach((g) => {
   g.addEventListener("click", () => townFromMap(g));
   g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); townFromMap(g); } });
 });
-$("i30-start").addEventListener("click", () => {                  // B-96: the one filled button on the demo home
+$("i30-start").addEventListener("click", () => {      // B-96 / B-104: the one filled button on the home, both modes
+  if (!sampleMode) { pick(""); ask(UI[lang].q_default.replace("{town}", "Kota Bharu"), "Kota Bharu"); return; }
   pick(PEAK); ask(UI[lang].q_default.replace("{town}", "Rantau Panjang"), "Rantau Panjang"); });
 $("e-back").addEventListener("click", () => show("s-home"));
 $("w-more").addEventListener("click", () => {
@@ -1233,8 +1236,9 @@ function showLive() {
 const ready = fetch("/health").then((r) => r.json()).then((h) => {
   sampleMode = !!h.sample_mode;
   publicDemo = !!h.demo;
-  $("intro30").hidden = !sampleMode;                   // B-96: offline / the public demo - judges and testers first
-  $("ask-go").classList.toggle("primary", !sampleMode);  // ONE filled button: the demo's Start, or live's Ask
+  $("intro30").hidden = false;                         // B-104: one home layout, live and offline
+  $("i30-start").dataset.t = sampleMode ? "i30_start" : "i30_start_live";
+  $("ask-go").classList.remove("primary");             // ONE filled button: Start (both modes)
   $("a-useful").hidden = !publicDemo;                  // /feedback exists in the public demo only
   showLive();
   // Cowork 24 Oct: the offline demo opens on the Nov 2024 flood at its peak, not on a made-up calm day

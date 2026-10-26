@@ -28,8 +28,8 @@ def _in_tmp(real_run, tmp_path, question, replay, at, on_step, lang=None):
 
 
 def test_health_in_sample_mode(client):
-    assert client.get("/health").json() == {"status": "ok", "sample_mode": True, "zetaris": "replay (offline)",
-                                            "nightshift": "not used"}
+    assert client.get("/health").json() == {"status": "ok", "sample_mode": True, "reason": "SAMPLE_MODE=true",
+                                            "zetaris": "replay (offline)", "nightshift": "not used"}
 
 
 def test_run_returns_the_official_fields(client):

@@ -14,8 +14,12 @@ def test_home_30_seconds_block_with_one_start_button_and_two_links():
     assert 'i30_start: "Start: Rantau Panjang at the Nov 2024 flood peak"' in PAGE
     assert 'i30_start: "Mula: Rantau Panjang semasa kemuncak banjir Nov 2024"' in PAGE
     assert 'i30_line: "VEDA menjawab soalan ini untuk Kelantan. Beberapa ejen AI menyemak kerja satu sama lain, dan setiap langkah direkodkan."' in PAGE
-    assert '$("intro30").hidden = !sampleMode;' in PAGE and '$("ask-go").classList.toggle("primary", !sampleMode);' in PAGE
+    # B-104: the same block live, with its own Start (Kota Bharu now); Start is the one filled button in both modes
+    assert '$("intro30").hidden = false;' in PAGE and '$("ask-go").classList.remove("primary");' in PAGE
+    assert 'i30_start_live: "Start: check Kota Bharu now"' in PAGE and 'i30_start_live: "Mula: semak Kota Bharu sekarang"' in PAGE
+    assert '$("i30-start").dataset.t = sampleMode ? "i30_start" : "i30_start_live";' in PAGE
     assert 'pick(PEAK); ask(UI[lang].q_default.replace("{town}", "Rantau Panjang"), "Rantau Panjang")' in PAGE
+    assert 'pick(""); ask(UI[lang].q_default.replace("{town}", "Kota Bharu"), "Kota Bharu")' in PAGE
 
 
 def test_old_scene_link_intro_line_and_check_buttons_are_gone():

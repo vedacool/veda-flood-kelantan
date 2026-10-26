@@ -62,8 +62,11 @@ python -m app.main                           # the web page on http://127.0.0.1:
 python scripts/run_evals.py                  # 41 safety scenarios, pass/fail table
 python -m pytest -q                          # offline test suite
 ```
-Without SAMPLE_MODE and without Zetaris keys, the web server answers "cannot reach its river data right now" (it does
-not crash); the command line (`python -m veda`) switches to offline sample mode by itself and says so.
+Start the server: with Zetaris + Nightshift it runs live; without them it runs the offline demo automatically. It
+checks once at start (keys set, Zetaris and Nightshift answering), logs one line saying why it went offline, and
+`/health` shows `"sample_mode": true` with the `"reason"`. A river-data outage while it runs never switches it: it
+stays live and answers "Can't confirm right now". The command line (`python -m veda`) also switches to offline sample
+mode by itself and says so.
 
 ## Try VEDA without the UI (API and command line)
 The same agents as the web page (Coordinator → Data & Reconciler → Forecast → Critic → safety gate), as JSON.

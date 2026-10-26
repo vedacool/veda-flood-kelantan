@@ -31,6 +31,7 @@ import os
 import queue
 import re
 import threading
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import requests
@@ -57,7 +58,16 @@ _watchers, _watch_lock = [], threading.Lock()   # /live/stream subscribers: (eve
 MAX_WATCHERS = 20                  # audit 24 Oct P1-1: more open live logs than this -> 503 (one visitor can't fill up)
 WATCH_QUEUE = 1000                 # records kept per slow watcher; past that its records are dropped, never the run
 _busy = threading.Lock()                 # one run at a time: the World Model on disk has one writer
+
+
+@asynccontextmanager
+async def _lifespan(_app):
+    await run_in_threadpool(start_mode)          # B-104: live, or offline sample mode with the reason - once, at start
+    yield
+
+
 app = FastAPI(title="VEDA", description="Flood-risk answers for Kelantan - multi-agent, every step traced.",
+              lifespan=_lifespan,
               # audit 24 Oct P3: no /docs, /redoc, /openapi.json in the public demo (they listed the admin routes)
               **({"docs_url": None, "redoc_url": None, "openapi_url": None} if config.demo_mode() else {}))
 
@@ -258,22 +268,58 @@ async def health():
     """Is VEDA ready? In SAMPLE_MODE everything is offline replay, so nothing is called. Async (audit 24 Oct P1-1):
     the offline answer never waits for a worker thread; the live checks run on one."""
     if config.sample_mode():
-        return {"status": "ok", "sample_mode": True, "zetaris": "replay (offline)", "nightshift": "not used",
+        return {"status": "ok", "sample_mode": True, "reason": config.sample_reason(), "zetaris": "replay (offline)",
+                "nightshift": "not used",
                 **({"demo": True} if config.demo_mode() else {})}      # Part 8: the page's demo-only intro line
     return await run_in_threadpool(_live_health)
 
 
-def _live_health():
-    status = {"status": "ok", "sample_mode": False, "busy": _busy.locked()}
+def _zetaris_status():
     try:
-        status["zetaris"] = "ok" if zetaris._post("SELECT 1 AS x", 1, timeout=10).ok else "error"
+        return "ok" if zetaris._post("SELECT 1 AS x", 1, timeout=10).ok else "error"
     except (zetaris.ZetarisError, requests.RequestException) as e:
-        status["zetaris"] = f"unreachable ({type(e).__name__})"
+        return f"unreachable ({type(e).__name__})"
+
+
+def _nightshift_status():
     try:
         base = os.getenv("METERLESS_BASE_URL", "http://127.0.0.1:8088/v1").rstrip("/").rsplit("/v1", 1)[0]
-        status["nightshift"] = "ok" if requests.get(f"{base}/healthz", timeout=5).ok else "error"
+        return "ok" if requests.get(f"{base}/healthz", timeout=5).ok else "error"
     except requests.RequestException as e:
-        status["nightshift"] = f"unreachable ({type(e).__name__})"
+        return f"unreachable ({type(e).__name__})"
+
+
+LIVE_KEYS = ("ZETARIS_API_URL", "ZETARIS_API_KEY", "METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN")
+
+
+def offline_reason():
+    """B-104: why this server can't run live, or None. Only the two services a live answer needs: missing keys, or
+    Zetaris / Nightshift not answering. Key NAMES only, never a value. JPS, Postgres and the collector are not checked:
+    their outages are answered live ("Can't confirm right now" + the signs box)."""
+    missing = [k for k in LIVE_KEYS if not os.getenv(k, "").strip()]
+    if missing:
+        where = "no .env file" if not (config.ROOT / ".env").exists() else "missing in .env"
+        return f"{where}: {', '.join(missing)} not set"
+    down = [f"{name} {state}" for name, state in (("Zetaris", _zetaris_status()), ("Nightshift", _nightshift_status()))
+            if state != "ok"]
+    return f"{' and '.join(down)} at start-up" if down else None
+
+
+def start_mode():
+    """B-104, run once at server start: live when the keys are set and Zetaris + Nightshift answer, else offline sample
+    mode with one log line saying why. SAMPLE_MODE=true or the public demo skip the check (already offline)."""
+    if config.sample_mode():
+        return
+    reason = offline_reason()
+    if reason:
+        config.fall_back_to_sample(reason)
+        logging.getLogger("uvicorn.error").warning("VEDA: starting in offline sample mode - %s", reason)
+
+
+def _live_health():
+    status = {"status": "ok", "sample_mode": False, "busy": _busy.locked()}
+    status["zetaris"] = _zetaris_status()
+    status["nightshift"] = _nightshift_status()
     status.update(_store_health())                    # A-P2-5: Postgres, the newest reading's age, open breakers
     if (status["zetaris"] != "ok" or status["nightshift"] != "ok" or status["postgres"] != "ok"
             or status["newest_reading"] == "stale" or status["open_breakers"]):
