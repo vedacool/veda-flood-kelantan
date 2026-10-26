@@ -117,6 +117,8 @@ def public_answer(out, r, lang):
         "ai_judgement": ("live mode only" if (j or {}).get("status") == "live_only" else j
                          if j else "not run (quick path: answer and review by code)" if v else None),
         "steps": steps,
+        "signs": ({"title": v["signs"]["title"][lg], "lines": v["signs"]["lines"][lg], "footer": v["signs"]["footer"][lg]}
+                  if v.get("signs") else None),                                   # B-105
         "trail": [{"who": r["who"], "text": r["text"]} for r in ((out.get("trail") or {}).get(lg) or [])],   # B-96
         "text": out.get("output"), "language": "bm" if out.get("language") == "ms" else out.get("language"),
         "emergency": bool(v.get("emergency")), "nearest_covered": out.get("nearest_covered"),

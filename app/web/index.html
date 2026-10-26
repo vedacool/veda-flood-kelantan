@@ -8,7 +8,7 @@
 <style>
   /* Cowork weekend plan B (24 Oct): EN and BM equal, no jargon, text >= 18 px, touch targets >= 44 px, works at 375 px.
      Plain HTML/CSS/JS, nothing loaded from outside. */
-  :root { --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
+  :root { --signs: #b0126f; --bg: #f6f5f1; --fg: #1c1c1a; --muted: #55554f; --card: #ffffff; --line: #d6d5cf; --accent: #1f5f8b;
           --on-accent: #ffffff; --danger: #b3261e; --warn-text: #8a4a00;
           /* verdict colours differ in lightness too (relative luminance ACT 0.07 < NORMAL 0.15 < unknown 0.29 <
              PREPARE 0.40 < WATCH 0.68), each with text at >= 5.3:1 - accessibility pass 24 Oct */
@@ -17,7 +17,7 @@
           /* the agents' colours - the same as the live log (live.html), white text on each */
           --c-coordinator: #1f5f8b; --c-data: #1e6b3a; --c-forecast: #7a3fa0; --c-critic: #a3271f; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
+    :root { --signs: #f06fb6; --bg: #151514; --fg: #eeeeea; --muted: #b0b0a9; --card: #212120; --line: #3b3b38; --accent: #82b8de;
             --on-accent: #151514; --danger: #f08a80; --warn-text: #f0b45a; }
   }
   * { box-sizing: border-box; }
@@ -174,6 +174,11 @@
   .combined { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-weight: 600; }
   .judge { margin-top: 12px; }
   .lede { font-size: 1.15rem; margin: 4px 0 14px; }
+  /* B-105: the warning-signs box - magenta, not a level colour; text in the page's own colours (contrast >= 4.5:1) */
+  .signs { border: 3px solid var(--signs); border-radius: 14px; padding: 12px 14px; margin: 10px 0 12px; background: var(--card); }
+  .signs-title { margin: 0 0 6px; font-weight: 800; }
+  .signs-list { margin: 0 0 6px; padding-left: 1.2em; display: grid; gap: 4px; }
+  .signs-foot { margin: 0; color: var(--muted); }
   #s-home footer a { display: inline-flex; align-items: center; min-height: 44px; }   /* B-96: 44 px taps */
   .i30-links { display: grid; gap: 0; margin: 8px 0 4px; }
   .i30-links a, #a-useful a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
@@ -394,6 +399,9 @@
   <!-- v2 (Cowork blueprint 24 Oct): level word + "Level n of 4" + ONE action line; never colour alone -->
   <div class="verdict" id="a-badge" role="group"></div>
   <p class="oneline sub" id="a-line"></p>
+  <!-- B-105: warning signs when this town's river reading is too old (the verdict stays "Can't confirm") -->
+  <div class="signs" id="a-signs" role="note" hidden><p class="signs-title" id="a-signs-title"></p>
+    <ul class="signs-list" id="a-signs-list"></ul><p class="signs-foot" id="a-signs-foot"></p></div>
   <div class="card todo"><h2 data-t="todo"></h2><ol class="steps big-steps" id="a-steps"></ol>
     <p id="a-todo" class="sub" style="margin:0"></p>
     <a class="btn wide" id="a-jps" href="https://publicinfobanjir.water.gov.my/" target="_blank" rel="noopener"
@@ -1011,6 +1019,13 @@ function renderAnswer() {
   // the reason line, only when something other than this town's river set the verdict (rain, upstream, a warning)
   $("a-line").hidden = v.line_is_river || v.verdict === "INSUFFICIENT_DATA";
   $("a-line").textContent = v.line[lang];
+  const sg = v.signs;                                   // B-105: never a level, never a JPS reading in metres
+  $("a-signs").hidden = !sg;
+  if (sg) {
+    $("a-signs-title").textContent = sg.title[lang];
+    $("a-signs-list").innerHTML = sg.lines[lang].map((x) => `<li>${esc(x)}</li>`).join("");
+    $("a-signs-foot").textContent = sg.footer[lang];
+  }
   $("a-steps").innerHTML = v.steps[lang].map((s) => `<li>${escBm(s)}</li>`).join("");
   const more = (v.todo_more && v.todo_more[lang]) || [];          // tide / thunderstorm advice
   $("a-todo").hidden = !more.length;

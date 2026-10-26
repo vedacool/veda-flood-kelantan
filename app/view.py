@@ -973,6 +973,12 @@ def answer_view(result):
     view["line_is_river"] = set_by(forecast) == "river"
     view["share"] = _both(lambda lang: share_v2(view, card, evidence, lang))
     view["judgement"] = judgement_row(result) if plan.get("effort") == "full" else None
+    # B-105: warning signs when the town's own river reading is too old (the verdict stays "Can't confirm")
+    view["signs"] = warning_signs(card, forecast, evidence)
+    if view["signs"]:
+        for lang in LANGS:
+            view["why"][lang] = (view["why"][lang] + " " + SIGNS["why"][lang].format(
+                names=", ".join(SIGNS["name"][k][lang] for k in view["signs"]["kinds"]))).strip()
     return view
 
 
@@ -989,6 +995,101 @@ JUDGE = {  # Part 7: the Details row "Rules said / Nemotron said / Final" on eve
     "ignored": {"en": "Nemotron's level was not used (it did not pass VEDA's checks).",
                 "ms": "Tahap Nemotron tidak digunakan (tidak lulus semakan VEDA)."},
 }
+
+
+# B-105 (Cowork 26 Oct wording): signs the river may rise suddenly - shown only when the town's own river reading
+# is too old; each sign only when present AND its data is fresh; never a level, never metres from JPS (B-75)
+SIGNS = {
+    "title": {"en": "⚠ Signs the river may rise suddenly", "ms": "⚠ Tanda paras sungai mungkin naik mendadak"},
+    "last": {"en": "Last river reading ({age} ago): {band}.", "ms": "Bacaan sungai terakhir ({age} lalu): {band}."},
+    "rain": {"en": "Heavy rain {where} in the last {h} h.", "ms": "Hujan lebat {where} dalam {h} jam lalu."},
+    "where": {"here": {"en": "here", "ms": "di sini"}, "upstream": {"en": "upstream", "ms": "di hulu"},
+              "both": {"en": "here and upstream", "ms": "di sini dan di hulu"}},
+    "up": {"en": "Upstream at {post}: {state}.", "ms": "Di hulu, {post}: {state}."},
+    "rising": {"en": "rising", "ms": "sedang naik"},
+    "at_band": {"en": "at {band}", "ms": "paras {band}"},
+    "met": {"en": "MetMalaysia warning: {level} rain.", "ms": "Amaran MetMalaysia: hujan {level}."},
+    "serious": {"en": "Treat this as serious until you can confirm with JPS or the authorities.",
+                "ms": "Anggap ini serius sehingga anda dapat sahkan dengan JPS atau pihak berkuasa."},
+    "footer": {"en": "Signs from: {sources}. River level not available.",
+               "ms": "Tanda daripada: {sources}. Paras sungai tidak tersedia."},
+    "source": {"last": {"en": "the last JPS reading", "ms": "bacaan JPS terakhir"},
+               "rain": {"en": "Open-Meteo rain", "ms": "hujan Open-Meteo"},
+               "up": {"en": "JPS upstream posts", "ms": "tiang paras hulu JPS"},
+               "met": {"en": "MetMalaysia", "ms": "MetMalaysia"}},
+    "name": {"last": {"en": "the last river reading", "ms": "bacaan sungai terakhir"},
+             "rain": {"en": "heavy rain", "ms": "hujan lebat"},
+             "up": {"en": "upstream river posts", "ms": "tiang paras sungai di hulu"},
+             "met": {"en": "a MetMalaysia warning", "ms": "amaran MetMalaysia"}},
+    "why": {"en": "Signs shown (they do not set a level): {names}.",
+            "ms": "Tanda yang ditunjukkan (tidak menetapkan tahap): {names}."},
+}
+BAND_WORD = {"below_normal": {"en": "Normal", "ms": "Normal"}, "normal": {"en": "Normal", "ms": "Normal"},
+             "alert": {"en": "Alert", "ms": "Waspada"}, "warning": {"en": "Warning", "ms": "Amaran"},
+             "danger": {"en": "Danger", "ms": "Bahaya"}}
+MET_WORD = {"waspada": {"en": "alert-level", "ms": "Waspada"}, "buruk": {"en": "severe-level", "ms": "Buruk"},
+            "bahaya": {"en": "danger-level", "ms": "Bahaya"}}
+STALE_REASON = "no fresh, healthy reading"          # forecast_agent's reason when the town's own reading is too old
+
+
+def _short_age(minutes, lang):
+    """'40 min' / '14 h' / '3.5 h' (no 'ago': the sign's own wording adds it)."""
+    if minutes is None:
+        return "?"
+    if minutes < 120:
+        return f"{minutes} min" if lang == "en" else f"{minutes} minit"
+    h = minutes / 60
+    n = f"{h:.0f}" if not minutes % 60 else f"{h:.1f}"
+    return f"{n} h" if lang == "en" else f"{n} jam"
+
+
+def warning_signs(card, forecast, evidence):
+    """The advisory box (B-105) -> {'kinds', 'serious', 'lines': {lang: [...]}, 'title', 'footer'} or None. Only when
+    the verdict is "Can't confirm" because the town's own river reading is too old. Signs: a) the last known level
+    (band word only), b) heavy rain (the B-88 rule), c) a fresh upstream post rising or at Alert+ (the Forecast
+    agent's own upstream rule), e) an active leveled MetMalaysia warning (rule A, fresh feed only). The box shows
+    when b, c or e is present, or the last known level is Alert or above."""
+    from app.agents import forecast_agent
+    fc, ev = forecast or {}, evidence or {}
+    if card.get("verdict") != "INSUFFICIENT_DATA" or STALE_REASON not in (fc.get("no_river") or ""):
+        return None
+    ctx = ev.get("context") or {}
+    signs = {}                                                       # kind -> {lang: line}
+    last = ctx.get("last_reading")
+    band = (last or {}).get("band")
+    if last and band in BAND_WORD:
+        signs["last"] = {lang: SIGNS["last"][lang].format(age=_short_age(last.get("age_minutes"), lang),
+                                                          band=BAND_WORD[band][lang]) for lang in LANGS}
+    ru = fc.get("rain_upstream") or {}
+    here = bool((ru.get("local") or {}).get("heavy"))
+    fallen = [u for u in ru.get("upstream") or [] if u.get("heavy_fallen")]      # fallen rain only: "in the last"
+    if here or fallen:
+        where = "both" if here and fallen else "here" if here else "upstream"
+        hours = 12 if where == "here" else 24
+        signs["rain"] = {lang: SIGNS["rain"][lang].format(where=SIGNS["where"][where][lang], h=hours) for lang in LANGS}
+    ups = [u for u in forecast_agent._upstream(ctx.get("sentinels", []))[1]
+           if u.get("status") != "no fresh reading" and (u.get("rising") or u.get("band") in ("alert", "warning", "danger"))]
+    if ups:
+        u = ups[0]
+        state = (lambda lang: SIGNS["at_band"][lang].format(band=BAND_WORD[u["band"]][lang])
+                 if u.get("band") in ("alert", "warning", "danger") else SIGNS["rising"][lang])
+        signs["up"] = {lang: SIGNS["up"][lang].format(post=_place_of(u["gauge"]), state=state(lang)) for lang in LANGS}
+    met = ev.get("met_warnings") or {}
+    levels = [forecast_agent.warning_level(w.get("heading"))[0] for w in met.get("active") or []] \
+        if met.get("status") == "ok" else []
+    levels = [lv for lv in levels if lv]
+    if levels:
+        top = max(levels, key=["waspada", "buruk", "bahaya"].index)
+        signs["met"] = {lang: SIGNS["met"][lang].format(level=MET_WORD[top][lang]) for lang in LANGS}
+    others = [k for k in ("rain", "up", "met") if k in signs]
+    if not others and band not in ("alert", "warning", "danger"):
+        return None                                                  # nothing fresh worth a box
+    kinds = [k for k in ("last", "rain", "up", "met") if k in signs]
+    serious = band in ("warning", "danger") or len(others) >= 2
+    lines = {lang: [signs[k][lang] for k in kinds] + ([SIGNS["serious"][lang]] if serious else []) for lang in LANGS}
+    return {"kinds": kinds, "serious": serious, "title": dict(SIGNS["title"]), "lines": lines,
+            "footer": {lang: SIGNS["footer"][lang].format(sources=", ".join(SIGNS["source"][k][lang] for k in kinds))
+                       for lang in LANGS}}
 
 
 def judgement_row(result):
