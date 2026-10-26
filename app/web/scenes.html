@@ -352,6 +352,15 @@ function fitWhy(text, limit = WHY_MAX) {
   return text.slice(0, end) + (end < text.length ? " …" : "");
 }
 
+// the first 12 lines of a step - but always its LAST Critic review, which the trail reads (= app/scenes.py
+// _keep_final_review, audit A-P2-19)
+function keepFinalReview(lines, n = 12) {
+  let out = lines.slice(0, n);
+  const last = [...lines].reverse().find((l) => l.action === "critic.review");
+  if (last && !out.includes(last)) out = [...out.slice(0, n - 1), last];
+  return out;
+}
+
 // the parts of the run result the check needs - the same shape as app/scenes.py compact()
 function compact(r) {
   const v = r.view || {}, how = r.how || {};
@@ -363,7 +372,7 @@ function compact(r) {
     why: { en: fitWhy((v.why || {}).en || ""), ms: fitWhy((v.why || {}).ms || "") },
     sources: byLang.en.map((s) => ({ name: s.name, used: s.used })), sources_by_lang: byLang,
     steps: (how.rows || []).filter((x) => ["gather", "forecast", "critique", "safety"].includes(x.key)).map((x) => ({
-      key: x.key, who: x.who, lines: (x.lines || []).slice(0, 12).map((l) => ({ action: l.action, text: (l.text || "").slice(0, 160) })) })) };
+      key: x.key, who: x.who, lines: keepFinalReview(x.lines || []).map((l) => ({ action: l.action, text: (l.text || "").slice(0, 160) })) })) };
 }
 
 async function start() {

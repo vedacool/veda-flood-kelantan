@@ -142,8 +142,31 @@ def test_a_changed_output_flips_the_check_to_a_cross(runs):
 
 def test_the_page_sends_the_same_compact_shape_and_stays_small(runs):
     assert "function compact(r)" in PAGE and '["gather", "forecast", "critique", "safety"]' in PAGE
-    assert ".slice(0, 12)" in PAGE and ".slice(0, 160)" in PAGE                   # = scenes.compact()
+    assert "function keepFinalReview(lines, n = 12)" in PAGE and ".slice(0, 160)" in PAGE    # = scenes.compact()
+    assert "lines: keepFinalReview(x.lines || [])" in PAGE
     assert max(len(json.dumps(out)) for out in runs.values()) < scenes.MAX_BODY
+
+
+def test_the_page_keeps_the_final_critic_review_the_same_way():
+    """Audit A-P2-19: the page's keepFinalReview() = app/scenes.py _keep_final_review() - the first 12 lines of a step,
+    but always its LAST critic.review (the page sends this to the check, and the trail reads that review)."""
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+    line = lambda i, a="data.request": {"action": a, "text": f"line {i}"}            # noqa: E731
+    cases = [[line(i) for i in range(5)],                                              # short: unchanged
+             [line(i, "critic.review" if i in (3, 14) else "x") for i in range(16)],   # final review after the cut
+             [line(i, "critic.review" if i == 2 else "x") for i in range(16)],         # last review inside the cut
+             [line(i) for i in range(20)]]                                              # no review at all
+    start = PAGE.index("function keepFinalReview(")
+    js = PAGE[start:PAGE.index("\n}\n", start) + 3]
+    run = js + f"\nconsole.log(JSON.stringify({json.dumps(cases)}.map((c) => keepFinalReview(c))));"
+    out = subprocess.run([node, "-e", run], capture_output=True, text=True, encoding="utf-8", check=True).stdout
+    want = [scenes._keep_final_review(c) for c in cases]
+    assert json.loads(out) == want
+    assert want[1][-1]["text"] == "line 14" and len(want[1]) == 12                    # the final review is kept
 
 
 def test_routes(monkeypatch):
