@@ -292,16 +292,17 @@ def _nightshift_status():
 LIVE_KEYS = ("ZETARIS_API_URL", "ZETARIS_API_KEY", "METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN")
 
 
-def offline_reason():
+def offline_reason(zetaris_state=None, nightshift_state=None):
     """B-104: why this server can't run live, or None. Only the two services a live answer needs: missing keys, or
     Zetaris / Nightshift not answering. Key NAMES only, never a value. JPS, Postgres and the collector are not checked:
-    their outages are answered live ("Can't confirm right now" + the signs box)."""
+    their outages are answered live ("Can't confirm right now" + the signs box). The doctor (B-106) passes the two
+    states it already found; the server checks them itself."""
     missing = [k for k in LIVE_KEYS if not os.getenv(k, "").strip()]
     if missing:
         where = "no .env file" if not (config.ROOT / ".env").exists() else "missing in .env"
         return f"{where}: {', '.join(missing)} not set"
-    down = [f"{name} {state}" for name, state in (("Zetaris", _zetaris_status()), ("Nightshift", _nightshift_status()))
-            if state != "ok"]
+    states = (("Zetaris", zetaris_state or _zetaris_status()), ("Nightshift", nightshift_state or _nightshift_status()))
+    down = [f"{name} {state}" for name, state in states if state != "ok"]
     return f"{' and '.join(down)} at start-up" if down else None
 
 

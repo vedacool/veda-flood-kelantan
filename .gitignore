@@ -34,3 +34,5 @@ docs/media/video/*.mp4
 
 # demo bundles (scripts/make_demo_bundle.py)
 dist/
+logs/*.log
+logs/doctor-jps-check.txt

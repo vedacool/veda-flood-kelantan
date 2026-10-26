@@ -2,6 +2,8 @@
 
 > **For judges, in 2 minutes**
 > - **What it is:** VEDA tells you whether a place in Kelantan is at risk of flooding; several agents check each other's work, and every step is logged.
+> - **Install + run (one line):** Windows `.\install.ps1` · Mac/Linux `./install.sh` - then open http://127.0.0.1:8000 (the offline demo with no keys; live with Zetaris + Nightshift).
+> - **Stuck?** `python -m veda doctor` · **Install with your AI:** [docs/INSTALL_WITH_AI.md](docs/INSTALL_WITH_AI.md)
 > - **Try it with no keys** (offline sample mode, after `pip install -r requirements.txt`): `python -m veda ask "Is Rantau Panjang at risk of flooding?"`
 > - **Public demo:** see the submission form (its address is not kept in this repo).
 > - **How it decided:** each run's trace is `logs/trace-<run_id>.jsonl`; the web page's **How it works** (`/how-it-works`) replays recorded live runs step by step.
@@ -376,6 +378,10 @@ a secret scan of the whole history, on pushes to `main` and on pull requests - n
 
 ## Live setup (Zetaris + Nightshift, one command)
 Live mode needs Zetaris and Meterless Nightshift running on your machine (SAMPLE_MODE needs neither).
+
+**Start with the doctor:** `python -m veda doctor` (read-only) prints ✓ / ✗ for Python + packages, `.env`, Docker,
+Zetaris + VEDA's tables, Nightshift + the Nemotron model, and JPS, each ✗ with a one-line fix, then the mode the
+server will start in and why. Fix the ✗ lines in order with the steps below; run it again after each.
 1. **Zetaris:** run it locally in Docker (Zetaris Participant Setup Guide). In the Zetaris UI, *Management → API
    Tokens*, create a token - the one manual step on the Zetaris side.
 2. **Nightshift:** install it, add your NVIDIA key **only in Nightshift's Providers tab** (never in `.env`), and give

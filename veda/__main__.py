@@ -3,6 +3,7 @@
     python -m veda ask "Is Tumpat safe tonight?"                 # plain text
     python -m veda ask "Kota Bharu banjir tak?" --lang bm --scene nov2024 --json
     python -m veda scenes
+    python -m veda doctor                                         # B-106: is this machine ready? (read-only)
 
 With no keys (no .env) it runs in offline sample mode and says so in one line; it never asks for keys.
 Exit codes: 0 answered, 2 bad input, 3 busy.
@@ -13,7 +14,10 @@ import json
 import os
 import sys
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:                 # B-106: the doctor still runs (and says so) when the packages are missing
+    load_dotenv = None
 
 
 def _mode_line():
@@ -59,7 +63,20 @@ def main(argv=None):
     a.add_argument("--scene", help="an offline scene id (see: python -m veda scenes)")
     a.add_argument("--json", action="store_true", help="print the API's JSON")
     sub.add_parser("scenes", help="list the offline scenes")
+    sub.add_parser("doctor", help="check this machine (read-only) and say which mode VEDA will start in")
+    sub.add_parser("init-env", help="installers: .env from .env.example, only when .env does not exist")
+    s = sub.add_parser("start", help="installers: start the web server on 127.0.0.1 and print the link")
+    s.add_argument("--port", type=int, default=8000)
     args = p.parse_args(argv)
+    if args.cmd in ("doctor", "init-env", "start"):                   # B-106: before any key is read or mode set
+        from veda import doctor
+        if args.cmd == "doctor":
+            doctor.run()
+            return 0                                                  # always 0: the lines say what to fix
+        if args.cmd == "init-env":
+            doctor.init_env()
+            return 0
+        return doctor.start(args.port)
     print(_mode_line(), file=sys.stderr)
     from app import api
     if args.cmd == "scenes":
