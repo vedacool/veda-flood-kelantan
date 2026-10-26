@@ -33,6 +33,9 @@ MYT = timezone(timedelta(hours=8))
 QUESTION = {"en": "Is {town} at risk of flooding right now?", "ms": "Adakah {town} berisiko banjir sekarang?"}  # the app's
 STEPS_SENT = ("gather", "forecast", "critique", "safety")          # the steps the check and the trail look at
 MAX_BODY = 15 * 1024                                                # the demo proxy accepts 16 KB
+WHY_MAX = 400                                                       # the plain "why" kept in compact() (Cowork 26 Oct)
+# a sentence ends at . ! ? before a space or the end - not in "Kg. Salor" / "Sg. Golok" (names) or "34.7" (numbers)
+SENTENCE_END = re.compile(r"(?<!\bKg)(?<!\bSg)(?<!\bKpg)(?<!\bJln)(?<!\bDr)(?<!\bSt)[.!?](?=\s|$)")
 
 
 def expected():
@@ -154,6 +157,17 @@ def tagged(scene, data):
 
 
 # ---------- checking the expectations against the REAL run output ----------
+def fit_why(text, limit=WHY_MAX):
+    """The plain "why", never cut mid-sentence: whole if it fits, else the whole sentences that fit + " …" (a first
+    sentence longer than the limit is kept whole). The page's fitWhy() in scenes.html does the same."""
+    if len(text) <= limit:
+        return text
+    ends = [m.end() for m in SENTENCE_END.finditer(text)]
+    fit = [e for e in ends if e + 2 <= limit]
+    end = fit[-1] if fit else (ends[0] if ends else len(text))
+    return text[:end] + (" …" if end < len(text) else "")
+
+
 def compact(result):
     """The parts of a run result the check needs (the page sends exactly this shape, kept under the proxy's 16 KB)."""
     view = result.get("view") or {}
@@ -161,7 +175,7 @@ def compact(result):
     by_lang = {lang: [{"name": s.get("name"), "used": bool(s.get("used")), "note": (s.get("note") or "")[:80]}
                       for s in (view.get("sources") or {}).get(lang, [])] for lang in ("en", "ms")}
     return {"verdict": result.get("verdict"),
-            "why": {lang: ((view.get("why") or {}).get(lang) or "")[:240] for lang in ("en", "ms")},
+            "why": {lang: fit_why((view.get("why") or {}).get(lang) or "") for lang in ("en", "ms")},
             "sources": [{"name": s["name"], "used": s["used"]} for s in by_lang["en"]],
             "sources_by_lang": by_lang,
             "steps": [{"key": r.get("key"), "who": r.get("who"),

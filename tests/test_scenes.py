@@ -343,3 +343,52 @@ def test_the_kosmo_2014_sentence_is_tagged_and_1_94_is_never_shown():
     assert n["url"] in {a["url"] for a in peak["news"]}                      # the same Kosmo article
     for text in (scenes.EXPECTED.read_text(encoding="utf-8"), scenes.DATA.read_text(encoding="utf-8"), PAGE):
         assert "1.94" not in text
+
+
+# a long "why" with the signs line (B-105), made up for the test: over 400 characters in EN and BM
+LONG_WHY = {
+    "en": ("Can't confirm right now. VEDA has no fresh, checked river reading for this place, so it will not guess. "
+           "Signs shown (they do not set a level): the last river reading at Kg. Jenob, heavy rain here (34.7 mm in "
+           "12 h), heavy rain upstream at Sg. Golok di Buke Ta (Waeng; Thailand), a fast rise upstream at Kg. Jenob, "
+           "MetMalaysia warnings for Kelantan, flood warnings from data.gov.my. Treat this as serious. Check again "
+           "soon, and follow JPS, APM and police instructions."),
+    "ms": ("Tidak dapat disahkan sekarang. VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia "
+           "tidak akan meneka. Tanda yang ditunjukkan (tidak menetapkan tahap): bacaan sungai terakhir di Kg. Jenob, "
+           "hujan lebat di sini (34.7 mm dalam 12 jam), hujan lebat di hulu di Sg. Golok di Buke Ta (Waeng; "
+           "Thailand), paras naik dengan cepat di hulu di Kg. Jenob, amaran MetMalaysia untuk Kelantan. Anggap ini "
+           "serius. Semak semula tidak lama lagi, dan ikut arahan JPS, APM dan polis."),
+}
+
+
+def test_the_why_is_never_cut_mid_sentence():
+    """Cowork 26 Oct: compact() keeps up to 400 characters of the plain "why"; over that, the whole sentences that fit
+    and " …" - never part of a sentence (and "Kg. Jenob" or "34.7" are not sentence ends)."""
+    assert scenes.WHY_MAX == 400
+    for lang, text in LONG_WHY.items():
+        assert len(text) > scenes.WHY_MAX, lang
+        out = scenes.compact({"view": {"why": {lang: text}}})["why"][lang]
+        assert out.endswith(" …") and len(out) <= scenes.WHY_MAX, (lang, out)
+        kept = out[:-2]
+        assert text.startswith(kept) and kept.endswith(".") and text[len(kept)] == " ", (lang, kept[-40:])
+        assert not kept.endswith(("Kg.", "Sg.")), (lang, kept[-20:])
+        assert ("Signs shown" in kept) or ("Tanda yang" in kept), lang          # the signs line is kept
+        assert scenes.fit_why(text, limit=len(text)) == text                   # fits: untouched, no " …"
+    assert scenes.fit_why("Short. Fine.") == "Short. Fine."
+    first = "A" * 450 + ". Then more."                                           # a first sentence over the limit
+    assert scenes.fit_why(first) == "A" * 450 + ". …"                            # kept whole, never cut
+    assert [m.end() for m in scenes.SENTENCE_END.finditer("At Kg. Salor 34.7 mm. Sg. Golok rose.")] == [21, 37]
+
+
+def test_the_page_fits_the_why_the_same_way():
+    """scenes.html fitWhy() = app/scenes.py fit_why() on the same inputs (the page sends this to the check)."""
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+    assert "fitWhy((v.why || {}).en" in PAGE and "const WHY_MAX = 400;" in PAGE
+    js = PAGE[PAGE.index("const WHY_MAX = 400;"):PAGE.index("// the parts of the run result the check needs")]
+    cases = list(LONG_WHY.values()) + ["Short. Fine.", "A" * 450 + ". Then more.", "No sentence end at all " * 30]
+    run = js + f"\nconsole.log(JSON.stringify({json.dumps(cases)}.map((t) => fitWhy(t))));"
+    out = subprocess.run([node, "-e", run], capture_output=True, text=True, encoding="utf-8", check=True).stdout
+    assert json.loads(out) == [scenes.fit_why(c) for c in cases]

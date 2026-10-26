@@ -339,6 +339,18 @@ function renderExpect() {
   }).join("");
 }
 
+// the plain "why", never cut mid-sentence - the same as app/scenes.py fit_why(): whole if it fits, else the whole
+// sentences that fit + " …" (a sentence ends at . ! ? before a space or the end, not in "Kg. Salor" or "34.7")
+const WHY_MAX = 400;
+const SENTENCE_END = /(?<!\bKg)(?<!\bSg)(?<!\bKpg)(?<!\bJln)(?<!\bDr)(?<!\bSt)[.!?](?=\s|$)/g;
+function fitWhy(text, limit = WHY_MAX) {
+  if (text.length <= limit) return text;
+  const ends = [...text.matchAll(SENTENCE_END)].map((m) => m.index + 1);
+  const fit = ends.filter((e) => e + 2 <= limit);
+  const end = fit.length ? fit[fit.length - 1] : (ends.length ? ends[0] : text.length);
+  return text.slice(0, end) + (end < text.length ? " …" : "");
+}
+
 // the parts of the run result the check needs - the same shape as app/scenes.py compact()
 function compact(r) {
   const v = r.view || {}, how = r.how || {};
@@ -347,7 +359,7 @@ function compact(r) {
     byLang[l] = ((v.sources || {})[l] || []).map((s) => ({ name: s.name, used: !!s.used, note: (s.note || "").slice(0, 80) }));
   }
   return { verdict: r.verdict,
-    why: { en: ((v.why || {}).en || "").slice(0, 240), ms: ((v.why || {}).ms || "").slice(0, 240) },
+    why: { en: fitWhy((v.why || {}).en || ""), ms: fitWhy((v.why || {}).ms || "") },
     sources: byLang.en.map((s) => ({ name: s.name, used: s.used })), sources_by_lang: byLang,
     steps: (how.rows || []).filter((x) => ["gather", "forecast", "critique", "safety"].includes(x.key)).map((x) => ({
       key: x.key, who: x.who, lines: (x.lines || []).slice(0, 12).map((l) => ({ action: l.action, text: (l.text || "").slice(0, 160) })) })) };
