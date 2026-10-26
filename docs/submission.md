@@ -14,7 +14,7 @@ Last checked against the product: 26 Oct 2026, main at `0ed62be` (over 1,000 tes
 | Team | Hujung Lab (auto from HackOS) |
 | Description | below (150-2000 characters) |
 | Video | link to the 1-4 min demo video (B-53: test it logged out) |
-| GitHub Solution | the new public repo (`vedacool/veda-kelantan` suggested, B-77) - never the private `vedacool/veda` |
+| GitHub Solution | the public repo https://github.com/vedacool/veda-flood-kelantan (B-77) - never the private `vedacool/veda` |
 | Pitch Deck | link or upload |
 
 ## Description (1,985 characters including the 6 line breaks - 1,991 if each break counts as 2; limit 2,000; paste as is)

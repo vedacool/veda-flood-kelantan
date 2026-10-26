@@ -5,3 +5,7 @@
 bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:45
 bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:49
 bd989a21af42469f98471f5ff19543849e628297:tests/test_trace.py:generic-api-key:51
+# Two made-up 17-character placeholder Zetaris keys in the start-mode / doctor tests (B-104, B-106); checked against
+# this machine's real .env secrets: no match (26 Oct, Cowork + Husaini approved).
+9070e7171a9573b150fbac0b39caad5eb88655e2:tests/test_doctor.py:generic-api-key:12
+6be6e83cff1ee583d26e9cb9b5aa803c29c37109:tests/test_start_mode.py:generic-api-key:11

@@ -3,8 +3,9 @@
     python scripts/public_links.py                    # dry run: what would change, and what is left on purpose
     python scripts/public_links.py --apply            # write the changes (then commit in the public repo's clone)
     python scripts/public_links.py --to https://github.com/vedacool/<name> --apply
+    python scripts/public_links.py --from https://github.com/vedacool/<old public name> --apply   # after a rename
 
-Only exact links to the private repo change. Lines that name the private repo on purpose (it stays private as build
+Only exact links to the private repo (or, with --from, to an earlier public name) change. Lines that name the private repo on purpose (it stays private as build
 evidence) are kept and listed, so a person can check them.
 """
 import argparse
@@ -15,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = "https://github.com/vedacool/veda"
-PUBLIC = "https://github.com/vedacool/veda-kelantan"
+PUBLIC = "https://github.com/vedacool/veda-flood-kelantan"     # Husaini + Cowork, 26 Oct (was veda-kelantan)
 # a private-repo link not followed by more of a repo name (so ...veda-kelantan is never matched)
 LINK = re.compile(re.escape(PRIVATE) + r"(?![\w-])")
 NAME = re.compile(r"vedacool/veda(?![\w-])")          # any mention of the private repo, link or not
@@ -31,7 +32,9 @@ def tracked():
     return [ROOT / p for p in out.splitlines() if p not in SKIP]
 
 
-def plan(to):
+def plan(to, frm=PRIVATE):
+    """frm: the link being replaced - the private repo, or an earlier public name after a rename."""
+    link = LINK if frm == PRIVATE else re.compile(re.escape(frm) + r"(?![\w-])")
     changes, kept = [], []
     for path in tracked():
         try:
@@ -43,12 +46,12 @@ def plan(to):
         lines = text.splitlines(keepends=True)
         new = []
         for i, line in enumerate(lines, 1):
-            if any(k in line for k in KEEP) or not LINK.search(line):
+            if any(k in line for k in KEEP) or not link.search(line):
                 if NAME.search(line):
                     kept.append((path, i, line.strip()))
                 new.append(line)
                 continue
-            fixed = LINK.sub(to, line)
+            fixed = link.sub(to, line)
             changes.append((path, i, line.strip(), fixed.strip()))
             new.append(fixed)
         if "".join(new) != text:
@@ -59,9 +62,10 @@ def plan(to):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--to", default=PUBLIC)
+    ap.add_argument("--from", dest="frm", default=PRIVATE)
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args(argv)
-    changes, kept = plan(a.to.rstrip("/"))
+    changes, kept = plan(a.to.rstrip("/"), a.frm.rstrip("/"))
     for path, line, old, new in changes:
         if line is not None:
             print(f"CHANGE {path.relative_to(ROOT)}:{line}\n   - {old}\n   + {new}")

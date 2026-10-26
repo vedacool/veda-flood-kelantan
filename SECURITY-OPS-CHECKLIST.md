@@ -26,7 +26,7 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
 
 ## Before the repo goes public (do all, in this order)
 - [ ] `gitleaks detect` on the full history is clean. (CI does this on every push; check the latest run is green.)
-- [x] No personal email in code: the JPS User-Agent is `VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-kelantan; …)`
+- [x] No personal email in code: the JPS User-Agent is `VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-flood-kelantan; …)`
       (was a personal address until 23 Oct).
 - [x] No local machine paths in docs (a `E:\…` path removed from `docs/spikes.md`, 23 Oct). Re-check with
       `git grep -n -F ":\\"` before publishing.

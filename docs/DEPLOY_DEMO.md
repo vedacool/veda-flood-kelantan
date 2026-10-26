@@ -83,7 +83,7 @@ networks and only port 8765 on 127.0.0.1.
 
 ## 3. Get the code (1 min)
 ```
-git clone https://github.com/vedacool/veda-kelantan.git ~/veda-demo     # the public repo (after Monday)
+git clone https://github.com/vedacool/veda-flood-kelantan.git ~/veda-demo     # the public repo (after Monday)
 cd ~/veda-demo
 ```
 (Before the public repo exists: clone the private repo with your GitHub login.)

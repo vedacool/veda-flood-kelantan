@@ -14,7 +14,7 @@ from _common import ROOT, log, short
 S = "s5"
 URL = ("https://publicinfobanjir.water.gov.my/aras-air/data-paras-air/aras-air-data/"
        "?state=KEL&district=ALL&station=ALL&lang=en")
-UA = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-kelantan; flood-risk research, low-rate, cached)"
+UA = "VEDA-hackathon/0.1 (+https://github.com/vedacool/veda-flood-kelantan; flood-risk research, low-rate, cached)"
 SNAP_DIR = ROOT / "data" / "snapshots" / "jps"
 OURS = {  # BUILD_BRIEF §2 coverage, matched by name fragments
     "Golok @ Rantau Panjang": ("golok", "rantau panjang"),

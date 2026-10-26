@@ -10,15 +10,24 @@ spec.loader.exec_module(pl)
 
 def test_link_matches_the_private_repo_only():
     assert pl.LINK.sub(pl.PUBLIC, "git clone https://github.com/vedacool/veda.git") == \
-        "git clone https://github.com/vedacool/veda-kelantan.git"
+        "git clone https://github.com/vedacool/veda-flood-kelantan.git"
     assert pl.LINK.sub(pl.PUBLIC, "(+https://github.com/vedacool/veda; research)") == \
-        "(+https://github.com/vedacool/veda-kelantan; research)"
-    assert not pl.LINK.search("https://github.com/vedacool/veda-kelantan")       # never a second time
+        "(+https://github.com/vedacool/veda-flood-kelantan; research)"
+    assert not pl.LINK.search("https://github.com/vedacool/veda-flood-kelantan")  # never a second time
+    assert not pl.LINK.search("https://github.com/vedacool/veda-kelantan")
     assert not pl.LINK.search("https://github.com/vedacool/vedanta")
 
 
+def test_a_rename_moves_the_old_public_links_only():
+    """26 Oct: the public repo is vedacool/veda-flood-kelantan (was veda-kelantan): --from the old public name; the
+    new name is never matched by the old one (veda-kelantan is not a prefix of veda-flood-kelantan)."""
+    assert pl.PUBLIC == "https://github.com/vedacool/veda-flood-kelantan"
+    changes, _ = pl.plan(pl.PUBLIC, "https://github.com/vedacool/veda-kelantan")
+    assert [c for c in changes if c[1] is not None] == []                   # applied: nothing left on the old name
+
+
 def test_the_sweep_is_applied_and_keeps_the_private_mentions():
-    """Cowork 26 Oct: --apply ran (the public repo is vedacool/veda-kelantan). A dry run now changes nothing; the
+    """Cowork 26 Oct: --apply ran (the public repo is vedacool/veda-flood-kelantan). A dry run now changes nothing; the
     user-facing links point at the public repo; the lines that name the private repo on purpose are kept."""
     changes, kept = pl.plan(pl.PUBLIC)
     assert [c for c in changes if c[1] is not None] == []                   # nothing left to switch
@@ -41,7 +50,7 @@ def test_the_script_and_its_test_are_never_swept():
 
 def test_the_judge_path_still_works_after_the_sweep():
     """Cowork audit P1-3: after --apply the clone URL changes to the public repo; each clone names its folder, so the
-    next line's `cd veda` stays right (a bare `git clone .../veda-kelantan.git` would make a veda-kelantan folder)."""
+    next line's `cd veda` stays right (a bare `git clone .../veda-flood-kelantan.git` would make a veda-flood-kelantan folder)."""
     import re
     judges = pl.LINK.sub(pl.PUBLIC, (pl.ROOT / "docs" / "JUDGES.md").read_text(encoding="utf-8")).splitlines()
     clones = [i for i, line in enumerate(judges) if line.startswith("git clone ")]
