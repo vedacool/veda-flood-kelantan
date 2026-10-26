@@ -65,7 +65,8 @@ Timestamps and outcomes only - no river readings (B-75).
   **Can't confirm right now** ("We have no fresh river reading for Kota Bharu."), with the safety steps and a link to
   JPS Infobanjir; full path, 2 AI calls. Screenshot (no river reading shown):
   [`docs/media/v2/outage/kota-bharu-live-25oct-375-en.png`](media/v2/outage/kota-bharu-live-25oct-375-en.png).
-- **When it recovered:** _to be filled in_ (collector records checked again at about 04:00 MYT and on Sunday afternoon).
+- **When it recovered:** JPS rebuilt its site on ~24 Oct; the old page address returns 404. VEDA keeps answering 'Can't confirm' with warning signs; adapting to the new page is planned after the hackathon.
+  - **Checked 26 Oct 14:12 MYT** (one request to the new Kelantan page `publicinfobanjir.water.gov.my/waterleveldata/Kelantan`, VEDA's User-Agent, certificate checks on; raw page kept privately, outside the repo; no reading printed): HTTP 200, but a new layout - Malay column headers (ID Stesen, Nama Stesen, Kemaskini Terakhir, Aras Air (m), Normal / Waspada / Amaran / Bahaya), new station ids (e.g. `0730103WL`, none of VEDA's 16 gauge keys), 9 of VEDA's 16 gauge names unchanged, graph links to `infobanjirjpskelantan.water.gov.my`; fresh values are loaded by the page's script from `/api/station` and `/api/detailstation` (POST, with an authorisation header). The table in the page itself was not current either: its newest "Kemaskini Terakhir" was 24 Oct 19:00. VEDA's parser was not changed (Cowork, 26 Oct).
 
 ## Counts over time
 **Offline tests** (from commit messages and the checklist; each `N` was the full suite at that commit):
