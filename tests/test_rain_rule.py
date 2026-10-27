@@ -393,7 +393,9 @@ def test_rain_upstream_not_read_this_run_is_not_used(tmp_path, monkeypatch, seco
     gazetteer.clear_cache()
     assert r["forecast"]["verdict"] != "PREPARE" and not r["forecast"].get("rain_upstream")
     assert "upstream-rain" not in [t["rule"] for t in r["forecast"]["triggers"]]
-    assert "Kuala Krai" not in r["answer"]["text"]
+    # no rain line from the old run's upstream point (audit 27 Oct A-P3-26: the old run's gauge readings, dated after
+    # this run's clock, are now "unknown" - the Critic may name Kuala Krai as missing, never with a rain figure)
+    assert not any("Kuala Krai" in ln and "mm" in ln for ln in r["answer"]["text"].splitlines())
     row = next(s for s in view.sources(r["evidence"], r["plan"], "en") if s["kind"] == "rain_upstream")
     assert not row["used"] and "could not be read" in row["note"]
 
@@ -467,3 +469,22 @@ def test_rain_summary_agrees_with_a_heavy_spell():
     assert view._rain_plain(c, {}, "en") == "Heavy rain expected here in the next day."
     c["rain_up"]["until_heavy"] = False
     assert view._rain_plain(c, {}, "en") == "Some rain expected here in the next day."
+
+
+def test_a_rain_fact_from_another_run_is_not_used_even_when_the_query_worked(tmp_path, monkeypatch):
+    """Audit 27 Oct A-P3-21: the hourly rain was read this run but no fact was written for this place (e.g. the places
+    query left it out) -> the previous run's still-young fact must not stand in."""
+    from app.agents import data_agent
+    from app.engines.world_model.world import WorldModel
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    gazetteer.clear_cache()
+    world = WorldModel()
+    first = loop.run("Kota Bharu selamat tak?", quiet=True, replay="synthetic_upstream_rain", at=NOW, world=world,
+                     log_dir=tmp_path)
+    assert first["forecast"]["verdict"] == "PREPARE" and first["forecast"].get("rain_upstream")
+    monkeypatch.setattr(data_agent.veda_ingest, "ingest_rain_hours", lambda *a, **k: {"points": 0, "places": 0})
+    r = loop.run("Kota Bharu selamat tak?", quiet=True, replay="synthetic_upstream_rain", at=NOW, world=world,
+                 log_dir=tmp_path)
+    gazetteer.clear_cache()
+    assert not r["forecast"].get("rain_upstream")
+    assert "upstream-rain" not in [t["rule"] for t in r["forecast"]["triggers"]]

@@ -1,8 +1,8 @@
 {
-  "run_id": "20261024-155557-550b",
-  "trace_id": "20261024-155557-550b",
+  "run_id": "20261027-144532-4566",
+  "trace_id": "20261027-144532-4566",
   "status": "success",
-  "output": "REPLAY · Nov 2024\nWHAT TO DO NOW: VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger.\nRantau Panjang: Can't confirm right now\nThis replay has no verified JPS reading near this time.\nLast verified reading: 8.41 m at 26 Nov 18:00 (14 h ago) - too far from this time to use.\nConfidence: low.\nRain past 24 h: 59.4 mm (Open-Meteo archive, 27 Nov 2024); a past day has no rain forecast.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.\nSources: JPS 14 h ago; Open-Meteo archive (real rain up to the replay time).\nLeft out: data.gov.my flood warnings (out of date, last update 2024-02-23).\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
+  "output": "REPLAY · Nov 2024\nWHAT TO DO NOW: VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger.\nRantau Panjang: Can't confirm right now\nThis replay has no verified JPS reading near this time.\nLast verified reading: 8.41 m at 26 Nov 18:00 (14 h ago) - too far from this time to use.\nConfidence: low.\nRain past 24 h: 59.4 mm (Open-Meteo archive, 27 Nov 2024); a past day has no rain forecast.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.\nSources: JPS 14 h ago; Open-Meteo archive (real rain up to the replay time).\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
   "language": "en",
   "verdict": "INSUFFICIENT_DATA",
   "confidence": "low",
@@ -16,18 +16,18 @@
     "Critic"
   ],
   "log_file": "output_examples/05_broken_source.trace.jsonl",
-  "execution_time": 0.1,
+  "execution_time": 0.0,
   "timing": {
     "plan": 0.0,
     "gather": 0.0,
     "forecast": 0.0,
     "draft": 0.0,
     "critique": 0.0,
-    "total": 0.1
+    "total": 0.0
   },
   "card": {
-    "en": "REPLAY · Nov 2024\nWHAT TO DO NOW: VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger.\nRantau Panjang: Can't confirm right now\nThis replay has no verified JPS reading near this time.\nLast verified reading: 8.41 m at 26 Nov 18:00 (14 h ago) - too far from this time to use.\nConfidence: low.\nRain past 24 h: 59.4 mm (Open-Meteo archive, 27 Nov 2024); a past day has no rain forecast.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.\nSources: JPS 14 h ago; Open-Meteo archive (real rain up to the replay time).\nLeft out: data.gov.my flood warnings (out of date, last update 2024-02-23).\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.",
-    "ms": "REPLAY · Nov 2024\nAPA PERLU DIBUAT SEKARANG: VEDA tidak dapat mengesahkan paras sungai sekarang. Semak JPS Infobanjir; hubungi 999 jika anda dalam bahaya.\nRantau Panjang: Tidak dapat disahkan sekarang\nUlang tayang ini tiada bacaan JPS yang disahkan berhampiran masa ini.\nBacaan disahkan terakhir: 8.41 m pada 26 Nov 18:00 (14 jam lalu) - terlalu jauh dari masa ini untuk digunakan.\nKeyakinan: rendah.\nHujan 24 jam lepas: 59.4 mm (arkib Open-Meteo, 27 Nov 2024); tiada ramalan hujan dalam ulang tayang.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui.\nSumber: JPS 14 jam lalu; arkib Open-Meteo.\nDiketepikan: amaran banjir lama data.gov.my.\nTiada bacaan terkini dari Sg. Golok di Kg. Jenob (F1); VEDA mencari stesen hulu lain di sungai yang sama, tiada ditemui."
+    "en": "REPLAY · Nov 2024\nWHAT TO DO NOW: VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger.\nRantau Panjang: Can't confirm right now\nThis replay has no verified JPS reading near this time.\nLast verified reading: 8.41 m at 26 Nov 18:00 (14 h ago) - too far from this time to use.\nConfidence: low.\nRain past 24 h: 59.4 mm (Open-Meteo archive, 27 Nov 2024); a past day has no rain forecast.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.\nSources: JPS 14 h ago; Open-Meteo archive (real rain up to the replay time).\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.",
+    "ms": "REPLAY · Nov 2024\nAPA PERLU DIBUAT SEKARANG: VEDA tidak dapat mengesahkan paras sungai sekarang. Semak JPS Infobanjir; hubungi 999 jika anda dalam bahaya.\nRantau Panjang: Tidak dapat disahkan sekarang\nUlang tayang ini tiada bacaan JPS yang disahkan berhampiran masa ini.\nBacaan disahkan terakhir: 8.41 m pada 26 Nov 18:00 (14 jam lalu) - terlalu jauh dari masa ini untuk digunakan.\nKeyakinan: rendah.\nHujan 24 jam lepas: 59.4 mm (arkib Open-Meteo, 27 Nov 2024); tiada ramalan hujan dalam ulang tayang.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui.\nSumber: JPS 14 jam lalu; arkib Open-Meteo (hujan sebenar sehingga masa ulang tayang).\nTiada bacaan terkini dari Sg. Golok di Kg. Jenob (F1); VEDA mencari stesen hulu lain di sungai yang sama, tiada ditemui."
   },
   "disclaimer": {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
@@ -55,26 +55,38 @@
     "water": null,
     "upstream": {
       "en": [
-        "Heavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known."
+        "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here."
       ],
       "ms": [
-        "Hujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui."
+        "Hujan sangat lebat di seberang sempadan di Thailand dalam 3 hari lalu. Air itu mengalir turun ke arah sini."
       ]
     },
     "rain": {
-      "en": "59.4 mm fell in the 24 hours before this time",
-      "ms": "59.4 mm turun dalam 24 jam sebelum masa ini"
+      "en": "Heavy rain here in the last day.",
+      "ms": "Hujan lebat di sini dalam sehari lalu."
     },
     "rain_more": {
       "en": [],
       "ms": []
     },
-    "rain_share": {
+    "rain_detail": {
       "en": [
-        "Heavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known."
+        "Heavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.",
+        "59.4 mm fell in the 24 hours before this time"
       ],
       "ms": [
-        "Hujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui."
+        "Hujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui.",
+        "59.4 mm turun dalam 24 jam sebelum masa ini"
+      ]
+    },
+    "rain_share": {
+      "en": [
+        "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here.",
+        "Heavy rain here in the last day."
+      ],
+      "ms": [
+        "Hujan sangat lebat di seberang sempadan di Thailand dalam 3 hari lalu. Air itu mengalir turun ke arah sini.",
+        "Hujan lebat di sini dalam sehari lalu."
       ]
     },
     "todo_more": {
@@ -82,8 +94,8 @@
       "ms": []
     },
     "why": {
-      "en": "VEDA has no fresh, checked river reading for this place, so it will not guess.",
-      "ms": "VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak akan meneka."
+      "en": "VEDA has no fresh, checked river reading for this place, so it will not guess. Signs shown (they do not set a level): the last river reading, heavy rain.",
+      "ms": "VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak akan meneka. Tanda yang ditunjukkan (tidak menetapkan tahap): bacaan sungai terakhir, hujan lebat."
     },
     "combined": null,
     "note": null,
@@ -103,7 +115,7 @@
           "name": "River upstream: Sg. Golok di Kg. Jenob",
           "used": false,
           "left_out": true,
-          "note": "left out: reading too old (17 h ago)"
+          "note": "left out: reading too old (17.5 h ago)"
         },
         {
           "kind": "rain",
@@ -130,8 +142,8 @@
           "kind": "flood_warnings",
           "name": "Flood warnings (data.gov.my)",
           "used": false,
-          "left_out": true,
-          "note": "left out: out of date"
+          "left_out": false,
+          "note": "not used: not available for this date"
         },
         {
           "kind": "rain_upstream",
@@ -154,7 +166,7 @@
           "name": "Sungai di hulu: Sg. Golok di Kg. Jenob",
           "used": false,
           "left_out": true,
-          "note": "diketepikan: bacaan terlalu lama (17 jam lalu)"
+          "note": "diketepikan: bacaan terlalu lama (17.5 jam lalu)"
         },
         {
           "kind": "rain",
@@ -181,8 +193,8 @@
           "kind": "flood_warnings",
           "name": "Amaran banjir (data.gov.my)",
           "used": false,
-          "left_out": true,
-          "note": "diketepikan: sudah lama tidak dikemas kini"
+          "left_out": false,
+          "note": "tidak digunakan: tiada untuk tarikh ini"
         },
         {
           "kind": "rain_upstream",
@@ -197,12 +209,108 @@
     "emergency": false,
     "synthetic": false,
     "strip": {
-      "en": "✓ Double-checked · combined from 2 sources: rain, rain upstream · 3 left out",
-      "ms": "✓ Disemak dua kali · digabung daripada 2 sumber: hujan, hujan di hulu · 3 diketepikan"
+      "en": "✓ Checked twice, using 2 sources",
+      "ms": "✓ Disemak dua kali, menggunakan 2 sumber"
     },
+    "level": null,
+    "level_text": {
+      "en": "Level unknown",
+      "ms": "Tahap tidak diketahui"
+    },
+    "action": {
+      "en": [
+        "We have no fresh river reading for Rantau Panjang."
+      ],
+      "ms": [
+        "Kami tiada bacaan sungai terkini untuk Rantau Panjang."
+      ]
+    },
+    "steps": {
+      "en": [
+        "If water is rising around you, don't wait for us: move to higher ground.",
+        "Check the official river levels yourself.",
+        "In danger, call 999."
+      ],
+      "ms": [
+        "Jika air naik di sekeliling anda, jangan tunggu kami: pindah ke tempat tinggi.",
+        "Semak sendiri paras sungai rasmi.",
+        "Jika dalam bahaya, hubungi 999."
+      ]
+    },
+    "official_link": "https://publicinfobanjir.water.gov.my/",
+    "river": null,
+    "flow": {
+      "en": {
+        "dots": [
+          {
+            "name": "Thailand",
+            "state": "rain",
+            "text": "heavy rain"
+          },
+          {
+            "name": "Rantau Panjang",
+            "state": "you",
+            "text": "you"
+          }
+        ],
+        "caption": "upstream (hulu) → water flows this way → you (hilir)"
+      },
+      "ms": {
+        "dots": [
+          {
+            "name": "Thailand",
+            "state": "rain",
+            "text": "hujan lebat"
+          },
+          {
+            "name": "Rantau Panjang",
+            "state": "you",
+            "text": "anda"
+          }
+        ],
+        "caption": "hulu → air mengalir ke arah ini → anda (hilir)"
+      }
+    },
+    "line_is_river": true,
     "share": {
-      "en": "VEDA · Rantau Panjang: Can't confirm right now\nPast flood replay · 27 Nov 2024, 08:00\nWhat to do now: VEDA cannot confirm the river level right now. Check JPS Infobanjir; call 999 if you are in danger.\nThere is no checked river reading near this time.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 120 mm in 3 days (62.1 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 98.5 mm in 3 days (58.9 mm in 24 h), arrival time not known.\n✓ Double-checked · combined from 2 sources: rain, rain upstream · 3 left out\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
-      "ms": "VEDA · Rantau Panjang: Tidak dapat disahkan sekarang\nUlang tayang banjir lalu · 27 Nov 2024, 08:00\nApa perlu dibuat sekarang: VEDA tidak dapat mengesahkan paras sungai sekarang. Semak JPS Infobanjir; hubungi 999 jika anda dalam bahaya.\nTiada bacaan sungai yang disahkan berhampiran masa ini.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 120 mm dalam 3 hari (62.1 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 98.5 mm dalam 3 hari (58.9 mm dalam 24 jam), masa sampai tidak diketahui.\n✓ Disemak dua kali · digabung daripada 2 sumber: hujan, hujan di hulu · 3 diketepikan\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
+      "en": "⚪ Rantau Panjang: CAN'T CONFIRM RIGHT NOW\nThere is no checked river reading near this time.\n\nWhat to do: If water is rising around you, don't wait for us: move to higher ground.\n\nChecked by VEDA · Past flood replay · 27 Nov 2024, 08:00 · no fresh river reading\nNot an official warning. Emergency 999 · APM 991",
+      "ms": "⚪ Rantau Panjang: TIDAK DAPAT DISAHKAN SEKARANG\nTiada bacaan sungai yang disahkan berhampiran masa ini.\n\nApa perlu dibuat: Jika air naik di sekeliling anda, jangan tunggu kami: pindah ke tempat tinggi.\n\nDisemak oleh VEDA · Ulang tayang banjir lalu · 27 Nov 2024, 08:00 · tiada bacaan sungai terkini\nBukan amaran rasmi. Kecemasan 999 · APM 991"
+    },
+    "judgement": {
+      "status": "live_only",
+      "text": {
+        "en": "Nemotron's judgement: live mode only",
+        "ms": "Penilaian Nemotron: mod langsung sahaja"
+      }
+    },
+    "signs": {
+      "kinds": [
+        "last",
+        "rain"
+      ],
+      "serious": true,
+      "title": {
+        "en": "⚠ Signs the river may rise suddenly",
+        "ms": "⚠ Tanda paras sungai mungkin naik mendadak"
+      },
+      "lines": {
+        "en": [
+          "Last river reading (14 h ago): Warning.",
+          "Heavy rain upstream in the last 24 h."
+        ],
+        "ms": [
+          "Bacaan sungai terakhir (14 jam lalu): Amaran.",
+          "Hujan lebat di hulu dalam 24 jam lalu."
+        ]
+      },
+      "advice": {
+        "en": "Treat this as serious until you can confirm with JPS or the authorities.",
+        "ms": "Anggap ini serius sehingga anda dapat sahkan dengan JPS atau pihak berkuasa."
+      },
+      "footer": {
+        "en": "Signs from: the last JPS reading, Open-Meteo rain. No recent river level.",
+        "ms": "Tanda daripada: bacaan JPS terakhir, hujan Open-Meteo. Tiada paras sungai terkini."
+      }
     }
   },
   "other": null,
@@ -227,7 +335,7 @@
             "agent": "Coordinator",
             "action": "route",
             "status": "success",
-            "text": "full path, answer in English - full: Sg. Golok di Rantau Panjang (F1) is at warning (8.41 m); Sg. Golok di Rantau Panjang (F1) has no fresh reading (stale); Sg. Golok di Kg. Jenob (F1) is at danger (25.15 m); Sg. Golok di Kg. Jenob (F1) has no fresh reading (stale); heavy rain upstream (golok_buketa, sukhirin)"
+            "text": "full path, answer in English - Sg. Golok di Rantau Panjang is at warning (8.41 m); Sg. Golok di Rantau Panjang has no fresh reading (stale); Sg. Golok di Kg. Jenob is at danger (25.15 m); Sg. Golok di Kg. Jenob has no fresh reading (stale); heavy rain upstream (golok_buketa, sukhirin)"
           }
         ],
         "ai": [],
@@ -245,14 +353,8 @@
           {
             "agent": "Data & Reconciler",
             "action": "data.cross_check",
-            "status": "fallback",
-            "text": "2 shared gauge(s); newest 2024-02-23 14:45 MYT"
-          },
-          {
-            "agent": "Data & Reconciler",
-            "action": "data.reconcile",
             "status": "success",
-            "text": "0 unresolved"
+            "text": "not available in replay"
           },
           {
             "agent": "Data & Reconciler",
@@ -327,19 +429,25 @@
             "agent": "Critic",
             "action": "critic.requery",
             "status": "success",
-            "text": "gauge: confirmed; flood-warning stale: True (277 days) - re-query agrees with the evidence"
+            "text": "gauge: confirmed; flood-warning stale: None (None days) - re-query agrees with the evidence"
           },
           {
             "agent": "Critic",
             "action": "critic.request",
             "status": "success",
-            "text": "need: fresh controlling reading - Sg. Golok di Rantau Panjang (F1) (reading too old (840 min)); fresh upstream reading - Sg. Golok di Kg. Jenob (F1) (reading too old (1050 min))"
+            "text": "need: fresh controlling reading - Sg. Golok di Rantau Panjang (reading too old (840 min)); fresh upstream reading - Sg. Golok di Kg. Jenob (reading too old (1050 min))"
           },
           {
             "agent": "Data & Reconciler",
             "action": "data.request",
             "status": "fallback",
-            "text": "nothing fresh for Sg. Golok di Rantau Panjang (F1) (reading too old (840 min)); nothing fresh for Sg. Golok di Kg. Jenob (F1) (reading too old (1050 min))"
+            "text": "nothing fresh for Sg. Golok di Rantau Panjang (reading too old (840 min)); nothing fresh for Sg. Golok di Kg. Jenob (reading too old (1050 min))"
+          },
+          {
+            "agent": "Critic",
+            "action": "critic.ai_judgement",
+            "status": "fallback",
+            "text": "rules INSUFFICIENT_DATA · Nemotron - · final INSUFFICIENT_DATA (not_run) - no AI-written text to check (card written by code)"
           },
           {
             "agent": "Critic",
@@ -349,7 +457,20 @@
           }
         ],
         "ai": [],
-        "queries": 2
+        "queries": 1,
+        "checks": [
+          "verdict words = the card's verdict",
+          "every number is on the card",
+          "no flipped above / below",
+          "no reassurance under WATCH / PREPARE / ACT",
+          "no 'a PPS is open' / cut-off prediction",
+          "no trend words when no trend is known",
+          "rising / falling / steady = the computed trend",
+          "wording (no internal terms, no minus signs, no Indonesian words in BM)",
+          "never 'go into the water'",
+          "stale / excluded source mentioned",
+          "conflicts mentioned"
+        ]
       },
       {
         "key": "safety",
@@ -371,11 +492,62 @@
         "queries": 0
       }
     ],
-    "total_s": 0.1,
+    "total_s": 0.0,
     "fallbacks": [
       "Coordinator: code-only card, explanation dropped"
     ]
   },
+  "ai_judgement": {
+    "status": "live_only"
+  },
+  "trail": {
+    "en": [
+      {
+        "key": "gather",
+        "who": "Data agent",
+        "text": "Used 2 of 7 sources. Left out: Sg. Golok di Rantau Panjang, reading too old (14 h ago); Sg. Golok di Kg. Jenob, reading too old (17.5 h ago); MetMalaysia forecast, not available for this date; and 2 more."
+      },
+      {
+        "key": "forecast",
+        "who": "Forecast agent",
+        "text": "Can't confirm right now. VEDA has no fresh, checked river reading for this place, so it will not guess. Signs shown (they do not set a level): the last river reading, heavy rain."
+      },
+      {
+        "key": "critique",
+        "who": "Critic",
+        "text": "Asked the Data agent for a fresh upstream reading. Nothing fresh was found. Checked the facts again and approved the answer."
+      },
+      {
+        "key": "safety",
+        "who": "Safety gate",
+        "text": "All safety checks passed."
+      }
+    ],
+    "ms": [
+      {
+        "key": "gather",
+        "who": "Ejen Data",
+        "text": "Menggunakan 2 daripada 7 sumber. Diketepikan: Sg. Golok di Rantau Panjang, bacaan terlalu lama (14 jam lalu); Sg. Golok di Kg. Jenob, bacaan terlalu lama (17.5 jam lalu); Ramalan MetMalaysia, tiada untuk tarikh ini; dan 2 lagi."
+      },
+      {
+        "key": "forecast",
+        "who": "Ejen Ramalan",
+        "text": "Tidak dapat disahkan sekarang. VEDA tiada bacaan sungai terkini yang disahkan untuk tempat ini, jadi ia tidak akan meneka. Tanda yang ditunjukkan (tidak menetapkan tahap): bacaan sungai terakhir, hujan lebat."
+      },
+      {
+        "key": "critique",
+        "who": "Penyemak",
+        "text": "Meminta Ejen Data mencari bacaan hulu yang baharu. Tiada bacaan baharu ditemui. Menyemak semula fakta dan meluluskan jawapan."
+      },
+      {
+        "key": "safety",
+        "who": "Semakan keselamatan",
+        "text": "Semua semakan keselamatan lulus."
+      }
+    ]
+  },
+  "explanation_lang": null,
+  "nearest_covered": null,
   "input": {
     "question": "Is Rantau Panjang safe?",
     "replay": "nov2024",

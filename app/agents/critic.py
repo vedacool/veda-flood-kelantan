@@ -393,7 +393,8 @@ def judge_facts(card, forecast, lang):
             elif rng and th.get("alert") is not None and rng.get("max", 0) >= th["alert"]:
                 raise_, level = True, "WATCH"
         elif key == "vs_2014":
-            raise_ = ((card.get("vs_2014") or {}).get("diff_m") or -1) >= 0
+            diff = (card.get("vs_2014") or {}).get("diff_m")           # audit 27 Oct A-P3-16: 0.0 (at the peak) counts
+            raise_ = diff is not None and diff >= 0
         elif key == "upstream":
             raise_ = True
         elif key == "rain_upstream_and_here":
@@ -475,7 +476,7 @@ def judge(data, code_level, meta):
     if code_level not in LEVELS:
         return done("ignored", "the rules cannot confirm the level - the AI cannot change 'Can't confirm'")
     if ai == "INSUFFICIENT_DATA" or LEVELS.index(ai) < LEVELS.index(code_level):
-        return done("lower", "AI judged lower; VEDA keeps the safer level")
+        return done("lower", "AI judged lower; VEDA keeps the more cautious (higher) level")
     if out["confidence"] not in ("medium", "high"):
         return done("ignored", f"the AI's confidence is {out['confidence'] or 'missing'} - a raise needs medium or high")
     if not ids or len(ids) > MAX_REASONS:
@@ -635,6 +636,10 @@ def review(question, plan, evidence, forecast, answer, world=None, round_no=1, l
                 checked_by.append("model-judgement")
             except nightshift.NightshiftError as e:
                 skip_reason = f"no AI-written text to check; the facts-only judgement failed ({str(e)[:80]})"
+        elif plan.get("effort") == "full" and answer.get("drafted_by") == "fallback" and not offline:
+            # audit 27 Oct A-P3-16: say why the facts-only judgement did not run - the run's time was nearly used up
+            skip_reason = (f"no AI-written text to check; too little time left for the facts-only judgement "
+                           f"({max(0, int(left))} s, needs {JUDGE_MIN_S} s)")
     if not use_model:
         decision, model_problems, fix = ("reject" if code_problems else "approve"), [], ""
         status_note = skip_reason or "model review skipped"

@@ -1,6 +1,6 @@
 {
-  "run_id": "20261024-155556-133b",
-  "trace_id": "20261024-155556-133b",
+  "run_id": "20261027-144532-2cc4",
+  "trace_id": "20261027-144532-2cc4",
   "status": "success",
   "output": "SYNTHETIC · calm day\nAPA PERLU DIBUAT SEKARANG: Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS.\nTumpat: NORMAL - paras JPS Normal\nSungai (data ujian rekaan · SYNTHETIC): 0.58 m pada 15 Jun 10:00 (Sg. Kelantan di Kg. Kok Majid (F1)); 0.62 m di bawah Waspada (1.2 m), 1.22 m di bawah Bahaya (1.8 m).\n(bacaan SYNTHETIC - direka untuk demo luar talian, bukan bacaan JPS sebenar)\nPasang surut laut menggerakkan sungai ini, jadi trend tidak ditunjukkan. Keyakinan: tinggi.\nSumber: paras sungai ujian rekaan (SYNTHETIC, bukan JPS).\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
   "language": "ms",
@@ -72,10 +72,10 @@
     },
     "upstream": {
       "en": [
-        "Tambatan D'Raja: normal."
+        "The river upstream is normal."
       ],
       "ms": [
-        "Tambatan D'Raja: normal."
+        "Sungai di hulu normal."
       ]
     },
     "rain": null,
@@ -83,9 +83,21 @@
       "en": [],
       "ms": []
     },
+    "rain_detail": {
+      "en": [
+        "Tambatan D'Raja: normal."
+      ],
+      "ms": [
+        "Tambatan D'Raja: normal."
+      ]
+    },
     "rain_share": {
-      "en": [],
-      "ms": []
+      "en": [
+        "The river upstream is normal."
+      ],
+      "ms": [
+        "Sungai di hulu normal."
+      ]
     },
     "todo_more": {
       "en": [],
@@ -215,13 +227,98 @@
     "emergency": false,
     "synthetic": true,
     "strip": {
-      "en": "✓ Double-checked · combined from 3 sources: river here, river upstream",
-      "ms": "✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, sungai di hulu"
+      "en": "✓ Checked twice, using 3 sources",
+      "ms": "✓ Disemak dua kali, menggunakan 3 sumber"
     },
+    "level": 1,
+    "level_text": {
+      "en": "Level 1 of 4",
+      "ms": "Tahap 1 daripada 4"
+    },
+    "action": {
+      "en": [
+        "Nothing to do now."
+      ],
+      "ms": [
+        "Tiada apa perlu dibuat sekarang."
+      ]
+    },
+    "steps": {
+      "en": [
+        "No action needed.",
+        "Keep an eye on JPS updates."
+      ],
+      "ms": [
+        "Tiada tindakan diperlukan.",
+        "Terus pantau maklumat terkini JPS."
+      ]
+    },
+    "official_link": null,
+    "river": {
+      "en": {
+        "level_m": 0.58,
+        "normal_m": 0.4,
+        "alert_m": 1.2,
+        "warning_m": 1.6,
+        "danger_m": 1.8,
+        "y2014_m": null,
+        "lines": [
+          "0.58 m now",
+          "1.22 m below the danger mark"
+        ]
+      },
+      "ms": {
+        "level_m": 0.58,
+        "normal_m": 0.4,
+        "alert_m": 1.2,
+        "warning_m": 1.6,
+        "danger_m": 1.8,
+        "y2014_m": null,
+        "lines": [
+          "0.58 m sekarang",
+          "1.22 m di bawah paras Bahaya"
+        ]
+      }
+    },
+    "flow": {
+      "en": {
+        "dots": [
+          {
+            "name": "Tambatan D'Raja",
+            "state": "normal",
+            "text": "normal"
+          },
+          {
+            "name": "Tumpat",
+            "state": "you",
+            "text": "you"
+          }
+        ],
+        "caption": "upstream (hulu) → water flows this way → you (hilir)"
+      },
+      "ms": {
+        "dots": [
+          {
+            "name": "Tambatan D'Raja",
+            "state": "normal",
+            "text": "normal"
+          },
+          {
+            "name": "Tumpat",
+            "state": "you",
+            "text": "anda"
+          }
+        ],
+        "caption": "hulu → air mengalir ke arah ini → anda (hilir)"
+      }
+    },
+    "line_is_river": true,
     "share": {
-      "en": "VEDA · Tumpat: Normal for now\nMade-up test scene · 15 Jun 2024, 10:00\nWhat to do now: No action needed. Keep an eye on JPS updates.\nThe river is 0.62 m below the alert level.\nThe sea tide moves this river, so we don't show a trend.\n✓ Double-checked · combined from 3 sources: river here, river upstream\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
-      "ms": "VEDA · Tumpat: Normal buat masa ini\nSenario ujian rekaan · 15 Jun 2024, 10:00\nApa perlu dibuat sekarang: Tiada tindakan diperlukan. Terus pantau maklumat terkini JPS.\nParas sungai 0.62 m di bawah paras Waspada.\nPasang surut laut menggerakkan sungai ini, jadi kami tidak menunjukkan trend.\n✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, sungai di hulu\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
-    }
+      "en": "🟢 Tumpat: NORMAL FOR NOW (level 1 of 4)\nThe river is 0.62 m below the alert level.\n\nWhat to do: Nothing to do now.\n\nChecked by VEDA · Made-up test scene · 15 Jun 2024, 10:00 · made-up test data · SYNTHETIC\nNot an official warning. Emergency 999 · APM 991",
+      "ms": "🟢 Tumpat: NORMAL BUAT MASA INI (tahap 1 daripada 4)\nParas sungai 0.62 m di bawah paras Waspada.\n\nApa perlu dibuat: Tiada apa perlu dibuat sekarang.\n\nDisemak oleh VEDA · Senario ujian rekaan · 15 Jun 2024, 10:00 · data ujian rekaan · SYNTHETIC\nBukan amaran rasmi. Kecemasan 999 · APM 991"
+    },
+    "judgement": null,
+    "signs": null
   },
   "other": null,
   "how": {
@@ -245,7 +342,7 @@
             "agent": "Coordinator",
             "action": "route",
             "status": "success",
-            "text": "quick path, answer in BM - quick: linked gauges below Alert and steady, no active warning, data fresh, simple question"
+            "text": "quick path, answer in BM - linked gauges below Alert and steady, no active warning, data fresh, simple question"
           }
         ],
         "ai": [],
@@ -331,7 +428,20 @@
           }
         ],
         "ai": [],
-        "queries": 0
+        "queries": 0,
+        "checks": [
+          "verdict words = the card's verdict",
+          "every number is on the card",
+          "no flipped above / below",
+          "no reassurance under WATCH / PREPARE / ACT",
+          "no 'a PPS is open' / cut-off prediction",
+          "no trend words when no trend is known",
+          "rising / falling / steady = the computed trend",
+          "wording (no internal terms, no minus signs, no Indonesian words in BM)",
+          "never 'go into the water'",
+          "stale / excluded source mentioned",
+          "conflicts mentioned"
+        ]
       },
       {
         "key": "safety",
@@ -356,6 +466,55 @@
     "total_s": 0.0,
     "fallbacks": []
   },
+  "ai_judgement": null,
+  "trail": {
+    "en": [
+      {
+        "key": "gather",
+        "who": "Data agent",
+        "text": "Used 3 of 7 sources. Left out: Rain record (Open-Meteo archive), not needed for this question; MetMalaysia forecast, not available for this date; MetMalaysia warnings, not needed for this question; and 1 more."
+      },
+      {
+        "key": "forecast",
+        "who": "Forecast agent",
+        "text": "Normal for now. The river is below the alert level and nothing else points to a flood."
+      },
+      {
+        "key": "critique",
+        "who": "Critic",
+        "text": "Checked the facts again and approved the answer."
+      },
+      {
+        "key": "safety",
+        "who": "Safety gate",
+        "text": "All safety checks passed."
+      }
+    ],
+    "ms": [
+      {
+        "key": "gather",
+        "who": "Ejen Data",
+        "text": "Menggunakan 3 daripada 7 sumber. Diketepikan: Rekod hujan (arkib Open-Meteo), tidak perlu untuk soalan ini; Ramalan MetMalaysia, tiada untuk tarikh ini; Amaran MetMalaysia, tidak perlu untuk soalan ini; dan 1 lagi."
+      },
+      {
+        "key": "forecast",
+        "who": "Ejen Ramalan",
+        "text": "Normal buat masa ini. Paras sungai di bawah paras Waspada dan tiada tanda lain yang menunjukkan banjir."
+      },
+      {
+        "key": "critique",
+        "who": "Penyemak",
+        "text": "Menyemak semula fakta dan meluluskan jawapan."
+      },
+      {
+        "key": "safety",
+        "who": "Semakan keselamatan",
+        "text": "Semua semakan keselamatan lulus."
+      }
+    ]
+  },
+  "explanation_lang": null,
+  "nearest_covered": null,
   "input": {
     "question": "Tumpat selamat ke?"
   },

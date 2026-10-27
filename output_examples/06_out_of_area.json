@@ -1,6 +1,6 @@
 {
-  "run_id": "20261024-155557-2365",
-  "trace_id": "20261024-155557-2365",
+  "run_id": "20261027-144532-020e",
+  "trace_id": "20261027-144532-020e",
   "status": "success",
   "output": "Machang terletak di Kelantan tetapi belum diliputi VEDA. Tempat yang diliputi: Kota Bharu, Pasir Mas, Rantau Panjang, Tumpat.\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991.",
   "language": "ms",
@@ -31,8 +31,8 @@
     "kind": "not_covered",
     "nearest": null,
     "text": {
-      "en": "VEDA covers Rantau Panjang, Pasir Mas, Kota Bharu and Tumpat for now.",
-      "ms": "Buat masa ini VEDA meliputi Rantau Panjang, Pasir Mas, Kota Bharu dan Tumpat."
+      "en": "VEDA covers Kota Bharu, Pasir Mas, Rantau Panjang and Tumpat for now.",
+      "ms": "Buat masa ini VEDA meliputi Kota Bharu, Pasir Mas, Rantau Panjang dan Tumpat."
     }
   },
   "how": {
@@ -54,7 +54,7 @@
           }
         ],
         "ai": [],
-        "queries": 13
+        "queries": 14
       },
       {
         "key": "safety",
@@ -79,6 +79,10 @@
     "total_s": 0.0,
     "fallbacks": []
   },
+  "ai_judgement": null,
+  "trail": null,
+  "explanation_lang": null,
+  "nearest_covered": null,
   "input": {
     "question": "Machang banjir tak?"
   },

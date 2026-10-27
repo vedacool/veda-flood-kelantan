@@ -12,7 +12,7 @@ Live mode, port 8000, HEAD `717d044`; Nightshift's VEDA memory deleted before (0
 | 2 | 18:54:46 | Rantau Panjang | ms | full | NORMAL | 85.1 | 5.8 | 0.0 | 0.0 | 32.0 | 47.2 | nvidia/nemotron-3.5-super-vl-120b-a12b | no | no | 0 | 0 | Critic: critic code + Zetaris only, AI review unavailable; System: explanation dropped, not reviewed by AI | approve: 0 problem(s) | nightshift.chat |
 | 3 | 19:00:25 | not covered (no place recognised) | - | - | - | 0.1 | 0.0 | None | None | None | None | - (no AI call) | no | no | 0 | 0 | - | - | - |
 
-Why the code chose the path: run 1: Sg. Golok di Kg. Jenob (F1) is rising (0.47 m in 1 h, 1.08 m in 3 h) · run 2: Sg. Golok di Kg. Jenob (F1) is rising (0.47 m in 1 h, 1.08 m in 3 h) · run 3: -
+Why the code chose the path: run 1: Sg. Golok di Kg. Jenob (F1) is rising ([rise] in 1 h, [rise] in 3 h) · run 2: Sg. Golok di Kg. Jenob (F1) is rising ([rise] in 1 h, [rise] in 3 h) · run 3: -
 
 ## Totals
 
@@ -47,7 +47,7 @@ Run ids: 20261024-185131-1184, 20261024-185446-7606, 20261024-190025-d2bf.
   at Rantau Panjang was "sedang turun" (falling). The model repeated VEDA's own fact: the card's trend word was
   "turun" because the 1-hour change was -2 cm, while the 3-hour change was +4 cm
   and the answer screen (same two rates, average under 0.5 cm/h) called it steady. Kg. Jenob upstream was rising
-  1.08 m in 3 h. The code checks and the Critic's AI review both passed it, because it matched the card. Fixed in A1.
+  [rise] in 3 h. The code checks and the Critic's AI review both passed it, because it matched the card. Fixed in A1.
 - **Run 2 - the Critic's AI review timed out:** the draft took 32.0 s, then the review was cut at its 45 s cap
   (critique 47.2 s, network timeout). As designed, the unreviewed explanation was dropped and the code-checked card
   went out; both fallbacks are marked in the trace.
@@ -58,4 +58,4 @@ Run ids: 20261024-185131-1184, 20261024-185446-7606, 20261024-190025-d2bf.
 - **After the not-covered answer (run 3)** the background prefetch still ran its Zetaris queries for ~3 s; harmless,
   but unnecessary.
 - **`/admin` was not opened** in this session (no request in `server.log`); `/live` and a run's step-by-step view were.
-- **Rantau Panjang showed NORMAL, confidence high,** while Kg. Jenob rose 1.08 m in 3 h - see Batch A3 (report only).
+- **Rantau Panjang showed NORMAL, confidence high,** while Kg. Jenob rose [rise] in 3 h - see Batch A3 (report only).

@@ -104,3 +104,29 @@ def test_missing_line_is_never_trimmed():
     c["upstream"] = [{"gauge": f"Sg. Contoh {i}", "band": "danger", "rising": True, "arrives_in_h": None}
                      for i in range(6)]
     assert "Missing: no fresh reading from Sg. Contoh di Hulu (F1)" in card.render(c, "en")
+
+
+def test_a_fresh_controlling_reading_found_on_request_is_used(monkeypatch):
+    """Audit 27 Oct A-P2-27: the re-read controlling gauge is fresh -> evidence usable again, old last reading cleared."""
+    stale = {"station": "station:jps:1", "name": "G", "role": "controlling", "level_m": 5.0, "age_minutes": 400,
+             "freshness": "stale", "health": {"ok": True}, "band": "alert"}
+    fresh = {**stale, "age_minutes": 10, "freshness": "fresh"}
+
+    class Builder:
+        def __init__(self, world):
+            pass
+
+        def gauge(self, station, role, why, clock):
+            return dict(fresh)
+
+    class World:
+        store = type("S", (), {"state": {"entities": {}}})()
+
+    monkeypatch.setattr(data_agent, "ContextBuilder", Builder)
+    monkeypatch.setattr(data_agent.trace, "step", lambda *a, **k: None)
+    ev = {"usable": False, "replay": {"scenario": "x"}, "clock": "2024-06-15T10:00:00+08:00",
+          "context": {"gauges": [stale], "sentinels": [], "last_reading": stale}}
+    got = data_agent.answer_request([{"kind": "controlling", "station": "station:jps:1", "gauge": "G",
+                                      "why": "reading too old (400 min)"}], ev, World())
+    assert got["found"] and ev["usable"] is True and "last_reading" not in ev["context"]
+    assert data_agent.main_usable(ev["context"])

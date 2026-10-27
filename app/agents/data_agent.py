@@ -77,9 +77,13 @@ FLOOD_WARNING_TYPES = re.compile(r"RAIN|THUNDERSTORM", re.IGNORECASE)   # sea / 
 KELANTAN_AREA = re.compile(r"Kelantan\s*(\(([^)]*)\))?")
 
 
+FUTURE_TOLERANCE_MIN = 5          # audit 27 Oct A-P3-26: clocks may differ a little; beyond that a time is wrong
+
+
 def freshness(source, age_minutes):
-    """'fresh' | 'aging' | 'stale' | 'unknown' for an age in minutes, using the source's limits."""
-    if age_minutes is None or source not in FRESHNESS:
+    """'fresh' | 'aging' | 'stale' | 'unknown' for an age in minutes, using the source's limits. A reading dated more
+    than FUTURE_TOLERANCE_MIN in the future is 'unknown' - never fresh."""
+    if age_minutes is None or source not in FRESHNESS or age_minutes < -FUTURE_TOLERANCE_MIN:
         return "unknown"
     fresh, aging = FRESHNESS[source]
     return "fresh" if age_minutes <= fresh else "aging" if age_minutes <= aging else "stale"
@@ -777,6 +781,14 @@ def _load_latest_all(world, run_id):
         world.assert_fact(sid, "band", row["band"], confidence=0.9 if health["ok"] else 0.2, source=src)
 
 
+def main_usable(ctx):
+    """The place's controlling gauge has a fresh (or aging), healthy reading - one rule for gather and the Critic's
+    request (audit 27 Oct A-P2-27)."""
+    controlling = next((g for g in ctx.get("gauges", []) if g["role"] == "controlling"), None)
+    return bool(controlling and controlling["level_m"] is not None and controlling["freshness"] in ("fresh", "aging")
+                and (controlling.get("health") or {"ok": True})["ok"])
+
+
 def answer_request(gaps, evidence, world):
     """B-71(b): the Data & Reconciler answers the Critic's request. A stale controlling gauge is only re-read (which
     gauge controls a town is flood logic - never swapped here); a silent upstream gauge may be replaced by the nearest
@@ -830,6 +842,12 @@ def answer_request(gaps, evidence, world):
                           "age_minutes": item["age_minutes"]})
         else:
             missing.append({"gauge": gap["gauge"], "role": "upstream", "why": gap["why"]})
+    if any(f["role"] == "controlling" for f in found):
+        # audit 27 Oct A-P2-27: a fresh controlling reading found on the Critic's request is USED - the evidence is
+        # usable again, and the old "last reading" (context for "Can't confirm") no longer applies
+        evidence["usable"] = main_usable(ctx)
+        if evidence["usable"]:
+            ctx.pop("last_reading", None)
     text = "; ".join([f"found {f['gauge']} ({f['role']}, {f['band']}, {f['age_minutes']} min old) for {f['for']}"
                       for f in found] + [f"nothing fresh for {m['gauge']} ({m['why']})" for m in missing])
     trace.step(AGENT, "data.request", input_summary="; ".join(f"{g['gauge']}: {g['why']}" for g in gaps),
@@ -935,7 +953,12 @@ def gather(plan, world, now=None, pre=None):
         # the hourly-rain query was read in THIS run and the fact belongs to this run's clock; otherwise it is an
         # old picture (an earlier run, scene or time) -> not used, and the answer says rain upstream is not checked.
         age = _age_min((ru.get("provenance") or {}).get("at"), clock)
-        if not pre.get("rain_hours_read", True) or age is None or not 0 <= age <= FRESHNESS["open_meteo"][0]:
+        # audit 27 Oct A-P3-21: and only a fact written by THIS run - when the query worked but wrote no fact for this
+        # place, an earlier run's fact (still young) must not stand in
+        run = trace.current_run()
+        other_run = (ru.get("provenance") or {}).get("run_id") != (run.run_id if run else None)
+        if (not pre.get("rain_hours_read", True) or other_run or age is None
+                or not 0 <= age <= FRESHNESS["open_meteo"][0]):
             ctx["rain_upstream"], ctx["rain_upstream_status"] = None, "not_checked"
             trace.step(AGENT, "data.rain_upstream", output_summary="not checked", status="fallback",
                        source="open_meteo", decision="Hourly rain not read this run (or the fact is from another "
@@ -1018,9 +1041,7 @@ def gather(plan, world, now=None, pre=None):
                    source="openstreetmap", status="success" if osm["status"] == "ok" else "fallback",
                    decision="Possible PPS are not an official list; bridges are facts only, no prediction")
 
-    controlling = next((g for g in ctx.get("gauges", []) if g["role"] == "controlling"), None)
-    usable = bool(controlling and controlling["level_m"] is not None and controlling["freshness"] in ("fresh", "aging")
-                  and (controlling["health"] or {"ok": True})["ok"])
+    usable = main_usable(ctx)
     if not usable:
         notes.append("The controlling gauge has no fresh, healthy reading - current status cannot be confirmed.")
     for key, s in sources.items():

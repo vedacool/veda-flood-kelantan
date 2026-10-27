@@ -70,7 +70,17 @@ def _pushed_files(stdin_text):
 
 
 def _doc_only(files):
-    return bool(files) and all(any(fnmatch.fnmatch(f, pat) for pat in DOC_ONLY) for f in files)
+    # audit 27 Oct A-P3-18: README.md is never "docs only" - tests check its claims (tests/test_metadata.py)
+    return (bool(files) and "README.md" not in files
+            and all(any(fnmatch.fnmatch(f, pat) for pat in DOC_ONLY) for f in files))
+
+
+def _not_checked_out(stdin_text):
+    """Audit 27 Oct A-P3-19: the refs being pushed whose commit is not HEAD - the gate tests the checked-out tree, so
+    `git push origin other-branch` would push code these tests never saw."""
+    head = _git("rev-parse", "HEAD").strip()
+    return [parts[0] for parts in (line.split() for line in stdin_text.splitlines())
+            if len(parts) == 4 and parts[1] != ZERO and parts[1] != head]
 
 
 def _counts(text, pattern):
@@ -84,6 +94,11 @@ def pre_push(stdin_text):
     if files is not None and _doc_only(files):
         print(f"pre-push: docs / media only ({len(files)} file(s)) - no tests needed.")
         return 0
+    other = _not_checked_out(stdin_text)
+    if other:
+        print(f"PUSH BLOCKED: pushing {', '.join(other)}, which is not the checked-out commit - the tests run on the")
+        print("checked-out tree. Check out what you push (git switch <branch>), then push again.")
+        return 1
     dirty = [ln for ln in _git("status", "--porcelain").splitlines()
              if not ln.startswith("??") or ln[3:].startswith(CODE_DIRS)]
     if dirty:

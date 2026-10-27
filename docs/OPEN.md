@@ -14,9 +14,7 @@ IDs are never reused. Severity: P2 = schedule, P3 = polish. Husaini 23 Oct: all 
 | A-P2-1 | P2 | Two processes writing `world.sqlite` at once (API + CLI live) both fail | `app/engines/world_model/store.py:45` | B-65 | after Gate 1 |
 | A-P2-2 | P2 | The whole World Model reloads on every run; facts scan is O(n) (fine today: 0.02 s) | `app/loop.py`, `world.py` | B-65 | after hackathon |
 | A-P2-4 | P2 | No backup of `veda-pg` / `world.sqlite`, no restore drill | `scripts/` | B-65 (software-start item 4) | after hackathon |
-| A-P2-9 | P2 | `load_dotenv` at import in `app/main.py` leaks the developer's `.env` into the test session | `app/main.py:32` | B-65 | after hackathon |
 | A-P3-1 | P3 | Lockfile has no hashes (`--require-hashes`) | `requirements-lock.txt` | B-65 (software-start item 6) | after hackathon |
-| A-P3-4 | P3 | `logs/` and `data/cache/jps/` are never pruned (~3 MB/day) | `logs/` | B-65 | after hackathon |
 
 Closed with a decision: **W-8** - organiser ruling on JPS data (23 Oct, human admin): no disqualification; build accurately - credit does not replace consent, recorded copies only if the terms allow redistribution (they don't), so JPS is fetched live at runtime only; SAMPLE_MODE / demo use synthetic or openly licensed data; all third-party data declared in the README. Done in B-75.
 
@@ -30,21 +28,19 @@ fixes only as Cowork approves):
 
 | ID | Sev | Finding | Where |
 |---|---|---|---|
-| A-P1-14 | P1 | Judge path: private repo links - run `scripts/public_links.py --apply` at freeze (the `cd veda` part fixed in afa87da) | `app/web/judges.html`, `docs/JUDGES.md`, `metadata.json:10` |
-| A-P1-15 | P1 | Form / JUDGES / How-it-works numbers say 41 evals; now 47 (Session B told 26 Oct, 13:05) | `docs/submission.md:8`, `docs/JUDGES.md:16,86`, `app/web/judges.html:244,284` |
-| A-P3-7 | P3 | Wrong-type JSON gives 500 on `/api/v1/ask` (`lang` / `scene` as list or dict); /scenes check fixed in afa87da | `app/api.py:73-75` |
-| A-P3-8 | P3 | Cross-site simple POST starts runs (/run, /api/v1/ask) | `app/main.py:374`, `app/api.py:149` |
 | A-P3-9 | P3 | No Host allow-list (DNS rebinding reaches /admin in live mode) | `app/main.py:439` |
-| A-P3-10 | P3 | /api/docs loads unpinned swagger without SRI | `app/api.py:28-30` |
-| A-P3-13 | P3 | Architecture guards don't scan veda/ | `tests/test_architecture.py:105-115` |
-| A-P3-14 | P3 | SYNTHETIC scene gauges carry kind 'reported' in /scenes/data.json | `app/scenes.py` build() |
 | A-P3-15 | P3 | No full module contract for veda/doctor.py (start-up rule + `veda start` noted in how-it-works) | `docs/how-it-works.md` |
-| A-P3-16 | P3 | Critic edges (>1 step when a fact stands higher; 0.0 diff; skip reason; 'safer level' wording) | `app/agents/critic.py:172,265-267,351-359` |
-| A-P3-18 | P3 | README-only push skips tests that assert the README | `scripts/precommit.py:46` |
-| A-P3-19 | P3 | Pre-push tests the working tree, not the pushed ref | `scripts/precommit.py:93` |
-| A-P3-20 | P3 | UX polish left: no H1 on the answer / waiting screens; dark-mode `#q` placeholder 3.5:1; placeholder cut at 375 px (html lang on /sources fixed) | `app/web/index.html` |
-| A-P3-21 | P3 | rain_upstream fact < 6 h reused when the query returns no rows for the place | `app/agents/data_agent.py:928-938` |
 | A-P3-22 | P3 | Cowork's P3 list (26 Oct full audit; `lang=constructor` fixed in afa87da) | `docs/audit/2026-10-26-full-audit.md` (P3) |
+
+Fixed and deleted here 27 Oct (Husaini's list + Batch 1 + Batch 2; commits 6dd406b..b6f1461): A-P1-17, A-P1-18, A-P2-9, -25, -26, -27, A-P3-4, -7, -8, -10, -13, -16, -18 to -21, -23 to -29, -32, -33; A-P1-14 (links switched, 3d21a1b) and A-P1-15 (numbers agree, Cowork 27 Oct) resolved. Not tonight (Husaini): A-P3-1, A-P3-9, A-P3-36, A-P2-1, A-P2-2, A-P2-4.
+Session B, 27 Oct (commits 0eb0a81..2ebe8a1): fixed and deleted A-P2-28, A-P3-14, A-P3-30, A-P3-34, A-P3-35; A-P3-36 resolved - the public repo's history has the tailnet name 0 times (files and commit messages; checked 27 Oct on a mirror of vedacool/veda-flood-kelantan); `a609c55` is only in the private repo, which stays private.
+
+## Open audit findings (Cowork full audit 2026-10-27 at `782f449`, `docs/audit/2026-10-27-full-audit.md`)
+No P0. Tonight (Husaini): A-P1-17, A-P1-18, A-P2-25, A-P2-26, A-P3-23, -24, -25, -27, -35; everything else after the hackathon.
+
+| ID | Sev | Finding | Where |
+|---|---|---|---|
+| A-P3-31 | P3 | Rate-limit key = last X-Forwarded-For: confirm Funnel appends the visitor's real address - the check is DEPLOY_DEMO step 6.3 (ba0831f); closed at deploy time on the Wyse, phone on mobile data (Cowork 27 Oct) | `demo/nginx.conf:24-27` |
 
 ## Waiting on Husaini
 | ID | Item | Raised | Recommendation | Backlog |

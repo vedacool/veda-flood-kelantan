@@ -9,7 +9,11 @@ addresses and phone / IC-like digit runs replaced by "[removed]"; the time is ke
 optional and quoted only if its box is ticked (unticked by default). Answers append as JSON lines to FEEDBACK_FILE.
 
 Abuse: control characters are dropped, one answer is at most MAX_RECORD bytes, a form sent from another website is
-refused, and the CSV export defuses cells a spreadsheet would run as a formula.
+refused, and the CSV export defuses cells a spreadsheet would run as a formula. One visitor can send at most
+VISITOR_MAX answers in a rolling VISITOR_WINDOW (audit A-P3-30, so one visitor cannot fill the box for everyone): the
+proxy passes its rate-limit key in the X-Veda-Visitor header; it is hashed at once with a random salt that lives in
+memory only and is replaced every VISITOR_WINDOW, and only the hash and the answer times are kept, in memory - never
+the address, never on disk.
 
 Frame (B-96): the page wears VEDA's shared top bar, demo strip and footer - app/frame.py, the same file the app uses
 (standard library only; the image copies it with app/config.py, see Dockerfile). /frame.css and /frame.js come from
@@ -17,13 +21,17 @@ VEDA through the proxy.
 """
 import argparse
 import csv
+import hashlib
+import hmac
 import html
 import io
 import json
 import os
 import re
+import secrets
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,7 +56,12 @@ AGES = ("under 30", "30-49", "50-64", "65+")
 FIELDS = ("time", "lang", "place", "place_other", "would_do", "confusing", "share", "share_why", "ease",
           "should_add", "age", "first_name", "quote_ok")
 TEXTS = ("would_do", "confusing", "share_why", "should_add")
+VISITOR_HEADER = "X-Veda-Visitor"       # set by the proxy only (demo/nginx.conf, location /feedback)
+VISITOR_MAX = 10                        # answers per visitor ...
+VISITOR_WINDOW = 24 * 3600              # ... in a rolling 24 h; the salt is replaced as often, so no hash outlives it
 _lock = threading.Lock()
+_salt = {"key": secrets.token_bytes(32), "born": time.monotonic()}
+_seen = {}                              # visitor hash -> times of their answers (memory only)
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 PHONE = re.compile(r"\+?\d[\d\s-]{5,}\d")          # 7+ digits with spaces / dashes: phone, IC
@@ -66,7 +79,9 @@ T = {
            "q8": "First name (optional)", "quote": "OK to quote my first name and answer in VEDA's presentation",
            "send": "Send", "thanks": "Thank you!",
            "thanks_body": "Your answer is saved. It helps us make VEDA clearer for families in Kelantan.",
-           "empty": "Please answer at least one question.", "full": "Sorry, the feedback box is full.",
+           "empty": "Please answer at least one question.",
+           "full": "Sorry, the feedback box is full for now, so this answer was not saved. Please try again later.",
+           "limit": "Thank you - you have already sent several answers today. Please send more tomorrow.",
            "too_long": "That was too long - please shorten it.",
            "cross_site": "Please send this form from VEDA's own feedback page.",
            "privacy": "We store only your answers and the time (to the minute) - no IP address, phone or email."},
@@ -82,7 +97,9 @@ T = {
            "send": "Hantar", "thanks": "Terima kasih!",
            "thanks_body": "Jawapan anda telah disimpan. Ia membantu kami menjadikan VEDA lebih jelas untuk keluarga "
            "di Kelantan.", "empty": "Sila jawab sekurang-kurangnya satu soalan.",
-           "full": "Maaf, peti maklum balas sudah penuh.", "too_long": "Terlalu panjang - sila pendekkan.",
+           "full": "Maaf, peti maklum balas penuh buat masa ini, jadi jawapan ini tidak disimpan. Sila cuba lagi nanti.",
+           "limit": "Terima kasih - anda sudah menghantar beberapa jawapan hari ini. Sila hantar lagi esok.",
+           "too_long": "Terlalu panjang - sila pendekkan.",
            "cross_site": "Sila hantar borang ini dari halaman maklum balas VEDA sendiri.",
            "privacy": "Kami simpan jawapan anda dan masa (hingga minit) sahaja - tiada alamat IP, telefon atau e-mel."},
 }
@@ -213,6 +230,26 @@ def safe_cell(v):
     return "'" + v if isinstance(v, str) and v.startswith(FORMULA) else v
 
 
+def over_cap(visitor, now=None):
+    """True when this visitor already sent VISITOR_MAX answers in the last VISITOR_WINDOW; else counts this one.
+    `visitor` (the proxy's key) is hashed at once and dropped; no key (a direct request, not through the proxy) is
+    not capped. Every VISITOR_WINDOW the salt is replaced and every count forgotten."""
+    if not visitor:
+        return False
+    now = time.monotonic() if now is None else now
+    with _lock:
+        if now - _salt["born"] >= VISITOR_WINDOW:
+            _salt.update(key=secrets.token_bytes(32), born=now)
+            _seen.clear()
+        key = hmac.new(_salt["key"], visitor.encode("utf-8", "replace"), hashlib.sha256).hexdigest()[:16]
+        times = [t for t in _seen.get(key, ()) if now - t < VISITOR_WINDOW]
+        if len(times) >= VISITOR_MAX:
+            _seen[key] = times
+            return True
+        _seen[key] = times + [now]
+        return False
+
+
 def append(rec, path=None):
     path = path or FILE
     with _lock:
@@ -281,7 +318,10 @@ class Handler(BaseHTTPRequestHandler):
         form = parse_qs(self.rfile.read(size).decode("utf-8", "replace"), keep_blank_values=True)
         lang = (form.get("lang") or [lang])[0] if (form.get("lang") or [""])[0] in T else lang
         try:
-            append(record(form))
+            rec = record(form)                         # a form with no answer is refused before it counts
+            if over_cap(self.headers.get(VISITOR_HEADER)):
+                return self._send(429, form_page(lang, T[lang]["limit"]))
+            append(rec)
         except ValueError as e:
             key = str(e) if str(e) in T[lang] else "empty"
             return self._send(400 if key != "full" else 503, form_page(lang, T[lang][key]))

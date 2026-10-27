@@ -78,7 +78,7 @@ Six ready-made inputs are in `input_examples/`, with VEDA's real answers and tra
   upstream reading and asks the Data agent for another gauge. JPS readings in them are redacted.
 - **The live log** (`/live`) and **How VEDA worked this out**, above: the run you just made, step by step.
 - **Its trace file:** every agent step, Zetaris query and model call is one JSON line in `logs/trace-<run_id>.jsonl`.
-- **Recorded live runs with Nemotron:** `data/sample/live_traces/` - 18 real live runs from 23 Oct 2026 with the AI
+- **Recorded live runs with Nemotron:** `data/sample/live_traces/` - 19 real live runs from 23-24 Oct 2026 with the AI
   explanation, the Critic's AI review, the model that actually answered and the Nightshift receipt (JPS readings
   redacted). Replay one at 4× in the live log: [127.0.0.1:8000/live](http://127.0.0.1:8000/live) → *Replay a recorded
   run…* → pick one → **4×**.

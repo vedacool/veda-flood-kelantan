@@ -316,9 +316,10 @@ def forecast(plan, evidence, world=None, now=None):
            "rules": RULES, "not_checked": NOT_CHECKED}
     if not evidence.get("usable") or main is None or not any(main["thresholds"].get(k) for k in
                                                              ("alert_m", "warning_m", "danger_m")):
-        why = ("no controlling gauge for this place" if main is None else
-               "the controlling gauge has no thresholds" if evidence.get("usable") else
-               "the controlling gauge has no fresh, healthy reading")
+        code = "no_gauge" if main is None else "no_thresholds" if evidence.get("usable") else "no_reading"
+        why = {"no_gauge": "no controlling gauge for this place",
+               "no_thresholds": "the controlling gauge has no thresholds",
+               "no_reading": "the controlling gauge has no fresh, healthy reading"}[code]
         triggers = [{"level": "INSUFFICIENT_DATA", "rule": "fail-safe", "reason": why}]
         verdict = "INSUFFICIENT_DATA"
         # Cowork 24 Oct (tentative, L11): no river reading + an official Buruk / Bahaya rain warning for the district
@@ -342,7 +343,7 @@ def forecast(plan, evidence, world=None, now=None):
                 triggers.insert(0, {"level": verdict, "rule": "ai-judgement", "reason": ai["reason"],
                                     "texts": ai.get("texts")})
         out.update({"verdict": verdict, "level_name": None,     # no band from an unusable reading
-                    "triggers": triggers, "no_river": why,
+                    "triggers": triggers, "no_river": why, "no_river_code": code,   # audit 27 Oct A-P3-27
                     "confidence": {"score": 0.1, "label": "low", "reasons": [why]}, "controlling": [], "upstream": [],
                     "rain": None, "history": [], "bigger_than_2014": None,
                     # B-88: the rain picture is still shown on the card as context - never a trigger here

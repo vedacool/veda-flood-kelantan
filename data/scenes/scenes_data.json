@@ -295,7 +295,7 @@
      "change_3h_m": 0.0,
      "fresh": true,
      "tide": true,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a909da87d93d45d7"
     },
     {
@@ -315,7 +315,7 @@
      "change_3h_m": 0.0,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a909da87d93d45d7"
     },
     {
@@ -335,7 +335,7 @@
      "change_3h_m": -0.04,
      "fresh": true,
      "tide": true,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a909da87d93d45d7"
     }
    ],
@@ -386,7 +386,7 @@
      "change_3h_m": 0.27,
      "fresh": true,
      "tide": true,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a69bc530e32c0f96"
     },
     {
@@ -406,7 +406,7 @@
      "change_3h_m": 0.47,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a69bc530e32c0f96"
     },
     {
@@ -426,7 +426,7 @@
      "change_3h_m": 0.44,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a69bc530e32c0f96"
     },
     {
@@ -446,7 +446,7 @@
      "change_3h_m": 0.74,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "a69bc530e32c0f96"
     }
    ],
@@ -527,7 +527,7 @@
      "change_3h_m": 0.01,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "843514228b56318c"
     },
     {
@@ -547,7 +547,7 @@
      "change_3h_m": null,
      "fresh": false,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "843514228b56318c"
     },
     {
@@ -567,7 +567,7 @@
      "change_3h_m": 0.01,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "843514228b56318c"
     },
     {
@@ -587,7 +587,7 @@
      "change_3h_m": null,
      "fresh": false,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "843514228b56318c"
     }
    ],
@@ -670,7 +670,7 @@
      "change_3h_m": 0.08,
      "fresh": true,
      "tide": true,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "cd5e85b3d4b93aac"
     },
     {
@@ -690,7 +690,7 @@
      "change_3h_m": 0.02,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "cd5e85b3d4b93aac"
     },
     {
@@ -710,7 +710,7 @@
      "change_3h_m": -0.02,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "cd5e85b3d4b93aac"
     },
     {
@@ -730,7 +730,7 @@
      "change_3h_m": 0.01,
      "fresh": true,
      "tide": false,
-     "kind": "reported",
+     "kind": "synthetic",
      "query_hash": "cd5e85b3d4b93aac"
     }
    ],

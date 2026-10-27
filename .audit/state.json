@@ -1,9 +1,9 @@
 {
-  "lastAuditCommit": "83aa552",
-  "lastFullAuditCommit": "83aa552",
-  "lastAuditDate": "2026-10-26",
+  "lastAuditCommit": "782f449",
+  "lastFullAuditCommit": "782f449",
+  "lastAuditDate": "2026-10-27",
   "report": "docs/audit/2026-10-26-audit.md",
-  "note": "Incremental 0f12eaa..83aa552 (26 Oct, five read-only reviewers + main-session verify). No P0; 1 P1 (A-P1-11 AI raise dropped in the no-river branch); 9 P2; 15 P3. The 4 P1s of 24 Oct fixed.",
+  "note": "Cowork full audit 27 Oct at 782f449: no P0, 2 P1 (A-P1-17 emergency view/API, A-P1-18 B-75 values in docs/scripts), 4 P2, 14 P3.",
   "verifiedGood": {
     "secrets-in-history": "44f33b0",
     "app/ingest/jps.py:parse": "4d4e31d",
@@ -36,7 +36,10 @@
     "installers:env-never-overwritten+127.0.0.1": "83aa552",
     "critic:judge-never-lowers+never-changes-cant-confirm": "83aa552",
     "scenes:not-hard-coded": "83aa552",
-    "secrets-in-diff": "83aa552"
+    "secrets-in-diff": "83aa552",
+    "axe-core:0-violations-375+1440": "782f449",
+    "demo:strace-no-egress": "782f449",
+    "secrets:history-304-commits": "782f449"
   },
   "fixesApplied": {
     "date": "2026-10-23",
@@ -53,10 +56,10 @@
     "wontFix": []
   },
   "lastFindingIds": {
-    "P1": 16,
-    "P2": 24,
-    "P3": 22
+    "P1": 18,
+    "P2": 28,
+    "P3": 36
   },
-  "lastFullAuditDate": "2026-10-26",
-  "fullReport": "docs/audit/2026-10-26-full-audit.md (Cowork)"
+  "lastFullAuditDate": "2026-10-27",
+  "fullReport": "docs/audit/2026-10-27-full-audit.md (Cowork)"
 }

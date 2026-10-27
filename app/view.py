@@ -324,7 +324,7 @@ def _line(card, forecast, lang):
         return SET_BY[by][lang].format(level=MET_LEVEL_WORD[_met_level(forecast) or "waspada"][lang])
     if by != "river":
         return SET_BY[by][lang]
-    comp, th = card.get("comparison") or {}, card.get("thresholds") or {}
+    comp = card.get("comparison") or {}
     if comp.get("danger") is not None and comp["danger"] >= 0:
         key = "danger"
     elif comp.get("alert") is not None and comp["alert"] >= 0 and comp.get("danger") is not None:
@@ -968,6 +968,15 @@ def answer_view(result):
                                else V2["no_level"][lang])
     view["action"] = _both(lambda lang: action_lines(verdict, card.get("place"), lang))
     view["steps"] = _both(lambda lang: steps(verdict, lang))
+    if card.get("emergency"):
+        # audit 27 Oct A-P1-17: a trapped / stranded person gets the ACT advice on the screen and in the API too, with
+        # the card's "safety first" label (the plain-text card already does); the verdict and the river post still
+        # show what the data says - under NORMAL, the card's note says local flooding can still trap you
+        view["action"] = _both(lambda lang: [card_mod.T["stranded"][lang] + "."]
+                               + action_lines("ACT", card.get("place"), lang)
+                               + ([card_mod.T["stranded_normal"][lang] + "."] if verdict == "NORMAL" else []))
+        view["steps"] = _both(lambda lang: steps("ACT", lang))
+        view["note"] = None                          # never "Nothing to do now" next to the stranded advice
     view["official_link"] = JPS_URL if verdict == "INSUFFICIENT_DATA" else None
     view["river"] = _both(lambda lang: river_post(card, forecast, evidence, lang)) if _level_bar(card, evidence) else None
     view["flow"] = _both(lambda lang: flow(card, forecast, lang)) if flow(card, forecast, "en") else None
@@ -991,8 +1000,8 @@ JUDGE = {  # Part 7: the Details row "Rules said / Nemotron said / Final" on eve
     "agreed": {"en": "Nemotron agreed with the rules.", "ms": "Nemotron bersetuju dengan peraturan."},
     "raised": {"en": "Nemotron raised the level; VEDA checked the facts it cited.",
                "ms": "Nemotron menaikkan tahap; VEDA menyemak fakta yang dirujuknya."},
-    "lower": {"en": "Nemotron judged lower; VEDA keeps the safer level.",
-              "ms": "Nemotron menilai lebih rendah; VEDA kekalkan tahap yang lebih selamat."},
+    "lower": {"en": "Nemotron judged lower; VEDA keeps the more cautious (higher) level.",
+              "ms": "Nemotron menilai lebih rendah; VEDA kekalkan tahap yang lebih berhati-hati (lebih tinggi)."},
     "ignored": {"en": "Nemotron's level was not used (it did not pass VEDA's checks).",
                 "ms": "Tahap Nemotron tidak digunakan (tidak lulus semakan VEDA)."},
 }
@@ -1012,8 +1021,8 @@ SIGNS = {
     "met": {"en": "MetMalaysia warning: {level} rain.", "ms": "Amaran MetMalaysia: hujan {level}."},
     "serious": {"en": "Treat this as serious until you can confirm with JPS or the authorities.",
                 "ms": "Anggap ini serius sehingga anda dapat sahkan dengan JPS atau pihak berkuasa."},
-    "footer": {"en": "Signs from: {sources}. River level not available.",
-               "ms": "Tanda daripada: {sources}. Paras sungai tidak tersedia."},
+    "footer": {"en": "Signs from: {sources}. No recent river level.",
+               "ms": "Tanda daripada: {sources}. Tiada paras sungai terkini."},
     "source": {"last": {"en": "the last JPS reading", "ms": "bacaan JPS terakhir"},
                "rain": {"en": "Open-Meteo rain", "ms": "hujan Open-Meteo"},
                "up": {"en": "JPS upstream posts", "ms": "tiang paras hulu JPS"},
@@ -1031,7 +1040,7 @@ BAND_WORD = {"below_normal": {"en": "Normal", "ms": "Normal"}, "normal": {"en": 
 MET_WORD = {"waspada": {"en": "alert", "ms": "Waspada"}, "buruk": {"en": "severe", "ms": "Buruk"},
             "bahaya": {"en": "danger", "ms": "Bahaya"}}
 NBSP = " "                     # B-105: a number never wraps away from its unit
-STALE_REASON = "no fresh, healthy reading"          # forecast_agent's reason when the town's own reading is too old
+STALE_CODE = "no_reading"          # forecast_agent's no_river_code when the town's own reading is too old / unusable
 
 
 def _short_age(minutes, lang):
@@ -1053,8 +1062,8 @@ def warning_signs(card, forecast, evidence):
     when b, c or e is present, or the last known level is Alert or above."""
     from app.agents import forecast_agent
     fc, ev = forecast or {}, evidence or {}
-    if card.get("verdict") != "INSUFFICIENT_DATA" or STALE_REASON not in (fc.get("no_river") or ""):
-        return None
+    if card.get("verdict") != "INSUFFICIENT_DATA" or fc.get("no_river_code") != STALE_CODE:
+        return None                      # audit 27 Oct A-P3-27: the Forecast agent's reason code, not its words
     ctx = ev.get("context") or {}
     signs = {}                                                       # kind -> {lang: line}
     last = ctx.get("last_reading")
@@ -1067,8 +1076,9 @@ def warning_signs(card, forecast, evidence):
     ru = fc.get("rain_upstream") or {}
     # audit 26 Oct (P1-2 / A-P2-10): only rain that FELL inside the window the sentence names - never forecast rain
     # (local.heavy) or rain older than 24 h (heavy_fallen also counts the 72 h total)
-    here = ((ru.get("local") or {}).get("past_12h_mm") or 0) >= HEAVY_HERE_MM
-    fallen = [u for u in ru.get("upstream") or [] if (u.get("past_24h_mm") or 0) >= UPSTREAM_24H_MM]
+    raw = lambda d, k: d.get(k + "_raw", d.get(k + "_mm")) or 0                       # noqa: E731 - the rule's own sum
+    here = raw(ru.get("local") or {}, "past_12h") >= HEAVY_HERE_MM
+    fallen = [u for u in ru.get("upstream") or [] if raw(u, "past_24h") >= UPSTREAM_24H_MM]
     if here or fallen:
         where = "both" if here and fallen else "here" if here else "upstream"
         hours = 12 if where == "here" else 24

@@ -9,8 +9,9 @@ spec.loader.exec_module(pc)
 
 
 def test_only_docs_and_media_skip_the_gate():
-    assert pc._doc_only({"README.md", "docs/EVIDENCE.md", "docs/media/v2/b96/home-375-en.png", "x/clip.mp4"})
-    assert not pc._doc_only({"README.md", "app/web/live.html"})
+    assert pc._doc_only({"docs/EVIDENCE.md", "docs/media/v2/b96/home-375-en.png", "x/clip.mp4"})
+    assert not pc._doc_only({"docs/EVIDENCE.md", "app/web/live.html"})
+    assert not pc._doc_only({"README.md"}) and not pc._doc_only({"README.md", "docs/x.md"})   # A-P3-18: tests read it
     assert not pc._doc_only({"tests/test_card.py"}) and not pc._doc_only(set())
 
 
@@ -27,8 +28,19 @@ def test_a_dirty_tree_blocks_the_push(monkeypatch, capsys):
     monkeypatch.setattr(pc, "_git", lambda *a: " M app/main.py\n" if a[0] == "status" else "")
     assert pc.pre_push("") == 1 and "PUSH BLOCKED" in capsys.readouterr().out
     monkeypatch.setattr(pc, "_git", lambda *a: "?? docs/notes.md\n" if a[0] == "status" else "")
-    monkeypatch.setattr(pc, "_pushed_files", lambda _: {"README.md"})
+    monkeypatch.setattr(pc, "_pushed_files", lambda _: {"docs/notes.md"})
     assert pc.pre_push("") == 0                                   # docs-only push: skipped before the tree check
+
+
+def test_pushing_a_commit_that_is_not_checked_out_is_blocked(monkeypatch, capsys):
+    """Audit 27 Oct A-P3-19: the tests run on the checked-out tree, so only HEAD may be pushed."""
+    head, other = "a" * 40, "c" * 40
+    monkeypatch.setattr(pc, "_pushed_files", lambda _: {"app/main.py"})
+    monkeypatch.setattr(pc, "_git", lambda *a: head + "\n" if a[0] == "rev-parse" else "")
+    line = "refs/heads/feature " + other + " refs/heads/feature " + "b" * 40 + "\n"
+    assert pc.pre_push(line) == 1 and "not the checked-out commit" in capsys.readouterr().out
+    assert pc._not_checked_out("refs/heads/main " + head + " refs/heads/main " + "b" * 40 + "\n") == []
+    assert pc._not_checked_out("refs/heads/x " + "0" * 40 + " refs/heads/x " + "b" * 40 + "\n") == []   # a delete
 
 
 def test_a_rename_of_code_into_a_doc_name_runs_the_gate(tmp_path):

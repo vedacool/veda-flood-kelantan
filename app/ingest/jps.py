@@ -9,6 +9,7 @@ Agents never call this; they read the stored rows through Zetaris (veda_pg.river
 """
 import argparse
 import math
+import os
 import re
 import sys
 import time
@@ -133,6 +134,63 @@ def parse(html):
 parse.rejected = 0
 
 
+class JpsTooSoon(Exception):
+    """JPS was already called less than 15 minutes ago (a failed attempt counts too) - not called again."""
+
+
+def attempt_stamp():
+    """The file whose time is VEDA's last live JPS attempt, failed or not (audit 27 Oct A-P3-32)."""
+    return CACHE_DIR / "last-attempt.txt"
+
+
+def last_attempt_age():
+    """Seconds since the last live JPS attempt, or None (never, or a stamp dated in the future)."""
+    stamp = attempt_stamp()
+    if not stamp.exists():
+        return None
+    age = _now() - stamp.stat().st_mtime
+    return age if age >= 0 else None
+
+
+def take_lock():
+    """An OS lock on data/cache/jps/collector.lock for the --loop collector - one collector at a time; the OS lets go
+    when the process ends, crash included (audit 27 Oct A-P3-32). Returns the open file (keep it), or None if held."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    f = open(CACHE_DIR / "collector.lock", "a+")
+    try:
+        f.seek(0)
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+KEEP_DAYS = 14          # audit 27 Oct A-P3-4: run traces and saved JPS pages older than this are deleted
+
+
+def prune_old_files(days=KEEP_DAYS):
+    """Delete logs/trace-*.jsonl and data/cache/jps/kel-*.html older than `days` (the collector does this once a cycle
+    on the live machine; ~3 MB/day otherwise grows for ever). Stamps, locks and other logs are kept. -> count deleted."""
+    cutoff, gone = _now() - days * 86400, 0
+    for folder, pattern in ((trace.ROOT / "logs", "trace-*.jsonl"), (CACHE_DIR, "kel-*.html")):
+        if not folder.exists():
+            continue
+        for f in folder.glob(pattern):
+            try:
+                if f.stat().st_mtime < cutoff:
+                    f.unlink()
+                    gone += 1
+            except OSError:
+                pass
+    return gone
+
+
 def newest_snapshot():
     """Most recent cached snapshot path, or None."""
     files = sorted(CACHE_DIR.glob("kel-*.html"), key=lambda p: p.stat().st_mtime) if CACHE_DIR.exists() else []
@@ -160,6 +218,13 @@ def fetch():
             trace.step(AGENT, "jps.fetch", output_summary=f"reused {recent.name} ({int(age // 60)} min old)",
                        source="jps-cache", decision="Last fetch < 15 min ago - not calling JPS again")
             return recent.read_text(encoding="utf-8"), "jps-cache", recent
+    since = last_attempt_age()
+    if since is not None and since < MIN_INTERVAL_S:         # audit 27 Oct A-P3-32: a FAILED attempt counts too
+        trace.step(AGENT, "jps.fetch", output_summary=f"last attempt {int(since // 60)} min ago - JPS not called",
+                   status="fallback", source="jps-cache", decision="15-minute rule: at most one JPS call per 15 minutes")
+        raise JpsTooSoon(f"JPS was tried {int(since // 60)} min ago - at most once per 15 minutes")
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    attempt_stamp().write_text(time.strftime("%Y-%m-%d %H:%M:%S"), encoding="utf-8")   # every attempt, before it
     t0 = time.perf_counter()
     try:
         html, status, size = _download()
@@ -250,7 +315,13 @@ def main(argv=None):
     ap.add_argument("--from-file", help="ingest a saved JPS snapshot instead of fetching")
     ap.add_argument("--loop", action="store_true", help="repeat every 15 minutes until Ctrl+C")
     args = ap.parse_args(argv)
+    lock = take_lock() if args.loop else None
+    if args.loop and lock is None:
+        print("Another JPS collector is already running (data/cache/jps/collector.lock) - not starting a second one.")
+        return 3
     while True:
+        if args.loop:
+            prune_old_files()
         trace.start_run("JPS collect" + (f" from {Path(args.from_file).name}" if args.from_file else ""))
         try:
             summary = ingest(args.from_file)

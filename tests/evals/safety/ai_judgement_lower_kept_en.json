@@ -19,7 +19,7 @@
       "The river is above its Alert level, so keep watching official updates."
     ],
     "must_trace": [
-      "AI judged lower; VEDA keeps the safer level"
+      "AI judged lower; VEDA keeps the more cautious (higher) level"
     ]
   },
   "replay": "synthetic_rising",

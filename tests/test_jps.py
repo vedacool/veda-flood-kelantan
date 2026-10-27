@@ -225,3 +225,66 @@ def test_ingest_snapshot_idempotent_and_readable_via_zetaris(tmp_path):
         trace.end_run()
     assert again["new_levels"] == 0 and again["stations"] == 36
     assert ["5320038_DKKI0003", "Sg. Galas di Dabong (F1)", 29.57, 38.0] in r.rows
+
+
+def test_a_failed_attempt_counts_for_the_15_minute_rule(tmp_path, monkeypatch):
+    """Audit 27 Oct A-P3-32: the stamp is written before every live attempt; a second call within 15 min (e.g. a manual
+    run while --loop runs, after a failed cycle) never reaches JPS."""
+    monkeypatch.setattr(jps, "CACHE_DIR", tmp_path)
+    calls = []
+
+    def failing_get(*a, **k):
+        calls.append(1)
+        raise jps.requests.ConnectionError("down")
+    monkeypatch.setattr(jps.requests, "get", failing_get)
+    trace.start_run("t", log_dir=tmp_path / "logs", quiet=True)
+    try:
+        with pytest.raises(jps.requests.ConnectionError):
+            jps.fetch()
+        assert jps.attempt_stamp().exists() and calls == [1]            # stamped although it failed
+        with pytest.raises(jps.JpsTooSoon):
+            jps.fetch()
+        assert calls == [1]                                            # not called again inside 15 minutes
+        monkeypatch.setattr(jps, "_now", lambda: time.time() + 16 * 60)
+        with pytest.raises(jps.requests.ConnectionError):
+            jps.fetch()
+        assert calls == [1, 1]                                         # 16 minutes later: one more try
+    finally:
+        trace.end_run()
+
+
+def test_only_one_collector_holds_the_lock(tmp_path, monkeypatch):
+    monkeypatch.setattr(jps, "CACHE_DIR", tmp_path)
+    first = jps.take_lock()
+    try:
+        assert first is not None and jps.take_lock() is None
+    finally:
+        first.close()
+    again = jps.take_lock()                                            # released when the holder closes / ends
+    assert again is not None
+    again.close()
+
+
+def test_real_jps_pages_never_go_into_an_image():
+    ignore = (jps.trace.ROOT / ".dockerignore").read_text(encoding="utf-8").split()
+    assert "data/cache/" in ignore and "data/snapshots/" in ignore
+
+
+def test_old_traces_and_pages_are_pruned_after_14_days(tmp_path, monkeypatch):
+    """Audit 27 Oct A-P3-4: the collector deletes run traces and saved JPS pages older than 14 days, nothing else."""
+    import os
+    logs, cache = tmp_path / "logs", tmp_path / "cache"
+    logs.mkdir()
+    cache.mkdir()
+    monkeypatch.setattr(jps.trace, "ROOT", tmp_path)
+    monkeypatch.setattr(jps, "CACHE_DIR", cache)
+    old = time.time() - 15 * 86400
+    files = {logs / "trace-old.jsonl": True, logs / "trace-new.jsonl": False, logs / "server-8000.log": False,
+             cache / "kel-20261001-000000.html": True, cache / "kel-20261026-000000.html": False,
+             cache / "last-attempt.txt": False, cache / "collector.lock": False}
+    for f, is_old in files.items():
+        f.write_text("x", encoding="utf-8")
+        if is_old or f.name in ("server-8000.log", "last-attempt.txt", "collector.lock"):
+            os.utime(f, (old, old))                          # old, but not a trace / page: kept
+    assert jps.prune_old_files() == 2
+    assert {f.name for f, is_old in files.items() if f.exists()} == {f.name for f, is_old in files.items() if not is_old}

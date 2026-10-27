@@ -48,6 +48,10 @@
                   border-radius: 12px; background: var(--card); color: var(--fg); }
   label { display: block; font-weight: 700; margin: 18px 0 6px; }
   .ask { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  /* audit 27 Oct A-P3-20: the example question is readable - muted text colour (>= 4.5:1 in both themes), and on a
+     phone the Ask button goes under the field so the field is full width */
+  #q::placeholder { color: var(--muted); opacity: 1; }
+  @media (max-width: 440px) { .ask { grid-template-columns: 1fr; } }
   .note { color: var(--muted); margin: 8px 0 0; }
   .sos { margin-top: 22px; background: var(--danger); color: #fff; border-color: var(--danger); font-weight: 800; width: 100%;
          min-height: 56px; }
@@ -377,7 +381,7 @@
 
 <!-- 2. Waiting -->
 <section id="s-wait" hidden>
-  <p class="place" id="w-place"></p>
+  <h1 class="place" id="w-place"></h1>
   <div class="wait-side"><!-- desktop: right column (progress + tip); phone: first, as before -->
   <p class="status" id="w-status" role="status" aria-live="polite"></p>
   <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="w-bar-box"><div id="w-bar"></div></div>
@@ -398,7 +402,7 @@
 <section id="s-answer" hidden>
   <p id="a-label" class="moment-line" hidden><span id="a-label-text"></span><span class="nowrap"><span id="a-change-dot"
      aria-hidden="true" hidden> · </span><button type="button" class="linkish" id="a-change" data-t="change" hidden></button></span></p>
-  <p class="place" id="a-place"></p>
+  <h1 class="place" id="a-place"></h1>
   <!-- v2 (Cowork blueprint 24 Oct): level word + "Level n of 4" + ONE action line; never colour alone -->
   <div class="verdict" id="a-badge" role="group"></div>
   <p class="oneline sub" id="a-line"></p>
@@ -725,6 +729,7 @@ function applyLang() {
   if (result) renderAnswer();
   if (!$("s-share").hidden) renderShare();
   if (!$("s-how").hidden) renderHow();
+  if (result && !$("s-answer").hidden) announce();        // audit 27 Oct A-P2-25: the screen reader hears it in BM too
 }
 
 function setLang(l) { lang = l; store.set("veda.lang", l); stopSpeaking(); applyLang();
@@ -1235,7 +1240,8 @@ $("sh-copy").addEventListener("click", async () => {
 // start: language from the saved choice, else the browser (ms -> BM); URL ?lang= / ?replay=&at= for demos
 const params = new URLSearchParams(location.search);
 lang = params.get("lang") || store.get("veda.lang") || ((navigator.language || "").toLowerCase().startsWith("ms") ? "ms" : "en");
-if (!UI[lang]) lang = "en";
+if (lang === "bm") lang = "ms";
+if (!Object.hasOwn(UI, lang)) lang = "en";              // audit 27 Oct A-P3-23: "?lang=constructor" is no language
 if (store.get("veda.big") === "1") document.documentElement.classList.add("big");
 applyLang();
 // ?replay=&at= is applied at once - not after /health, which can take seconds live (24 Oct: a tap before it answered

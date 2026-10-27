@@ -63,7 +63,7 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
          values in the B-02 commit are reported again - measured in the dry run).
       4. Before publishing: CI green on the new repo; history search **0 unexplained**; the clean-clone test
          (fresh clone, empty `.env`, Zetaris and Nightshift stopped, SAMPLE_MODE); gitleaks over the full history.
-      5. Create the new public repo (suggested name: **`vedacool/veda-kelantan`**), push, check CI, then record it in
+      5. Create the new public repo (**`vedacool/veda-flood-kelantan`**, published 26 Oct 2026), push, check CI, then record it in
          `docs/DECISIONS.md` and update links. **Link sweep (only after the public repo exists)**, in the public repo's
          working clone: `python scripts/public_links.py` (dry run: lists every CHANGE and every KEEP), check it, then
          `python scripts/public_links.py --apply`, `pytest -q`, commit (`docs: B-77 links point to the public repo`),
@@ -93,8 +93,8 @@ values. The trace logger masks secret values, Bearer / Basic auth and phone / IC
       1. `python public_clean.py` then `python history_probe3.py work\veda-public` (must print 0 unexplained) and
          `gitleaks\gitleaks.exe detect --source work\veda-public --log-opts="--all" --redact`;
       2. in `work\veda-public`: `pytest -q` and `python scripts/run_evals.py` with an empty `.env`;
-      3. `gh repo create vedacool/veda-kelantan --private`, `git remote add public <url>`, `git push public main`;
-         wait for CI green, then `gh repo edit vedacool/veda-kelantan --visibility public
+      3. `gh repo create vedacool/veda-flood-kelantan --private`, `git remote add public <url>`, `git push public main`;
+         wait for CI green, then `gh repo edit vedacool/veda-flood-kelantan --visibility public
          --accept-visibility-change-consequences` and check it logged out (step 5 above).
 - [ ] JPS written consent - only if VEDA continues after the hackathon (`docs/OPEN.md` W-7).
 

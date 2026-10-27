@@ -17,6 +17,7 @@ def fresh(monkeypatch):
     """Not in sample mode, no fallback yet; SAMPLE_MODE and the fallback are restored after the test."""
     monkeypatch.setenv("SAMPLE_MODE", "false")
     monkeypatch.delenv("VEDA_DEMO", raising=False)
+    monkeypatch.setattr(main, "load_dotenv", lambda *a, **k: None)      # the real lifespan never reads this .env
     monkeypatch.setitem(config._FALLBACK, "reason", None)
     for k in KEYS:
         monkeypatch.delenv(k, raising=False)

@@ -8,6 +8,25 @@ NGINX = (DEMO / "nginx.conf").read_text(encoding="utf-8")
 COMPOSE = (DEMO / "compose.yaml").read_text(encoding="utf-8")
 
 
+def test_deploy_doc_updates_into_its_own_folder_and_can_roll_back():
+    """Audit 27 Oct (A-P2-28, A-P3-31): the exact bundle name into ~/veda-demo-<commit> (a wildcard breaks on a second
+    bundle); updating keeps the old folder; rollback = compose down + setup from the previous folder, never --stop
+    mid-demo; no git on the Wyse; a direct check that Funnel appends the visitor's address to X-Forwarded-For."""
+    doc = (DEMO.parent / "docs" / "DEPLOY_DEMO.md").read_text(encoding="utf-8")
+    assert "veda-demo-*.tar.gz" not in doc
+    assert "mkdir ~/veda-demo-$C && tar -xzf ~/veda-demo-$C.tar.gz -C ~/veda-demo-$C --strip-components=1" in doc
+    assert "sha256sum ~/veda-demo-$C.tar.gz" in doc and "**Updating to a new bundle**" in doc and "**Rollback**" in doc
+    rollback = doc.split("**Rollback**", 1)[1].split("\n\n", 1)[0]
+    assert "docker compose -f demo/compose.yaml --profile demo" in rollback and "--stop" not in rollback
+    assert "cd ~/veda-demo-$O && bash demo/setup_wyse.sh" in rollback
+    assert "**Never\nrun `setup_wyse.sh --stop` while the demo should stay up**" in doc
+    step7 = doc.split("## 7. While it runs", 1)[1].split("\n## ", 1)[0]
+    assert "git pull" not in step7 and "Updating to a new bundle" in step7
+    step6 = doc.split("## 6. Test it from outside", 1)[1].split("\n## ", 1)[0]
+    assert "**Funnel appends the visitor's real address**" in step6 and 'grep -i "x-forwarded-for"' in step6
+    assert 'map $http_x_forwarded_for $visitor' in NGINX                 # the key the check is about
+
+
 def test_operator_screens_and_run_logs_are_closed():
     assert re.search(r"location \^~ /admin\s+\{ return 404; \}", NGINX)
     assert re.search(r"location \^~ /trace/run/ \{[^}]*return 404 ", NGINX)

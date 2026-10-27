@@ -13,8 +13,7 @@ the loop's, after the safety gate. Errors are JSON: {"error": {"code", "message"
 import json
 
 from fastapi import FastAPI, Request
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app import config, trace, view
@@ -26,8 +25,33 @@ LANGS = {"en": "en", "bm": "ms", "ms": "ms"}       # the API says "bm"; inside V
 SCENE_SOURCE = {"replay": "past flood replay", "synthetic": "made-up test scene"}   # the live log's own words
 # /api/docs only: Swagger UI loads its script and style from jsDelivr (the rest of VEDA loads nothing from outside)
 DOCS_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; "
             "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+
+# audit 27 Oct A-P3-10: an exact Swagger UI version (Apache-2.0) with Subresource Integrity - the browser refuses
+# the file if the CDN ever serves anything else. Hashes: sha384 of the two files at this version (26-27 Oct).
+SWAGGER = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/"
+SWAGGER_SRI = {"swagger-ui-bundle.js": "sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep",
+               "swagger-ui.css": "sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn"}
+DOCS_PAGE = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEDA API</title>
+<link rel="stylesheet" href="{SWAGGER}swagger-ui.css" integrity="{SWAGGER_SRI['swagger-ui.css']}" crossorigin="anonymous">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="{SWAGGER}swagger-ui-bundle.js" integrity="{SWAGGER_SRI['swagger-ui-bundle.js']}" crossorigin="anonymous"></script>
+<script>
+SwaggerUIBundle({{url: "/api/openapi.json", dom_id: "#swagger-ui", layout: "BaseLayout", deepLinking: true,
+  showExtensions: true, showCommonExtensions: true,
+  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset]}});
+</script>
+</body>
+</html>
+"""
 
 EXAMPLE_REQUEST = {"question": "Is Tumpat safe tonight?", "lang": "en", "scene": "synthetic_calm"}
 EXAMPLE_RESPONSE = {  # a real offline answer to EXAMPLE_REQUEST (24 Oct), trimmed - documentation only
@@ -62,9 +86,10 @@ def _error(status, code, message):
     return JSONResponse({"error": {"code": code, "message": trace.redact(message)}}, status_code=status)
 
 
-def ask(question, lang="en", scene=None, on_step=None):
+def ask(question, lang="en", scene=None, on_step=None, at=None):
     """One question through VEDA's agents -> the public answer (dict). Raises BadInput (bad input, or busy). The
-    function behind POST /api/v1/ask and the CLI."""
+    function behind POST /api/v1/ask and the CLI. at (audit 27 Oct A-P3-33): optional "YYYY-MM-DD HH:MM" Malaysia
+    time inside the scene's window - checked like the CLI's --at (main.parse_input)."""
     from app import main                                      # main mounts this module: import it late
     if not isinstance(question, str) or not question.strip():
         raise BadInput(400, "empty_question", "Ask a question about a place in Kelantan (1-300 characters).")
@@ -74,8 +99,10 @@ def ask(question, lang="en", scene=None, on_step=None):
         raise BadInput(400, "bad_lang", "lang must be \"en\" or \"bm\".")
     if scene not in (None, "") and scene not in config.REPLAYS:
         raise BadInput(400, "unknown_scene", f"Known scenes: {', '.join(sorted(config.REPLAYS))} (GET /api/v1/scenes).")
+    if at not in (None, "") and not isinstance(at, str):
+        raise BadInput(400, "bad_time", "'at' must look like 2024-11-26 18:00 (Malaysia time).")
     try:
-        q, replay, at = main.parse_input(question, scene or None, None)
+        q, replay, at = main.parse_input(question, scene or None, at or None)
     except main.BadInput as e:
         raise BadInput(400, e.code, str(e)) from None
     if not main._busy.acquire(blocking=False):
@@ -144,9 +171,7 @@ api = FastAPI(title="VEDA API", version="1.0",
 
 @api.get("/docs", include_in_schema=False)
 def docs():
-    page = get_swagger_ui_html(openapi_url="/api/openapi.json", title="VEDA API")
-    page.headers["Content-Security-Policy"] = DOCS_CSP
-    return page
+    return HTMLResponse(DOCS_PAGE, headers={"Content-Security-Policy": DOCS_CSP})
 
 
 @api.post("/v1/ask", summary="Ask VEDA one question", openapi_extra={
@@ -154,7 +179,10 @@ def docs():
         "schema": {"type": "object", "required": ["question"], "properties": {
             "question": {"type": "string", "minLength": 1, "maxLength": MAX_QUESTION},
             "lang": {"type": "string", "enum": ["en", "bm"], "default": "en"},
-            "scene": {"type": "string", "description": "an offline scene id from GET /api/v1/scenes"}}},
+            "scene": {"type": "string", "description": "an offline scene id from GET /api/v1/scenes"},
+            "at": {"type": "string", "description": "optional, with a scene: a time inside the scene's window, "
+                                                     "'YYYY-MM-DD HH:MM' Malaysia time (e.g. the Nov 2024 peak "
+                                                     "'2024-11-27 19:30')"}}},
         "example": EXAMPLE_REQUEST}}},
     "responses": {"200": {"description": "The answer", "content": {"application/json": {"example": EXAMPLE_RESPONSE}}},
                   "400": {"description": "Bad input", "content": {"application/json": {"example": {
@@ -162,7 +190,8 @@ def docs():
                   "413": {"description": "Body over 4 KB"}, "415": {"description": "Not JSON"},
                   "429": {"description": "Another question is being answered"}}})
 async def ask_endpoint(request: Request):
-    if "application/json" not in (request.headers.get("content-type") or ""):
+    from app import main
+    if not main.is_json(request):                 # audit 27 Oct A-P3-29: exactly application/json
         return _error(415, "json_only", "Send JSON (Content-Type: application/json).")
     raw = await request.body()
     if len(raw) > MAX_BODY:
@@ -173,8 +202,12 @@ async def ask_endpoint(request: Request):
         return _error(400, "bad_json", "Send JSON like {\"question\": \"Is Tumpat safe tonight?\"}.")
     if not isinstance(body, dict):
         return _error(400, "bad_json", "Send a JSON object.")
+    bad = main.wrong_type(body, ("question", "lang", "scene", "at"))          # audit 27 Oct A-P3-7
+    if bad:
+        return _error(422, "wrong_type", f"'{bad}' must be text.")
     try:
-        return await run_in_threadpool(ask, body.get("question"), body.get("lang") or "en", body.get("scene"))
+        return await run_in_threadpool(ask, body.get("question"), body.get("lang") or "en", body.get("scene"),
+                                       None, body.get("at"))
     except BadInput as e:
         return _error(e.status, e.code, str(e))
 

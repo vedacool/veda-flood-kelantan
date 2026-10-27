@@ -94,7 +94,9 @@ def language(question, hint=None):
 # whatever the river data says and even when the place is unknown.
 EMERGENCY = ["terkandas", "terperangkap", "tak boleh keluar", "tak leh keluar", "tidak boleh keluar",
              "air keliling rumah", "air masuk rumah", "air dalam rumah", "trapped", "stranded", "can't get out",
-             "cannot get out", "water around my house", "water in my house"]
+             "cannot get out", "water around my house", "water in my house",
+             # audit 27 Oct A-P3-25
+             "stuck", "on the roof", "drowning", "tersekat", "terkepung", "atas bumbung", "lemas"]
 
 
 def emergency(question):

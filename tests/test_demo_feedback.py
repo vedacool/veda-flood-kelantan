@@ -175,3 +175,50 @@ def test_post_from_another_website_is_refused(server):
             urllib.request.urlopen(urllib.request.Request(base + "/feedback?lang=ms", data=data, headers=headers))
         assert e.value.code == 403 and "halaman maklum balas VEDA sendiri" in e.value.read().decode()
     assert not path.exists()
+
+
+def test_one_visitor_is_capped_and_only_a_hash_is_kept_in_memory(monkeypatch):
+    """Audit A-P3-30: at most VISITOR_MAX answers per visitor in a rolling 24 h; the proxy's key is hashed with a
+    memory-only salt that is replaced (and every count forgotten) each window; a request without the key is not capped."""
+    monkeypatch.setattr(fb, "_seen", {})
+    monkeypatch.setattr(fb, "_salt", {"key": b"k" * 32, "born": 0.0})
+    a, b = "203.0.113.9", "198.51.100.7"
+    assert [fb.over_cap(a, now=10.0 + i) for i in range(fb.VISITOR_MAX)] == [False] * fb.VISITOR_MAX
+    assert fb.over_cap(a, now=100.0) and not fb.over_cap(b, now=100.0)           # one visitor full, the other not
+    assert not any(fb.over_cap(None, now=100.0) for _ in range(20))               # no key: not capped
+    kept = json.dumps(fb._seen)
+    assert a not in kept and b not in kept and len(next(iter(fb._seen))) == 16     # hashes only, never the address
+    old_key = fb._salt["key"]
+    assert not fb.over_cap(a, now=float(fb.VISITOR_WINDOW))                       # a new window: new salt, counts gone
+    assert fb._salt["key"] != old_key and len(fb._seen) == 1
+    assert fb.VISITOR_MAX == 10 and fb.VISITOR_WINDOW == 24 * 3600 and fb.VISITOR_HEADER == "X-Veda-Visitor"
+
+
+def test_the_eleventh_answer_from_one_visitor_gets_the_limit_message(server, monkeypatch):
+    base, path = server
+    monkeypatch.setattr(fb, "_seen", {})
+    data = urllib.parse.urlencode({"lang": "en", "place": "Tumpat", "ease": "4"}).encode()
+    for i in range(fb.VISITOR_MAX + 1):
+        req = urllib.request.Request(base + "/feedback", data=data, headers={"X-Veda-Visitor": "203.0.113.9"})
+        with pytest.raises(urllib.error.HTTPError) as e:
+            urllib.request.build_opener(NoRedirect).open(req)
+        if i < fb.VISITOR_MAX:
+            assert e.value.code == 303, i
+    assert e.value.code == 429 and "you have already sent several answers today" in e.value.read().decode()
+    stored = path.read_text(encoding="utf-8")
+    assert len(stored.splitlines()) == fb.VISITOR_MAX and "203.0.113.9" not in stored     # 10 saved, no address
+    for lang, words in (("en", "so this answer was not saved"), ("ms", "jadi jawapan ini tidak disimpan")):
+        assert words in fb.T[lang]["full"] and fb.T[lang]["limit"]
+
+
+def test_the_proxy_passes_the_visitor_key_to_the_feedback_service_only():
+    """The /feedback location adds X-Veda-Visitor and repeats the server's header lines (a location that sets any
+    proxy_set_header inherits none), so the visitor's address, Forwarded and Tailscale identity stay blanked."""
+    nginx = (Path(__file__).resolve().parents[1] / "demo" / "nginx.conf").read_text(encoding="utf-8")
+    loc = nginx.split("location ^~ /feedback {", 1)[1].split("}", 1)[0]
+    assert "proxy_set_header X-Veda-Visitor $visitor;" in loc
+    for line in ('proxy_set_header X-Forwarded-For "";', 'proxy_set_header X-Real-IP "";', 'proxy_set_header Forwarded "";',
+                 'proxy_set_header Tailscale-User-Login "";', 'proxy_set_header Tailscale-User-Name "";',
+                 'proxy_set_header Tailscale-User-Profile-Pic "";', "proxy_set_header Host $host;"):
+        assert line in loc, line
+    assert nginx.count("X-Veda-Visitor") == 1                                    # nowhere else - not to VEDA itself

@@ -111,8 +111,8 @@ def _myt(utc_text):
 
 
 def compare_lines():
-    """One plain sentence per core station, e.g. 'Sg Golok @ Rantau Panjang: 7.29 m (reading 22 Oct 16:45 MYT) -
-    3.55 m below ...'. The reading time is always shown: a gauge can stop reporting, and "now" would then be a lie.
+    """One plain sentence per core station, e.g. 'Sg Golok @ Rantau Panjang: [JPS reading] m (reading [date, time] MYT) -
+    [distance] m below ...'. The reading time is always shown: a gauge can stop reporting, and "now" would then be a lie.
     (Whether a reading is too old to use is the Critic's call - freshness limits are still KIV.)"""
     rows = zetaris.run_sql(COMPARE_SQL, agent=AGENT, purpose="bigger than 2014? (core stations)").rows
     lines = []

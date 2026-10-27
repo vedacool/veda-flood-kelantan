@@ -45,8 +45,8 @@ from app import admin, config, frame, progress, trace, view
 from app.adapters import nightshift, zetaris
 from app.agents.coordinator import SAFETY
 
-if not config.demo_mode():                   # VEDA_DEMO=1 (public demo): no .env is read, whatever is set
-    load_dotenv(config.ROOT / ".env")
+# audit 27 Oct A-P2-9: .env is read when the SERVER starts (the lifespan below), not when this module is imported -
+# importing app.main (tests, scripts) never loads the developer's keys into the process
 MAX_QUESTION = 500
 WEB_PAGE = config.ROOT / "app" / "web" / "index.html"
 LIVE_PAGE = config.ROOT / "app" / "web" / "live.html"
@@ -62,6 +62,8 @@ _busy = threading.Lock()                 # one run at a time: the World Model on
 
 @asynccontextmanager
 async def _lifespan(_app):
+    if not config.demo_mode():               # VEDA_DEMO=1 (public demo): no .env is read, whatever is set
+        load_dotenv(config.ROOT / ".env")
     # B-104: live, or offline sample mode with the reason - once, at start. Audit 26 Oct: never longer than
     # START_LIMIT_S - a Zetaris that answers but stalls can't hang the start; then the offline demo, with that reason
     try:
@@ -183,7 +185,7 @@ def result_json(r):
             name = json.loads(line).get("agent_name")
             if name and name != "System" and name not in agents:
                 agents.append(name)
-    except OSError:
+    except (OSError, ValueError):           # audit 27 Oct A-P3-24: a cut-off last line (disk full) is no 500
         pass
     fc = r.get("forecast") or {}
     out = {"run_id": r["run_id"], "trace_id": r["run_id"], "status": r["status"],
@@ -264,8 +266,36 @@ def _run(question, replay, at, on_step=None, lang=None):
         _publish(rec)
         if on_step:
             on_step(rec)
-    return loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True,
-                    lang_hint=lang if lang in ("en", "ms") else None)
+    result = loop.run(question, quiet=True, replay=replay, at=at, on_step=step, default_scene=True,
+                      lang_hint=lang if lang in ("en", "ms") else None)
+    if config.demo_mode():
+        prune_traces()
+    return result
+
+
+KEEP_TRACES = 200          # audit 27 Oct A-P3-24: the public demo's logs (a small tmpfs) keep the newest runs only
+
+
+def prune_traces(keep=KEEP_TRACES):
+    """Delete all but the newest `keep` run traces in logs/ (public demo only; the live machine keeps its logs)."""
+    files = sorted((trace.ROOT / "logs").glob("trace-*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for f in files[keep:]:
+        try:
+            f.unlink()
+        except OSError:
+            pass
+
+
+def wrong_type(body, fields):
+    """Audit 27 Oct A-P3-7: the first of `fields` whose value is not text (or absent / null), else None - a list or an
+    object in a text field is a 422, never a 500."""
+    return next((f for f in fields if body.get(f) is not None and not isinstance(body.get(f), str)), None)
+
+
+def is_json(request):
+    """Audit 27 Oct A-P3-29 (closes A-P3-8): the media type is exactly application/json - "text/plain;application/json"
+    is a form a browser may send cross-site without asking first, so it never passes."""
+    return (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower() == "application/json"
 
 
 @app.get("/health")
@@ -353,7 +383,9 @@ def _live_health():
     return status
 
 
-NEWEST_STALE_MIN = 180      # the JPS 'aging' limit (data_agent.FRESHNESS): older than this -> the collector is behind
+# audit 27 Oct A-P3-28: one staleness limit - the JPS 'aging' limit in data_agent.FRESHNESS (older -> collector behind)
+from app.agents.data_agent import FRESHNESS as _FRESHNESS  # noqa: E402
+NEWEST_STALE_MIN = _FRESHNESS["jps_levels"][1]
 
 
 def _store_health():
@@ -395,7 +427,7 @@ def _store_health():
 @app.post("/run")
 async def run(request: Request):
     """One question -> the answer JSON. 400 on bad input, 415 unless JSON, 429 while another run is going."""
-    if "application/json" not in (request.headers.get("content-type") or ""):     # A-P3-3: no text/plain form posts
+    if not is_json(request):                       # A-P3-3 + audit 27 Oct A-P3-29: exactly application/json
         return _error(415, "json_only", "Send JSON (Content-Type: application/json) like {\"question\": \"Is Tumpat safe?\"}.")
     try:
         body = await request.json()
@@ -403,6 +435,9 @@ async def run(request: Request):
         return _error(400, "bad_json", "Send JSON like {\"question\": \"Is Tumpat safe?\"}.")
     if not isinstance(body, dict):
         return _error(400, "bad_json", "Send a JSON object.")
+    bad = wrong_type(body, ("question", "replay", "at", "lang"))
+    if bad:
+        return _error(422, "wrong_type", f"'{bad}' must be text.")
     try:
         question, replay, at = parse_input(body.get("question"), body.get("replay"), body.get("at"))
     except BadInput as e:
@@ -502,7 +537,7 @@ def frame_js():
     return FileResponse(FRAME_DIR / "frame.js", media_type="text/javascript")
 
 
-@app.api_route("/scenes{tail:path}", methods=["GET", "POST"])
+@app.api_route("/scenes{tail:path}", methods=["GET", "POST"], include_in_schema=False)   # A-P3-35
 async def scenes_page(tail: str, request: Request):
     """B-91 Scenes test page: /scenes, /scenes/<id>, /scenes/data.json, POST /scenes/<id>/check (app/scenes.py)."""
     from app import scenes
@@ -634,7 +669,7 @@ async def admin_approve(request: Request):
     (CORS preflight), so another web page cannot send this."""
     if not _local(request):
         return _error(403, "local_only", "This computer only.")
-    if request.headers.get("x-veda-admin") != "1" or "application/json" not in (request.headers.get("content-type") or ""):
+    if request.headers.get("x-veda-admin") != "1" or not is_json(request):
         return _error(400, "bad_request", "Send JSON from the admin page.")
     if config.sample_mode():
         return _error(400, "sample_mode", "SAMPLE_MODE: approval writes to the live World Model - run VEDA live.")

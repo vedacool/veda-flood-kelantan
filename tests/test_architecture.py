@@ -103,14 +103,14 @@ def test_agents_never_use_setup_ddl():
 
 # --- Rule 2: never route through meterless/auto -------------------------------------------------------------
 def test_no_meterless_auto():
-    bad = [f"{rel(f)}:{i}" for f in py_files("app", "scripts", "run.py")
+    bad = [f"{rel(f)}:{i}" for f in py_files("app", "scripts", "veda", "run.py")      # + veda/ (audit 27 Oct A-P3-13)
            for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1) if "meterless/auto" in line]
     assert not bad, "Never call meterless/auto - use meterless/fast / meterless/deep:\n" + "\n".join(bad)
 
 
 # --- Rule 3: no reading output_examples/ at runtime ---------------------------------------------------------
 def test_runtime_never_reads_output_examples():
-    bad = [f"{rel(f)}:{i}" for f in py_files("app", "run.py")
+    bad = [f"{rel(f)}:{i}" for f in py_files("app", "veda", "run.py")                  # + veda/ (audit 27 Oct A-P3-13)
            for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1) if "output_examples" in line]
     assert not bad, "Runtime code must never read output_examples/ (no hard-coded outputs):\n" + "\n".join(bad)
 

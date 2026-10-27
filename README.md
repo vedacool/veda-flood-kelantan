@@ -412,7 +412,7 @@ server will start in and why. Fix the ✗ lines in order with the steps below; r
    (as `-e` overrides - keep `.env` as it is for the run without Docker):
    ```
    docker build -t veda .
-   docker run --rm -p 8000:8000 --env-file .env      -e ZETARIS_API_URL=http://host.docker.internal:8888/api/v1.0      -e METERLESS_BASE_URL=http://host.docker.internal:8088/v1      -e VEDA_PG_HOST=host.docker.internal      veda
+   docker run --rm -p 127.0.0.1:8000:8000 --env-file .env      -e ZETARIS_API_URL=http://host.docker.internal:8888/api/v1.0      -e METERLESS_BASE_URL=http://host.docker.internal:8088/v1      -e VEDA_PG_HOST=host.docker.internal      veda
    ```
    `GET /health` then reports Zetaris, Nightshift, veda-pg, the newest reading's age and any open circuit breaker. Zetaris itself reaches veda-pg at `veda-pg:5432` on the Zetaris
    Docker network.

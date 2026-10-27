@@ -41,15 +41,19 @@ def _mode_line():
 
 
 def _text(a):
+    from app.view import HEADLINE
     lines = []
+    lg = "ms" if a.get("language") == "bm" else "en"
+    name = lambda lv: HEADLINE[lv][lg] if lv in HEADLINE else (lv or "-")             # noqa: E731
     if a.get("level"):
-        lines.append(f"{a['place']}: {a['level_label']['bm' if a['language'] == 'bm' else 'en']} ({a['level']})"
+        lines.append(f"{a['place']}: {a['level_label']['bm' if a['language'] == 'bm' else 'en']}"
                      + (f"  [{a['scene']}]" if a.get("scene") else ""))
         lines += ["What to do: " + " ".join(a["what_to_do"])] + [f"Why: {w}" for w in a["why"]]
         j = a["ai_judgement"]
         lines.append("Nemotron's judgement: " + (j if isinstance(j, str) else
-                                                 f"rules {j.get('code_level')}, Nemotron {j.get('ai_level') or '-'}, "
-                                                 f"final {j.get('final')} ({j.get('status')})"))
+                                                 f"rules: {name(j.get('code_level'))}, Nemotron: "
+                                                 f"{name(j.get('ai_level'))}, final: {name(j.get('final'))} "
+                                                 f"({j.get('status')})"))
         lines.append(f"Critic: {'approved' if a['critic_checks']['approved'] else 'not approved'} "
                      f"(checked by {', '.join(a['critic_checks']['checked_by'])}; {len(a['critic_checks']['checks'])} "
                      "code checks)")

@@ -137,10 +137,12 @@ def assess(controlling, local_point, points, links, golok=False):
         fallen, forecast = heavy_upstream(p["features"])
         up.append({"point": key, "name": p["name"], "window": window, "heavy_fallen": fallen,
                    "heavy_forecast": forecast, **{k: p["features"][k] for k in (
-                       "past_24h_mm", "past_72h_mm", "next_24h_mm", "next_72h_mm")}})
+                       "past_24h_mm", "past_72h_mm", "next_24h_mm", "next_72h_mm")},
+                   "past_24h_raw": (p["features"].get("raw") or p["features"])["past_24h_mm"]})
     lf = (points.get(local_point) or {}).get("features")
     local = None if not lf else {"point": local_point, "name": points[local_point]["name"],
                                  "max_12h_mm": lf["max_12h_mm"], "past_12h_mm": lf["past_12h_mm"],
+                                 "past_12h_raw": (lf.get("raw") or lf)["past_12h_mm"],
                                  "next_12h_mm": lf["next_12h_mm"],
                                  "heavy": (lf.get("raw") or lf)["max_12h_mm"] >= LOCAL_12H_MM,
                                  "until": lf["until"], "until_heavy": lf["until_heavy"],

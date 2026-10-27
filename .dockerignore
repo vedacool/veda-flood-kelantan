@@ -11,3 +11,6 @@ data/world/
 .pytest_cache/
 CLAUDE.local.md
 spikes/
+# audit 27 Oct A-P3-32: real JPS pages and caches never go into an image
+data/cache/
+data/snapshots/

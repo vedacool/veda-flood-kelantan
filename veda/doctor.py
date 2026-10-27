@@ -71,7 +71,6 @@ def _docker():
 
 def zetaris_check(sql):
     """One read-only SQL statement on Zetaris -> 'ok' or a short reason (no key in it)."""
-    import requests
     from app.adapters import zetaris
     try:
         r = zetaris._post(sql, 1, timeout=10)
@@ -151,7 +150,9 @@ def _jps(root):
     now = time.time()
     recent = jps.newest_snapshot()
     stamp = root / "logs" / JPS_STAMP
-    last = max([p.stat().st_mtime for p in (recent, stamp if stamp.exists() else None) if p] or [0])
+    tried = jps.attempt_stamp()                       # the collector's last attempt, failed or not (A-P3-32)
+    last = max([p.stat().st_mtime for p in (recent, stamp if stamp.exists() else None,
+                                            tried if tried.exists() else None) if p] or [0])
     if 0 <= now - last < jps.MIN_INTERVAL_S:
         return True, f"JPS: not checked - VEDA fetched or checked it {int((now - last) // 60)} min ago " \
             "(at most once per 15 minutes)", None

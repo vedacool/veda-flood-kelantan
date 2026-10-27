@@ -1,7 +1,7 @@
 # VEDA - one container: the API + web page (B-19). Python 3.13 everywhere (decided 22 Oct night).
 #   docker build -t veda .
 #   docker run --rm -p 8000:8000 -e SAMPLE_MODE=true veda          # judges: offline, no .env, no keys
-#   docker run --rm -p 8000:8000 --env-file .env veda              # live: Zetaris + Nightshift on this machine
+#   docker run --rm -p 127.0.0.1:8000:8000 --env-file .env veda    # live: keys inside - this computer only
 #                                                                   #   (use host.docker.internal in the URLs)
 # Base image pinned by digest (supply chain: a tag can move, a digest cannot).
 FROM python:3.13-slim@sha256:57b29a7c050c4e679e4bea572e14b3965cf4b5839de2da49d55e49ffc4024f39

@@ -38,10 +38,14 @@ The first command builds `dist\veda-demo-<commit>.tar.gz` from `origin/main` (it
 `a6a2280`, any secret-looking file or `.env` value, and anything that fails the JPS guard) and prints the exact file
 name, its size and SHA256. Use that file name in the second command.
 
-**On the Wyse:**
+**On the Wyse** (`C` = the commit in the bundle's file name; each bundle gets a folder of its own, so a second
+bundle never lands on the first one):
 ```
-sudo tailscale file get ~/ && sudo chown "$USER": ~/veda-demo-*.tar.gz && tar -xzf ~/veda-demo-*.tar.gz -C ~
-cd ~/veda-demo && bash demo/setup_wyse.sh
+C=<commit>
+sudo tailscale file get ~/ && sudo chown "$USER": ~/veda-demo-$C.tar.gz
+sha256sum ~/veda-demo-$C.tar.gz      # must equal the SHA256 make_demo_bundle.py printed
+mkdir ~/veda-demo-$C && tar -xzf ~/veda-demo-$C.tar.gz -C ~/veda-demo-$C --strip-components=1
+cd ~/veda-demo-$C && bash demo/setup_wyse.sh
 ```
 `setup_wyse.sh` does steps 1, 4 and 5 below in one go: it checks the machine (x86_64, 1.5 GB memory, 3 GB disk,
 Docker - it never installs anything; without Docker it prints step 2 and stops), finds a free port (8765, or the
@@ -57,6 +61,24 @@ bash demo/setup_wyse.sh --stop        # Funnel off for the demo's port + contain
                                       # asks before turning off 443, in case Funnel was turned on there by hand
 ```
 Then do step 6 (test from outside) by hand. Steps 1-9 below are the same thing done by hand, for reference.
+
+**Updating to a new bundle** (the demo is already running from `~/veda-demo-<old>`; keep that folder):
+```
+N=<new commit>; O=<old commit>
+# get + check + unpack the new bundle into ~/veda-demo-$N exactly as above (sha256sum, mkdir, tar --strip-components=1)
+cp ~/veda-demo-$O/demo/.state ~/veda-demo-$N/demo/.state          # the same ports
+(cd ~/veda-demo-$O && bash demo/setup_wyse.sh --export)            # back up the feedback answers first
+(cd ~/veda-demo-$O && DEMO_PORT=$(grep ^DEMO_PORT= demo/.state | cut -d= -f2) docker compose -f demo/compose.yaml --profile demo down)
+cd ~/veda-demo-$N && VEDA_PUBLIC_URL="https://<the public address>" bash demo/setup_wyse.sh   # answer skip at Funnel
+```
+`compose down` stops the old containers only: Funnel stays on, and the feedback answers stay in the volume. **Never
+run `setup_wyse.sh --stop` while the demo should stay up** - it also turns Funnel off. The new setup must reuse the
+DEMO_PORT from `.state`; all its checks must PASS.
+
+**Rollback** (the new version misbehaves): `cd ~/veda-demo-$N && docker compose -f demo/compose.yaml --profile demo
+down`, then `cd ~/veda-demo-$O && bash demo/setup_wyse.sh` (answer `skip` at Funnel). The old folder still has
+its `.state`, so the demo comes back on the same port and the same public address. Keep the old folders until judging
+ends.
 
 ## 1. Check the machine (2 min)
 ```
@@ -137,7 +159,19 @@ On a phone **on mobile data, not on the tailnet** (or any computer logged out of
    is at the top (in BM after tapping BM). Link to share with judges and testers (opens the flood replay):
    `https://wyse5070.<your-tailnet>.ts.net/?replay=nov2024&at=2024-11-27%2019:30` -> tap **Rantau Panjang** -> Act now.
 2. `…/admin` -> 404. `…/feedback` -> the form, in BM if the phone is in Malay; send one test answer -> *Thank you*.
-3. The rate limit cannot be dodged with a fake header (from any computer outside the tailnet):
+3. **Funnel appends the visitor's real address** (audit A-P3-31). The proxy limits each visitor by the LAST entry of
+   `X-Forwarded-For` (`demo/nginx.conf`, `map $http_x_forwarded_for $visitor`). Tailscale's Serve / Funnel docs name no
+   header that carries a Funnel visitor's address (identity headers are tailnet-only), so check it once, by eye -
+   nothing is written to disk. On the phone, look up its public address (any "what is my IP" page). On the Wyse:
+   ```
+   sudo tcpdump -i lo -A -s 0 -c 20 "tcp dst port $(grep ^DEMO_PORT= demo/.state | cut -d= -f2)" | grep -i "x-forwarded-for"
+   ```
+   then load the public address once on the phone (Ctrl-C after a few lines).
+   - **The last address on the line is the phone's public address:** the per-visitor limit works as designed.
+   - **No such line, or the last address is `127.0.0.1` / a `100.x` Tailscale address:** every visitor shares one key.
+     Tailscale documents no other client-address header for Funnel, so use the shared limit in item 4 below (safe,
+     just stricter) and tell Session B.
+4. The rate limit cannot be dodged with a fake header (from any computer outside the tailnet):
    ```
    for i in $(seq 30); do curl -s -o /dev/null -w '%{http_code}\n' -H "X-Forwarded-For: 10.9.$i.1" \
      https://wyse5070.<your-tailnet>.ts.net/feedback; done | sort | uniq -c
@@ -148,15 +182,15 @@ On a phone **on mobile data, not on the tailnet** (or any computer logged out of
    `"~." $remote_addr;` (one shared limit for all visitors together - safe, just stricter), then
    `docker compose -f demo/compose.yaml --profile demo up -d --build proxy` (the config is built into the proxy image)
    and test again.
-4. The limit is **per visitor**, checked from two networks (audit 24 Oct). You need two devices on different
+5. The limit is **per visitor**, checked from two networks (audit 24 Oct). You need two devices on different
    networks, neither on the tailnet - for example phone A on mobile data and phone B (or a laptop) on another
    Wi-Fi. On **A**, open `…/feedback` and pull down to reload about 20 times quickly, until it shows
    `429 Too Many Requests`. Straight away on **B**, open `…/feedback`:
    - **B shows the form:** each visitor has their own limit - good.
    - **B also gets 429:** everyone shares one limit (Funnel is not passing the visitor's address). The demo is still
-     safe, but one busy visitor slows everyone; tell Session B, and keep the step-3 fallback in mind.
+     safe, but one busy visitor slows everyone; tell Session B, and keep the item-4 fallback in mind.
    Wait a minute before using the demo from A again.
-5. Nothing leaves VEDA's container (on the Wyse):
+6. Nothing leaves VEDA's container (on the Wyse):
    ```
    docker compose -f demo/compose.yaml --profile demo exec -T veda python -c "import urllib.request; urllib.request.urlopen('https://api.open-meteo.com', timeout=5)"
    ```
@@ -167,7 +201,8 @@ On a phone **on mobile data, not on the tailnet** (or any computer logged out of
 docker stats --no-stream veda-demo-veda-1 veda-demo-proxy-1 veda-demo-feedback-1   # memory under the limits
 docker compose -f demo/compose.yaml --profile demo logs --tail 50 veda
 ```
-Updating after a new commit: `git pull` then the `up -d --build` line from step 4.
+Updating after a new commit: there is no git on the Wyse - build a new bundle on the PC, copy it over with
+`tailscale file cp`, and follow **Updating to a new bundle** above (the old folder stays, for a rollback).
 
 **What visitors can see of each other:** the live log (`/live`) follows every run as it happens - the place and the
 steps, never the question. The feedback form's answers are only on the Wyse.

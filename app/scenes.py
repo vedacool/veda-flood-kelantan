@@ -17,7 +17,6 @@ import json
 import re
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -86,7 +85,9 @@ def build(scene):
             "thresholds": {k: th.get(f"{k}_m") for k in ("normal", "alert", "warning", "danger")},
             "change_1h_m": g.get("change_1h_m"), "change_3h_m": g.get("change_3h_m"),
             "fresh": g.get("freshness") == "fresh", "tide": bool(g.get("tide_influenced")),
-            "kind": (prov.get("replay") or {}).get("kind"), "query_hash": prov.get("query_hash")})
+            # a made-up scene's readings are synthetic, whatever the replay machinery calls them (audit A-P3-14)
+            "kind": "synthetic" if synthetic else (prov.get("replay") or {}).get("kind"),
+            "query_hash": prov.get("query_hash")})
     ru = ctx.get("rain_upstream") or {}
     local = ru.get("local") or {}
     rain = {"here": {"name": _plain(local.get("name")), "past_12h_mm": local.get("past_12h_mm"),

@@ -360,13 +360,30 @@ def test_the_kosmo_2014_sentence_is_tagged_and_1_94_is_never_shown():
     en = "Kosmo reported that the river had passed its level in the 2014 flood (10.52 m)."
     ms = "Kosmo melaporkan paras sungai telah melepasi paras banjir 2014 (10.52 m)."
     assert peak["story"]["en"].startswith("Wednesday 27 November 2024, 7:30 pm. " + en)
-    assert peak["story"]["ms"].startswith("Rabu, 27 November 2024, 7:30 malam. " + ms)
+    assert peak["story"]["ms"].startswith("Rabu, 27 November 2024, 7.30 malam. " + ms)
     (n,) = peak["story_news"]
     assert n["text"] == {"en": en, "ms": ms} and "kosmo.com.my/2024/11/27/" in n["url"]
     assert n["url"] in {a["url"] for a in peak["news"]}                      # the same Kosmo article
     for text in (scenes.EXPECTED.read_text(encoding="utf-8"), scenes.DATA.read_text(encoding="utf-8"), PAGE):
         assert "1.94" not in text
 
+
+def test_one_bm_time_format_and_synthetic_readings_are_labelled_synthetic():
+    """Audit 26-27 Oct: BM times read "7.30 malam" everywhere on /scenes (A-P3-35; EN keeps "7:30 pm"); a made-up
+    scene's gauge readings are 'synthetic', a replay scene's 'reported' (A-P3-14)."""
+    bm_colon = re.compile(r"\b\d{1,2}:\d{2} (pagi|petang|malam|tengah hari)")
+    def ms_strings(node):                                                          # noqa: E306
+        if isinstance(node, dict):
+            for k, v in node.items():
+                yield from ([v] if k == "ms" and isinstance(v, str) else ms_strings(v))
+        elif isinstance(node, list):
+            for v in node:
+                yield from ms_strings(v)
+    assert not [s for s in ms_strings(scenes.expected()) if bm_colon.search(s)]
+    assert 'const sep = lang === "ms" ? "." : ":";' in PAGE
+    for s in scenes.scene_data()["scenes"]:
+        want = "synthetic" if s["kind"] == "synthetic" else "reported"
+        assert {g["kind"] for g in s["gauges"]} == {want}, s["id"]
 
 # a long "why" with the signs line (B-105), made up for the test: over 400 characters in EN and BM
 LONG_WHY = {

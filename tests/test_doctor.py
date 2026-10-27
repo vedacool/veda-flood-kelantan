@@ -93,6 +93,7 @@ def test_jps_is_checked_at_most_once_per_15_minutes(monkeypatch, tmp_path):
     from app.ingest import jps
     (tmp_path / "logs").mkdir()
     monkeypatch.setattr(jps, "newest_snapshot", lambda: None)
+    monkeypatch.setattr(jps, "CACHE_DIR", tmp_path / "jps-cache")        # never the real collector's attempt stamp
     calls = []
     monkeypatch.setattr(doctor, "jps_head", lambda: calls.append(1) or "HTTP 404")
     first = doctor._jps(tmp_path)

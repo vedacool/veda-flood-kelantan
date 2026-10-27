@@ -18,7 +18,8 @@ def sentinel(name="Sg. Golok di Kg. Jenob (F1)", band="normal", change_3h=0.0, f
 
 
 def signs(last=None, rain=None, sentinels=(), met=None, reason=STALE, card=CARD):
-    fc = {"no_river": reason, "rain_upstream": rain}
+    code = "no_reading" if reason == STALE else "no_gauge"                  # the Forecast agent's reason code
+    fc = {"no_river": reason, "no_river_code": code, "rain_upstream": rain}
     ev = {"context": {"last_reading": last, "sentinels": list(sentinels)}, "met_warnings": met}
     return view.warning_signs(card, fc, ev)
 
@@ -47,7 +48,8 @@ def test_each_sign_only_when_present_and_fresh():
     out = signs(last=last)
     assert out["lines"]["en"][0] == f"Last river reading (14{NB}h ago): Warning." and out["lines"]["ms"][0] == \
         f"Bacaan sungai terakhir (14{NB}jam lalu): Amaran."
-    assert out["footer"]["en"] == "Signs from: the last JPS reading. River level not available."
+    assert out["footer"]["en"] == "Signs from: the last JPS reading. No recent river level."
+    assert out["footer"]["ms"] == "Tanda daripada: bacaan JPS terakhir. Tiada paras sungai terkini."
     assert signs(last={"band": "alert", "age_minutes": 40})["lines"]["ms"] == [f"Bacaan sungai terakhir (40{NB}minit lalu): Waspada."]
 
 
@@ -134,3 +136,14 @@ def test_the_data_agent_keeps_only_a_healthy_last_reading(monkeypatch):
                 return {"attrs": {}}
         data_agent.heal(ctx, World(), None)
         assert (ctx.get("last_reading") is not None) is kept, health
+
+
+def test_the_box_keys_on_the_reason_code_and_the_rain_sign_on_the_raw_sum():
+    """Audit 27 Oct A-P3-27: the Forecast agent's no_river_code (not its words), and the rule's unrounded sum."""
+    fc = {"no_river": "anything at all", "no_river_code": "no_reading", "rain_upstream": HEAVY_HERE}
+    assert view.warning_signs(CARD, fc, {"context": {}})["kinds"] == ["rain"]
+    fc["no_river_code"] = "no_gauge"
+    assert view.warning_signs(CARD, fc, {"context": {}}) is None
+    rounded_up = {"local": {"past_12h_mm": 30.0, "past_12h_raw": 29.96}, "upstream": [{"past_24h_mm": 50.0,
+                                                                                         "past_24h_raw": 49.96}]}
+    assert signs(rain=rounded_up) is None                                   # 29.96 mm is below the 30 mm rule

@@ -208,11 +208,12 @@ let all = null, scene = null, checked = null, running = false, rawLines = [];
 let publicDemo = false;                // /feedback exists in the public demo only (/health "demo"), as on the answer page
 const sceneId = (location.pathname.match(/^\/scenes\/([a-z0-9-]+)\/?$/) || [])[1] || null;
 
-function when(text) {                 // "2024-11-26 18:00" -> "26 Nov 2024, 6:00 pm" / "26 Nov 2024, 6:00 petang"
+function when(text) {                 // "2024-11-26 18:00" -> "26 Nov 2024, 6:00 pm" / "26 Nov 2024, 6.00 petang"
   const [d, hm] = text.split(" "), [y, m, dd] = d.split("-").map(Number), [h, mi] = hm.split(":").map(Number);
   const mon = (lang === "ms" ? "Jan Feb Mac Apr Mei Jun Jul Ogo Sep Okt Nov Dis" : "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec").split(" ");
   const h12 = ((h + 11) % 12) + 1, part = lang === "ms" ? (h < 12 ? "pagi" : h < 19 ? "petang" : "malam") : (h < 12 ? "am" : "pm");
-  return `${dd} ${mon[m - 1]} ${y}, ${h12}:${String(mi).padStart(2, "0")} ${part}`;
+  const sep = lang === "ms" ? "." : ":";                            // BM "7.30 malam", EN "7:30 pm" (A-P3-35)
+  return `${dd} ${mon[m - 1]} ${y}, ${h12}${sep}${String(mi).padStart(2, "0")} ${part}`;
 }
 const level = (code) => (all && all.levels[code] && all.levels[code][lang]) || code;
 const hours = (min) => min >= 120 ? `${(min / 60).toFixed(min % 60 ? 1 : 0)} h` : `${min} min`;

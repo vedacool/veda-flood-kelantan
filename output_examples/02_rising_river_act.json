@@ -1,8 +1,8 @@
 {
-  "run_id": "20261024-155556-a68e",
-  "trace_id": "20261024-155556-a68e",
+  "run_id": "20261027-144532-e9fb",
+  "trace_id": "20261027-144532-e9fb",
   "status": "success",
-  "output": "REPLAY · Nov 2024\nWHAT TO DO NOW: Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.\nRantau Panjang: ACT - JPS level Danger\nRiver: 10.94 m at 27 Nov 19:30 (Sg. Golok); 3.94 m above Alert (7 m), 1.94 m above Danger (9 m).\n(reported JPS reading (Kosmo), 27 Nov 19:30)\nCompared with 2014: 0.1 m above the Dec 2014 peak here (10.84 m).\nNext 24 h: still rising, higher than 2014. Confidence: medium.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.\nHeavy rain here: 35.9 mm in 12 h.\nSmall rivers and drains can rise fast in heavy rain - keep away from them.\nSources: JPS 0 min ago; Open-Meteo archive.\nLeft out: old data.gov.my flood warnings.\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
+  "output": "REPLAY · Nov 2024\nWHAT TO DO NOW: Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.\nRantau Panjang: ACT - JPS level Danger\nRiver: 10.94 m at 27 Nov 19:30 (Sg. Golok); 3.94 m above Alert (7 m), 1.94 m above Danger (9 m).\n(reported JPS reading (Kosmo), 27 Nov 19:30)\nCompared with 2014: 0.1 m above the Dec 2014 peak here (10.84 m).\nNext 24 h: still rising, higher than 2014. Confidence: medium.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.\nHeavy rain here: 35.9 mm in 12 h.\nSmall rivers and drains can rise fast in heavy rain - keep away from them.\nSources: JPS 0 min ago; Open-Meteo archive.\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
   "language": "en",
   "verdict": "ACT",
   "confidence": "medium",
@@ -10,24 +10,24 @@
   "approved_by_critic": true,
   "safety_fixes": [],
   "agents": [
-    "Data & Reconciler",
     "Coordinator",
+    "Data & Reconciler",
     "Forecast",
     "Critic"
   ],
   "log_file": "output_examples/02_rising_river_act.trace.jsonl",
-  "execution_time": 0.1,
+  "execution_time": 0.0,
   "timing": {
     "plan": 0.0,
     "gather": 0.0,
     "forecast": 0.0,
     "draft": 0.0,
     "critique": 0.0,
-    "total": 0.1
+    "total": 0.0
   },
   "card": {
-    "en": "REPLAY · Nov 2024\nWHAT TO DO NOW: Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.\nRantau Panjang: ACT - JPS level Danger\nRiver: 10.94 m at 27 Nov 19:30 (Sg. Golok); 3.94 m above Alert (7 m), 1.94 m above Danger (9 m).\n(reported JPS reading (Kosmo), 27 Nov 19:30)\nCompared with 2014: 0.1 m above the Dec 2014 peak here (10.84 m).\nNext 24 h: still rising, higher than 2014. Confidence: medium.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.\nHeavy rain here: 35.9 mm in 12 h.\nSmall rivers and drains can rise fast in heavy rain - keep away from them.\nSources: JPS 0 min ago; Open-Meteo archive.\nLeft out: old data.gov.my flood warnings.\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.",
-    "ms": "REPLAY · Nov 2024\nAPA PERLU DIBUAT SEKARANG: Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991.\nRantau Panjang: BERTINDAK - paras JPS Bahaya\nSungai: 10.94 m pada 27 Nov 19:30 (Sg. Golok); 3.94 m di atas Waspada (7 m), 1.94 m di atas Bahaya (9 m).\n(bacaan JPS dilaporkan (Kosmo), 27 Nov 19:30)\nBerbanding 2014: 0.1 m di atas puncak Dis 2014 di sini (10.84 m).\n24 jam akan datang: masih naik, melebihi paras 2014. Keyakinan: sederhana.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 148.2 mm dalam 3 hari (71 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 123.4 mm dalam 3 hari (57.8 mm dalam 24 jam), masa sampai tidak diketahui.\nHujan lebat di sini: 35.9 mm dalam 12 jam.\nSungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - sila jauhi kawasan itu.\nSumber: JPS 0 minit lalu; arkib Open-Meteo.\nDiketepikan: amaran banjir lama data.gov.my.\nTiada bacaan terkini dari Sg. Golok di Kg. Jenob (F1); VEDA mencari stesen hulu lain di sungai yang sama, tiada ditemui."
+    "en": "REPLAY · Nov 2024\nWHAT TO DO NOW: Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.\nRantau Panjang: ACT - JPS level Danger\nRiver: 10.94 m at 27 Nov 19:30 (Sg. Golok); 3.94 m above Alert (7 m), 1.94 m above Danger (9 m).\n(reported JPS reading (Kosmo), 27 Nov 19:30)\nCompared with 2014: 0.1 m above the Dec 2014 peak here (10.84 m).\nNext 24 h: still rising, higher than 2014. Confidence: medium.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.\nHeavy rain here: 35.9 mm in 12 h.\nSmall rivers and drains can rise fast in heavy rain - keep away from them.\nSources: JPS 0 min ago; Open-Meteo archive.\nMissing: no fresh reading from Sg. Golok di Kg. Jenob (F1); VEDA looked for another upstream gauge on the same river and found none.",
+    "ms": "REPLAY · Nov 2024\nAPA PERLU DIBUAT SEKARANG: Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991.\nRantau Panjang: BERTINDAK - paras JPS Bahaya\nSungai: 10.94 m pada 27 Nov 19:30 (Sg. Golok); 3.94 m di atas Waspada (7 m), 1.94 m di atas Bahaya (9 m).\n(bacaan JPS dilaporkan (Kosmo), 27 Nov 19:30)\nBerbanding 2014: 0.1 m di atas puncak Dis 2014 di sini (10.84 m).\n24 jam akan datang: masih naik, melebihi paras 2014. Keyakinan: sederhana.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 148.2 mm dalam 3 hari (71 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 123.4 mm dalam 3 hari (57.8 mm dalam 24 jam), masa sampai tidak diketahui.\nHujan lebat di sini: 35.9 mm dalam 12 jam.\nSungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - sila jauhi kawasan itu.\nSumber: JPS 0 minit lalu; arkib Open-Meteo.\nTiada bacaan terkini dari Sg. Golok di Kg. Jenob (F1); VEDA mencari stesen hulu lain di sungai yang sama, tiada ditemui."
   },
   "disclaimer": {
     "en": "Not an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
@@ -49,22 +49,22 @@
       "ms": "Paras sungai 1.94 m di atas paras Bahaya dan masih naik."
     },
     "todo": {
-      "en": "Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.",
-      "ms": "Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991."
+      "en": "Follow APM / police instructions and go to the evacuation centre (PPS) if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.",
+      "ms": "Ikut arahan APM / polis dan pergi ke pusat pemindahan (PPS) jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991."
     },
     "water": {
       "en": {
-        "main": "Rising about 12-15 cm an hour. Already 1.94 m over the danger mark.",
+        "main": "Rising about 12–15 cm an hour. Already 1.94 m over the danger mark.",
         "detail": [
-          "10.94 m at 19:30 (reading reported in the news) · rising 12-15 cm an hour · up 35 cm in 3 hours",
+          "10.94 m at 19:30 (reading reported in the news) · rising 12–15 cm an hour · up 35 cm in 3 hours",
           "3.94 m above the alert level (7 m)",
           "1.94 m above the danger level (9 m)"
         ]
       },
       "ms": {
-        "main": "Naik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras Bahaya.",
+        "main": "Naik kira-kira 12–15 cm sejam. Sudah 1.94 m melebihi paras Bahaya.",
         "detail": [
-          "10.94 m pada 19:30 (bacaan yang dilaporkan dalam berita) · naik 12-15 cm sejam · naik 35 cm dalam 3 jam",
+          "10.94 m pada 19:30 (bacaan yang dilaporkan dalam berita) · naik 12–15 cm sejam · naik 35 cm dalam 3 jam",
           "3.94 m di atas paras Waspada (7 m)",
           "1.94 m di atas paras Bahaya (9 m)"
         ]
@@ -72,36 +72,48 @@
     },
     "upstream": {
       "en": [
-        "Heavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.",
-        "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming."
+        "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here.",
+        "We have no fresh river reading upstream, so we can't see exactly what is coming."
       ],
       "ms": [
-        "Hujan lebat di hulu: Buke Ta (Waeng; Thailand) 148.2 mm dalam 3 hari (71 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 123.4 mm dalam 3 hari (57.8 mm dalam 24 jam), masa sampai tidak diketahui.",
-        "Tiada bacaan terkini di hulu (Kg. Jenob) - VEDA tidak dapat melihat apa yang mungkin sampai."
+        "Hujan sangat lebat di seberang sempadan di Thailand dalam 3 hari lalu. Air itu mengalir turun ke arah sini.",
+        "Kami tiada bacaan sungai terkini di hulu, jadi kami tidak dapat melihat dengan tepat apa yang akan sampai."
       ]
     },
     "rain": {
-      "en": "57.2 mm fell in the 24 hours before this time",
-      "ms": "57.2 mm turun dalam 24 jam sebelum masa ini"
+      "en": "Heavy rain here in the last day.",
+      "ms": "Hujan lebat di sini dalam sehari lalu."
     },
     "rain_more": {
       "en": [
-        "Heavy rain here: 35.9 mm in 12 h.",
         "Small rivers and drains can rise fast in heavy rain - keep away from them."
       ],
       "ms": [
-        "Hujan lebat di sini: 35.9 mm dalam 12 jam.",
         "Sungai kecil dan longkang boleh naik dengan cepat ketika hujan lebat - sila jauhi kawasan itu."
       ]
     },
-    "rain_share": {
+    "rain_detail": {
       "en": [
         "Heavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.",
+        "No fresh reading upstream (Kg. Jenob) - VEDA can't see what may be coming.",
+        "57.2 mm fell in the 24 hours before this time",
         "Heavy rain here: 35.9 mm in 12 h."
       ],
       "ms": [
         "Hujan lebat di hulu: Buke Ta (Waeng; Thailand) 148.2 mm dalam 3 hari (71 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 123.4 mm dalam 3 hari (57.8 mm dalam 24 jam), masa sampai tidak diketahui.",
+        "Tiada bacaan terkini di hulu (Kg. Jenob) - VEDA tidak dapat melihat apa yang mungkin sampai.",
+        "57.2 mm turun dalam 24 jam sebelum masa ini",
         "Hujan lebat di sini: 35.9 mm dalam 12 jam."
+      ]
+    },
+    "rain_share": {
+      "en": [
+        "Very heavy rain across the border in Thailand over the last 3 days. That water flows down towards here.",
+        "Heavy rain here in the last day."
+      ],
+      "ms": [
+        "Hujan sangat lebat di seberang sempadan di Thailand dalam 3 hari lalu. Air itu mengalir turun ke arah sini.",
+        "Hujan lebat di sini dalam sehari lalu."
       ]
     },
     "todo_more": {
@@ -162,8 +174,8 @@
           "kind": "flood_warnings",
           "name": "Flood warnings (data.gov.my)",
           "used": false,
-          "left_out": true,
-          "note": "left out: out of date"
+          "left_out": false,
+          "note": "not used: not available for this date"
         },
         {
           "kind": "rain_upstream",
@@ -213,8 +225,8 @@
           "kind": "flood_warnings",
           "name": "Amaran banjir (data.gov.my)",
           "used": false,
-          "left_out": true,
-          "note": "diketepikan: sudah lama tidak dikemas kini"
+          "left_out": false,
+          "note": "tidak digunakan: tiada untuk tarikh ini"
         },
         {
           "kind": "rain_upstream",
@@ -229,13 +241,118 @@
     "emergency": false,
     "synthetic": false,
     "strip": {
-      "en": "✓ Double-checked · combined from 3 sources: river here, rain, rain upstream · 2 left out",
-      "ms": "✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, hujan, hujan di hulu · 2 diketepikan"
+      "en": "✓ Checked twice, using 3 sources",
+      "ms": "✓ Disemak dua kali, menggunakan 3 sumber"
     },
+    "level": 4,
+    "level_text": {
+      "en": "Level 4 of 4",
+      "ms": "Tahap 4 daripada 4"
+    },
+    "action": {
+      "en": [
+        "Move to higher ground. Follow APM / police."
+      ],
+      "ms": [
+        "Pindah ke tempat tinggi. Ikut arahan APM / polis."
+      ]
+    },
+    "steps": {
+      "en": [
+        "Follow APM / police instructions and go to the evacuation centre (PPS) if told.",
+        "Switch off the main power. Never walk or drive through floodwater.",
+        "If trapped: stay on high ground, save phone battery, call 999 / 991. Don't go back for animals or things."
+      ],
+      "ms": [
+        "Ikut arahan APM / polis dan pergi ke pusat pemindahan (PPS) jika diarahkan.",
+        "Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu.",
+        "Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991. Jangan patah balik untuk haiwan atau barang."
+      ]
+    },
+    "official_link": null,
+    "river": {
+      "en": {
+        "level_m": 10.94,
+        "normal_m": 5.0,
+        "alert_m": 7.0,
+        "warning_m": 8.0,
+        "danger_m": 9.0,
+        "y2014_m": 10.84,
+        "lines": [
+          "10.94 m now",
+          "1.94 m above the danger mark",
+          "↑ Rising about 12–15 cm an hour"
+        ]
+      },
+      "ms": {
+        "level_m": 10.94,
+        "normal_m": 5.0,
+        "alert_m": 7.0,
+        "warning_m": 8.0,
+        "danger_m": 9.0,
+        "y2014_m": 10.84,
+        "lines": [
+          "10.94 m sekarang",
+          "1.94 m di atas paras Bahaya",
+          "↑ Naik kira-kira 12–15 cm sejam"
+        ]
+      }
+    },
+    "flow": {
+      "en": {
+        "dots": [
+          {
+            "name": "Thailand",
+            "state": "rain",
+            "text": "heavy rain"
+          },
+          {
+            "name": "Kg. Jenob",
+            "state": "none",
+            "text": "no fresh reading"
+          },
+          {
+            "name": "Rantau Panjang",
+            "state": "you",
+            "text": "you"
+          }
+        ],
+        "caption": "upstream (hulu) → water flows this way → you (hilir)"
+      },
+      "ms": {
+        "dots": [
+          {
+            "name": "Thailand",
+            "state": "rain",
+            "text": "hujan lebat"
+          },
+          {
+            "name": "Kg. Jenob",
+            "state": "none",
+            "text": "tiada bacaan terkini"
+          },
+          {
+            "name": "Rantau Panjang",
+            "state": "you",
+            "text": "anda"
+          }
+        ],
+        "caption": "hulu → air mengalir ke arah ini → anda (hilir)"
+      }
+    },
+    "line_is_river": true,
     "share": {
-      "en": "VEDA · Rantau Panjang: Act now\nPast flood replay · 27 Nov 2024, 19:30\nWhat to do now: Follow APM / police instructions and go to the PPS if told. Switch off the main power. Never walk or drive through floodwater. If trapped: stay on high ground, save phone battery, call 999 / 991.\nThe river is 1.94 m above the danger level and still rising.\nRising about 12-15 cm an hour. Already 1.94 m over the danger mark.\nHeavy rain upstream: Buke Ta (Waeng; Thailand) 148.2 mm in 3 days (71 mm in 24 h), arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 3 days (57.8 mm in 24 h), arrival time not known.\nHeavy rain here: 35.9 mm in 12 h.\n✓ Double-checked · combined from 3 sources: river here, rain, rain upstream · 2 left out\nNot an official warning. Follow JPS / APM / police instructions. Emergency: 999, APM (Civil Defence): 991.",
-      "ms": "VEDA · Rantau Panjang: Bertindak sekarang\nUlang tayang banjir lalu · 27 Nov 2024, 19:30\nApa perlu dibuat sekarang: Ikut arahan APM / polis dan pergi ke PPS jika diarahkan. Matikan suis utama elektrik. Jangan meredah air banjir, sama ada berjalan kaki atau memandu. Jika terkandas: kekal di tempat tinggi, jimatkan bateri telefon, hubungi 999 / 991.\nParas sungai 1.94 m di atas paras Bahaya dan masih naik.\nNaik kira-kira 12-15 cm sejam. Sudah 1.94 m melebihi paras Bahaya.\nHujan lebat di hulu: Buke Ta (Waeng; Thailand) 148.2 mm dalam 3 hari (71 mm dalam 24 jam), masa sampai tidak diketahui; Sukhirin (Narathiwat; Thailand) 123.4 mm dalam 3 hari (57.8 mm dalam 24 jam), masa sampai tidak diketahui.\nHujan lebat di sini: 35.9 mm dalam 12 jam.\n✓ Disemak dua kali · digabung daripada 3 sumber: sungai di sini, hujan, hujan di hulu · 2 diketepikan\nBukan amaran rasmi. Ikut arahan JPS / APM / polis. Kecemasan: 999, APM: 991."
-    }
+      "en": "🔴 Rantau Panjang: ACT NOW (level 4 of 4)\nThe river is 1.94 m above the danger level and still rising.\n\nWhat to do: Move to higher ground. Follow APM / police.\n\nChecked by VEDA · Past flood replay · 27 Nov 2024, 19:30 · river level reported in the news, citing JPS\nNot an official warning. Emergency 999 · APM 991",
+      "ms": "🔴 Rantau Panjang: BERTINDAK SEKARANG (tahap 4 daripada 4)\nParas sungai 1.94 m di atas paras Bahaya dan masih naik.\n\nApa perlu dibuat: Pindah ke tempat tinggi. Ikut arahan APM / polis.\n\nDisemak oleh VEDA · Ulang tayang banjir lalu · 27 Nov 2024, 19:30 · paras sungai dilaporkan berita, memetik JPS\nBukan amaran rasmi. Kecemasan 999 · APM 991"
+    },
+    "judgement": {
+      "status": "live_only",
+      "text": {
+        "en": "Nemotron's judgement: live mode only",
+        "ms": "Penilaian Nemotron: mod langsung sahaja"
+      }
+    },
+    "signs": null
   },
   "other": null,
   "how": {
@@ -259,7 +376,7 @@
             "agent": "Coordinator",
             "action": "route",
             "status": "success",
-            "text": "full path, answer in English - full: Sg. Golok di Rantau Panjang (F1) is at danger (10.94 m); Sg. Golok di Rantau Panjang (F1) is rising (0.15 m in 1 h, 0.35 m in 3 h); Sg. Golok di Kg. Jenob (F1) is at danger (25.15 m); Sg. Golok di Kg. Jenob (F1) has no fresh reading (stale); heavy rain upstream (golok_buketa, sukhirin); hea..."
+            "text": "full path, answer in English - Sg. Golok di Rantau Panjang is at danger (10.94 m); Sg. Golok di Rantau Panjang is rising (0.15 m in 1 h, 0.35 m in 3 h); Sg. Golok di Kg. Jenob is at danger (25.15 m); Sg. Golok di Kg. Jenob has no fresh reading (stale); heavy rain upstream (golok_buketa, sukhirin); hea..."
           }
         ],
         "ai": [],
@@ -277,14 +394,8 @@
           {
             "agent": "Data & Reconciler",
             "action": "data.cross_check",
-            "status": "fallback",
-            "text": "2 shared gauge(s); newest 2024-02-23 14:45 MYT"
-          },
-          {
-            "agent": "Data & Reconciler",
-            "action": "data.reconcile",
             "status": "success",
-            "text": "0 unresolved"
+            "text": "not available in replay"
           },
           {
             "agent": "Data & Reconciler",
@@ -309,7 +420,7 @@
             "agent": "Forecast",
             "action": "forecast.verdict",
             "status": "success",
-            "text": "ACT (confidence medium, 0.64) - Sg. Golok di Rantau Panjang (F1) is 10.94 m, at or above danger (9.0 m); heavy rain upstream: Sg. Golok di Buke Ta (Waeng; Thailand) 148.2 mm in 72 h / 71.0 mm in 24 h, arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 72 h / 57.8 mm in 24 h, arrival time not known"
+            "text": "ACT (confidence medium, 0.64) - Sg. Golok di Rantau Panjang is 10.94 m, at or above danger (9.0 m); heavy rain upstream: Sg. Golok di Buke Ta (Waeng; Thailand) 148.2 mm in 72 h / 71.0 mm in 24 h, arrival time not known; Sukhirin (Narathiwat; Thailand) 123.4 mm in 72 h / 57.8 mm in 24 h, arrival time not known"
           }
         ],
         "ai": [],
@@ -359,19 +470,25 @@
             "agent": "Critic",
             "action": "critic.requery",
             "status": "success",
-            "text": "gauge: confirmed; flood-warning stale: True (278 days) - re-query agrees with the evidence"
+            "text": "gauge: confirmed; flood-warning stale: None (None days) - re-query agrees with the evidence"
           },
           {
             "agent": "Critic",
             "action": "critic.request",
             "status": "success",
-            "text": "need: fresh upstream reading - Sg. Golok di Kg. Jenob (F1) (reading too old (1740 min))"
+            "text": "need: fresh upstream reading - Sg. Golok di Kg. Jenob (reading too old (1740 min))"
           },
           {
             "agent": "Data & Reconciler",
             "action": "data.request",
             "status": "fallback",
-            "text": "nothing fresh for Sg. Golok di Kg. Jenob (F1) (reading too old (1740 min))"
+            "text": "nothing fresh for Sg. Golok di Kg. Jenob (reading too old (1740 min))"
+          },
+          {
+            "agent": "Critic",
+            "action": "critic.ai_judgement",
+            "status": "fallback",
+            "text": "rules ACT · Nemotron - · final ACT (not_run) - no AI-written text to check (card written by code)"
           },
           {
             "agent": "Critic",
@@ -381,7 +498,20 @@
           }
         ],
         "ai": [],
-        "queries": 2
+        "queries": 1,
+        "checks": [
+          "verdict words = the card's verdict",
+          "every number is on the card",
+          "no flipped above / below",
+          "no reassurance under WATCH / PREPARE / ACT",
+          "no 'a PPS is open' / cut-off prediction",
+          "no trend words when no trend is known",
+          "rising / falling / steady = the computed trend",
+          "wording (no internal terms, no minus signs, no Indonesian words in BM)",
+          "never 'go into the water'",
+          "stale / excluded source mentioned",
+          "conflicts mentioned"
+        ]
       },
       {
         "key": "safety",
@@ -403,11 +533,62 @@
         "queries": 0
       }
     ],
-    "total_s": 0.1,
+    "total_s": 0.0,
     "fallbacks": [
       "Coordinator: code-only card, explanation dropped"
     ]
   },
+  "ai_judgement": {
+    "status": "live_only"
+  },
+  "trail": {
+    "en": [
+      {
+        "key": "gather",
+        "who": "Data agent",
+        "text": "Used 3 of 7 sources. Left out: Sg. Golok di Kg. Jenob, reading too old (29 h ago); MetMalaysia forecast, not available for this date; MetMalaysia warnings, not available for this date; and 1 more."
+      },
+      {
+        "key": "forecast",
+        "who": "Forecast agent",
+        "text": "Act now. The river is at or above the danger level."
+      },
+      {
+        "key": "critique",
+        "who": "Critic",
+        "text": "Asked the Data agent for a fresh upstream reading. Nothing fresh was found. Checked the facts again and approved the answer."
+      },
+      {
+        "key": "safety",
+        "who": "Safety gate",
+        "text": "All safety checks passed."
+      }
+    ],
+    "ms": [
+      {
+        "key": "gather",
+        "who": "Ejen Data",
+        "text": "Menggunakan 3 daripada 7 sumber. Diketepikan: Sg. Golok di Kg. Jenob, bacaan terlalu lama (29 jam lalu); Ramalan MetMalaysia, tiada untuk tarikh ini; Amaran MetMalaysia, tiada untuk tarikh ini; dan 1 lagi."
+      },
+      {
+        "key": "forecast",
+        "who": "Ejen Ramalan",
+        "text": "Bertindak sekarang. Paras sungai pada atau melebihi paras Bahaya."
+      },
+      {
+        "key": "critique",
+        "who": "Penyemak",
+        "text": "Meminta Ejen Data mencari bacaan hulu yang baharu. Tiada bacaan baharu ditemui. Menyemak semula fakta dan meluluskan jawapan."
+      },
+      {
+        "key": "safety",
+        "who": "Semakan keselamatan",
+        "text": "Semua semakan keselamatan lulus."
+      }
+    ]
+  },
+  "explanation_lang": null,
+  "nearest_covered": null,
   "input": {
     "question": "Is Rantau Panjang safe now?",
     "replay": "nov2024",

@@ -128,3 +128,42 @@ def test_python_m_veda_runs(offline):
     r = subprocess.run([sys.executable, "-m", "veda", "scenes"], cwd=config.ROOT, env=env, capture_output=True,
                        text=True, timeout=120)
     assert r.returncode == 0 and "synthetic_rising" in r.stdout and r.stderr.startswith("Offline sample mode")
+
+
+def test_ask_takes_an_optional_time_inside_the_scene(offline):
+    """Audit 27 Oct A-P3-33: 'at' with a scene, checked like the CLI's --at; the Nov 2024 peak can be asked."""
+    c = TestClient(main.app)
+    peak = c.post("/api/v1/ask", json={"question": "Is Rantau Panjang at risk?", "scene": "nov2024",
+                                       "at": "2024-11-27 19:30"}).json()
+    assert peak["level"] == "ACT"
+    for body, code in (({"scene": "nov2024", "at": "27/11/2024"}, "bad_time"),
+                       ({"scene": "nov2024", "at": "2030-01-01 00:00"}, "outside_replay"),
+                       ({"at": "2024-11-27 19:30"}, "at_without_replay")):
+        r = c.post("/api/v1/ask", json={"question": "Is Rantau Panjang at risk?", **body})
+        assert r.status_code == 400 and r.json()["error"]["code"] == code, body
+
+
+@pytest.mark.parametrize("ctype", ["text/plain;application/json", "text/plain; x=application/json",
+                                   "application/jsonx", "application/json-patch+json"])
+def test_only_exactly_application_json_is_accepted(offline, ctype):
+    """Audit 27 Oct A-P3-29 (closes A-P3-8): a browser's no-preflight 'simple' form never passes."""
+    c = TestClient(main.app)
+    for path in ("/api/v1/ask", "/run"):
+        r = c.post(path, content=json.dumps({"question": "Tumpat?"}), headers={"content-type": ctype})
+        assert r.status_code == 415, (path, ctype)
+    ok = c.post("/api/v1/ask", content=json.dumps({"question": "Is Tumpat at risk?"}),
+                headers={"content-type": "application/json; charset=utf-8"})
+    assert ok.status_code == 200
+
+
+@pytest.mark.parametrize("field, value", [("question", ["Tumpat?"]), ("lang", ["en"]), ("lang", {"x": 1}),
+                                          ("scene", ["nov2024"]), ("scene", {"a": 1}), ("at", 1930)])
+def test_wrong_type_json_is_a_422_never_a_500(offline, field, value):
+    """Audit 27 Oct A-P3-7: a list / object / number in a text field."""
+    c = TestClient(main.app)
+    body = {"question": "Is Tumpat at risk?", field: value}
+    r = c.post("/api/v1/ask", json=body)
+    assert r.status_code == 422 and r.json()["error"]["code"] == "wrong_type" and field in r.json()["error"]["message"]
+    run_field = {"scene": "replay"}.get(field, field)
+    r2 = c.post("/run", json={"question": "Is Tumpat at risk?", run_field: value})
+    assert r2.status_code == 422 and r2.json()["error"]["code"] == "wrong_type"

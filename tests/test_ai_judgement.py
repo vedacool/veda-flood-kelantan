@@ -27,7 +27,7 @@ def test_a_raise_is_capped_at_one_level_unless_a_cited_fact_stands_higher():
 
 def test_never_lower_and_never_changes_cant_confirm():
     low =j("NORMAL", ["vs_alert"])
-    assert low["status"] == "lower" and low["final"] == "WATCH" and "keeps the safer level" in low["why"]
+    assert low["status"] == "lower" and low["final"] == "WATCH" and "keeps the more cautious (higher) level" in low["why"]
     assert j("INSUFFICIENT_DATA", [])["status"] == "lower" and j("INSUFFICIENT_DATA", [])["final"] == "WATCH"
     for ai in ("NORMAL", "ACT"):
         out = j(ai, ["next_24h"], code="INSUFFICIENT_DATA")
@@ -151,3 +151,20 @@ def test_a_failed_draft_still_gets_a_facts_only_judgement(tmp_path, monkeypatch)
                                                                               tzinfo=__import__("app.config").config.MYT))
     assert critic.JUDGE_SYSTEM in seen and r["forecast"]["verdict"] == "WATCH"
     assert r["ai_judgement"]["status"] == "lower" and r["ai_judgement"]["why"].startswith("facts-only judgement")
+
+
+def test_a_p3_16_at_exactly_the_2014_peak_supports_a_raise():
+    """Audit 27 Oct A-P3-16: diff_m == 0.0 (exactly at the 2014 peak) used to count as 'below' ((0.0 or -1) < 0)."""
+    card = {"place": "Kota Bharu", "verdict": "WATCH", "level_name": {"en": "Alert", "ms": "Waspada"},
+            "confidence": "high", "gauge": {"name": "G", "level_m": 3.0, "read_at": "18:00"},
+            "comparison": {"alert": 0.1}, "thresholds": {"alert": 2.9}, "trend": "rising", "upstream": [],
+            "warnings": [], "conflicts": [], "rain_up": None}
+    for diff, raises in ((0.0, True), (0.2, True), (-0.3, False)):
+        _, meta = critic.judge_facts({**card, "vs_2014": {"diff_m": diff, "peak_m": 3.0}}, None, "en")
+        assert meta["vs_2014"]["raise"] is raises, diff
+
+
+def test_a_p3_16_the_lower_wording_says_more_cautious():
+    from app import view
+    assert view.JUDGE["lower"]["en"] == "Nemotron judged lower; VEDA keeps the more cautious (higher) level."
+    assert "lebih berhati-hati (lebih tinggi)" in view.JUDGE["lower"]["ms"]

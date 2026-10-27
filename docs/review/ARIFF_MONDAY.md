@@ -19,10 +19,10 @@ river is steady (e.g. −2 cm in 1 h but +4 cm in 3 h → steady, not "falling")
 **2** dry hours inside it, and is called "heavy" only if one hour reaches **7.6 mm**. Right? ☐ yes ☐ use ___ h / ___ dry
 hours / ___ mm
 
-**(d) Upstream fast rise (proposal — not built).** 24 Oct 18:30: Kg. Jenob (Sg. Golok) rose **1.08 m in 3 h** and was
+**(d) Upstream fast rise (proposal — not built).** 24 Oct 18:30: Kg. Jenob (Sg. Golok) rose **[rise] in 3 h** and was
 still below its Alert. Rantau Panjang was still below its Alert and VEDA said **NORMAL,
-confidence high**; travel time Jenob → Rantau Panjang is not known. Proposal: an upstream gauge rising **≥ 0.5 m in
-3 h** → at least *Keep watching* downstream; **≥ 1.0 m in 3 h and at Alert or above** → at least *Get ready*; and
+confidence high**; travel time Jenob → Rantau Panjang is not known. Proposal: an upstream gauge rising **≥ [X] m in
+3 h** → at least *Keep watching* downstream; **≥ [Y] m in 3 h and at Alert or above** → at least *Get ready*; and
 confidence never "high" while an upstream gauge rises fast. Build it? ☐ yes ☐ no · numbers ____ m / ____ m in 3 h ·
 Jenob → Rantau Panjang travel time, if you know it: ____ h
 
