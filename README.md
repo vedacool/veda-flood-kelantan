@@ -1,21 +1,26 @@
 # VEDA — Vast Earth Data Analyser
 
-> **For judges, in 2 minutes**
+> **For judges**
 > - **What it is:** VEDA tells you whether a place in Kelantan is at risk of flooding; several agents check each other's work, and every step is logged.
 > - **Install + run (one line):** Windows `.\install.ps1` · Mac/Linux `./install.sh` - then open http://127.0.0.1:8000 (the offline demo with no keys; live with Zetaris + Nightshift).
-> - **Stuck?** `python -m veda doctor` · **Install with your AI:** [docs/INSTALL_WITH_AI.md](docs/INSTALL_WITH_AI.md)
-> - **Try it with no keys** (offline sample mode, after `pip install -r requirements.txt`): `python -m veda ask "Is Rantau Panjang at risk of flooding?"`
+> - **Try it offline with no keys** (offline sample mode, after `pip install -r requirements.txt`): `python -m veda ask "Is Rantau Panjang at risk of flooding?"`
 > - **Public demo:** see the submission form (its address is not kept in this repo).
+> - **Demo video:** https://youtu.be/Bgk8Oei9ssQ
+> - **[Try VEDA in 10 minutes](docs/JUDGES.md)** - offline, no keys, no Docker: three commands, then eight things to try (the Nov 2024 flood replay, a calm day, rain raising the alarm, a broken source, how the agents worked it out, the agents' live log, the Critic asking for more data, BM).
+> - **Stuck?** `python -m veda doctor` · **Install with your AI:** [docs/INSTALL_WITH_AI.md](docs/INSTALL_WITH_AI.md)
 > - **How it decided:** each run's trace is `logs/trace-<run_id>.jsonl`; the web page's **How it works** (`/how-it-works`) replays recorded live runs step by step.
 > - **Meterless World Model test:** `python -m pytest tests/conformance -v` - 8/8 conformance checks pass (over 1,000 offline tests in all: `python -m pytest -q`).
 > - **Model per AI call:** every AI call's trace line names the model requested and the model that answered, with its Nightshift receipt - see [AI and Model Usage](#ai-and-model-usage).
 
+**Sponsor tech at a glance**
+- **Zetaris** - the only data path: every agent reads its data through `run_sql()` (read-only SQL over all sources).
+- **Meterless World Model** - the agents' shared memory (facts with their source and age); `python -m pytest tests/conformance` - 8 passed.
+- **Meterless Nightshift** - the only AI provider: the model is asked for by name, the served model is checked, and every call has a receipt.
+- **NVIDIA Nemotron 3.5 Super VL** - explains the answer, reviews it for the Critic, and may only raise the level, citing facts.
+- Full detail: [Sponsor technology explanation](#sponsor-technology-explanation).
+
 **Team Hujung Lab** (Mohd Husaini Mohd Fauzi, Muhammad Ariff Baharudin) · GenAI Works Open Agent Hackathon 2026 ·
 Track: Solving Fragmented Intelligence · Machine-readable summary: [`metadata.json`](metadata.json)
-
-> **Judges: [try VEDA in 10 minutes](docs/JUDGES.md)** - offline, no keys, no Docker: three commands, then eight things to
-> try (the Nov 2024 flood replay, a calm day, rain raising the alarm, a broken source, how the agents worked it out,
-> the agents' live log, the Critic asking for more data, BM).
 
 VEDA is a multi-agent system for flood-prone Kelantan, Malaysia. Kelantan's flood data is scattered and sometimes
 stale or contradictory. VEDA cross-checks it and answers one question for anyone asking about a place, in English or
@@ -24,14 +29,14 @@ is traced to its source and its age.
 
 **Approach:** code agents read every source through Zetaris, check and reconcile it, and decide the verdict with
 plain, reviewable rules. NVIDIA Nemotron (through Meterless Nightshift) writes a 1-2 sentence explanation, which a
-Critic checks against the facts, and in that check gives its own level: code uses it only to raise the level, by one
-step, when the facts it cites support it - never to lower it. The answer card goes out, checked by code, even when
+Critic checks against the facts, and in that check gives its own level: code uses it only to raise the level, at most
+one level (unless a cited fact itself stands higher), when the facts it cites support it - never to lower it. The answer card goes out, checked by code, even when
 the model is slow or down.
 
 > ⚠️ **Not an official warning. Follow JPS / APM / police instructions. Emergency 999 · APM 991.**
 > VEDA is decision support only.
 
-## Quick start for judges (offline, no keys, about 2 minutes)
+## Quick start (offline, no keys, about 2 minutes)
 SAMPLE_MODE runs the real agent logic offline, with no network, no `.env` and no API keys, on **scenes**: the Nov 2024
 replay (readings reported in the news, each cited) or a **SYNTHETIC** scene (made-up readings, labelled everywhere).
 On the command line and the API, a question without a scene runs on the SYNTHETIC calm day; the web page opens
@@ -75,10 +80,9 @@ which mode it is in.
 The same agents as the web page (Coordinator → Data & Reconciler → Forecast → Critic → safety gate), as JSON.
 Full docs with a filled-in example: **`/api/docs`** (only the three `/api/v1` routes).
 
-**Public demo** (offline sample mode, scenes only; the demo's address is on the submission form - `<tailnet>` below
-stands for it):
+**Public demo** (offline sample mode, scenes only; the demo's address is on the submission form):
 ```
-curl -X POST https://wyse5070.<tailnet>.ts.net/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'
+curl -X POST https://<public demo address from the submission form>/api/v1/ask -H "Content-Type: application/json" -d '{"question": "Is Tumpat safe tonight?", "lang": "en"}'
 ```
 **On your computer** (after `python -m app.main` with SAMPLE_MODE=true, or the Docker command above):
 ```
@@ -352,7 +356,7 @@ its date, kind and how to reproduce it: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 - **Replay data:** the Nov 2024 replay uses a few real reported readings. Hours between two known readings are
   reconstructed on a straight line and labelled as such. Times reported as "about" lower the confidence.
 - **No river-flow model yet:** GloFAS river-flow forecasts are not used.
-- **One run at a time:** the API answers one question at a time (`429` while busy). Logs are not pruned automatically.
+- **One run at a time:** the API answers one question at a time (`429` while busy). Run traces older than 14 days are pruned (the demo keeps the newest 200).
 
 ## Developer setup — first time
 Python 3.13. From the repo folder:
