@@ -183,15 +183,43 @@ def test_one_visitor_is_capped_and_only_a_hash_is_kept_in_memory(monkeypatch):
     monkeypatch.setattr(fb, "_seen", {})
     monkeypatch.setattr(fb, "_salt", {"key": b"k" * 32, "born": 0.0})
     a, b = "203.0.113.9", "198.51.100.7"
-    assert [fb.over_cap(a, now=10.0 + i) for i in range(fb.VISITOR_MAX)] == [False] * fb.VISITOR_MAX
+    for i in range(fb.VISITOR_MAX):                                               # look, then count a saved answer
+        assert not fb.over_cap(a, now=10.0 + i)
+        fb.count_answer(a, now=10.0 + i)
     assert fb.over_cap(a, now=100.0) and not fb.over_cap(b, now=100.0)           # one visitor full, the other not
     assert not any(fb.over_cap(None, now=100.0) for _ in range(20))               # no key: not capped
     kept = json.dumps(fb._seen)
-    assert a not in kept and b not in kept and len(next(iter(fb._seen))) == 16     # hashes only, never the address
+    assert a not in kept and b not in kept and all(len(k) == 16 for k in fb._seen)  # hashes only, never the address
     old_key = fb._salt["key"]
     assert not fb.over_cap(a, now=float(fb.VISITOR_WINDOW))                       # a new window: new salt, counts gone
-    assert fb._salt["key"] != old_key and len(fb._seen) == 1
+    assert fb._salt["key"] != old_key and all(not v for v in fb._seen.values())
     assert fb.VISITOR_MAX == 10 and fb.VISITOR_WINDOW == 24 * 3600 and fb.VISITOR_HEADER == "X-Veda-Visitor"
+
+
+def test_a_full_box_does_not_spend_the_visitors_slots(server, monkeypatch):
+    """Audit A-P3-39: an answer refused because the box is full (503) is not counted - once there is room again, the
+    same visitor still has all VISITOR_MAX answers."""
+    base, path = server
+    monkeypatch.setattr(fb, "_seen", {})
+    data = urllib.parse.urlencode({"lang": "en", "place": "Tumpat"}).encode()
+    send = lambda: urllib.request.build_opener(NoRedirect).open(urllib.request.Request(          # noqa: E731
+        base + "/feedback", data=data, headers={"X-Veda-Visitor": "203.0.113.9"}))
+    path.write_text("x" * 100, encoding="utf-8")
+    monkeypatch.setattr(fb, "MAX_FILE", 50)                                       # the box is full
+    for _ in range(fb.VISITOR_MAX + 2):
+        with pytest.raises(urllib.error.HTTPError) as e:
+            send()
+        assert e.value.code == 503 and "so this answer was not saved" in e.value.read().decode()
+    assert all(not times for times in fb._seen.values())                          # no slot spent
+    path.unlink()
+    monkeypatch.setattr(fb, "MAX_FILE", 20 * 1024 * 1024)                         # room again
+    for i in range(fb.VISITOR_MAX):
+        with pytest.raises(urllib.error.HTTPError) as e:
+            send()
+        assert e.value.code == 303, i                                             # all 10 still there
+    with pytest.raises(urllib.error.HTTPError) as e:
+        send()
+    assert e.value.code == 429
 
 
 def test_the_eleventh_answer_from_one_visitor_gets_the_limit_message(server, monkeypatch):

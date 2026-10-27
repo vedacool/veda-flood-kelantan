@@ -34,13 +34,16 @@ def test_a_dirty_tree_blocks_the_push(monkeypatch, capsys):
 
 def test_pushing_a_commit_that_is_not_checked_out_is_blocked(monkeypatch, capsys):
     """Audit 27 Oct A-P3-19: the tests run on the checked-out tree, so only HEAD may be pushed."""
-    head, other = "a" * 40, "c" * 40
+    head, other, tag = "a" * 40, "c" * 40, "d" * 40
+    commits = {"HEAD": head, head + "^{commit}": head, other + "^{commit}": other, tag + "^{commit}": head}
     monkeypatch.setattr(pc, "_pushed_files", lambda _: {"app/main.py"})
-    monkeypatch.setattr(pc, "_git", lambda *a: head + "\n" if a[0] == "rev-parse" else "")
+    monkeypatch.setattr(pc, "_git", lambda *a: commits.get(a[1], "") + "\n" if a[0] == "rev-parse" else "")
     line = "refs/heads/feature " + other + " refs/heads/feature " + "b" * 40 + "\n"
     assert pc.pre_push(line) == 1 and "not the checked-out commit" in capsys.readouterr().out
     assert pc._not_checked_out("refs/heads/main " + head + " refs/heads/main " + "b" * 40 + "\n") == []
     assert pc._not_checked_out("refs/heads/x " + "0" * 40 + " refs/heads/x " + "b" * 40 + "\n") == []   # a delete
+    # A-P3-38: an annotated tag on HEAD is pushed as the tag object - it points at HEAD, so it is fine
+    assert pc._not_checked_out("refs/tags/v1 " + tag + " refs/tags/v1 " + "0" * 40 + "\n") == []
 
 
 def test_a_rename_of_code_into_a_doc_name_runs_the_gate(tmp_path):

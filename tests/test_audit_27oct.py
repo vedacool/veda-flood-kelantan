@@ -23,7 +23,7 @@ def test_a_p2_26_the_live_docker_recipes_publish_on_this_computer_only():
 
 
 def test_a_p3_23_lang_from_the_address_is_an_own_key_of_the_words():
-    assert 'if (!Object.hasOwn(UI, lang)) lang = "en";' in PAGE and "if (!UI[lang])" not in PAGE
+    assert 'if (!Object.prototype.hasOwnProperty.call(UI, lang)) lang = "en";' in PAGE and "if (!UI[lang])" not in PAGE
 
 
 def test_a_p3_24_a_cut_off_trace_line_is_no_500(tmp_path):
@@ -105,3 +105,20 @@ def test_a_p2_9_importing_app_main_reads_no_env_file(tmp_path):
     out = subprocess.run([sys.executable, "-c", code], cwd=config.ROOT, capture_output=True, text=True, timeout=120)
     assert out.returncode == 0, out.stderr[-500:]
     assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+def test_a_p2_29_no_page_uses_object_hasown():
+    """Regression review 27 Oct: Object.hasOwn is missing on Chrome < 93 / Safari < 15.4 - the page would die before it
+    shows any words. hasOwnProperty.call works everywhere."""
+    for f in (config.ROOT / "app" / "web").rglob("*.*"):
+        if f.suffix in (".html", ".js"):
+            assert "Object.hasOwn(" not in f.read_text(encoding="utf-8"), f.name
+
+
+def test_a_p3_37_a_warning_issued_a_little_ahead_still_counts():
+    """Regression review 27 Oct: the future-time rule is for river readings only - a MetMalaysia warning whose 'issued'
+    is ahead of VEDA's clock is kept (dropping it would be the less cautious way)."""
+    from app.agents import data_agent
+    assert data_agent.freshness("jps_levels", -30) == "unknown"
+    for ahead in (-6, -30, -120):
+        assert data_agent.freshness("mygov_warning", ahead) == "fresh", ahead

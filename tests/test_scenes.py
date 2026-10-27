@@ -453,7 +453,7 @@ def test_tell_us_only_in_the_public_demo_and_lang_guard():
     assert '$("r-ask").hidden = !publicDemo;' in PAGE
     judges = (trace.ROOT / "app" / "web" / "judges.html").read_text(encoding="utf-8")
     for page in (PAGE, judges):
-        assert 'if (!Object.hasOwn(UI, lang)) lang = "en";' in page and "if (!UI[lang])" not in page
+        assert 'if (!Object.prototype.hasOwnProperty.call(UI, lang)) lang = "en";' in page and "if (!UI[lang])" not in page
 
 
 def test_the_trail_reads_the_final_critic_review():

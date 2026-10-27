@@ -79,8 +79,10 @@ def _not_checked_out(stdin_text):
     """Audit 27 Oct A-P3-19: the refs being pushed whose commit is not HEAD - the gate tests the checked-out tree, so
     `git push origin other-branch` would push code these tests never saw."""
     head = _git("rev-parse", "HEAD").strip()
+    # A-P3-38: an annotated tag is pushed as the TAG object - compare the commit it points to
+    commit = lambda sha: _git("rev-parse", sha + "^{commit}").strip() or sha          # noqa: E731
     return [parts[0] for parts in (line.split() for line in stdin_text.splitlines())
-            if len(parts) == 4 and parts[1] != ZERO and parts[1] != head]
+            if len(parts) == 4 and parts[1] != ZERO and commit(parts[1]) != head]
 
 
 def _counts(text, pattern):

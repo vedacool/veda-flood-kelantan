@@ -230,24 +230,37 @@ def safe_cell(v):
     return "'" + v if isinstance(v, str) and v.startswith(FORMULA) else v
 
 
+def _recent(visitor, now):
+    """-> (hash, this visitor's answer times in the window). Call with _lock held. `visitor` (the proxy's key) is
+    hashed at once and dropped; every VISITOR_WINDOW the salt is replaced and every count forgotten."""
+    if now - _salt["born"] >= VISITOR_WINDOW:
+        _salt.update(key=secrets.token_bytes(32), born=now)
+        _seen.clear()
+    key = hmac.new(_salt["key"], visitor.encode("utf-8", "replace"), hashlib.sha256).hexdigest()[:16]
+    return key, [t for t in _seen.get(key, ()) if now - t < VISITOR_WINDOW]
+
+
 def over_cap(visitor, now=None):
-    """True when this visitor already sent VISITOR_MAX answers in the last VISITOR_WINDOW; else counts this one.
-    `visitor` (the proxy's key) is hashed at once and dropped; no key (a direct request, not through the proxy) is
-    not capped. Every VISITOR_WINDOW the salt is replaced and every count forgotten."""
+    """True when this visitor already sent VISITOR_MAX answers in the last VISITOR_WINDOW. Only looks: an answer is
+    counted by count_answer() after it is saved (audit A-P3-39: a 'box full' failure must not spend a slot). No key
+    (a direct request, not through the proxy) is never capped."""
     if not visitor:
         return False
     now = time.monotonic() if now is None else now
     with _lock:
-        if now - _salt["born"] >= VISITOR_WINDOW:
-            _salt.update(key=secrets.token_bytes(32), born=now)
-            _seen.clear()
-        key = hmac.new(_salt["key"], visitor.encode("utf-8", "replace"), hashlib.sha256).hexdigest()[:16]
-        times = [t for t in _seen.get(key, ()) if now - t < VISITOR_WINDOW]
-        if len(times) >= VISITOR_MAX:
-            _seen[key] = times
-            return True
+        key, times = _recent(visitor, now)
+        _seen[key] = times
+        return len(times) >= VISITOR_MAX
+
+
+def count_answer(visitor, now=None):
+    """Count one SAVED answer against this visitor's cap."""
+    if not visitor:
+        return
+    now = time.monotonic() if now is None else now
+    with _lock:
+        key, times = _recent(visitor, now)
         _seen[key] = times + [now]
-        return False
 
 
 def append(rec, path=None):
@@ -319,9 +332,11 @@ class Handler(BaseHTTPRequestHandler):
         lang = (form.get("lang") or [lang])[0] if (form.get("lang") or [""])[0] in T else lang
         try:
             rec = record(form)                         # a form with no answer is refused before it counts
-            if over_cap(self.headers.get(VISITOR_HEADER)):
+            visitor = self.headers.get(VISITOR_HEADER)
+            if over_cap(visitor):
                 return self._send(429, form_page(lang, T[lang]["limit"]))
             append(rec)
+            count_answer(visitor)                      # only a saved answer spends a slot (A-P3-39)
         except ValueError as e:
             key = str(e) if str(e) in T[lang] else "empty"
             return self._send(400 if key != "full" else 503, form_page(lang, T[lang][key]))

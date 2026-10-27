@@ -302,7 +302,7 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } } };
 let lang = new URLSearchParams(location.search).get("lang") || store.get("veda.lang") || "en";
-if (!Object.hasOwn(UI, lang)) lang = "en";            // not UI[lang]: ?lang=constructor would pass (audit)
+if (!Object.prototype.hasOwnProperty.call(UI, lang)) lang = "en";   // A-P2-29: works on old phone browsers too            // not UI[lang]: ?lang=constructor would pass (audit)
 const t = (k) => UI[lang][k];
 let runs = [], current = null, timer = null, shown = 0, speed = 1, playing = false;
 

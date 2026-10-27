@@ -1241,7 +1241,7 @@ $("sh-copy").addEventListener("click", async () => {
 const params = new URLSearchParams(location.search);
 lang = params.get("lang") || store.get("veda.lang") || ((navigator.language || "").toLowerCase().startsWith("ms") ? "ms" : "en");
 if (lang === "bm") lang = "ms";
-if (!Object.hasOwn(UI, lang)) lang = "en";              // audit 27 Oct A-P3-23: "?lang=constructor" is no language
+if (!Object.prototype.hasOwnProperty.call(UI, lang)) lang = "en";   // A-P2-29: works on old phone browsers too              // audit 27 Oct A-P3-23: "?lang=constructor" is no language
 if (store.get("veda.big") === "1") document.documentElement.classList.add("big");
 applyLang();
 // ?replay=&at= is applied at once - not after /health, which can take seconds live (24 Oct: a tap before it answered

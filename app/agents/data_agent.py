@@ -81,9 +81,12 @@ FUTURE_TOLERANCE_MIN = 5          # audit 27 Oct A-P3-26: clocks may differ a li
 
 
 def freshness(source, age_minutes):
-    """'fresh' | 'aging' | 'stale' | 'unknown' for an age in minutes, using the source's limits. A reading dated more
-    than FUTURE_TOLERANCE_MIN in the future is 'unknown' - never fresh."""
-    if age_minutes is None or source not in FRESHNESS or age_minutes < -FUTURE_TOLERANCE_MIN:
+    """'fresh' | 'aging' | 'stale' | 'unknown' for an age in minutes, using the source's limits. A RIVER reading dated
+    more than FUTURE_TOLERANCE_MIN in the future is 'unknown' - never fresh (A-P3-26). Only river readings: a
+    MetMalaysia warning 'issued' a little ahead still counts - dropping it would be the less cautious way (A-P3-37)."""
+    if age_minutes is None or source not in FRESHNESS:
+        return "unknown"
+    if source == "jps_levels" and age_minutes < -FUTURE_TOLERANCE_MIN:
         return "unknown"
     fresh, aging = FRESHNESS[source]
     return "fresh" if age_minutes <= fresh else "aging" if age_minutes <= aging else "stale"
